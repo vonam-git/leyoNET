@@ -1,6 +1,6 @@
 # Protokolle und Vereinfachungen
 
-Der Simulator sendet Pakete, die den Standards folgen. Jeder Rahmen lässt sich in echte Bytes kodieren (`src/core/wire/encode.ts`) und als pcapng-Datei exportieren. Wireshark und Scapy lesen diese Dateien wie einen echten Mitschnitt, Prüfsummen (IPv4, ICMP, UDP, TCP, OSPF) sind korrekt berechnet. Wo der Unterricht es erfordert, sind Abläufe vereinfacht oder Zeiten verkürzt. Die Paketdetails vermerken das pro Schicht.
+Der Simulator sendet Pakete, die den Standards folgen. Jeder Rahmen lässt sich in echte Bytes kodieren (`src/core/wire/encode.ts`) und als pcapng-Datei exportieren. Wireshark und Scapy lesen diese Dateien wie einen echten Mitschnitt, Prüfsummen (IPv4, ICMP, UDP, TCP, OSPF) sind korrekt berechnet. Wo der Unterricht es erfordert, sind Abläufe vereinfacht oder Zeiten verkürzt. Die Paketdetails vermerken das pro Schicht. Welche Normen zitiert werden und wie das Projekt prüft, ob sie noch aktuell sind, steht in [normen.md](normen.md).
 
 ## Übersicht
 
