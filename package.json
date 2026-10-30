@@ -1,0 +1,43 @@
+{
+  "name": "leyonet",
+  "private": true,
+  "version": "0.5.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.core.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify": "npm run check && npm test && npm run test:server && npm run build",
+    "e2e": "npm run build && playwright test",
+    "release": "npm run verify && node scripts/release.mjs",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build",
+    "tauri": "tauri",
+    "test:server": "node --test server/app.test.cjs",
+    "server": "node server/start.cjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tauri-apps/cli": "^2.12.4",
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/node": "^26.6.5",
+    "svelte": "^5.57.3",
+    "svelte-check": "^4.7.7",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.5",
+    "vite-plugin-singlefile": "^2.3.4",
+    "vitest": "^4.1.12"
+  },
+  "license": "AGPL-3.0-or-later",
+  "author": "Mark von Allmen & Mikael von Allmen",
+  "contributors": [
+    "Mark von Allmen",
+    "Mikael von Allmen"
+  ],
+  "homepage": "https://github.com/vonam-git/leyoNET",
+  "repository": { "type": "git", "url": "https://github.com/vonam-git/leyoNET.git" }
+}

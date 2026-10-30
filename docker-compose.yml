@@ -1,0 +1,14 @@
+# leyoNET im Schulnetz (Variante B).
+# Start:  docker compose up -d --build
+# Danach: http://<servername>:8080
+services:
+  leyonet:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    image: leyonet:latest
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
