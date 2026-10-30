@@ -1,12 +1,13 @@
 # leyoNET – Hinweise für die Arbeit am Projekt
 
-leyoNET ist ein Netzwerk-Simulator für den Informatik-Unterricht (1. Lehrjahr bis Fachhochschule) von Mark und Mikael von Allmen. Er läuft als einzelne HTML-Datei im Browser, als Webversion mit Node-Server (Plesk) und als Desktop-App (Tauri). Überblick: [README.md](README.md), Doku in [docs/](docs/).
+leyoNET ist ein Netzwerk-Simulator für den Informatik-Unterricht (1. Lehrjahr bis Fachhochschule) der Brüder Mark und Mika. Er läuft als einzelne HTML-Datei im Browser, als Webversion mit Node-Server (Plesk) und als Desktop-App (Tauri). Überblick: [README.md](README.md), Doku in [docs/](docs/).
 
 ## Arbeitsweise
 
 - Mark spricht Deutsch (Schweiz). Antworten auf Deutsch, Schweizer Schreibweise («ss» statt «ß», «…»-Anführungszeichen).
 - Gearbeitet wird auf `develop`. `main` ist die stabile Version (Pull Request von `develop`). Plesk liefert `develop` aus.
 - Vor jedem Commit: `npm run release` (Typprüfung, Tests, Server-Tests, Build, `release/leyonet.html`, Release-Prüfung). Die Datei `release/leyonet.html` ist eingecheckt und muss zum Code passen, sonst schlägt die CI fehl.
+- Automatische Prüfungen: CI bei jedem Push; jeden Montag `.github/workflows/woechentlich.yml` (Funktionsprüfung plus Abgleich der RFCs mit dem RFC-Index, bei Handlungsbedarf ein Issue). Offene Issues «Wöchentliche Prüfung: Handlungsbedarf» zu Beginn einer Sitzung ansehen und erledigen.
 - Oberflächentests: `PW_EXECUTABLE=<chromium> npx playwright test` nach `npm run build`.
 - Nach Abschluss committen und pushen.
 
@@ -24,4 +25,5 @@ leyoNET ist ein Netzwerk-Simulator für den Informatik-Unterricht (1. Lehrjahr b
 - **Herkunft:** Keinen fremden Code, keine Icons, Schriften oder Texte kopieren. Neue Pakete nur mit freigegebener Lizenz (`scripts/third-party-licenses.mjs`). Beispieldomains nur `.example` (RFC 2606), Adressen aus RFC 1918/5737. Siehe `docs/herkunft.md`.
 - **Lizenz:** AGPL-3.0-or-later. Name und Logo (`branding/`) sind ausgenommen (`NOTICE.md`). Der Link zum Quellcode unter «Über» muss bleiben (AGPL §13, prüft die Release-Prüfung).
 - **Kompatibilität:** Technische Kennungen bleiben unverändert, damit alte Dateien und Einstellungen funktionieren: Projektformat `netzwerk-simulator`, Speicherschlüssel `netzwerk-simulator.*`, Funktionsdatei `netzwerk-simulator-features`.
+- **Normen:** Jede in Code, Texten oder Doku zitierte Norm (RFC, IEEE 802.x, ITU-T, DOCSIS) steht in `docs/normen.json`, sonst schlägt `npm run release` fehl. Immer die aktuell gültige Ausgabe verwenden; abgelöste RFCs ersetzen. Bei Prüfung einer IEEE-/ITU-T-Norm `geprueft` nachführen. Siehe `docs/normen.md`.
 - **Doku nachführen:** Neue Funktionen gehören in die passende Datei unter `docs/` und in die F1-Hilfe.

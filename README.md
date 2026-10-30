@@ -10,7 +10,7 @@ leyoNET ist ein Simulator für Rechnernetze im Informatik-Unterricht, vom ersten
 
 Die ursprüngliche Anforderungsbeschreibung steht in [docs/konzept.md](docs/konzept.md).
 
-**Dokumentation:** [Anleitung für Lernende](docs/anleitung.md) · [Hinweise für Lehrpersonen](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Befehlszeile](docs/cli.md) · [Datenschutz](docs/datenschutz.md) · [Installation](docs/installation.md) · [Webversion auf Plesk](docs/plesk.md) · [Desktop](docs/desktop.md)
+**Dokumentation:** [Anleitung für Lernende](docs/anleitung.md) · [Hinweise für Lehrpersonen](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Normen und automatische Prüfungen](docs/normen.md) · [Befehlszeile](docs/cli.md) · [Datenschutz](docs/datenschutz.md) · [Installation](docs/installation.md) · [Webversion auf Plesk](docs/plesk.md) · [Desktop](docs/desktop.md)
 
 ## Sofort loslegen
 
@@ -84,7 +84,7 @@ src/
   ui/     Svelte-Oberfläche (Editor, Palette, Inspektor)
   i18n/   Sprachdateien (de.json, en.json; ein Test prüft gleiche Schlüssel)
 server/   Node.js-Server der Webversion (ohne Abhängigkeiten): Sessions, Klassen, Rückmeldungen, Admin
-docs/     Anleitung, Lehrpersonen, Funktionsprofile, Protokolle, Aufgaben, Befehlszeile, Datenschutz, Installation, Plesk, Desktop
+docs/     Anleitung, Lehrpersonen, Funktionsprofile, Protokolle, Normen, Aufgaben, Befehlszeile, Datenschutz, Installation, Plesk, Desktop
 scripts/  Release, Lizenzhinweise, Release-Prüfung (Datenschutz, Sicherheit, Lizenzen)
 ```
 
@@ -154,7 +154,7 @@ Klartext-JSON mit `meta` (Format und Version), `topology` (Geräte, Anschlüsse 
 
 ## Geschichte
 
-Mark von Allmen unterrichtet Netzwerktechnik und hat jahrelang mit Cisco Packet Tracer und FILIUS gearbeitet. Daraus entstand der Wunsch nach einem Werkzeug, das moderner ist, mehr kann, im Browser läuft und sich trotzdem lokal installieren lässt. Das Grundgerüst baute er zusammen mit seinem Bruder Mikael (Mika), danach entwickelte Mark es mit seinen Ideen aus dem Unterricht weiter. Die eigentliche Programmierarbeit erledigt eine KI; Ideen, Entscheidungen und Verantwortung liegen bei den beiden.
+Mark unterrichtet Netzwerktechnik und hat jahrelang mit Cisco Packet Tracer und FILIUS gearbeitet. Daraus entstand der Wunsch nach einem Werkzeug, das moderner ist, mehr kann, im Browser läuft und sich trotzdem lokal installieren lässt. Das Grundgerüst baute er zusammen mit seinem Bruder Mika, danach entwickelte Mark es mit seinen Ideen aus dem Unterricht weiter. Die eigentliche Programmierarbeit erledigt eine KI; Ideen, Entscheidungen und Verantwortung liegen bei den beiden.
 
 «leyo» sind die Anfangsbuchstaben von Marks Kindern. Das Symbol zeigt ein «l» und ein «y» aus Netzwerkknoten: «ly» für «love you».
 

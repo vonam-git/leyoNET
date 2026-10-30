@@ -1,6 +1,6 @@
 {
   "version": "0.5.0",
-  "date": "2026-10-30T09:34:24.940Z",
+  "date": "2026-10-30T12:50:24.161Z",
   "checks": [
     {
       "id": "privacy.noExternal",
@@ -103,6 +103,18 @@
       "category": "licenses",
       "status": "pass",
       "detail": "Alle Build-Werkzeuge mit freier Lizenz."
+    },
+    {
+      "id": "standards.registered",
+      "category": "standards",
+      "status": "pass",
+      "detail": "44 zitierte Normen, alle im Verzeichnis (30 RFCs, 10 IEEE/ITU-T/CableLabs)."
+    },
+    {
+      "id": "standards.reviewed",
+      "category": "standards",
+      "status": "pass",
+      "detail": "IEEE-, ITU-T- und CableLabs-Normen in den letzten 12 Monaten geprüft; RFCs prüft der wöchentliche Abgleich mit dem RFC-Index."
     }
   ]
 }

@@ -30,7 +30,7 @@ Alle diese Lizenzen sind mit der AGPL-3.0, unter der leyoNET steht, verträglich
 | Simulationskern (`src/core`) | eigene Implementierung nach öffentlichen Standards (RFCs, IEEE 802, ITU-T), siehe [protokolle.md](protokolle.md) |
 | Oberfläche (`src/ui`) | eigene Implementierung |
 | Symbole (`Icon.svelte`, `DeviceIcon.svelte`) | eigene, einfache Zeichnungen als SVG-Pfade; keine Icon-Bibliothek |
-| Logo und Symbol (`branding/leyoNET.svg`, `branding/favicon.svg`) | eigene Gestaltung von Mark von Allmen; App-Symbole der Desktop-Version daraus erzeugt (`npx tauri icon`). Name und Logo sind nicht Teil der AGPL, siehe [NOTICE.md](../NOTICE.md) |
+| Logo und Symbol (`branding/leyoNET.svg`, `branding/favicon.svg`) | eigene Gestaltung von Mark; App-Symbole der Desktop-Version daraus erzeugt (`npx tauri icon`). Name und Logo sind nicht Teil der AGPL, siehe [NOTICE.md](../NOTICE.md) |
 | Logo-Schrift | Systemschrift «Courier New» bzw. Monospace des Geräts, nicht eingebettet |
 | Schriften | keine eingebetteten Schriften, es werden die Systemschriften genutzt |
 | Texte, Hilfe, Übungen, Beispiele | eigene Texte |
