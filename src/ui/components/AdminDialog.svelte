@@ -312,7 +312,7 @@
         <p class="muted">{t('admin.checksMissing')}</p>
       {:else}
         <p>{t('admin.checksVersion', { version: checks.version, date: when(Date.parse(checks.date)) })}</p>
-        {#each ['privacy', 'security', 'licenses'] as const as category (category)}
+        {#each ['privacy', 'security', 'licenses', 'standards'] as const as category (category)}
           <h3>{t(`checks.category.${category}`)}</h3>
           <ul class="checklist">
             {#each checks.checks.filter((c) => c.category === category) as c (c.id)}

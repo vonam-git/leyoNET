@@ -1,0 +1,91 @@
+# Wöchentliche Prüfung, auch ohne neue Commits:
+#  - Funktionsprüfung: dieselben Prüfungen wie bei jedem Push (Typen, Tests,
+#    Server-Tests, Build, Release-Prüfung, Oberflächentests) mit frisch
+#    installierten Werkzeugen und aktuellem Browser.
+#  - Normenprüfung: Abgleich aller zitierten RFCs mit dem offiziellen RFC-Index
+#    und Erinnerung an fällige Prüfungen von IEEE-, ITU-T- und CableLabs-Normen.
+# Bei Handlungsbedarf eröffnet der Workflow ein Issue (oder ergänzt das offene).
+# Manuell: Actions → «Wöchentliche Prüfung» → «Run workflow».
+name: Wöchentliche Prüfung
+
+on:
+  schedule:
+    - cron: '17 5 * * 1' # Montag, 05:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  funktion:
+    uses: ./.github/workflows/ci.yml
+
+  normen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      handlungsbedarf: ${{ steps.abgleich.outputs.handlungsbedarf }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Abgleich mit dem RFC-Index
+        id: abgleich
+        run: |
+          if node scripts/normen-online.mjs; then
+            echo "handlungsbedarf=nein" >> "$GITHUB_OUTPUT"
+          else
+            echo "handlungsbedarf=ja" >> "$GITHUB_OUTPUT"
+          fi
+          test -f normen-bericht.md && cat normen-bericht.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: normen-bericht
+          path: normen-bericht.md
+          retention-days: 30
+          if-no-files-found: ignore
+
+  meldung:
+    needs: [funktion, normen]
+    if: always() && (needs.funktion.result != 'success' || needs.normen.result != 'success' || needs.normen.outputs.handlungsbedarf == 'ja')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: normen-bericht
+        continue-on-error: true
+
+      - name: Issue eröffnen oder ergänzen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          FUNKTION: ${{ needs.funktion.result }}
+          NORMEN: ${{ needs.normen.result }}
+          LAUF: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            echo "Die wöchentliche Prüfung hat Handlungsbedarf gefunden ([Lauf]($LAUF))."
+            echo
+            if [ "$FUNKTION" != "success" ]; then
+              echo "**Funktionsprüfung fehlgeschlagen.** Details im Lauf (Job «funktion»). Lokal nachvollziehen mit \`npm ci && npm run release\`."
+              echo
+            fi
+            if [ "$NORMEN" != "success" ]; then
+              echo "**Normenprüfung konnte nicht laufen** (z.B. RFC-Index nicht erreichbar)."
+              echo
+            fi
+            if [ -f normen-bericht.md ]; then cat normen-bericht.md; fi
+          } > meldung.md
+          titel="Wöchentliche Prüfung: Handlungsbedarf"
+          nummer=$(gh issue list --state open --search "in:title \"$titel\"" --json number --jq '.[0].number')
+          if [ -n "$nummer" ]; then
+            gh issue comment "$nummer" --body-file meldung.md
+          else
+            gh issue create --title "$titel" --body-file meldung.md
+          fi

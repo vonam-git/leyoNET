@@ -1,4 +1,4 @@
-// Prüfungen bei jedem Release: Datenschutz, Sicherheit und Lizenzen.
+// Prüfungen bei jedem Release: Datenschutz, Sicherheit, Lizenzen und Normen.
 // Das Ergebnis landet in release/checks.json; die Admin-Konsole der
 // Webversion zeigt es unter «Prüfungen». Ein «fail» bricht das Release ab.
 //
@@ -8,6 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checkRegistry } from './normen.mjs';
 import { ALLOWED } from './third-party-licenses.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -119,6 +120,11 @@ export function runChecks({ html, packages }) {
     return ALLOWED.includes(license) || /^\(?(MIT|Apache-2\.0)( OR |\))/.test(license) ? [] : [`${name} (${license})`];
   });
   add('licenses', 'licenses.tools', dev.length ? 'warn' : 'pass', dev.length ? `Werkzeuge mit anderer Lizenz (nicht ausgeliefert): ${dev.join(', ')}` : 'Alle Build-Werkzeuge mit freier Lizenz.');
+
+  // --- Normen (docs/normen.json, Ablauf in docs/normen.md) -------------------------
+  const norms = checkRegistry();
+  add('standards', 'standards.registered', norms.missing.length ? 'fail' : 'pass', norms.missing.length ? `Nicht in docs/normen.json: ${norms.missing.join('; ')}` : `${norms.references.size} zitierte Normen, alle im Verzeichnis (${Object.keys(norms.registry.rfc).length} RFCs, ${norms.registry.weitere.length} IEEE/ITU-T/CableLabs).`);
+  add('standards', 'standards.reviewed', norms.overdue.length ? 'warn' : 'pass', norms.overdue.length ? `Prüfung älter als ${norms.limit} Monate: ${norms.overdue.join(', ')}` : `IEEE-, ITU-T- und CableLabs-Normen in den letzten ${norms.limit} Monaten geprüft; RFCs prüft der wöchentliche Abgleich mit dem RFC-Index.`);
 
   return { version: pkg.version, date: new Date().toISOString(), checks: [...checks] };
 }

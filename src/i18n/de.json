@@ -2009,6 +2009,9 @@
   "checks.licenses.notices": "Lizenztexte eingebettet",
   "checks.licenses.own": "Eigene Lizenz (AGPL-3.0) und Link zum Quellcode",
   "checks.licenses.tools": "Lizenzen der Werkzeuge",
+  "checks.category.standards": "Normen",
+  "checks.standards.registered": "Zitierte Normen im Verzeichnis",
+  "checks.standards.reviewed": "Normen auf aktuellem Stand geprüft",
 
   "catalog.sniffArp.title": "Pakete mitschneiden",
   "catalog.sniffArp.description": "Die beiden PCs sind schon fertig eingerichtet. Wechsle in die Simulation, öffne die Paketliste und pinge von PC 1 aus PC 2 an. Beobachte, wie PC 1 zuerst per ARP nach der MAC-Adresse fragt und dann die ICMP-Pakete schickt. Klicke ein Paket an und sieh dir die Schichten an.",
