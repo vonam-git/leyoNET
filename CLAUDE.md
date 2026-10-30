@@ -10,6 +10,7 @@ leyoNET ist ein Netzwerk-Simulator für den Informatik-Unterricht (1. Lehrjahr b
 - Automatische Prüfungen: CI bei jedem Push; jeden Montag `.github/workflows/woechentlich.yml` (Funktionsprüfung plus Abgleich der RFCs mit dem RFC-Index, bei Handlungsbedarf ein Issue). Offene Issues «Wöchentliche Prüfung: Handlungsbedarf» zu Beginn einer Sitzung ansehen und erledigen.
 - Oberflächentests: `PW_EXECUTABLE=<chromium> npx playwright test` nach `npm run build`.
 - Nach Abschluss committen und pushen.
+- **Plesk-Schritte nennen:** Mark hat das Repo in Plesk verbunden (Branch `develop`). Nach jedem Push am Ende der Antwort sagen, was er in Plesk tun muss, in dieser Reihenfolge: *Git → Pull Updates*, *Jetzt bereitstellen*, *Node.js → App neu starten*. Dazu nennen, ob etwas Zusätzliches nötig ist (z.B. neue Umgebungsvariablen, geänderte Einstellungen unter Node.js) oder ob nur der Neustart wichtig ist (Änderungen in `server/`).
 
 ## Architektur
 
