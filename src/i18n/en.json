@@ -1948,6 +1948,9 @@
   "checks.licenses.notices": "Licence texts embedded",
   "checks.licenses.own": "Own licence (AGPL-3.0) and source link",
   "checks.licenses.tools": "Tool licences",
+  "checks.category.standards": "Standards",
+  "checks.standards.registered": "Cited standards registered",
+  "checks.standards.reviewed": "Standards reviewed for currency",
 
   "catalog.sniffArp.title": "Capture packets",
   "catalog.sniffArp.description": "Both PCs are already configured. Switch to the simulation, open the packet list and ping PC 2 from PC 1. Watch PC 1 first ask for the MAC address via ARP and then send the ICMP packets. Click a packet and look at its layers.",

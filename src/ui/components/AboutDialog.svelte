@@ -59,7 +59,7 @@
   </section>
 
   <h3>{t('about.ownLicense')}</h3>
-  <p class="small">© 2026 Mark von Allmen &amp; Mikael von Allmen</p>
+  <p class="small">© 2026 Mark &amp; Mika</p>
   <p class="small">{t('about.license')}</p>
   <p class="small">{t('about.trademark')}</p>
   <p class="small">

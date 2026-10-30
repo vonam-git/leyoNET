@@ -22,12 +22,12 @@ Es gibt drei Wege, je nachdem, was du vorhast:
 git clone https://github.com/vonam-git/leyoNET.git
 ```
 
-Danach im Ordner `netzwerk-simulator/release/` die Datei **`leyonet.html`** doppelklicken. Fertig.
+Danach im Ordner `leyoNET/release/` die Datei **`leyonet.html`** doppelklicken. Fertig.
 
 Neue Versionen holen:
 
 ```bash
-cd netzwerk-simulator
+cd leyoNET
 git pull
 ```
 
@@ -55,7 +55,7 @@ Für den Betrieb im Schulnetz liefert ein kleiner Nginx-Container die Datei aus.
 
 ```bash
 git clone https://github.com/vonam-git/leyoNET.git
-cd netzwerk-simulator
+cd leyoNET
 docker compose up -d --build
 ```
 
@@ -93,7 +93,7 @@ Voraussetzung: [Node.js](https://nodejs.org/) ab Version 20 (LTS empfohlen) und 
 
 ```bash
 git clone https://github.com/vonam-git/leyoNET.git
-cd netzwerk-simulator
+cd leyoNET
 npm ci
 npm run dev
 ```
