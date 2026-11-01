@@ -70,6 +70,12 @@ export const CHECK_FIELDS: Record<Check['type'], FieldSpec[]> = {
     { key: 'min', kind: 'number', optional: true },
   ],
   noStorm: [],
+  noDuplicateIp: [],
+  seenAs: [
+    { key: 'from', kind: 'device' },
+    { key: 'to', kind: 'device', label: 'pingTo' },
+    { key: 'address', kind: 'text', label: 'seenAddress' },
+  ],
   modemOnline: [{ key: 'device', kind: 'device' }],
   groupLeases: [
     { key: 'device', kind: 'device' },

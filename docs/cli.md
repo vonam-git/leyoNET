@@ -110,7 +110,7 @@ Beide Enden brauchen dieselbe Kapselung, sonst bleibt die Leitung down.
 ### Statisches NAT (Router)
 
 ```
-ip nat inside source static 192.168.0.80 203.0.113.5
+ip nat inside source static 192.168.0.80 203.0.113.5   ! 1:1-NAT; reines SNAT/DNAT nur im Formular (Reiter NAT)
 no ip nat inside source static 192.168.0.80 203.0.113.5
 ```
 

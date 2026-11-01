@@ -1,6 +1,6 @@
 # leyoNET – Urheber, Lizenz und Marke
 
-Copyright (C) 2026 Mark von Allmen und Mikael von Allmen
+Copyright (C) 2026 Mark v. A. und Mikael v. A.
 
 ## Lizenz des Codes
 
@@ -29,8 +29,8 @@ veröffentlicht; für diese Stände gilt sie weiter.
 ## Name und Logo
 
 Der Name **leyoNET** und das leyoNET-Logo (Dateien in `branding/`) sind **nicht**
-Teil der AGPL-Lizenz. Sie kennzeichnen das Original-Projekt von Mark und Mikael
-von Allmen. Unveränderte Kopien dürfen Name und Logo tragen. Veränderte Fassungen
+Teil der AGPL-Lizenz. Sie kennzeichnen das Original-Projekt von Mark v. A. und
+Mikael v. A. Unveränderte Kopien dürfen Name und Logo tragen. Veränderte Fassungen
 brauchen einen eigenen Namen und ein eigenes Logo; ein Hinweis wie «basiert auf
 leyoNET» ist erlaubt.
 

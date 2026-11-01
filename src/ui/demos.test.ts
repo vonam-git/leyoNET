@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Simulation, parseProject, type Topology } from '../core';
+import de from '../i18n/de.json';
+import en from '../i18n/en.json';
 import { DEMOS, demoProject, type Demo } from './demos';
 
 /**
@@ -41,6 +43,19 @@ describe('Demo-Netze', () => {
     for (const demo of DEMOS) {
       const topology = load(demo);
       for (const action of demo.actions) expect(topology.devices.some((d) => d.name === action.device), `${demo.id}: ${action.device}`).toBe(true);
+    }
+  });
+
+  it('Texte und Geräte der geführten Demos sind vollständig', () => {
+    for (const demo of DEMOS) {
+      const names = new Set(load(demo).devices.map((d) => d.name));
+      for (const key of ['title', 'text', 'show']) for (const lang of [de, en] as Record<string, string>[]) expect(lang[`demo.${demo.id}.${key}`], `${demo.id}.${key}`).toBeTruthy();
+      (demo.tour ?? []).forEach((step, n) => {
+        for (const lang of [de, en] as Record<string, string>[]) expect(lang[`demo.${demo.id}.tour.${n}`], `${demo.id}.tour.${n}`).toBeTruthy();
+        for (const name of [step.highlight, step.window?.device, step.action?.device]) if (name) expect(names.has(name), `${demo.id}: ${name}`).toBe(true);
+      });
+      // Keine überzähligen Texte (z.B. nach dem Entfernen eines Schritts).
+      expect(Object.keys(de).filter((k) => k.startsWith(`demo.${demo.id}.tour.`))).toHaveLength(demo.tour?.length ?? 0);
     }
   });
 

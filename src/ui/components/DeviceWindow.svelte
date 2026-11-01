@@ -2,7 +2,7 @@
   import { DEVICE_SPECS, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterType, isSwitchType } from '../../core';
   import { t } from '../../i18n';
   import { typeLabel } from '../labels';
-  import { dialogs } from '../state/dialogs.svelte';
+  import { dialogs, type DeviceWindowState } from '../state/dialogs.svelte';
   import { editor } from '../state/editor.svelte';
   import { ui } from '../state/ui.svelte';
   import CpeConfig from './CpeConfig.svelte';
@@ -28,13 +28,20 @@
   import WlanConfig from './WlanConfig.svelte';
 
   /**
-   * Erweiterte Einstellungen eines Geräts: alle Parameter sauber nach Reitern
-   * geordnet. Mit ◀ ▶ (oder Bild↑/Bild↓, Alt+←/→) direkt zum vorherigen bzw.
-   * nächsten Gerät wechseln; der gewählte Reiter bleibt, wenn es ihn dort gibt.
+   * Fenster mit den erweiterten Einstellungen eines Geräts: alle Parameter
+   * nach Reitern geordnet. Nicht modal: Mehrere Fenster können offen sein, die
+   * Zeichenfläche bleibt bedienbar. Am Kopf verschieben, unten rechts in der
+   * Grösse ändern. Mit ◀ ▶ (oder Bild↑/Bild↓, Alt+←/→) zum vorherigen bzw.
+   * nächsten Gerät; der gewählte Reiter bleibt, wenn es ihn dort gibt.
    */
-  let dialog: HTMLDialogElement;
+  let { win }: { win: DeviceWindowState } = $props();
+  let dialog: HTMLElement;
+  const uid = $derived(`dw${win.key}`);
 
-  const device = $derived(dialogs.device ? getDevice(editor.topology, dialogs.device.id) : undefined);
+  const device = $derived(getDevice(editor.topology, win.id));
+  const front = $derived(dialogs.deviceWindows.every((w) => w.z <= win.z));
+  /** Stapelreihenfolge 0…5 (statt der fortlaufenden Zahl), damit Führung und Meldungen darüber bleiben. */
+  const rank = $derived(dialogs.deviceWindows.filter((w) => w.z < win.z).length);
 
   /** Geräte in der Reihenfolge für ◀ ▶: auf dem angezeigten Stockwerk, nach Namen sortiert. */
   const order = $derived(
@@ -70,20 +77,44 @@
   });
 
   const tab = $derived.by((): TabId => {
-    const wanted = dialogs.device?.tab as TabId | undefined;
+    const wanted = win.tab as TabId | undefined;
     return wanted && tabs.includes(wanted) ? wanted : (tabs[0] ?? 'general');
   });
 
   const HELP: Partial<Record<TabId, string>> = { routing: 'routing', nat: 'nat', relay: 'dhcp', dhcp: 'dhcp', wlan: 'wlan', mail: 'mail', switching: 'vlan', services: 'dhcp' };
 
-  $effect(() => {
-    if (dialogs.device && !dialog.open) dialog.showModal();
-  });
-
   // Gerät gelöscht oder Projekt gewechselt: schliessen.
   $effect(() => {
-    if (dialogs.device && !device) dialogs.closeDevice();
+    if (!device) dialogs.closeDevice(win.key);
   });
+
+  // Neu geöffnet: Fokus ins Fenster, damit Tasten (Esc, Bild↑/↓) wirken.
+  $effect(() => {
+    queueMicrotask(() => dialog?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus());
+  });
+
+  function close() {
+    commitInput();
+    dialogs.closeDevice(win.key);
+  }
+
+  // --- Verschieben ------------------------------------------------------------
+  let drag: { dx: number; dy: number } | null = null;
+  function onHeadDown(event: PointerEvent) {
+    if (event.button !== 0 || (event.target as Element).closest('button')) return;
+    drag = { dx: event.clientX - win.x, dy: event.clientY - win.y };
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+  function onHeadMove(event: PointerEvent) {
+    if (!drag) return;
+    // Immer ein Stück des Kopfes sichtbar lassen.
+    win.x = Math.min(window.innerWidth - 120, Math.max(-dialog.offsetWidth + 160, event.clientX - drag.dx));
+    win.y = Math.min(window.innerHeight - 48, Math.max(0, event.clientY - drag.dy));
+  }
+  function onHeadUp() {
+    drag = null;
+  }
 
   /** Offene Eingabe zuerst speichern (Formulare speichern beim Verlassen des Feldes). */
   function commitInput() {
@@ -93,7 +124,7 @@
 
   function select(id: TabId) {
     commitInput();
-    if (dialogs.device) dialogs.device = { ...dialogs.device, tab: id };
+    win.tab = id;
   }
 
   /** Zum vorherigen (-1) oder nächsten (+1) Gerät. */
@@ -101,14 +132,19 @@
     if (order.length < 2 || position < 0) return;
     const next = order[(position + delta + order.length) % order.length]!;
     commitInput();
-    dialogs.showDevice(next.id, tab);
+    dialogs.switchDevice(win.key, next.id);
     editor.select({ kind: 'device', id: next.id });
   }
 
   function onkeydown(event: KeyboardEvent) {
     const target = event.target as HTMLElement;
     const typing = !!target.closest('input, textarea, select, [contenteditable]');
-    if (event.key === 'PageUp' || event.key === 'PageDown') {
+    // Eigene Tasten: Kürzel des Hauptfensters (z.B. Entf = Gerät löschen) wirken hier nicht.
+    event.stopPropagation();
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      close();
+    } else if (event.key === 'PageUp' || event.key === 'PageDown') {
       event.preventDefault();
       step(event.key === 'PageUp' ? -1 : 1);
     } else if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && (event.altKey || (!typing && !target.closest('[role="tablist"]')))) {
@@ -125,36 +161,51 @@
     const i = tabs.indexOf(tab);
     const next = tabs[(i + (event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1) + tabs.length) % tabs.length]!;
     select(next);
-    queueMicrotask(() => (document.getElementById(`devtab-${next}`) as HTMLElement | null)?.focus());
+    queueMicrotask(() => (document.getElementById(`${uid}-tab-${next}`) as HTMLElement | null)?.focus());
   }
 </script>
 
-<dialog bind:this={dialog} class="device-dialog" aria-labelledby="device-dialog-title" onclose={() => dialogs.closeDevice()} oncancel={commitInput} {onkeydown}>
+<div
+  bind:this={dialog}
+  class="device-window"
+  class:front
+  role="dialog"
+  aria-labelledby="{uid}-title"
+  tabindex="-1"
+  style:left="{win.x}px"
+  style:top="{win.y}px"
+  style:z-index={40 + rank}
+  {onkeydown}
+  onpointerdown={() => dialogs.focusDevice(win.key)}
+  onfocusin={() => dialogs.focusDevice(win.key)}
+>
   {#if device}
-    <header>
+    <!-- Ziehen am Kopf ist eine Ergänzung; das Fenster ist auch ohne Verschieben voll bedienbar. -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <header onpointerdown={onHeadDown} onpointermove={onHeadMove} onpointerup={onHeadUp} onpointercancel={onHeadUp}>
       <button class="nav" onclick={() => step(-1)} disabled={order.length < 2} aria-label={t('deviceDialog.prev')} title="{t('deviceDialog.prev')} (Bild↑)">◀</button>
       <svg class="icon role-{DEVICE_SPECS[device.type].role}" viewBox="-30 -25 60 50" aria-hidden="true"><DeviceIcon type={device.type} variant={device.variant} /></svg>
       <div class="title">
-        <h2 id="device-dialog-title">{device.name}</h2>
+        <h2 id="{uid}-title">{device.name}</h2>
         <span class="muted">{typeLabel(device.type)} · {t('deviceDialog.position', { n: position + 1, total: order.length })}</span>
       </div>
       <button class="nav" onclick={() => step(1)} disabled={order.length < 2} aria-label={t('deviceDialog.next')} title="{t('deviceDialog.next')} (Bild↓)">▶</button>
       <span class="spacer"></span>
       {#if HELP[tab]}
-        <button class="ghost" onclick={() => (dialog.close(), dialogs.showHelp(HELP[tab]))} title={t('help.contextHint')} aria-label={t('menu.help.help')}><Icon name="help" size={16} /></button>
+        <button class="ghost" onclick={() => dialogs.showHelp(HELP[tab])} title={t('help.contextHint')} aria-label={t('menu.help.help')}><Icon name="help" size={16} /></button>
       {/if}
-      <button class="ghost close" onclick={() => dialog.close()} aria-label={t('about.close')}>✕</button>
+      <button class="ghost close" onclick={close} aria-label={t('about.close')}>✕</button>
     </header>
 
     <div class="tabs" role="tablist" aria-label={t('deviceDialog.tabs')} tabindex="-1" onkeydown={onTabKey}>
       {#each tabs as id (id)}
-        <button id="devtab-{id}" role="tab" aria-selected={tab === id} aria-controls="devpanel" tabindex={tab === id ? 0 : -1} onclick={() => select(id)}>
+        <button id="{uid}-tab-{id}" role="tab" aria-selected={tab === id} aria-controls="{uid}-panel" tabindex={tab === id ? 0 : -1} onclick={() => select(id)}>
           {t(`deviceDialog.tab.${id}`)}
         </button>
       {/each}
     </div>
 
-    <div id="devpanel" class="panel" role="tabpanel" aria-labelledby="devtab-{tab}">
+    <div id="{uid}-panel" class="panel" role="tabpanel" aria-labelledby="{uid}-tab-{tab}">
       {#key device.id + tab}
         {#if tab === 'general'}
           <div class="cols">
@@ -214,27 +265,38 @@
     </div>
     <footer class="muted">{t('deviceDialog.footer')}</footer>
   {/if}
-</dialog>
+</div>
 
 <style>
-  dialog {
-    width: min(900px, calc(100vw - 32px));
-    height: min(680px, calc(100vh - 48px));
-    padding: 0;
+  .device-window {
+    position: fixed;
+    width: min(820px, calc(100vw - 32px));
+    height: min(600px, calc(100vh - 80px));
+    min-width: 420px;
+    min-height: 280px;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    display: flex;
+    flex-direction: column;
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--surface);
     color: var(--text);
-    flex-direction: column;
     overflow: hidden;
+    resize: both;
+    box-shadow: 0 12px 34px rgba(15, 23, 42, 0.22);
   }
-  dialog[open] {
-    display: flex;
+  .device-window.front {
+    box-shadow: 0 16px 44px rgba(15, 23, 42, 0.34);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
   }
-  dialog::backdrop {
-    background: rgb(0 0 0 / 0.35);
+  .device-window:not(.front) header {
+    opacity: 0.85;
   }
   header {
+    cursor: move;
+    user-select: none;
+    touch-action: none;
     display: flex;
     align-items: center;
     gap: 10px;

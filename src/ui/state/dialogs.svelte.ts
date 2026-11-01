@@ -19,7 +19,8 @@ export type DialogName =
   | 'ipcalc'
   | 'vlans'
   | 'costs'
-  | 'demos';
+  | 'demos'
+  | 'avatar';
 
 /** Werte, die der IP-Rechner übernehmen kann (z.B. in das Formular eines Rechners). */
 export interface IpCalcTarget {
@@ -29,21 +30,62 @@ export interface IpCalcTarget {
   apply?: (values: { ip: string; mask: string; gateway: string; network: string }) => void;
 }
 
+/** So viele Geräte-Fenster höchstens; das älteste schliesst beim nächsten. */
+export const MAX_DEVICE_WINDOWS = 6;
+
+export interface DeviceWindowState {
+  key: number;
+  id: string;
+  tab: string;
+  x: number;
+  y: number;
+  z: number;
+}
+
 class Dialogs {
   open = $state<DialogName | null>(null);
   ipcalc = $state.raw<IpCalcTarget>({});
   /** Hilfe-Seitenleiste mit dem gewählten Thema. */
   help = $state<string | null>(null);
-  /** Erweiterte Einstellungen eines Geräts (eigenes Fenster mit Reitern), unabhängig von `open`. */
-  device = $state<{ id: string; tab: string } | null>(null);
+  /**
+   * Fenster mit den erweiterten Einstellungen von Geräten. Mehrere können
+   * gleichzeitig offen sein; jedes lässt sich verschieben. `z` bestimmt die
+   * Reihenfolge (das zuletzt benutzte liegt oben).
+   */
+  deviceWindows = $state<DeviceWindowState[]>([]);
+  #z = 1;
+  #key = 0;
 
-  /** Erweiterte Einstellungen öffnen; ohne Reiter der zuletzt gewählte (falls vorhanden). */
+  /** Erweiterte Einstellungen öffnen; ist das Gerät schon offen, kommt sein Fenster nach vorne. */
   showDevice(id: string, tab?: string) {
-    this.device = { id, tab: tab ?? this.device?.tab ?? 'general' };
+    const open = this.deviceWindows.find((w) => w.id === id);
+    if (open) {
+      open.z = ++this.#z;
+      if (tab) open.tab = tab;
+      return;
+    }
+    const last = this.deviceWindows.at(-1);
+    const n = this.deviceWindows.length;
+    if (n >= MAX_DEVICE_WINDOWS) this.deviceWindows.shift();
+    this.deviceWindows.push({ key: ++this.#key, id, tab: tab ?? last?.tab ?? 'general', x: 120 + (n % 6) * 32, y: 70 + (n % 6) * 28, z: ++this.#z });
   }
 
-  closeDevice() {
-    this.device = null;
+  /** ◀ ▶: dasselbe Fenster zeigt ein anderes Gerät (ein zweites Fenster für dieses Gerät schliesst). */
+  switchDevice(key: number, id: string) {
+    const w = this.deviceWindows.find((x) => x.key === key);
+    if (!w) return;
+    this.deviceWindows = this.deviceWindows.filter((x) => x.key === key || x.id !== id);
+    w.id = id;
+    w.z = ++this.#z;
+  }
+
+  focusDevice(key: number) {
+    const w = this.deviceWindows.find((x) => x.key === key);
+    if (w && w.z !== this.#z) w.z = ++this.#z;
+  }
+
+  closeDevice(key?: number) {
+    this.deviceWindows = key === undefined ? [] : this.deviceWindows.filter((w) => w.key !== key);
   }
 
   show(name: DialogName) {

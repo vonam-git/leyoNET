@@ -109,10 +109,10 @@
     </ul>
   {/if}
   {#if device.staticNat?.length}
-    <h3>{t('nat.static')}</h3>
+    <h3>{t('nat.staticRules')}</h3>
     <ul class="plain mono">
-      {#each device.staticNat as rule (rule.inside)}
-        <li>{rule.inside} ⇄ {rule.outside}</li>
+      {#each device.staticNat as rule, i (i)}
+        <li class="nat-{rule.kind ?? 'static'}"><span class="kind">{t(`nat.kind.${rule.kind ?? 'static'}`)}</span> {rule.kind === 'dnat' ? `${rule.outside} → ${rule.inside}` : rule.kind === 'snat' ? `${rule.inside} → ${rule.outside}` : `${rule.inside} ⇄ ${rule.outside}`}</li>
       {/each}
     </ul>
   {/if}
@@ -124,14 +124,16 @@
       <table>
         <thead>
           <tr>
+            <th scope="col">{t('nat.kind')}</th>
             <th scope="col">{t('nat.protocol')}</th>
             <th scope="col">{t('nat.inside')}</th>
             <th scope="col">{t('nat.outside')}</th>
           </tr>
         </thead>
         <tbody>
-          {#each deviceState?.nat ?? [] as entry (`${entry.protocol}:${entry.outsidePort}`)}
-            <tr>
+          {#each deviceState?.nat ?? [] as entry, i (i)}
+            <tr class="nat-{entry.kind ?? 'pat'}">
+              <td><span class="kind">{t(`nat.kind.${entry.kind === 'cgnat' ? 'pat' : (entry.kind ?? 'pat')}`)}</span></td>
               <td>{entry.protocol.toUpperCase()}{entry.forwarded ? ' ⇄' : ''}</td>
               <td class="mono">{entry.inside}:{entry.insidePort}</td>
               <td class="mono">{entry.outside}:{entry.outsidePort}</td>
@@ -244,5 +246,19 @@
   .time {
     color: var(--muted);
     font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  }
+  .kind {
+    font-weight: 700;
+    font-size: 0.72rem;
+  }
+  .nat-pat .kind,
+  .nat-snat .kind {
+    color: #2563eb;
+  }
+  .nat-dnat .kind {
+    color: #c2410c;
+  }
+  .nat-static .kind {
+    color: #7c3aed;
   }
 </style>

@@ -32,7 +32,7 @@
     "category": "Education",
     "shortDescription": "leyoNET – Netzwerke bauen, simulieren und verstehen",
     "longDescription": "Rechnernetze aufbauen, Geräte konfigurieren und den Verkehr auf Paketebene beobachten. Läuft vollständig offline.",
-    "copyright": "© 2026 Mark von Allmen & Mikael von Allmen, AGPL-3.0",
+    "copyright": "© 2026 Mark v. A. & Mikael v. A., AGPL-3.0",
     "license": "AGPL-3.0-or-later",
     "licenseFile": "../LICENSE",
     "resources": {

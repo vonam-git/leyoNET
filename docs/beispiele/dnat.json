@@ -1,0 +1,275 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "server",
+        "name": "Webserver intern",
+        "position": {
+          "x": 80,
+          "y": 160
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "ip": "192.168.0.80",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.0.1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Firmen-Webseite</h1><p>Dieser Server steht im internen Netz. Der Router leitet Anfragen an 203.0.113.5 per DNAT hierher.</p>"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d2",
+        "type": "pc",
+        "name": "NAS",
+        "position": {
+          "x": 80,
+          "y": 420
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "192.168.0.20",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.0.1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>NAS</h1><p>Erreichbar über die Portweiterleitung 203.0.113.2:8080.</p>"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d3",
+        "type": "switch",
+        "name": "Switch",
+        "position": {
+          "x": 280,
+          "y": 300
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:03:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:03:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:03:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:03:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:03:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:03:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:03:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:03:08",
+            "sfpSlot": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:03:09",
+            "sfpSlot": true
+          }
+        ]
+      },
+      {
+        "id": "d4",
+        "type": "router",
+        "name": "Firmenrouter",
+        "position": {
+          "x": 480,
+          "y": 300
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ip": "192.168.0.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:04:01",
+            "ip": "203.0.113.2",
+            "mask": "255.255.255.248",
+            "nat": true
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:04:02",
+            "sfpSlot": true
+          }
+        ],
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "203.0.113.1"
+          }
+        ],
+        "staticNat": [
+          {
+            "inside": "192.168.0.80",
+            "outside": "203.0.113.5",
+            "kind": "dnat"
+          }
+        ],
+        "portForwards": [
+          {
+            "protocol": "tcp",
+            "port": 8080,
+            "to": "192.168.0.20",
+            "toPort": 80
+          }
+        ]
+      },
+      {
+        "id": "d5",
+        "type": "internet",
+        "name": "Internet",
+        "position": {
+          "x": 720,
+          "y": 300
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ip": "203.0.113.1",
+            "mask": "255.255.255.248"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:05:01",
+            "ip": "198.51.100.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:05:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:05:03"
+          }
+        ]
+      },
+      {
+        "id": "d6",
+        "type": "notebook",
+        "name": "Aussen",
+        "position": {
+          "x": 940,
+          "y": 300
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:06:00",
+            "ip": "198.51.100.20",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "198.51.100.1"
+      }
+    ],
+    "cables": [
+      {
+        "id": "c7",
+        "a": {
+          "device": "d1",
+          "iface": 0
+        },
+        "b": {
+          "device": "d3",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c8",
+        "a": {
+          "device": "d2",
+          "iface": 0
+        },
+        "b": {
+          "device": "d3",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c9",
+        "a": {
+          "device": "d3",
+          "iface": 2
+        },
+        "b": {
+          "device": "d4",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c10",
+        "a": {
+          "device": "d4",
+          "iface": 1
+        },
+        "b": {
+          "device": "d5",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c11",
+        "a": {
+          "device": "d5",
+          "iface": 1
+        },
+        "b": {
+          "device": "d6",
+          "iface": 0
+        }
+      }
+    ],
+    "nextId": 12
+  },
+  "configuration": {}
+}
+

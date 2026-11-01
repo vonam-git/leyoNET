@@ -1,0 +1,183 @@
+{
+  "hinweis": "Richtpreise in CHF (src/core/model/costs.ts) mit plausiblem Bereich. Jeder Preis muss hier stehen und im Bereich liegen, sonst schlägt npm test fehl. Nach einer Prüfung von Hand 'geprueft' nachführen; nach Ablauf des Intervalls erinnert die wöchentliche Prüfung. Siehe docs/preise.md.",
+  "waehrung": "CHF",
+  "pruefintervallMonate": 6,
+  "geprueft": "2026-11-01",
+  "preise": {
+    "notebook": {
+      "min": 600,
+      "max": 1500,
+      "beschreibung": "Schul-/Büro-Notebook, Mittelklasse"
+    },
+    "pc": {
+      "min": 700,
+      "max": 1600,
+      "beschreibung": "Büro-PC mit Bildschirm"
+    },
+    "server": {
+      "min": 1500,
+      "max": 4500,
+      "beschreibung": "Tower-Server für kleine Firmen"
+    },
+    "serverRack": {
+      "min": 2500,
+      "max": 7000,
+      "beschreibung": "Rack-Server 1 HE"
+    },
+    "groupMember": {
+      "min": 600,
+      "max": 1400,
+      "beschreibung": "PC in einer Client-Gruppe (Mengenrabatt)"
+    },
+    "switchBase": {
+      "min": 60,
+      "max": 250,
+      "beschreibung": "Managed Switch Grundpreis"
+    },
+    "switchPort": {
+      "min": 8,
+      "max": 40,
+      "beschreibung": "pro Gigabit-Port"
+    },
+    "switchSfp": {
+      "min": 10,
+      "max": 60,
+      "beschreibung": "pro SFP-Einschub"
+    },
+    "l3Base": {
+      "min": 500,
+      "max": 1800,
+      "beschreibung": "Layer-3-Switch Grundpreis"
+    },
+    "l3Port": {
+      "min": 25,
+      "max": 90,
+      "beschreibung": "pro Port"
+    },
+    "l3Sfp": {
+      "min": 20,
+      "max": 90,
+      "beschreibung": "pro SFP-Einschub"
+    },
+    "routerBase": {
+      "min": 150,
+      "max": 700,
+      "beschreibung": "Business-Router Grundpreis"
+    },
+    "routerEth": {
+      "min": 30,
+      "max": 120,
+      "beschreibung": "pro Ethernet-Port"
+    },
+    "routerSerial": {
+      "min": 120,
+      "max": 450,
+      "beschreibung": "pro serielle WAN-Schnittstelle (Modul)"
+    },
+    "routerSfp": {
+      "min": 25,
+      "max": 120,
+      "beschreibung": "pro SFP-Einschub"
+    },
+    "accesspoint": {
+      "min": 150,
+      "max": 600,
+      "beschreibung": "Business-Access-Point Wi-Fi 5/6"
+    },
+    "rack": {
+      "min": 400,
+      "max": 1800,
+      "beschreibung": "19-Zoll-Rack, 24–42 HE"
+    },
+    "modem.cable": {
+      "min": 100,
+      "max": 300,
+      "beschreibung": "Kabelmodem DOCSIS 3.1"
+    },
+    "modem.fiber": {
+      "min": 60,
+      "max": 250,
+      "beschreibung": "Glasfaser-ONT"
+    },
+    "modem.mobile": {
+      "min": 150,
+      "max": 450,
+      "beschreibung": "LTE/5G-Router"
+    },
+    "modem.adsl": {
+      "min": 30,
+      "max": 120,
+      "beschreibung": "ADSL2+-Modem"
+    },
+    "modem.vdsl": {
+      "min": 60,
+      "max": 200,
+      "beschreibung": "VDSL2-Modem"
+    },
+    "legacyModem": {
+      "min": 50,
+      "max": 200,
+      "beschreibung": "Modem ohne Zugangstechnik"
+    },
+    "cpe": {
+      "min": 90,
+      "max": 350,
+      "beschreibung": "Internet-Box ohne eingebautes Modem (Zuschlag je Technik wie Modem)"
+    },
+    "cable.tp": {
+      "min": 3,
+      "max": 20,
+      "beschreibung": "Patchkabel Cat 6, 2–5 m"
+    },
+    "cable.fiber": {
+      "min": 12,
+      "max": 60,
+      "beschreibung": "LWL-Patchkabel duplex"
+    },
+    "cable.wireless": {
+      "min": 0,
+      "max": 0,
+      "beschreibung": "Funk, keine Kosten"
+    },
+    "cable.serial": {
+      "min": 40,
+      "max": 160,
+      "beschreibung": "serielles WAN-Kabel"
+    },
+    "cable.coax": {
+      "min": 8,
+      "max": 35,
+      "beschreibung": "Koaxkabel"
+    },
+    "cable.dsl": {
+      "min": 3,
+      "max": 15,
+      "beschreibung": "Telefonkabel"
+    },
+    "cable.cellular": {
+      "min": 0,
+      "max": 0,
+      "beschreibung": "Funk, keine Kosten"
+    },
+    "sfp.1G-SX": {
+      "min": 15,
+      "max": 80,
+      "beschreibung": "SFP 1G Multimode"
+    },
+    "sfp.1G-LX": {
+      "min": 25,
+      "max": 120,
+      "beschreibung": "SFP 1G Singlemode"
+    },
+    "sfp.10G-SR": {
+      "min": 30,
+      "max": 160,
+      "beschreibung": "SFP+ 10G Multimode"
+    },
+    "sfp.10G-LR": {
+      "min": 60,
+      "max": 300,
+      "beschreibung": "SFP+ 10G Singlemode"
+    }
+  }
+}

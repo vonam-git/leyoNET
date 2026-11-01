@@ -106,7 +106,7 @@
     border-bottom: 1px solid var(--border);
     font-size: 0.86rem;
     position: relative;
-    z-index: 30;
+    z-index: 70;
   }
   .brand {
     all: unset;

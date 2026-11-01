@@ -16,7 +16,7 @@ Der Simulator sendet Pakete, die den Standards folgen. Jeder Rahmen lässt sich 
 | 3 | IPv4 | RFC 791 | Keine Fragmentierung (MSS 1460 verhindert sie), keine Optionen |
 | 3 | ICMP | RFC 792 | Echo, Destination Unreachable, Time Exceeded |
 | 3 | OSPFv2 | RFC 2328 | Router-LSAs und externe LSAs (Redistribution), keine Summary-LSAs zwischen Areas, kein DR/BDR (Nachbarn wie Punkt-zu-Punkt); Hello 2 s statt 10 s |
-| 3 | NAT/PAT, statisches NAT, CGNAT | RFC 3022, RFC 6598 | Endpunktunabhängige Zuordnung; keine Application Layer Gateways |
+| 3 | NAT: PAT, statisches SNAT, DNAT (Portweiterleitung, statisch), 1:1-NAT, CGNAT | RFC 3022, RFC 6598 | Endpunktunabhängige Zuordnung; keine Application Layer Gateways; SNAT und DNAT merken sich Verbindungen für die Antworten |
 | 4 | UDP | RFC 768 | – |
 | 4 | TCP | RFC 9293 | Drei-Wege-Handshake, Sequenznummern in Bytes, MSS 1460, Wiederholung nach 1 s (höchstens dreimal), FIN/RST; feste Fenstergrösse, keine Staukontrolle |
 | 7 | DHCP | RFC 2131, RFC 2132 | Discover/Offer/Request/Ack, Relay (giaddr); Erneuerung nach halber Lease-Dauer |

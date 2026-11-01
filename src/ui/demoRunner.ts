@@ -42,12 +42,13 @@ export function openDemo(demo: Demo, present: boolean) {
     if (!editor.acting || editor.generation !== generation) return stop();
     const sim = simStore.sim;
     if (!sim) return;
-    while (pending.length > 0 && sim.now >= pending[0]!.at) run(pending.shift()!);
+    while (pending.length > 0 && sim.now >= pending[0]!.at) runDemoAction(pending.shift()!);
     if (pending.length === 0) stop();
   }, 100);
 }
 
-function run(action: DemoAction) {
+/** Aktion einer Demo jetzt ausführen (mit geöffnetem Desktop des Geräts). */
+export function runDemoAction(action: DemoAction) {
   const device = editor.topology.devices.find((d) => d.name === action.device);
   if (!device) return;
   openDesktop(device.id, demoApp(action));

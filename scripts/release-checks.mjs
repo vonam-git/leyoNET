@@ -9,6 +9,7 @@ import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from '
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkRegistry } from './normen.mjs';
+import { checkPrices } from './preise.mjs';
 import { ALLOWED } from './third-party-licenses.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -41,7 +42,7 @@ export function runChecks({ html, packages }) {
   const csp = /Content-Security-Policy[^>]+connect-src 'none'/.test(html);
   add('privacy', 'privacy.csp', csp ? 'pass' : 'fail', csp ? "CSP verbietet Netzwerkzugriffe (connect-src 'none'); die Webversion erlaubt nur den eigenen Server." : "CSP mit connect-src 'none' fehlt.");
 
-  const trackers = /google-analytics|googletagmanager|gtag\(|plausible|matomo|hotjar|sentry|facebook\.net|doubleclick|clarity\.ms/i;
+  const trackers = /google-analytics|googletagmanager|gtag\(|plausible\.io|matomo|hotjar|sentry|facebook\.net|doubleclick|clarity\.ms/i;
   const tracked = [['release', html], ['server/app.cjs', server], ...sources].filter(([, text]) => trackers.test(text)).map(([f]) => f);
   add('privacy', 'privacy.noTracking', tracked.length ? 'fail' : 'pass', tracked.length ? `Verdächtige Dienste in: ${tracked.join(', ')}` : 'Keine Analyse-, Tracking- oder Werbedienste.');
 
@@ -125,6 +126,10 @@ export function runChecks({ html, packages }) {
   const norms = checkRegistry();
   add('standards', 'standards.registered', norms.missing.length ? 'fail' : 'pass', norms.missing.length ? `Nicht in docs/normen.json: ${norms.missing.join('; ')}` : `${norms.references.size} zitierte Normen, alle im Verzeichnis (${Object.keys(norms.registry.rfc).length} RFCs, ${norms.registry.weitere.length} IEEE/ITU-T/CableLabs).`);
   add('standards', 'standards.reviewed', norms.overdue.length ? 'warn' : 'pass', norms.overdue.length ? `Prüfung älter als ${norms.limit} Monate: ${norms.overdue.join(', ')}` : `IEEE-, ITU-T- und CableLabs-Normen in den letzten ${norms.limit} Monaten geprüft; RFCs prüft der wöchentliche Abgleich mit dem RFC-Index.`);
+
+  // --- Preise (docs/preise.json, Bereiche prüft prices.test.ts) -----------------------
+  const prices = checkPrices();
+  add('standards', 'standards.prices', prices.overdue ? 'warn' : 'pass', prices.overdue ? `Richtpreise zuletzt am ${prices.geprueft} geprüft (älter als ${prices.limit} Monate).` : `${prices.count} Richtpreise im plausiblen Bereich, zuletzt am ${prices.geprueft} mit dem Markt verglichen.`);
 
   return { version: pkg.version, date: new Date().toISOString(), checks: [...checks] };
 }

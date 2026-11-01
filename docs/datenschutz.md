@@ -18,7 +18,7 @@ Das Konzept folgt dem Schweizer Datenschutzgesetz (revDSG, in Kraft seit 1.9.202
 | Was | Wo | Dauer |
 |---|---|---|
 | Aktuelles Projekt (Autosave) inkl. Snapshots | IndexedDB im Browserprofil bzw. im App-Datenordner | bis «Neues Netz» oder Löschen der Browserdaten |
-| Sprache, Darstellung (hell/dunkel), Funktionsprofil bzw. Funktionsauswahl, Währung, Adressanzeige ein/aus | `localStorage` | bis Löschen der Browserdaten |
+| Sprache, Darstellung (hell/dunkel), Funktionsprofil bzw. Funktionsauswahl, Währung, Adressanzeige ein/aus, ein- und ausgefahrene Bereiche, Anschlusswahl beim Verbinden, Aussehen des Avatars (nur Frisur, Farben usw., kein Name, kein Bild) | `localStorage` | bis Löschen der Browserdaten |
 | Gespeicherte Projekte und Funktionsdateien | `.json`-Dateien, die die Person selbst ablegt | liegt in ihrer Hand |
 
 Projektdateien enthalten Geräte, Kabel, Adressen und Konfiguration, auch Webseiten und Bilder, die auf einem simulierten Webserver liegen. Bilder werden beim Hochladen auf höchstens 480 Pixel verkleinert und neu kodiert, dabei gehen Metadaten wie Ort und Kamera verloren (EXIF). Trotzdem gilt: **keine Fotos von Personen hochladen.** Gerätenamen sind frei wählbar; sie sollten neutral sein («PC 1», nicht «PC Anna»).

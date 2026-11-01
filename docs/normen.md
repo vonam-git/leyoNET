@@ -37,4 +37,6 @@ node scripts/normen-online.mjs             # mit Internet: Abgleich mit dem RFC-
 node scripts/normen-online.mjs --schreiben # bekannte «updated by»-RFCs als Ausgangsstand eintragen
 ```
 
+Dieselbe wöchentliche Prüfung erinnert auch an die halbjährliche Kontrolle der Richtpreise ([preise.md](preise.md)).
+
 Die wöchentliche Prüfung lässt sich auf GitHub unter **Actions → Wöchentliche Prüfung → Run workflow** jederzeit von Hand starten.

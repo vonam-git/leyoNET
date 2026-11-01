@@ -58,6 +58,8 @@ Statische Prüfungen schauen nur auf das gebaute Netz. **Dynamische** Prüfungen
 | `routeLearned` ⚡ | `device`, `network` (z.B. `"10.2.0.0/16"`), `protocol`? (`ospf`, `rip`, `bgp`) | der Router nach 25 s virtueller Zeit (Zeit für das Routingprotokoll) eine Route in dieses Netz kennt (optional: gelernt über dieses Protokoll) |
 | `neighbors` ⚡ | `device`, `protocol` (`ospf` oder `bgp`), `min`? (Standard 1) | nach 25 s mindestens so viele OSPF-Nachbarn im Zustand *Full* bzw. BGP-Sitzungen *Established* bestehen |
 | `noStorm` ⚡ | – | kurz nach dem Start kein Switch einen Broadcast-Sturm meldet |
+| `noDuplicateIp` ⚡ | – | keine IP-Adresse im selben Netz doppelt vergeben ist (auch per DHCP bezogene) |
+| `seenAs` ⚡ | `from`, `to`, `address` | ein Ping von `from` bei `to` mit der Absenderadresse `address` ankommt (prüft NAT: PAT, SNAT, 1:1) |
 | `modemOnline` ⚡ | `device` | das Modem seine Zugangsleitung aufgebaut hat |
 | `groupLeases` ⚡ | `device` (Client-Gruppe), `min`? (Standard: alle) | so viele Mitglieder der Gruppe eine Adresse per DHCP haben |
 | `budget` | `max` (CHF) | die Richtpreise aller Geräte, Kabel und Module zusammen höchstens `max` ergeben |
