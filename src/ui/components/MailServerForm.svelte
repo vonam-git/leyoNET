@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Device } from '../../core';
   import { t } from '../../i18n';
+  import { autosave } from '../autosave';
   import { editor } from '../state/editor.svelte';
 
   /** Entwurfsmodus, Rechner: Mailserver mit Domain und Postfächern. */
@@ -14,10 +15,15 @@
     domain = device.mailServer?.domain ?? '';
   });
 
-  function applyDomain(event: SubmitEvent) {
-    event.preventDefault();
+  function saveDomain(quiet: boolean): boolean {
+    if (domain.trim() === device.mailServer?.domain) return true;
     const failure = editor.setMailDomain(device.id, domain);
-    error = failure ? { field: 'domain', text: t(`error.${failure.code}`, failure.params) } : null;
+    if (failure) {
+      if (!quiet) error = { field: 'domain', text: t(`error.${failure.code}`, failure.params) };
+      return false;
+    }
+    error = null;
+    return true;
   }
 
   function addMailbox(event: SubmitEvent) {
@@ -34,12 +40,11 @@
 </label>
 
 {#if device.mailServer}
-  <form class="row" onsubmit={applyDomain}>
+  <form class="row" use:autosave={saveDomain} onsubmit={(e) => (e.preventDefault(), saveDomain(false))}>
     <label>
       <span>{t('mailServer.domain')}</span>
       <input bind:value={domain} autocomplete="off" spellcheck="false" aria-invalid={error?.field === 'domain'} />
     </label>
-    <button type="submit" disabled={domain.trim() === device.mailServer.domain}>{t('config.apply')}</button>
   </form>
 
   <h4>{t('mailServer.mailboxes')}</h4>

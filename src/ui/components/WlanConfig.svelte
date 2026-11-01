@@ -1,6 +1,7 @@
 <script lang="ts">
   import { CHANNELS, type Device, type WlanBand } from '../../core';
   import { t } from '../../i18n';
+  import { autosave } from '../autosave';
   import { editor } from '../state/editor.svelte';
   import { ui } from '../state/ui.svelte';
 
@@ -16,13 +17,17 @@
     error = null;
   });
 
-  function apply(event?: SubmitEvent) {
-    event?.preventDefault();
+  function save(quiet = false): boolean {
     const failure = editor.setWlan(
       device.id,
       draft.enabled ? { ssid: draft.ssid, password: draft.password || undefined, band: draft.band, channel: draft.channel, mesh: draft.mesh } : null,
     );
-    error = failure ? { field: failure.field, text: t(`error.${failure.code}`, failure.params) } : null;
+    if (failure) {
+      if (!quiet) error = { field: failure.field, text: t(`error.${failure.code}`, failure.params) };
+      return false;
+    }
+    error = null;
+    return true;
   }
 
   function setBand(band: WlanBand) {
@@ -32,7 +37,7 @@
 </script>
 
 <h3>{t('wlan.title')}</h3>
-<form onsubmit={apply}>
+<form use:autosave={save} onsubmit={(e) => (e.preventDefault(), save(false))}>
   <label class="toggle">
     <input type="checkbox" bind:checked={draft.enabled} />
     {t('wlan.enable')}
@@ -70,7 +75,6 @@
     <p class="muted">{t(draft.mesh ? 'wlan.meshHint' : 'wlan.hint')}</p>
   {/if}
   {#if error}<p class="error" role="alert">{error.text}</p>{/if}
-  <button type="submit">{t('config.apply')}</button>
 </form>
 
 <style>
@@ -132,8 +136,5 @@
     color: var(--danger);
     font-size: 0.75rem;
     margin: 0;
-  }
-  button[type='submit'] {
-    justify-self: start;
   }
 </style>

@@ -3,6 +3,7 @@ export * from './model/devices';
 export * from './model/mac';
 export * from './model/topology';
 export * from './model/links';
+export * from './model/duplicates';
 export * from './io/project';
 export * from './net/ipv4';
 export * from './sim/frames';

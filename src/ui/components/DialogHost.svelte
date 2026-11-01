@@ -5,6 +5,9 @@
   import CatalogDialog from './CatalogDialog.svelte';
   import CommandPalette from './CommandPalette.svelte';
   import CostDialog from './CostDialog.svelte';
+  import AvatarEditor from './AvatarEditor.svelte';
+  import DemoDialog from './DemoDialog.svelte';
+  import DeviceWindow from './DeviceWindow.svelte';
   import FeaturesDialog from './FeaturesDialog.svelte';
   import FeedbackDialog from './FeedbackDialog.svelte';
   import IpCalculator from './IpCalculator.svelte';
@@ -20,6 +23,10 @@
   /** Zeigt den gerade geöffneten Dialog (gesteuert über Menüs, Kürzel und Schaltflächen). */
   const close = () => dialogs.close();
 </script>
+
+{#each dialogs.deviceWindows as win (win.key)}
+  <DeviceWindow {win} />
+{/each}
 
 {#if dialogs.open === 'about'}
   <AboutDialog onclose={close} />
@@ -53,4 +60,8 @@
   <VlanDialog onclose={close} />
 {:else if dialogs.open === 'costs'}
   <CostDialog onclose={close} />
+{:else if dialogs.open === 'demos'}
+  <DemoDialog onclose={close} />
+{:else if dialogs.open === 'avatar'}
+  <AvatarEditor onclose={close} />
 {/if}

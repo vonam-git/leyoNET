@@ -51,7 +51,7 @@
           >
             <span class="thumb">
               {#if item.kind === 'device'}
-                <svg viewBox="-28 -24 56 48" width="44" height="38" aria-hidden="true" class="role-{item.type === 'router' || item.type === 'internet' || item.type === 'modem' ? 'routing' : item.type === 'switch' || item.type === 'l3switch' || item.type === 'accesspoint' ? 'distribution' : 'endpoint'}"><DeviceIcon type={item.type} variant={item.options?.variant} /></svg>
+                <svg viewBox="-28 -24 56 48" width="44" height="38" aria-hidden="true" class="role-{item.type === 'router' || item.type === 'internet' || item.type === 'modem' || item.type === 'cpe' ? 'routing' : item.type === 'switch' || item.type === 'l3switch' || item.type === 'accesspoint' ? 'distribution' : 'endpoint'}"><DeviceIcon type={item.type} variant={item.options?.variant} /></svg>
               {:else if item.kind === 'medium'}
                 <svg viewBox="0 0 44 20" width="44" height="20" aria-hidden="true"><line class={mediumClass(item.medium)} x1="4" y1="10" x2="40" y2="10" /></svg>
               {:else if item.kind === 'sfp'}
@@ -74,7 +74,7 @@
               <span class="label">{itemLabel(item)}</span>
               <span class="desc">{itemHint(item)}</span>
             </span>
-            {#if ui.has('tool.costs') && priceOf(item) > 0}
+            {#if ui.showPrices && priceOf(item) > 0}
               <span class="price">{money(priceOf(item))}</span>
             {/if}
           </button>
@@ -100,7 +100,7 @@
     position: absolute;
     top: 8px;
     left: calc(100% + 1px);
-    z-index: 25;
+    z-index: 55;
     width: 300px;
     max-height: calc(100% - 16px);
     overflow-y: auto;

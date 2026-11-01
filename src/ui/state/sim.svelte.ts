@@ -1,4 +1,5 @@
 import { Simulation, type Topology } from '../../core';
+import { unpackPlan, type UnpackPlan } from '../osiSteps';
 
 /** Längster Zeitschritt pro Bild, damit ein Tab im Hintergrund nicht Minuten "nachholt". */
 const MAX_FRAME_MS = 100;
@@ -20,8 +21,17 @@ const SLOWDOWN: Record<Speed, number> = { realtime: 1, slow: 300, slower: 1000 }
  * übersprungen, damit man jedem Rahmen folgen kann.
  * Komponenten lesen `tick`, um bei Änderungen neu zu zeichnen.
  */
+/** Einzelschritt: Ein ankommender Rahmen wird Schicht für Schicht ausgepackt (siehe osiSteps.ts). */
+export interface Unpacking extends UnpackPlan {
+  entryId: number;
+  deviceId: string;
+  /** Aktuell gezeigte Schicht (Index in `layers`). */
+  index: number;
+}
+
 class SimStore {
   tick = $state(0);
+  unpacking = $state.raw<Unpacking | null>(null);
   speed = $state<Speed>('realtime');
   paused = $state(false);
   #sim: Simulation | null = null;
@@ -50,18 +60,44 @@ class SimStore {
   }
 
   deactivate() {
+    this.unpacking = null;
     cancelAnimationFrame(this.#frame);
     this.#frame = 0;
   }
 
   togglePause() {
     this.paused = !this.paused;
+    if (!this.paused) this.unpacking = null;
   }
 
-  /** Genau ein Ereignis verarbeiten; die Simulation bleibt danach angehalten. */
+  /**
+   * Einzelschritt; die Simulation bleibt danach angehalten. Ist das nächste
+   * Ereignis die Ankunft eines Rahmens, zeigt jeder Schritt zuerst eine Schicht
+   * des Auspackens (OSI-Farben), erst danach verarbeitet das Gerät den Rahmen.
+   */
   step() {
     this.paused = true;
-    this.#sim?.step();
+    const sim = this.#sim;
+    if (!sim) return;
+    const current = this.unpacking;
+    if (current) {
+      if (current.index < current.layers.length - 1) this.unpacking = { ...current, index: current.index + 1 };
+      else {
+        this.unpacking = null;
+        sim.step();
+      }
+      this.tick++;
+      return;
+    }
+    const next = sim.nextEventTime();
+    const arriving = next === undefined ? undefined : sim.getInFlight().filter((e) => e.arrives === next).sort((a, b) => a.id - b.id)[0];
+    const plan = arriving ? unpackPlan(sim.topology, arriving) : null;
+    if (arriving && plan) {
+      // Der Rahmen steht nun beim Empfänger; die nächsten Schritte packen ihn aus.
+      this.unpacking = { ...plan, entryId: arriving.id, deviceId: arriving.to.device, index: 0 };
+    } else {
+      sim.step();
+    }
     this.tick++;
   }
 

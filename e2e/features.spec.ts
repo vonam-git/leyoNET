@@ -113,10 +113,76 @@ test('WLAN-Mesh: Link-Status grün, falsches Passwort rot', async ({ page }) => 
   await openProject(page, example('wlan-mesh'));
   await expect(page.locator('.led.up').first()).toBeVisible();
   await page.getByRole('button', { name: 'Notebook OG, Notebook' }).click();
-  const profile = page.locator('details').filter({ hasText: 'WLAN-Profil' });
-  await profile.getByLabel('Passwort').fill('falsch123');
-  await profile.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.locator('.inspector .led.down')).toBeVisible();
+  await page.getByRole('button', { name: /^Erweitert/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Notebook OG' });
+  await dialog.getByRole('tab', { name: 'WLAN' }).click();
+  // Ohne «Übernehmen»: gespeichert, sobald das Feld verlassen wird.
+  await dialog.getByLabel('Passwort').fill('falsch123');
+  await dialog.getByLabel('Passwort').press('Tab');
+  await dialog.getByRole('tab', { name: 'Anschlüsse' }).click();
+  await expect(dialog.locator('.led.down')).toBeVisible();
+});
+
+test('Erweiterte Einstellungen: Reiter, Wechsel zum nächsten Gerät, Speichern ohne Übernehmen', async ({ page }) => {
+  await openProject(page, example('zwei-subnetze'));
+  await page.getByRole('button', { name: /^PC 1,/ }).click();
+  // Rechts nur die Grundeinstellungen; die IP-Adresse speichert beim Verlassen des Feldes.
+  await page.locator('#config-ip').fill('192.168.1.20');
+  await page.locator('#config-ip').press('Tab');
+  await expect(page.getByRole('button', { name: /^PC 1,/ })).toContainText('192.168.1.20/24');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: /^Router 1,/ }).click();
+  await page.keyboard.press('e');
+  const dialog = page.getByRole('dialog', { name: 'Router 1' });
+  await dialog.getByRole('tab', { name: 'Routing' }).click();
+  await expect(dialog.locator('table.routes')).toContainText('192.168.2.0/24');
+  // Statische Route in der letzten Zeile hinzufügen.
+  await dialog.getByLabel('Zielnetz').fill('10.9.0.0');
+  await dialog.getByLabel('Maske').last().fill('/16');
+  await dialog.getByLabel('Nächster Router').fill('192.168.2.10');
+  await dialog.getByRole('button', { name: 'Route hinzufügen' }).click();
+  await expect(dialog.locator('table.routes')).toContainText('10.9.0.0/16');
+  // Zum nächsten Gerät; der Reiter bleibt, solange es ihn gibt.
+  await dialog.getByRole('button', { name: 'Nächstes Gerät' }).click();
+  await expect(page.getByRole('dialog', { name: 'Switch 1' })).toBeVisible();
+});
+
+test('Doppelte Adresse wird markiert', async ({ page }) => {
+  await openProject(page, example('arp-ping'));
+  await page.getByRole('button', { name: /^PC 2,/ }).click();
+  await page.locator('#config-ip').fill('192.168.1.10');
+  await page.locator('#config-ip').press('Enter');
+  await expect(page.locator('.dup-badge')).toHaveCount(2);
+  await expect(page.getByRole('alert').filter({ hasText: 'doppelt' })).toBeVisible();
+});
+
+test('Kabel mit gewähltem Anschluss', async ({ page }) => {
+  await shop(page, 'Endgeräte', /^Desktop-PC/);
+  await shop(page, 'Switches', /^Switch 8/);
+  await page.keyboard.press('k');
+  await page.getByLabel('aus Liste wählen').check();
+  await page.getByRole('button', { name: /^PC 1,/ }).click();
+  await page.getByRole('button', { name: /^Switch 1,/ }).click();
+  await page.getByRole('dialog', { name: /Anschluss an Switch 1/ }).getByRole('button', { name: /Port 5/ }).click();
+  await expect(page.getByRole('button', { name: /Switch 1 \(Port 5\)/ })).toBeVisible();
+});
+
+test('Demo vorführen, Desktop minimieren, Einzelschritt packt aus', async ({ page }) => {
+  await page.getByRole('button', { name: 'Demo-Netze …' }).click();
+  await page.locator('li').filter({ hasText: 'ARP und Ping im LAN' }).getByRole('button', { name: /Vorführen/ }).click();
+  await expect(page.getByRole('radio', { name: 'Simulation' })).toBeChecked();
+  const desktop = page.getByRole('dialog', { name: 'Desktop von PC 1' });
+  await expect(desktop).toContainText('Antwort von 192.168.1.11', { timeout: 10_000 });
+  await desktop.getByRole('button', { name: 'Minimieren' }).click();
+  await expect(desktop).toBeHidden();
+  await page.getByRole('group', { name: 'Offene Desktops' }).getByRole('button', { name: /PC 1/ }).click();
+  await expect(desktop).toBeVisible();
+  await page.getByRole('button', { name: /Anhalten/ }).click();
+  await desktop.getByRole('textbox').fill('ping 192.168.1.12');
+  await desktop.getByRole('textbox').press('Enter');
+  for (let i = 0; i < 2; i++) await page.getByRole('button', { name: /Einzelschritt/ }).click();
+  await expect(page.locator('.osi-legend')).toBeVisible();
+  await expect(page.locator('.unpack-label')).toContainText('Schicht');
 });
 
 test('VLAN-Farbe färbt Switch-Ports', async ({ page }) => {
@@ -133,4 +199,57 @@ test('Kosten in anderer Währung', async ({ page }) => {
   const dialog = page.getByRole('dialog', { name: 'Kosten' });
   await dialog.getByRole('radio', { name: 'EUR' }).click();
   await expect(dialog).toContainText("1'155");
+});
+
+test('Mehrere Geräte-Fenster, verschiebbar; Bereiche ein- und ausfahren', async ({ page }) => {
+  await openProject(page, example('zwei-subnetze'));
+  await page.getByRole('button', { name: /^PC 1,/ }).click();
+  await page.keyboard.press('e');
+  // Zweites Gerät über die Befehlssuche wählen und rechts «Erweitert …».
+  await page.locator('.zoom').click();
+  await page.keyboard.press('Control+k');
+  await page.keyboard.type('Router 1');
+  await page.keyboard.press('Enter');
+  await page.locator('aside.inspector').getByRole('button', { name: /^Erweitert/ }).click();
+  await expect(page.getByRole('dialog', { name: 'PC 1' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Router 1' })).toBeVisible();
+  const win = page.getByRole('dialog', { name: 'Router 1' });
+  const before = (await win.boundingBox())!;
+  const head = win.locator('header');
+  const box = (await head.boundingBox())!;
+  await page.mouse.move(box.x + 320, box.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 420, box.y + 100, { steps: 5 });
+  await page.mouse.up();
+  const after = (await win.boundingBox())!;
+  expect(Math.round(after.x - before.x)).toBe(100);
+  await win.getByRole('button', { name: 'Schliessen' }).click();
+  await page.getByRole('dialog', { name: 'PC 1' }).press('Escape');
+  await expect(page.locator('.device-window')).toHaveCount(0);
+  // Shop und Eigenschaften einfahren
+  await page.getByRole('button', { name: 'Shop einfahren' }).click();
+  await expect(page.getByRole('navigation', { name: 'Geräte' })).toBeHidden();
+  await page.getByRole('button', { name: 'Eigenschaften einfahren' }).click();
+  await expect(page.locator('aside.inspector')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Shop ausfahren' }).click();
+  await expect(page.getByRole('navigation', { name: 'Geräte' })).toBeVisible();
+});
+
+test('Geführte Demo mit Avatar: Schritte, SNAT und DNAT im NAT-Reiter', async ({ page }) => {
+  await page.getByRole('button', { name: 'Demo-Netze …' }).click();
+  await page.locator('li').filter({ hasText: 'SNAT: Quelladresse ersetzen' }).getByRole('button', { name: /Schritt für Schritt/ }).click();
+  const tour = page.getByRole('dialog', { name: 'SNAT: Quelladresse ersetzen' });
+  await expect(tour).toContainText('Schritt 1 von 6');
+  await tour.getByRole('button', { name: /Weiter/ }).click();
+  const router = page.getByRole('dialog', { name: 'Firmenrouter' });
+  await expect(router.getByRole('tab', { name: 'NAT' })).toHaveAttribute('aria-selected', 'true');
+  await expect(router).toContainText('SNAT: Quelladresse ersetzen');
+  await expect(router).toContainText('DNAT: Zieladresse ersetzen');
+  await expect(router).toContainText('192.168.0.25 → 203.0.113.5');
+  await tour.getByRole('button', { name: 'Avatar anpassen …' }).click();
+  await page.getByRole('button', { name: 'Vollbart' }).click();
+  await expect(page.getByRole('button', { name: 'Vollbart' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('dialog', { name: 'Avatar der Lehrperson' }).getByRole('button', { name: 'Schliessen' }).click();
+  await tour.getByRole('button', { name: 'Führung beenden' }).click();
+  await expect(tour).toBeHidden();
 });

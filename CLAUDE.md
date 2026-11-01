@@ -10,11 +10,12 @@ leyoNET ist ein Netzwerk-Simulator für den Informatik-Unterricht (1. Lehrjahr b
 - Automatische Prüfungen: CI bei jedem Push; jeden Montag `.github/workflows/woechentlich.yml` (Funktionsprüfung plus Abgleich der RFCs mit dem RFC-Index, bei Handlungsbedarf ein Issue). Offene Issues «Wöchentliche Prüfung: Handlungsbedarf» zu Beginn einer Sitzung ansehen und erledigen.
 - Oberflächentests: `PW_EXECUTABLE=<chromium> npx playwright test` nach `npm run build`.
 - Nach Abschluss committen und pushen.
+- **Plesk-Schritte nennen:** Mark hat das Repo in Plesk verbunden (Branch `develop`). Nach jedem Push am Ende der Antwort sagen, was er in Plesk tun muss, in dieser Reihenfolge: *Git → Pull Updates*, *Jetzt bereitstellen*, *Node.js → App neu starten*. Dazu nennen, ob etwas Zusätzliches nötig ist (z.B. neue Umgebungsvariablen, geänderte Einstellungen unter Node.js) oder ob nur der Neustart wichtig ist (Änderungen in `server/`).
 
 ## Architektur
 
 - `src/core/`: Simulationskern ohne DOM, unveränderliche Topologie (`model/topology.ts` liefert `Result<T>` mit Fehlercodes), diskrete Ereignis-Simulation (`sim/`), Protokolle nach Standard, Kodierung in echte Bytes (`wire/`), CLI (`cli/`), Aufgabenprüfung (`tasks/`).
-- `src/ui/`: Svelte 5 (Runes). Zustand in `state/*.svelte.ts`, Befehle, Menüs und Tastenkürzel in `commands.svelte.ts`, Funktionsprofile in `features.ts`, Shop in `shop.ts`, Übungskatalog in `catalog.ts` (jede Übung braucht eine Musterlösung in `catalog.test.ts`).
+- `src/ui/`: Svelte 5 (Runes). Zustand in `state/*.svelte.ts`, Befehle, Menüs und Tastenkürzel in `commands.svelte.ts`, Funktionsprofile in `features.ts`, Shop in `shop.ts`, Übungskatalog in `catalog.ts` (jede Übung braucht eine Musterlösung in `catalog.test.ts`), Demo-Netze in `demos.ts` (Projektdateien in `docs/beispiele/`; `demos.test.ts` führt jede Demo aus und prüft ihr Ergebnis, neue Protokolle bekommen eine Demo). Geräteeinstellungen: rechts nur Grundeinstellungen, alles Weitere in Fenstern `DeviceWindow.svelte` (Reiter, verschiebbar, mehrere offen); Formulare speichern mit `use:autosave` (`autosave.ts`) statt «Übernehmen».
 - `src/i18n/de.json`, `en.json`: Alle Texte. Ein Test prüft, dass jeder im Code verwendete Schlüssel existiert. Neue Funktionen brauchen de und en, plus Hilfe (`help.<thema>.title/body`) und gegebenenfalls Funktionsschalter (`features.ts`, `feature.<id>` und `.hint`).
 - `server/`: Node-Server ohne Abhängigkeiten (Sessions, Klassen, Rückmeldungen, Admin). In Plesk: Anwendungsstamm `<repo>/server`, Startdatei `start.cjs`, Dokumentstamm `<repo>/server/public`. Siehe `docs/plesk.md`.
 - Die Quell-HTML heisst `dev.html` (nicht `index.html`), damit ein Webserver sie nie als Startseite ausliefert. Dev-Server: `http://localhost:5173/dev.html`.

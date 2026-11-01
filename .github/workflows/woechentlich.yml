@@ -1,4 +1,4 @@
-# Wöchentliche Prüfung, auch ohne neue Commits:
+# Wöchentliche Prüfung, auch ohne neue Commits (Funktionen, Normen, Richtpreise):
 #  - Funktionsprüfung: dieselben Prüfungen wie bei jedem Push (Typen, Tests,
 #    Server-Tests, Build, Release-Prüfung, Oberflächentests) mit frisch
 #    installierten Werkzeugen und aktuellem Browser.

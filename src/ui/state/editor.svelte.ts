@@ -26,6 +26,7 @@ import {
   connect,
   emptyTopology,
   freeInterfaceFor,
+  freeInterfacesFor,
   getCable,
   getDevice,
   moveDevice,
@@ -37,6 +38,7 @@ import {
   setCableLoss,
   setDhcpServer,
   setInterfaceAddress,
+  setDefaultGateway,
   setInterfaceCount,
   suggestName,
   type DeviceType,
@@ -120,6 +122,16 @@ import { simStore } from './sim.svelte';
 import { t } from '../../i18n';
 import { errorText, interfaceLabel } from '../labels';
 
+const PORT_CHOICE_KEY = 'netzwerk-simulator.portChoice';
+
+function readPortChoice(): 'auto' | 'ask' {
+  try {
+    return typeof window !== 'undefined' && window.localStorage.getItem(PORT_CHOICE_KEY) === 'ask' ? 'ask' : 'auto';
+  } catch {
+    return 'auto';
+  }
+}
+
 export type Selection = { kind: 'device'; id: string } | { kind: 'cable'; id: string } | { kind: 'area'; id: string } | null;
 export type Tool = 'select' | 'cable' | 'area';
 export type Mode = 'design' | 'simulation';
@@ -157,6 +169,12 @@ class Editor {
   mode = $state<Mode>('design');
   /** Erstes Gerät, solange im Kabelwerkzeug ein Kabel gezogen wird. */
   cableSource = $state<string | null>(null);
+  /** Gewählter Anschluss am ersten Gerät (nur bei «Anschluss wählen»). */
+  cableSourcePort = $state<number | null>(null);
+  /** Anschlusswahl beim Verbinden: automatisch der nächste freie oder aus einer Liste. */
+  portChoice = $state<'auto' | 'ask'>(readPortChoice());
+  /** Offene Anschlussauswahl für ein Gerät (erstes oder zweites Ende). */
+  portPrompt = $state.raw<{ deviceId: string; step: 'source' | 'target' } | null>(null);
   view = $state.raw<View>({ x: 0, y: 0, scale: 1 });
   message = $state.raw<Message | null>(null);
   /** Steigt, wenn ein anderes Projekt geladen wird; die Simulation beginnt dann neu. */
@@ -349,6 +367,11 @@ class Editor {
 
   configureHost(id: string, input: HostConfigInput): TopologyError | null {
     return this.#applyForm(configureHost(this.topology, id, input));
+  }
+
+  /** Standardgateway eines Vermittlungsgeräts (Route 0.0.0.0/0), z.B. das Gateway des Providers an der CPE. */
+  setDefaultGateway(id: string, gateway: string): TopologyError | null {
+    return this.#applyForm(setDefaultGateway(this.topology, id, gateway));
   }
 
   setInterfaceAddress(id: string, index: number, ip: string, mask: string): TopologyError | null {
@@ -895,7 +918,22 @@ class Editor {
   setTool(tool: Tool) {
     if ((tool === 'cable' || tool === 'area') && !this.editable) return;
     this.tool = tool;
+    this.#resetCable();
+  }
+
+  #resetCable() {
     this.cableSource = null;
+    this.cableSourcePort = null;
+    this.portPrompt = null;
+  }
+
+  setPortChoice(choice: 'auto' | 'ask') {
+    this.portChoice = choice;
+    try {
+      window.localStorage.setItem(PORT_CHOICE_KEY, choice);
+    } catch {
+      // Ohne Speicher gilt die Wahl bis zum Neuladen.
+    }
   }
 
   setMode(mode: Mode) {
@@ -906,40 +944,68 @@ class Editor {
     }
     this.mode = mode;
     this.tool = 'select';
-    this.cableSource = null;
+    this.#resetCable();
   }
 
   /** Kabelwerkzeug: Das erste Gerät merken, beim zweiten verbinden. */
   cableClick(id: string) {
     if (!this.editable) return;
     const source = this.cableSource;
+    const device = getDevice(this.topology, id);
+    if (!device) return;
     if (!source) {
-      const device = getDevice(this.topology, id);
-      if (!device) return;
       if (!freeInterfaceFor(this.topology, device, this.medium)) {
         this.notify(errorText({ code: noPortError(this.topology, device, this.medium), params: { device: device.name, medium: t(`medium.${this.medium}`) } }), 'error');
         return;
       }
-      this.cableSource = id;
       this.selection = { kind: 'device', id };
+      // «Anschluss wählen»: bei mehreren freien Anschlüssen eine Liste zeigen.
+      if (this.portChoice === 'ask' && freeInterfacesFor(this.topology, device, this.medium).length > 1) {
+        this.portPrompt = { deviceId: id, step: 'source' };
+        return;
+      }
+      this.cableSource = id;
+      this.cableSourcePort = null;
       return;
     }
     if (source === id) {
-      this.cableSource = null;
+      this.#resetCable();
       return;
     }
-    const loop = wouldLoopWithoutStp(this.topology, source, id);
-    const connected = this.#check(connect(this.topology, source, id, this.medium));
+    if (this.portChoice === 'ask' && freeInterfacesFor(this.topology, device, this.medium).length > 1) {
+      this.portPrompt = { deviceId: id, step: 'target' };
+      return;
+    }
+    this.#finishCable(source, id, this.cableSourcePort ?? undefined, undefined);
+  }
+
+  /** Anschluss aus der Liste gewählt (siehe `portPrompt`). */
+  choosePort(iface: number) {
+    const prompt = this.portPrompt;
+    if (!prompt) return;
+    this.portPrompt = null;
+    if (prompt.step === 'source') {
+      this.cableSource = prompt.deviceId;
+      this.cableSourcePort = iface;
+    } else if (this.cableSource) {
+      this.#finishCable(this.cableSource, prompt.deviceId, this.cableSourcePort ?? undefined, iface);
+    }
+  }
+
+  #finishCable(source: string, target: string, a: number | undefined, b: number | undefined) {
+    const loop = wouldLoopWithoutStp(this.topology, source, target);
+    const connected = this.#check(connect(this.topology, source, target, this.medium, { a, b }));
     if (!connected) return;
     this.#commit(connected.topology);
     if (loop) this.notify(t('stp.loopWarning'), 'error');
     this.selection = { kind: 'cable', id: connected.id };
-    this.cableSource = null;
+    this.#resetCable();
   }
 
   /** Esc: schrittweise zurück zum neutralen Zustand. */
   cancel() {
-    if (this.cableSource) this.cableSource = null;
+    if (this.portPrompt) this.portPrompt = null;
+    else if (this.cableSource) this.#resetCable();
     else if (this.tool !== 'select') this.tool = 'select';
     else this.selection = null;
   }

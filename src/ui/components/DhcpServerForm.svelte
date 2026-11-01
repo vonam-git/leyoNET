@@ -1,6 +1,7 @@
 <script lang="ts">
   import { DEFAULT_LEASE_TIME, parseMask, type Device, type DhcpServerConfig } from '../../core';
   import { t } from '../../i18n';
+  import { autosave } from '../autosave';
   import { editor } from '../state/editor.svelte';
 
   /** Entwurfsmodus, Rechner: DHCP-Server-Dienst einrichten. */
@@ -26,8 +27,7 @@
     error = null;
   });
 
-  function apply(event: SubmitEvent) {
-    event.preventDefault();
+  function save(quiet: boolean): boolean {
     let config: DhcpServerConfig | null = null;
     if (enabled) {
       config = {
@@ -39,7 +39,12 @@
       };
     }
     const failure = editor.setDhcpServer(device.id, config);
-    error = failure ? { field: failure.field, text: t(`error.${failure.code}`, failure.params) } : null;
+    if (failure) {
+      if (!quiet) error = { field: failure.field, text: t(`error.${failure.code}`, failure.params) };
+      return false;
+    }
+    error = null;
+    return true;
   }
 
   // --- Weitere Bereiche für Netze hinter einem Relay ---------------------------
@@ -57,7 +62,7 @@
   }
 </script>
 
-<form class="dhcp" onsubmit={apply}>
+<form class="dhcp" use:autosave={save} onsubmit={(e) => (e.preventDefault(), save(false))}>
   <label class="toggle">
     <input type="checkbox" bind:checked={enabled} />
     {t('dhcpServer.enable')}
@@ -83,7 +88,6 @@
   {#if error && !fields.includes(error.field as Field)}
     <p class="error" role="alert">{error.text}</p>
   {/if}
-  <button type="submit">{t('config.apply')}</button>
 </form>
 
 {#if device.dhcpServer}

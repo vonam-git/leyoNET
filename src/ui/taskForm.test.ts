@@ -43,8 +43,8 @@ describe('Aufgaben-Formular', () => {
 
   it('hat für jeden Prüfbaustein Felder und Texte', () => {
     for (const type of CHECK_TYPES) {
-      // Nur «kein Broadcast-Sturm» kommt ohne Felder aus.
-      if (type !== 'noStorm') expect(CHECK_FIELDS[type].length).toBeGreaterThan(0);
+      // Nur «kein Broadcast-Sturm» und «keine doppelten Adressen» kommen ohne Felder aus.
+      if (type !== 'noStorm' && type !== 'noDuplicateIp') expect(CHECK_FIELDS[type].length).toBeGreaterThan(0);
       expect(de).toHaveProperty([`taskForm.type.${type}`]);
       expect(de).toHaveProperty([`taskForm.text.${type}`]);
       for (const spec of CHECK_FIELDS[type]) expect(de).toHaveProperty([`taskForm.field.${spec.label ?? spec.key}`]);

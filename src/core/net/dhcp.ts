@@ -12,11 +12,17 @@ export interface DhcpIssue {
   params?: Record<string, string | number>;
 }
 
+/** Anschluss, dessen Netz der DHCP-Server bedient: bei der CPE das LAN (Anschluss 1), sonst Anschluss 0. */
+export function dhcpServerIface(device: Device): number {
+  return device.type === 'cpe' ? 1 : 0;
+}
+
 /** Ein DHCP-Server vergibt Adressen aus seinem eigenen Netz; dafür braucht er selbst eine feste Adresse. */
 export function checkDhcpServer(device: Device, config: DhcpServerConfig): DhcpIssue | null {
-  if (!canHostServices(device.type)) return { code: 'notAServer', field: 'server' };
-  const ownIp = device.interfaces[0]?.ip ? parseIp(device.interfaces[0].ip) : null;
-  const prefix = device.interfaces[0]?.mask ? parseMask(device.interfaces[0].mask) : null;
+  if (!canHostServices(device.type) && device.type !== 'cpe') return { code: 'notAServer', field: 'server' };
+  const own = device.interfaces[dhcpServerIface(device)];
+  const ownIp = own?.ip ? parseIp(own.ip) : null;
+  const prefix = own?.mask ? parseMask(own.mask) : null;
   if (device.dhcp || ownIp === null || prefix === null) return { code: 'dhcpServerNeedsAddress', field: 'server' };
 
   const start = parseIp(config.start);
@@ -99,8 +105,9 @@ export interface ResolvedScope {
  */
 export function scopeFor(device: Device, giaddr?: string): ResolvedScope | null {
   const config = device.dhcpServer;
-  const ownIp = device.interfaces[0]?.ip ? parseIp(device.interfaces[0].ip) : null;
-  const ownPrefix = device.interfaces[0]?.mask ? parseMask(device.interfaces[0].mask) : null;
+  const own = device.interfaces[dhcpServerIface(device)];
+  const ownIp = own?.ip ? parseIp(own.ip) : null;
+  const ownPrefix = own?.mask ? parseMask(own.mask) : null;
   if (!config || ownIp === null || ownPrefix === null) return null;
   const relay = giaddr ? parseIp(giaddr) : null;
   if (relay === null || networkOf(relay, ownPrefix) === networkOf(ownIp, ownPrefix)) {

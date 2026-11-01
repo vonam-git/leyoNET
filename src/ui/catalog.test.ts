@@ -4,6 +4,8 @@ import {
   addDevice,
   addDnsRecord,
   addStaticNat,
+  addPortForward,
+  setDefaultGateway,
   addStaticRoute,
   setBgp,
   setEncapsulation,
@@ -131,6 +133,18 @@ const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
     for (const n of ['R1', 'R2', 'R3']) t = unwrap(setRip(t, byName(t, n), { networks: [{ network: '0.0.0.0', mask: '0.0.0.0' }] }));
     return t;
   },
+  'duplicate-ip': (t) => unwrap(configureHost(t, byName(t, 'Notebook'), { ip: '10.0.0.3', mask: '24' })),
+  'static-routes': (t) => {
+    t = unwrap(addStaticRoute(t, byName(t, 'Router 1'), { network: '192.168.20.0', mask: '24', gateway: '10.0.0.2' }));
+    return unwrap(addStaticRoute(t, byName(t, 'Router 2'), { network: '192.168.10.0', mask: '24', gateway: '10.0.0.1' }));
+  },
+  'cpe-home': (t) => {
+    t = unwrap(setInterfaceAddress(t, byName(t, 'Internet-Box'), 0, '203.0.113.2', '30'));
+    return unwrap(setDefaultGateway(t, byName(t, 'Internet-Box'), '203.0.113.1'));
+  },
+  'port-forward': (t) => unwrap(addPortForward(t, byName(t, 'Heimrouter'), { protocol: 'tcp', port: 8080, to: '192.168.1.20', toPort: 80 })),
+  'snat-mail': (t) => unwrap(addStaticNat(t, byName(t, 'Firmenrouter'), { inside: '192.168.0.25', outside: '203.0.113.5', kind: 'snat' })),
+  'dnat-web': (t) => unwrap(addStaticNat(t, byName(t, 'Firmenrouter'), { inside: '192.168.0.80', outside: '203.0.113.6', kind: 'dnat' })),
   'static-nat-dmz': (t) => unwrap(addStaticNat(t, byName(t, 'Firmenrouter'), { inside: '192.168.0.80', outside: '203.0.113.5' })),
   'bgp-two-as': (t) => {
     t = unwrap(setBgp(t, byName(t, 'R Firma'), { asn: 65001, neighbors: [{ ip: '172.16.12.2', remoteAs: 65002 }], networks: [{ network: '10.1.0.0', mask: '255.255.0.0' }] }));

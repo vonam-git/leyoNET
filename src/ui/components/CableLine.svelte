@@ -77,6 +77,22 @@
     };
   });
 
+  /**
+   * Verkehr auf der Leitung: Die LEDs leuchten orange, solange Rahmen
+   * unterwegs sind (und kurz danach), sonst grün bei bestehender Verbindung.
+   */
+  const ACTIVITY_HOLD_MS = 450;
+  let lastActivity = $state(0);
+  const busy = $derived.by(() => {
+    if (!editor.acting) return false;
+    void simStore.tick;
+    return simStore.sim?.getInFlight().some((e) => e.cable === cable.id) ?? false;
+  });
+  $effect(() => {
+    if (busy) lastActivity = performance.now();
+  });
+  const traffic = $derived((simStore.tick, editor.acting && (busy || performance.now() - lastActivity < ACTIVITY_HOLD_MS)));
+
   const ledEnds = $derived(
     geometry.leds
       ? [
@@ -100,6 +116,7 @@
 </script>
 
 <g
+  data-hover="cable:{cable.id}"
   class="cable medium-{medium}"
   class:selected
   class:down={!status.up}
@@ -139,6 +156,7 @@
       <circle
         class="led"
         class:up={status.up}
+        class:traffic={status.up && traffic}
         class:off={device.interfaces[cable[end].iface]?.shutdown}
         cx={p.x}
         cy={p.y}
@@ -146,7 +164,7 @@
         style:stroke={tag}
         style:stroke-width={tag ? 3.5 : undefined}
       >
-        <title>{status.up ? t('link.up') : t(`link.down.${status.reason ?? 'unknown'}`)}</title>
+        <title>{status.up ? (traffic ? t('link.traffic') : t('link.up')) : t(`link.down.${status.reason ?? 'unknown'}`)}</title>
       </circle>
     {/each}
   {/if}
@@ -288,6 +306,20 @@
     fill: var(--led-down, #dc2626);
     stroke: var(--bg);
     stroke-width: 1.5;
+  }
+  .led.traffic {
+    fill: var(--led-traffic, #f97316) !important;
+    animation: blink 0.28s steps(2, jump-none) infinite;
+  }
+  @keyframes blink {
+    50% {
+      opacity: 0.55;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .led.traffic {
+      animation: none;
+    }
   }
   .led.up {
     fill: var(--led-up, #16a34a);

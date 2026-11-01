@@ -7,6 +7,7 @@ import { DEVICE_TYPES } from '../model/devices';
 import { cablesOf, otherEnd, vlanColor } from '../model/topology';
 import { linkStatus, mediumOf } from '../model/links';
 import { costOf } from '../model/costs';
+import { duplicateAddresses } from '../model/duplicates';
 import { MEDIA, type Device, type DeviceType, type Medium, type Topology } from '../model/types';
 import { formatIp, networkOf, parseIp, parseMask } from '../net/ipv4';
 import { protocolOf } from '../sim/protocol';
@@ -32,6 +33,10 @@ export type Check =
   | { type: 'neighbors'; device: string; protocol: 'ospf' | 'bgp'; min?: number }
   /** Kein Broadcast-Sturm (Schleifen nur mit Spanning Tree). */
   | { type: 'noStorm' }
+  /** Keine IP-Adresse ist im selben Netz doppelt vergeben (auch per DHCP bezogene). */
+  | { type: 'noDuplicateIp' }
+  /** Ping von `from` an `to`; beim Ziel kommt er mit dieser Absenderadresse an (NAT prüfen). */
+  | { type: 'seenAs'; from: string; to: string; address: string }
   /** Modem hat seine Zugangsleitung aufgebaut. */
   | { type: 'modemOnline'; device: string }
   /** Alle (oder mindestens `min`) Rechner der Client-Gruppe haben eine Adresse. */
@@ -59,6 +64,8 @@ export const CHECK_TYPES = [
   'routeLearned',
   'neighbors',
   'noStorm',
+  'noDuplicateIp',
+  'seenAs',
   'modemOnline',
   'groupLeases',
   'budget',
@@ -283,6 +290,34 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       const storming = sim.stormingDevices().map((sid) => topology.devices.find((d) => d.id === sid)?.name ?? sid);
       return storming.length ? fail(id, 'storm', { names: storming.join(', ') }) : { id, passed: true };
     }
+    case 'seenAs': {
+      const from = need(check.from);
+      if (!from) return missing(check.from);
+      const target = need(check.to);
+      if (!target) return missing(check.to);
+      const address = target.interfaces[0]?.ip;
+      if (!address) return fail(id, 'noAddress', { name: target.name });
+      const sim = bootedSimulation(topology);
+      sim.ping(from.id, address);
+      sim.runUntil(BOOT_MS + ACTION_MS);
+      const arrived = sim.getPacketLog().filter((e) => e.to.device === target.id && e.frame.payload.kind === 'ipv4' && e.frame.payload.payload.kind === 'icmp' && e.frame.payload.payload.type === 'echoRequest');
+      if (!arrived.length) return fail(id, 'pingFailedTo', { name: target.name });
+      const seen = arrived[0]!.frame.payload.kind === 'ipv4' ? arrived[0]!.frame.payload.src : '';
+      return seen === check.address ? { id, passed: true } : fail(id, 'seenAsOther', { name: from.name, seen, address: check.address });
+    }
+    case 'noDuplicateIp': {
+      const sim = bootedSimulation(topology);
+      const live = new Map<string, string>();
+      for (const d of topology.devices) {
+        const ip = d.dhcp ? sim.getDeviceState(d.id).address?.ip : undefined;
+        if (ip) live.set(d.id, ip);
+      }
+      const keys = [...duplicateAddresses(topology, live)];
+      if (!keys.length) return { id, passed: true };
+      const names = [...new Set(keys.map((k) => topology.devices.find((d) => d.id === k.split('#')[0])?.name ?? k))];
+      const ips = [...new Set(keys.map((k) => k.split('#')[1]))];
+      return fail(id, 'duplicateIp', { names: names.join(', '), ips: ips.join(', ') });
+    }
     case 'modemOnline': {
       const device = need(check.device);
       if (!device) return missing(check.device);
@@ -416,7 +451,11 @@ export function readTasks(value: unknown, invalid: (path: string) => never): Tas
           break;
         }
         case 'noStorm':
+        case 'noDuplicateIp':
           check = { type };
+          break;
+        case 'seenAs':
+          check = { type, from: str(c.from, `${cp}.from`), to: str(c.to, `${cp}.to`), address: str(c.address, `${cp}.address`) };
           break;
         case 'modemOnline':
           check = { type, device: str(c.device, `${cp}.device`) };

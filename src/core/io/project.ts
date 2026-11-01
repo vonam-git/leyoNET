@@ -596,7 +596,7 @@ function readDevice(v: unknown, path: string): Device {
   }
   if (o.modem !== undefined) {
     const m = obj(o.modem, `${path}.modem`);
-    if (type !== 'modem' || !(MODEM_KINDS as readonly unknown[]).includes(m.kind)) throw new Invalid(`${path}.modem`);
+    if ((type !== 'modem' && type !== 'cpe') || !(MODEM_KINDS as readonly unknown[]).includes(m.kind)) throw new Invalid(`${path}.modem`);
     device.modem = { kind: m.kind as ModemKind };
   }
   if (o.variant !== undefined) {
@@ -605,10 +605,11 @@ function readDevice(v: unknown, path: string): Device {
     device.variant = variant;
   }
   if (o.staticNat !== undefined) {
-    if (type !== 'router') throw new Invalid(`${path}.staticNat`);
+    if (type !== 'router' && type !== 'cpe') throw new Invalid(`${path}.staticNat`);
     device.staticNat = arr(o.staticNat, `${path}.staticNat`).map((raw, i) => {
       const r = obj(raw, `${path}.staticNat[${i}]`);
-      return { inside: ip(r.inside, `${path}.staticNat[${i}].inside`), outside: ip(r.outside, `${path}.staticNat[${i}].outside`) };
+      if (r.kind !== undefined && r.kind !== 'snat' && r.kind !== 'dnat') throw new Invalid(`${path}.staticNat[${i}].kind`);
+      return { inside: ip(r.inside, `${path}.staticNat[${i}].inside`), outside: ip(r.outside, `${path}.staticNat[${i}].outside`), ...(r.kind ? { kind: r.kind as 'snat' | 'dnat' } : {}) };
     });
   }
   if (o.cgnatAddress !== undefined) {

@@ -125,13 +125,6 @@
 
 <style>
   .details {
-    --osi-7: #8e44ad;
-    --osi-6: #9b59b6;
-    --osi-5: #a569bd;
-    --osi-4: #2e86c1;
-    --osi-3: #16a085;
-    --osi-2: #d68910;
-    --osi-1: #7f8c8d;
     height: 100%;
     overflow-y: auto;
     padding: 8px 10px;

@@ -3,6 +3,7 @@
   import { t } from '../../i18n';
   import { interfaceLabel } from '../labels';
   import { editor } from '../state/editor.svelte';
+  import { simStore } from '../state/sim.svelte';
   import { TAG_HEX } from '../tags';
 
   /**
@@ -29,6 +30,13 @@
       return { iface, cable, status, peer: peer?.name ?? '' };
     }),
   );
+  /** Kabel mit Verkehr (in der Simulation): LED orange. */
+  const busy = $derived.by(() => {
+    if (!editor.acting) return new Set<string>();
+    void simStore.tick;
+    return new Set((simStore.sim?.getInFlight() ?? []).map((e) => e.cable));
+  });
+
   // Zwei Reihen wie bei echten Switches: ungerade oben, gerade unten.
   const columns = $derived(Math.ceil(device.interfaces.filter((i) => !i.sfpSlot).length / 2) + device.interfaces.filter((i) => i.sfpSlot).length);
 
@@ -82,7 +90,7 @@
       disabled={!editor.editable && !p.cable}
       onclick={() => click(i)}
     >
-      <span class="led" class:up={p.status?.up} class:down={p.status && !p.status.up}></span>
+      <span class="led" class:up={p.status?.up} class:traffic={p.status?.up && !!p.cable && busy.has(p.cable.id)} class:down={p.status && !p.status.up}></span>
       {#if p.iface.sfpSlot}
         <span class="cage" class:filled={!!p.iface.sfp} style:border-color={p.iface.color ? TAG_HEX[p.iface.color] : undefined}></span>
         <span class="num">{p.iface.sfp ?? 'SFP'}</span>
@@ -139,6 +147,10 @@
   .led.up {
     background: #22c55e;
     box-shadow: 0 0 4px #22c55e;
+  }
+  .led.traffic {
+    background: #f97316 !important;
+    box-shadow: 0 0 4px #f97316;
   }
   .led.down {
     background: #ef4444;

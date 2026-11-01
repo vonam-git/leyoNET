@@ -1,0 +1,288 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "pc",
+        "name": "PC 1",
+        "position": {
+          "x": 80,
+          "y": 120
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "ip": "192.168.0.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.0.1"
+      },
+      {
+        "id": "d2",
+        "type": "pc",
+        "name": "PC 2",
+        "position": {
+          "x": 80,
+          "y": 300
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "192.168.0.11",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.0.1"
+      },
+      {
+        "id": "d3",
+        "type": "server",
+        "name": "Mailserver",
+        "position": {
+          "x": 80,
+          "y": 480
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ip": "192.168.0.25",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.0.1"
+      },
+      {
+        "id": "d4",
+        "type": "switch",
+        "name": "Switch",
+        "position": {
+          "x": 280,
+          "y": 300
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:04:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:04:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:04:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:04:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:04:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:04:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:04:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:04:08",
+            "sfpSlot": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:04:09",
+            "sfpSlot": true
+          }
+        ]
+      },
+      {
+        "id": "d5",
+        "type": "router",
+        "name": "Firmenrouter",
+        "position": {
+          "x": 480,
+          "y": 300
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ip": "192.168.0.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:05:01",
+            "ip": "203.0.113.2",
+            "mask": "255.255.255.248",
+            "nat": true
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:05:02",
+            "sfpSlot": true
+          }
+        ],
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "203.0.113.1"
+          }
+        ],
+        "staticNat": [
+          {
+            "inside": "192.168.0.25",
+            "outside": "203.0.113.5",
+            "kind": "snat"
+          }
+        ]
+      },
+      {
+        "id": "d6",
+        "type": "internet",
+        "name": "Internet",
+        "position": {
+          "x": 720,
+          "y": 300
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:06:00",
+            "ip": "203.0.113.1",
+            "mask": "255.255.255.248"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:06:01",
+            "ip": "198.51.100.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:06:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:06:03"
+          }
+        ]
+      },
+      {
+        "id": "d7",
+        "type": "server",
+        "name": "Webserver",
+        "position": {
+          "x": 940,
+          "y": 300
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:07:00",
+            "ip": "198.51.100.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "198.51.100.1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Öffentlicher Webserver</h1><p>Im Protokoll des Servers erscheint als Absender nur eine öffentliche Adresse.</p>"
+            }
+          ]
+        }
+      }
+    ],
+    "cables": [
+      {
+        "id": "c8",
+        "a": {
+          "device": "d1",
+          "iface": 0
+        },
+        "b": {
+          "device": "d4",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c9",
+        "a": {
+          "device": "d2",
+          "iface": 0
+        },
+        "b": {
+          "device": "d4",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c10",
+        "a": {
+          "device": "d3",
+          "iface": 0
+        },
+        "b": {
+          "device": "d4",
+          "iface": 2
+        }
+      },
+      {
+        "id": "c11",
+        "a": {
+          "device": "d4",
+          "iface": 3
+        },
+        "b": {
+          "device": "d5",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c12",
+        "a": {
+          "device": "d5",
+          "iface": 1
+        },
+        "b": {
+          "device": "d6",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c13",
+        "a": {
+          "device": "d6",
+          "iface": 1
+        },
+        "b": {
+          "device": "d7",
+          "iface": 0
+        }
+      }
+    ],
+    "nextId": 14
+  },
+  "configuration": {}
+}
+

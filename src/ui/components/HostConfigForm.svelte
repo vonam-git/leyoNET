@@ -1,7 +1,9 @@
 <script lang="ts">
   import { checkHostConfig, maskToText, parseMask, type Device } from '../../core';
   import { t } from '../../i18n';
+  import { autosave } from '../autosave';
   import { dialogs } from '../state/dialogs.svelte';
+  import { duplicates } from '../state/duplicates.svelte';
   import { editor } from '../state/editor.svelte';
   import { ui } from '../state/ui.svelte';
   import { subnetSummary } from '../subnet';
@@ -31,6 +33,7 @@
   });
 
   const dirty = $derived(dhcp !== !!device.dhcp || (!dhcp && fields.some((f) => draft[f].trim() !== saved[f])));
+  const duplicate = $derived(!device.dhcp && duplicates.has(device.id, saved.ip));
   const warnings = $derived(device.dhcp ? [] : checkHostConfig(saved).warnings);
 
   /** Zeigt die Maske jeweils in der anderen Schreibweise, damit beide geübt werden. */
@@ -50,18 +53,25 @@
       apply: (v) => {
         draft = { ...draft, ip: v.ip, mask: v.mask, gateway: v.gateway };
         dhcp = false;
+        save(false);
       },
     });
   }
 
-  function apply(event: SubmitEvent) {
-    event.preventDefault();
+  /** Speichert automatisch (siehe autosave.ts); leise, solange man im Formular bleibt. */
+  function save(quiet: boolean): boolean {
+    if (!dirty) return true;
     const failure = editor.configureHost(device.id, { ...draft, dhcp });
-    error = failure ? { field: failure.field, text: t(`error.${failure.code}`, failure.params) } : null;
+    if (failure) {
+      if (!quiet) error = { field: failure.field, text: t(`error.${failure.code}`, failure.params) };
+      return false;
+    }
+    error = null;
+    return true;
   }
 </script>
 
-<form class="config" onsubmit={apply}>
+<form class="config" use:autosave={save} onsubmit={(e) => (e.preventDefault(), save(false))}>
   <h3>{t('config.title')}</h3>
   <fieldset class="mode">
     <legend class="visually-hidden">{t('address.mode')}</legend>
@@ -99,12 +109,11 @@
   {#if error && !error.field}
     <p class="error" role="alert">{error.text}</p>
   {/if}
-  <div class="buttons">
-    <button type="submit" disabled={!dirty}>{t('config.apply')}</button>
-    {#if ui.has('tool.ipCalculator') && !dhcp}
+  {#if ui.has('tool.ipCalculator') && !dhcp}
+    <div class="buttons">
       <button type="button" class="calc" onclick={calc} title={t('ipcalc.openHint')}><Icon name="calc" size={15} /> {t('menu.tool.ipcalc')}</button>
-    {/if}
-  </div>
+    </div>
+  {/if}
 
   {#if device.dhcp}
     <!-- Adresse steht erst in der Simulation fest. -->
@@ -112,6 +121,9 @@
     <p class="muted">{#if ui.has('tool.addressBadges')}<ScopeBadge ip={saved.ip} /> {/if}{networkInfo}</p>
   {:else}
     <p class="muted">{t('config.none')}</p>
+  {/if}
+  {#if duplicate}
+    <p class="warning dup" role="alert">❗ {t('canvas.duplicateIp', { ip: saved.ip })}</p>
   {/if}
   {#each warnings as warning (warning.code)}
     <p class="warning" role="note">⚠ {t(`warning.${warning.code}`, warning.params)}</p>
@@ -191,6 +203,10 @@
     font-size: 0.8rem;
     border-radius: 6px;
     background: var(--warning-soft);
+  }
+  .warning.dup {
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
+    color: var(--danger);
   }
   .muted {
     margin: 8px 0 0;

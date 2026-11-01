@@ -21,6 +21,14 @@
   --console-bg: #18212c;
   --console-text: #e3e9f0;
   --console-prompt: #8fd18f;
+  /* OSI-Schichten: Paketdetails und Einzelschritt (Auspacken) */
+  --osi-7: #8e44ad;
+  --osi-6: #9b59b6;
+  --osi-5: #a569bd;
+  --osi-4: #2e86c1;
+  --osi-3: #16a085;
+  --osi-2: #d68910;
+  --osi-1: #7f8c8d;
   --proto-arp: #f5e3b3;
   --proto-icmp: #d6e4fb;
   --proto-dhcp: #d3f2e5;

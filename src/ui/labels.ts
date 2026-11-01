@@ -23,6 +23,7 @@ export function interfaceLabel(device: Device, index: number): string {
     return t('iface.serial', { n });
   }
   if (device.type === 'modem' && device.modem && isModemWan(device, index)) return t('iface.wan');
+  if (device.type === 'cpe') return index === 0 ? t('iface.wan') : t('iface.lanN', { n: index });
   if (device.type === 'accesspoint') return index === 0 ? t('iface.lan') : t('iface.radio', { n: index });
   if (device.interfaces[index]?.sfpSlot) {
     const n = device.interfaces.slice(0, index + 1).filter((i) => i.sfpSlot).length;

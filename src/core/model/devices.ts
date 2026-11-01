@@ -19,6 +19,7 @@ export const DEVICE_TYPES: readonly DeviceType[] = [
   'router',
   'accesspoint',
   'modem',
+  'cpe',
   'internet',
 ];
 
@@ -37,6 +38,8 @@ export const DEVICE_SPECS: Record<DeviceType, DeviceSpec> = {
   // Anschluss 0 ist der LAN-Port (Kabel), alle weiteren sind Funkverbindungen.
   accesspoint: { role: 'distribution', defaultInterfaces: 9, minInterfaces: 3, maxInterfaces: 33 },
   modem: { role: 'routing', defaultInterfaces: 2, minInterfaces: 2, maxInterfaces: 2 },
+  // CPE (Internet-Box): Anschluss 0 ist WAN zum Provider, 1–4 sind LAN-Buchsen (ein Netz, interner Switch).
+  cpe: { role: 'routing', defaultInterfaces: 5, minInterfaces: 5, maxInterfaces: 5 },
   internet: { role: 'routing', defaultInterfaces: 4, minInterfaces: 2, maxInterfaces: 8 },
 };
 
@@ -56,7 +59,7 @@ export function isSwitchType(type: DeviceType): boolean {
 
 /** Geräte mit eigener Routingtabelle (statische Routen). */
 export function hasRoutingTable(type: DeviceType): boolean {
-  return isRouterType(type) || type === 'l3switch';
+  return isRouterType(type) || type === 'l3switch' || type === 'cpe';
 }
 
 /** Geräte, die in ein Rack eingebaut werden können. */

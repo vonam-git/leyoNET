@@ -1,6 +1,6 @@
 {
   "version": "0.5.0",
-  "date": "2026-10-30T12:50:24.161Z",
+  "date": "2026-11-01T16:38:57.316Z",
   "checks": [
     {
       "id": "privacy.noExternal",
@@ -30,7 +30,7 @@
       "id": "privacy.storage",
       "category": "privacy",
       "status": "pass",
-      "detail": "Browser-Speicher nur für Technik: netzwerk-simulator.addresses, netzwerk-simulator.class, netzwerk-simulator.currency, netzwerk-simulator.features, netzwerk-simulator.level, netzwerk-simulator.locale, netzwerk-simulator.profile, netzwerk-simulator.session, netzwerk-simulator.theme"
+      "detail": "Browser-Speicher nur für Technik: netzwerk-simulator.addresses, netzwerk-simulator.avatar, netzwerk-simulator.class, netzwerk-simulator.currency, netzwerk-simulator.features, netzwerk-simulator.level, netzwerk-simulator.locale, netzwerk-simulator.panels, netzwerk-simulator.portChoice, netzwerk-simulator.profile, netzwerk-simulator.session, netzwerk-simulator.theme"
     },
     {
       "id": "privacy.noIpLog",
@@ -96,7 +96,7 @@
       "id": "licenses.own",
       "category": "licenses",
       "status": "pass",
-      "detail": "Eigener Code unter AGPL-3.0-or-later (Mark von Allmen & Mikael von Allmen), Link zum Quellcode unter «Über»."
+      "detail": "Eigener Code unter AGPL-3.0-or-later (Mark v. A. & Mikael v. A.), Link zum Quellcode unter «Über»."
     },
     {
       "id": "licenses.tools",
@@ -115,6 +115,12 @@
       "category": "standards",
       "status": "pass",
       "detail": "IEEE-, ITU-T- und CableLabs-Normen in den letzten 12 Monaten geprüft; RFCs prüft der wöchentliche Abgleich mit dem RFC-Index."
+    },
+    {
+      "id": "standards.prices",
+      "category": "standards",
+      "status": "pass",
+      "detail": "35 Richtpreise im plausiblen Bereich, zuletzt am 2026-11-01 mit dem Markt verglichen."
     }
   ]
 }

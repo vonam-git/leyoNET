@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { DEVICE_SPECS, addressScope, floorsOf, hasCli, parseIp, parseMask, type AddressScope, type Device } from '../../core';
+  import { DEVICE_SPECS, addressScope, floorsOf, parseIp, parseMask, type AddressScope, type Device } from '../../core';
   import { t } from '../../i18n';
-  import { typeLabel } from '../labels';
-  import { openCli } from '../state/cli.svelte';
-  import { openDesktop } from '../state/desktop.svelte';
-  import { ui } from '../state/ui.svelte';
+  import { interfaceLabel, typeLabel } from '../labels';
+  import { duplicates } from '../state/duplicates.svelte';
+    import { ui } from '../state/ui.svelte';
   import { editor } from '../state/editor.svelte';
   import { simStore } from '../state/sim.svelte';
   import DeviceIcon from './DeviceIcon.svelte';
@@ -50,18 +49,22 @@
     const n = parseIp(text.split('/')[0] ?? '');
     return n === null ? null : addressScope(n);
   };
-  const lines = $derived.by((): { text: string; scope: AddressScope | null }[] => {
-    if (isEndpoint) return ip ? [{ text: ip, scope: badges ? scopeOf(ip) : null }] : [];
+  type Line = { text: string; port?: string; scope: AddressScope | null; duplicate: boolean };
+  const lines = $derived.by((): Line[] => {
+    if (isEndpoint) return ip ? [{ text: ip, scope: badges ? scopeOf(ip) : null, duplicate: duplicates.has(device.id, ip.split('/')[0]) }] : [];
     if (!badges) return [];
+    // Bei Routern dezent den Anschluss davor, z.B. «eth0: 192.168.1.1/24».
     return device.interfaces
       .filter((i) => i.ip)
       .slice(0, 4)
       .map((i) => {
         const prefix = i.mask ? parseMask(i.mask) : null;
         const text = prefix === null ? i.ip! : `${i.ip}/${prefix}`;
-        return { text, scope: scopeOf(text) };
+        return { text, port: interfaceLabel(device, i.index), scope: scopeOf(text), duplicate: duplicates.has(device.id, i.ip) };
       });
   });
+  /** Doppelte Adressen: rotes Ausrufezeichen am Gerät, auch wenn die Adressen ausgeblendet sind. */
+  const duplicated = $derived(duplicates.of(device.id));
 
   function onkeydown(event: KeyboardEvent) {
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -71,14 +74,10 @@
     else editor.select({ kind: 'device', id: device.id });
   }
 
-  /** Doppelklick: in der Simulation Desktop des Endgeräts; Router und Switches öffnen ihre Befehlszeile. */
-  function ondblclick() {
-    if (editor.acting && isEndpoint) openDesktop(device.id);
-    else if (hasCli(device.type) && ui.has('net.cli')) openCli(device.id);
-  }
 </script>
 
 <g
+  data-hover="device:{device.id}"
   class="device role-{DEVICE_SPECS[device.type].role}"
   class:selected
   class:source={isSource}
@@ -91,7 +90,6 @@
   onpointerdown={(e) => onpointerdown(e, device)}
   onfocus={() => editor.tool === 'select' && editor.select({ kind: 'device', id: device.id })}
   {onkeydown}
-  {ondblclick}
 >
   {#if racked}
     <rect class="plate" x="-86" y="-28" width="172" height="56" rx="3" />
@@ -108,11 +106,18 @@
     <text class="label" y="44">{device.name}</text>
   {/if}
   {#each lines as line, i (i)}
-    <text class="ip scope-{line.scope ?? 'none'}" y={59 + i * 13}>
-      {line.text}
-      {#if line.scope}<title>{t(`scope.${line.scope}.hint`)}</title>{/if}
+    <text class="ip scope-{line.scope ?? 'none'}" class:duplicate={line.duplicate} y={59 + i * 13}>
+      {#if line.port}<tspan class="port">{line.port}: </tspan>{/if}{line.text}{#if line.duplicate}<tspan class="dup-mark"> !</tspan>{/if}
+      {#if line.duplicate}<title>{t('canvas.duplicateIp', { ip: line.text.split('/')[0] ?? '' })}</title>{:else if line.scope}<title>{t(`scope.${line.scope}.hint`)}</title>{/if}
     </text>
   {/each}
+  {#if duplicated.length > 0}
+    <g class="dup-badge" transform="translate(-30 -26)" role="img" aria-label={t('canvas.duplicateIp', { ip: duplicated.join(', ') })}>
+      <circle r="8" />
+      <text y="4">!</text>
+      <title>{t('canvas.duplicateIp', { ip: duplicated.join(', ') })}</title>
+    </g>
+  {/if}
   {#if floorLabel}
     <g class="floor" transform="translate(30 -26)">
       <rect x="-2" y="-9" width={floorLabel.length * 6.5 + 8} height="15" rx="4" />
@@ -182,6 +187,31 @@
     stroke: var(--bg);
     stroke-width: 4px;
     stroke-linejoin: round;
+    user-select: none;
+  }
+  .ip .port {
+    fill: var(--muted);
+    font-weight: normal;
+    opacity: 0.75;
+  }
+  .ip.duplicate {
+    fill: var(--danger);
+    font-weight: 700;
+  }
+  .dup-mark {
+    fill: var(--danger);
+    font-weight: 700;
+  }
+  .dup-badge circle {
+    fill: var(--danger);
+    stroke: var(--bg);
+    stroke-width: 2;
+  }
+  .dup-badge text {
+    font-size: 12px;
+    font-weight: 800;
+    text-anchor: middle;
+    fill: #fff;
     user-select: none;
   }
   .ip.scope-private {

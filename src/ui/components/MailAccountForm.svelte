@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Device, MailProtocol } from '../../core';
   import { t } from '../../i18n';
+  import { autosave } from '../autosave';
   import { editor } from '../state/editor.svelte';
 
   /** Entwurfsmodus, Endgerät: E-Mail-Konto für die Anwendung "E-Mail". */
@@ -22,14 +23,18 @@
     error = null;
   });
 
-  function apply(event: SubmitEvent) {
-    event.preventDefault();
+  function save(quiet: boolean): boolean {
     const failure = editor.setMailAccount(device.id, enabled ? { ...draft, protocol } : null);
-    error = failure ? { field: failure.field, text: t(`error.${failure.code}`, failure.params) } : null;
+    if (failure) {
+      if (!quiet) error = { field: failure.field, text: t(`error.${failure.code}`, failure.params) };
+      return false;
+    }
+    error = null;
+    return true;
   }
 </script>
 
-<form onsubmit={apply}>
+<form use:autosave={save} onsubmit={(e) => (e.preventDefault(), save(false))}>
   <label class="toggle">
     <input type="checkbox" bind:checked={enabled} />
     {t('mailAccount.enable')}
@@ -57,7 +62,6 @@
   {#if error}
     <p class="error" role="alert">{error.text}</p>
   {/if}
-  <button type="submit">{t('config.apply')}</button>
 </form>
 
 <style>

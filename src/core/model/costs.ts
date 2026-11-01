@@ -27,6 +27,8 @@ export const PRICES = {
   rack: 900,
   modem: { cable: 180, fiber: 120, mobile: 280, adsl: 60, vdsl: 110 } as Record<ModemKind, number>,
   legacyModem: 100,
+  /** CPE (Internet-Box): Grundpreis, Zugangstechnik als Zuschlag (eingebautes Modem). */
+  cpe: 160,
   cable: { tp: 8, fiber: 25, wireless: 0, serial: 90, coax: 15, dsl: 5, cellular: 0 } as Record<Medium, number>,
   sfp: { '1G-SX': 35, '1G-LX': 60, '10G-SR': 80, '10G-LR': 150 } as Record<SfpModule, number>,
 } as const;
@@ -63,6 +65,8 @@ export function devicePrice(device: Pick<Device, 'type' | 'interfaces' | 'varian
       return PRICES.accesspoint;
     case 'modem':
       return device.modem ? PRICES.modem[device.modem.kind] : PRICES.legacyModem;
+    case 'cpe':
+      return PRICES.cpe + (device.modem ? PRICES.modem[device.modem.kind] : 0);
     case 'internet':
       return 0;
   }

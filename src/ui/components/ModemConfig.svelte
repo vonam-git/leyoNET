@@ -18,7 +18,7 @@
 <label class="field">
   <span>{t('modem.kind')}</span>
   <select value={kind ?? ''} disabled={!editor.editable} onchange={(e) => editor.setModemKind(device.id, (e.currentTarget.value || null) as ModemKind | null)}>
-    <option value="">{t('modem.kind.legacy')}</option>
+    <option value="">{device.type === 'cpe' ? t('cpe.ethernet') : t('modem.kind.legacy')}</option>
     {#each MODEM_KINDS as k (k)}<option value={k}>{t(`modem.kind.${k}`)}</option>{/each}
   </select>
 </label>
@@ -33,7 +33,7 @@
   </dl>
   <p class="muted">{t(`modem.kind.${kind}.hint`)}</p>
 {:else}
-  <p class="muted">{t('modem.legacyHint')}</p>
+  <p class="muted">{device.type === 'cpe' ? t('cpe.ethernetHint') : t('modem.legacyHint')}</p>
 {/if}
 {#if live}
   <div class="status status-{live.phase}">

@@ -208,3 +208,30 @@ describe('Anzahl Ports', () => {
     expect(copperPorts(getDevice(unwrap(setInterfaceCount(t, 'd1', 3)), 'd1')!)).toHaveLength(3);
   });
 });
+
+describe('Verbinden mit gewähltem Anschluss', () => {
+  it('nimmt die gewählten Anschlüsse statt der ersten freien', () => {
+    let t = emptyTopology();
+    const pc = add(t, 'pc', 'PC 1');
+    t = pc.topology;
+    const sw = add(t, 'switch', 'Switch 1');
+    t = sw.topology;
+    const r = connect(t, pc.id, sw.id, 'tp', { b: 5 });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.topology.cables[0]?.b).toEqual({ device: sw.id, iface: 5 });
+  });
+
+  it('lehnt einen belegten Anschluss ab', () => {
+    let t = emptyTopology();
+    const a = add(t, 'pc', 'PC 1');
+    t = a.topology;
+    const b = add(t, 'pc', 'PC 2');
+    t = b.topology;
+    const sw = add(t, 'switch', 'Switch 1');
+    t = sw.topology;
+    t = unwrap(connect(t, a.id, sw.id, 'tp', { b: 3 })).topology;
+    const r = connect(t, b.id, sw.id, 'tp', { b: 3 });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.code).toBe('interfaceInUse');
+  });
+});

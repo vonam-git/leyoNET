@@ -28,7 +28,7 @@
     transform: translateX(-50%);
     max-width: min(560px, calc(100vw - 32px));
     pointer-events: none;
-    z-index: 10;
+    z-index: 55;
   }
   .toast {
     margin: 0;

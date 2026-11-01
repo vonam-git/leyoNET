@@ -8,6 +8,7 @@ export type DeviceType =
   | 'router'
   | 'accesspoint'
   | 'modem'
+  | 'cpe'
   | 'internet';
 
 /**
@@ -181,6 +182,13 @@ export interface Device {
 export interface StaticNat {
   inside: string;
   outside: string;
+  /**
+   * Richtung: «snat» ersetzt nur die Quelladresse ausgehender Verbindungen
+   * (Antworten kommen zurück, neue Verbindungen von aussen nicht), «dnat» nur
+   * die Zieladresse eingehender (Antworten gehen mit der äusseren Adresse
+   * hinaus). Fehlt = 1:1-NAT in beide Richtungen (SNAT und DNAT).
+   */
+  kind?: 'snat' | 'dnat';
 }
 
 export interface RoutedNetwork {

@@ -10,7 +10,7 @@ leyoNET ist ein Simulator für Rechnernetze im Informatik-Unterricht, vom ersten
 
 Die ursprüngliche Anforderungsbeschreibung steht in [docs/konzept.md](docs/konzept.md).
 
-**Dokumentation:** [Anleitung für Lernende](docs/anleitung.md) · [Hinweise für Lehrpersonen](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Normen und automatische Prüfungen](docs/normen.md) · [Befehlszeile](docs/cli.md) · [Datenschutz](docs/datenschutz.md) · [Installation](docs/installation.md) · [Webversion auf Plesk](docs/plesk.md) · [Desktop](docs/desktop.md)
+**Dokumentation:** [Anleitung für Lernende](docs/anleitung.md) · [Hinweise für Lehrpersonen](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Normen und automatische Prüfungen](docs/normen.md) · [Richtpreise](docs/preise.md) · [Befehlszeile](docs/cli.md) · [Datenschutz](docs/datenschutz.md) · [Installation](docs/installation.md) · [Webversion auf Plesk](docs/plesk.md) · [Desktop](docs/desktop.md)
 
 ## Sofort loslegen
 
@@ -116,11 +116,17 @@ Regeln, die das Projekt technisch absichert:
 - Das Gerät «Internet» leitet wie ein Provider weiter und verwirft private Adressen. Router übersetzen mit NAT (inkl. Port-Übersetzung), statischem NAT 1:1 (SNAT/DNAT mit Proxy-ARP) und bieten Portweiterleitungen. Der Provider kann CGNAT (100.64.0.0/10) einsetzen.
 - VLANs: Switch-Ports gehören zu einem VLAN (Access) oder übertragen als Trunk alle VLANs mit 802.1Q-Tag; die MAC-Tabelle gilt je VLAN.
 - Spanning Tree (vereinfacht, verkürzte Zeiten): Switches wählen per BPDU eine Root-Bridge und blockieren redundante Ports; nach einem Ausfall wird neu berechnet. Schleifen sind erlaubt; ohne STP erkennt der Simulator den Broadcast-Sturm, warnt beim Verkabeln und zeigt ein Banner mit den betroffenen Geräten. Ports zu Endgeräten leiten sofort weiter (wie PortFast).
+- **Erweiterte Einstellungen**: Rechts nur die Grundeinstellungen, alles Weitere in einem Fenster mit Reitern (Adressen, Anschlüsse, Routing, NAT, DHCP, VLAN & STP, WLAN, Dienste …); mit ◀ ▶ direkt zum nächsten Gerät. Die Routing-Tabelle ist farbig nach Herkunft und direkt bearbeitbar. Eingaben speichern beim Verlassen des Feldes, ohne «Übernehmen».
+- **Demo-Netze**: zu jedem Protokoll ein fertig konfiguriertes Netz, per Knopfdruck geöffnet oder vorgeführt (Simulation startet, Ping/Webseite/E-Mail laufen automatisch); viele auch **Schritt für Schritt** mit einem Avatar als Lehrperson, den alle selbst einstellen können. Jede Demo wird bei jedem Release geprüft.
+- **SNAT und DNAT** getrennt: PAT, statisches SNAT, Portweiterleitung, statisches DNAT und 1:1-NAT; die NAT-Tabelle zeigt die Art jedes Eintrags.
+- **Fenster und Bereiche**: Geräte-Fenster verschiebbar und mehrere gleichzeitig offen; Shop, Eigenschaften und Paketliste lassen sich ein- und ausfahren.
+- **Einzelschritt mit OSI-Farben**: Pakete zeigen ihre Schichten ineinander; jeder Schritt packt ein ankommendes Paket eine Schicht weiter aus (Switch bis 2, Router bis 3, Ziel ganz). Maus über Gerät, Kabel oder Paket zeigt Details; mehrere Desktops lassen sich minimieren.
+- **Internet-Box (CPE)**: Modem, Router mit NAT, DHCP-Server und vier LAN-Buchsen in einem Gerät, mit Kabel-, Glasfaser- oder VDSL-Zugang.
 - **Funktionsprofile 1–5** (1. Lehrjahr bis Studium) oder eigene Auswahl blenden Funktionen ein und aus; Lehrpersonen verteilen die Auswahl als Datei, in der Webversion setzt der Admin Grenzen ([docs/funktionsprofile.md](docs/funktionsprofile.md)). Projekte, die mehr nutzen, schalten die nötigen Funktionen beim Öffnen ein.
 - **Router-on-a-Stick**: Router-Subinterfaces mit 802.1Q-Tag (`eth0.10`) an einem Trunk-Port; jedes ist Gateway eines VLANs.
 - **Layer-3-Switch**: Switch mit VLAN-Interfaces (SVIs) als Gateways, routet zwischen VLANs (`ip routing`), auch mit DHCP-Relay.
 - **Befehlszeile** für Router und Switches im Stil von FRRouting (vtysh), mit Abkürzungen, `?`, Tab und `do`; Zugang per Doppelklick (Konsole) oder per `ssh` vom PC über simuliertes TCP. Befehlsreferenz: [docs/cli.md](docs/cli.md).
-- **Verbindungsarten**: TP-Kabel, Glasfaser, Funk (WLAN), seriell (HDLC/PPP mit LCP/IPCP), Koax, Telefonleitung (DSL) und Mobilfunk. Jedes Kabelende zeigt eine Link-LED (grün aktiv, rot aus mit Grund), Anschlüsse haben Farbtags und Beschreibungen, Ports lassen sich jederzeit abschalten (`shutdown`), auch in der Simulation.
+- **Verbindungsarten**: TP-Kabel, Glasfaser, Funk (WLAN), seriell (HDLC/PPP mit LCP/IPCP), Koax, Telefonleitung (DSL) und Mobilfunk. Jedes Kabelende zeigt eine Link-LED (grün aktiv, orange bei Verkehr, rot aus mit Grund); beim Verbinden wählt der Simulator den nächsten freien Anschluss oder zeigt eine Liste, Anschlüsse haben Farbtags und Beschreibungen, Ports lassen sich jederzeit abschalten (`shutdown`), auch in der Simulation.
 - **WLAN**: Access Points mit SSID, WPA2-Passwort, Band und Kanal; Endgeräte mit WLAN-Profil. Die Signalqualität hängt von Abstand und Stockwerken ab. **Mesh**: Access Points mit Mesh-Betrieb verbinden sich per Funk, auch über Stockwerke. **Roaming**: Wird ein Client in der Simulation verschoben, meldet er sich beim näheren Access Point mit derselben SSID an (Reassociation, Gratuitous ARP).
 - **Stockwerke**: Geräte und Bereiche liegen auf Stockwerken; die Ansicht zeigt alle oder eines.
 - **Dokumentation im Entwurf**: farbige Bereiche mit Titel, Netz (Netzadresse, Maske, Hostbereich und Broadcast werden berechnet), VLAN, Notiz und «öffentliches Netz»; VLANs mit Name und Farbe färben die Switch-Ports automatisch.
@@ -128,17 +134,18 @@ Regeln, die das Projekt technisch absichert:
 - **Frontansicht und Rack**: Switch-Ports wie auf dem Gerät, Umstecken per Klick; die Rack-Ansicht zeigt alle Netzwerkgeräte pro Stockwerk.
 - **Dynamisches Routing**: OSPFv2 (Hello, DBD, LSR, LSU, LSAck, SPF nach Dijkstra), RIP v2 und BGP-4 (binär nach RFC 4271 über TCP 179); administrative Distanz entscheidet zwischen Quellen. Konfiguration per Formular oder CLI.
 - **Server und Client-Gruppen**: eigenes Server-Gerät für DHCP, DNS, Web und Mail; eine Client-Gruppe steht für bis zu 500 PCs, die ihre Adressen per DHCP beziehen.
-- **Kosten**: Richtpreise für alle Geräte, Kabel und Module, Total in CHF, EUR oder USD; Aufgaben können ein Budget verlangen.
+- **Kosten**: Richtpreise für alle Geräte, Kabel und Module, Total in CHF, EUR oder USD; Aufgaben können ein Budget verlangen. Preise im Shop je nach Profil ein- oder ausgeblendet; jeder Preis wird automatisch auf Plausibilität geprüft, die Marktprüfung erinnert halbjährlich ([docs/preise.md](docs/preise.md)).
+- **Doppelte Adressen**: Rotes Ausrufezeichen am Gerät, wenn zwei Geräte im selben Netz dieselbe IP-Adresse haben (auch per DHCP).
 - **IP-Rechner** (Taste I): Netz, Broadcast, Hostbereich, Binärdarstellung, Subnetting gleichmässig oder nach Bedarf (VLSM), Werte direkt übernehmen.
 - Konfigurationen werden nur auf Lesbarkeit geprüft. Fachliche Fehler (Gateway ausserhalb des Netzes, Netzadresse als Geräteadresse) sind erlaubt und werden als Warnung erklärt, damit Lehrpersonen Fehlersuche-Aufgaben bauen können.
 
 ## Aufgaben
 
-Der **Aufgaben-Katalog** im Simulator enthält 24 Übungen von ★ bis ★★★★★, jede mit automatischer Prüfung ([docs/lehrpersonen.md](docs/lehrpersonen.md)). Aufgabendateien enthalten zusätzlich Lernziele, die der Simulator auf Knopfdruck prüft (z.B. «PC 1 erreicht PC 2 per Ping»). Lehrpersonen erstellen sie direkt im Simulator in einem Formular (oder als JSON) und werten mit «Abgaben auswerten …» die Dateien einer ganzen Klasse auf einmal aus, mit Export als CSV für Excel. Beschreibung aller Prüfbausteine: [docs/aufgaben.md](docs/aufgaben.md). Musteraufgabe: [docs/aufgaben/zwei-subnetze.json](docs/aufgaben/zwei-subnetze.json).
+Der **Aufgaben-Katalog** im Simulator enthält 30 Übungen von ★ bis ★★★★★, jede mit automatischer Prüfung ([docs/lehrpersonen.md](docs/lehrpersonen.md)). Aufgabendateien enthalten zusätzlich Lernziele, die der Simulator auf Knopfdruck prüft (z.B. «PC 1 erreicht PC 2 per Ping»). Lehrpersonen erstellen sie direkt im Simulator in einem Formular (oder als JSON) und werten mit «Abgaben auswerten …» die Dateien einer ganzen Klasse auf einmal aus, mit Export als CSV für Excel. Beschreibung aller Prüfbausteine: [docs/aufgaben.md](docs/aufgaben.md). Musteraufgabe: [docs/aufgaben/zwei-subnetze.json](docs/aufgaben/zwei-subnetze.json).
 
 ## Beispiele
 
-[docs/beispiele](docs/beispiele) enthält fertige Projekte zum Öffnen (`Öffnen …`), z.B. `zwei-subnetze.json` (PC 1 erreicht über Router 1 einen Switch mit zwei Geräten im zweiten Subnetz) `dhcp.json` (ein Server vergibt drei Clients ihre Adressen) `web.json` (ein Notebook bezieht per DHCP Adresse und DNS-Server und ruft über einen Router `http://www.schule.example/` ab) `mail.json` (Anna und Ben schreiben sich E-Mails über einen gemeinsamen Mailserver) `heimnetz-nat.json` (Heimnetz mit NAT, öffentlicher Webserver, Portweiterleitung auf ein NAS) `vlan-stp.json` (drei Switches im Ring mit Spanning Tree, zwei VLANs über Trunks), `router-on-a-stick.json` (zwei VLANs, ein Router mit Subinterfaces, SSH-Zugang `admin` / `Netz2026`), `layer3-switch.json` (Core-Switch routet zwischen drei VLANs, zentraler DHCP-Server über Relay, dokumentierte Bereiche) und `wlan-mesh.json` (zwei Mesh-Access-Points im EG und OG). Ein Test stellt sicher, dass alle Beispiele gültig bleiben.
+[docs/beispiele](docs/beispiele) enthält fertige Projekte; im Programm stehen sie unter **Datei → Demo-Netze …** (auch neu: `arp-ping`, `statische-routen`, `ospf`, `rip`, `bgp`, `seriell-ppp`, `broadcast-sturm`, `cpe-heimnetz`). Zum Beispiel `zwei-subnetze.json` (PC 1 erreicht über Router 1 einen Switch mit zwei Geräten im zweiten Subnetz) `dhcp.json` (ein Server vergibt drei Clients ihre Adressen) `web.json` (ein Notebook bezieht per DHCP Adresse und DNS-Server und ruft über einen Router `http://www.schule.example/` ab) `mail.json` (Anna und Ben schreiben sich E-Mails über einen gemeinsamen Mailserver) `heimnetz-nat.json` (Heimnetz mit NAT, öffentlicher Webserver, Portweiterleitung auf ein NAS) `vlan-stp.json` (drei Switches im Ring mit Spanning Tree, zwei VLANs über Trunks), `router-on-a-stick.json` (zwei VLANs, ein Router mit Subinterfaces, SSH-Zugang `admin` / `Netz2026`), `layer3-switch.json` (Core-Switch routet zwischen drei VLANs, zentraler DHCP-Server über Relay, dokumentierte Bereiche) und `wlan-mesh.json` (zwei Mesh-Access-Points im EG und OG). Ein Test stellt sicher, dass alle Beispiele gültig bleiben.
 
 ## Datenschutz
 
@@ -164,7 +171,7 @@ leyoNET ist eine eigenständige Neuentwicklung. Von FILIUS (Universität Siegen)
 
 ## Lizenz
 
-© 2026 Mark von Allmen und Mikael von Allmen. leyoNET ist freie Software unter der [GNU Affero General Public License v3 oder neuer](LICENSE) (AGPL-3.0-or-later):
+© 2026 Mark v. A. und Mikael v. A. – leyoNET ist freie Software unter der [GNU Affero General Public License v3 oder neuer](LICENSE) (AGPL-3.0-or-later):
 
 - Schulen, Lehrpersonen und Lernende dürfen leyoNET frei nutzen, kopieren und weitergeben, auch als Webversion auf dem eigenen Server.
 - Wer leyoNET verändert und weitergibt oder als Webdienst anbietet, muss den Quellcode seiner Fassung unter derselben Lizenz zugänglich machen.
