@@ -608,7 +608,8 @@ function readDevice(v: unknown, path: string): Device {
     if (type !== 'router' && type !== 'cpe') throw new Invalid(`${path}.staticNat`);
     device.staticNat = arr(o.staticNat, `${path}.staticNat`).map((raw, i) => {
       const r = obj(raw, `${path}.staticNat[${i}]`);
-      return { inside: ip(r.inside, `${path}.staticNat[${i}].inside`), outside: ip(r.outside, `${path}.staticNat[${i}].outside`) };
+      if (r.kind !== undefined && r.kind !== 'snat' && r.kind !== 'dnat') throw new Invalid(`${path}.staticNat[${i}].kind`);
+      return { inside: ip(r.inside, `${path}.staticNat[${i}].inside`), outside: ip(r.outside, `${path}.staticNat[${i}].outside`), ...(r.kind ? { kind: r.kind as 'snat' | 'dnat' } : {}) };
     });
   }
   if (o.cgnatAddress !== undefined) {

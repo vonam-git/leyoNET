@@ -15,6 +15,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { checkRegistry, root } from './normen.mjs';
+import { checkPrices } from './preise.mjs';
 
 const INDEX_URL = 'https://www.rfc-editor.org/rfc-index.xml';
 
@@ -79,8 +80,11 @@ export function report({ obsolete, updated, unknown }, { missing, overdue, limit
   section('Nicht im Normenverzeichnis eingetragen', missing);
   section(`Prüfung älter als ${limit} Monate (IEEE, ITU-T, CableLabs)`, overdue.map((o) => `${o}: aktuelle Ausgabe prüfen, \`aktuell\` und \`geprueft\` in docs/normen.json nachführen.`));
   section('Neue Aktualisierungen (zur Information)', updated.map((u) => `${rfcLink(u.number)} wird zusätzlich aktualisiert durch ${u.by.map(rfcLink).join(', ')}.`));
-  const action = obsolete.length + unknown.length + missing.length + overdue.length > 0;
-  if (!action && !updated.length) lines.push('Alle Normen sind aktuell.', '');
+  // Richtpreise: Bereiche prüft npm test; hier nur die fällige Marktprüfung von Hand.
+  const prices = checkPrices();
+  section(`Richtpreise: Prüfung älter als ${prices.limit} Monate`, prices.overdue ? [`Zuletzt am ${prices.geprueft}. Preise in docs/preise.json und src/core/model/costs.ts mit dem Markt vergleichen, «geprueft» nachführen (siehe docs/preise.md).`] : []);
+  const action = obsolete.length + unknown.length + missing.length + overdue.length > 0 || prices.overdue;
+  if (!action && !updated.length) lines.push('Alle Normen und Richtpreise sind aktuell.', '');
   return { text: lines.join('\n'), action };
 }
 

@@ -10,7 +10,7 @@ leyoNET ist ein Simulator für Rechnernetze im Informatik-Unterricht, vom ersten
 
 Die ursprüngliche Anforderungsbeschreibung steht in [docs/konzept.md](docs/konzept.md).
 
-**Dokumentation:** [Anleitung für Lernende](docs/anleitung.md) · [Hinweise für Lehrpersonen](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Normen und automatische Prüfungen](docs/normen.md) · [Befehlszeile](docs/cli.md) · [Datenschutz](docs/datenschutz.md) · [Installation](docs/installation.md) · [Webversion auf Plesk](docs/plesk.md) · [Desktop](docs/desktop.md)
+**Dokumentation:** [Anleitung für Lernende](docs/anleitung.md) · [Hinweise für Lehrpersonen](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Normen und automatische Prüfungen](docs/normen.md) · [Richtpreise](docs/preise.md) · [Befehlszeile](docs/cli.md) · [Datenschutz](docs/datenschutz.md) · [Installation](docs/installation.md) · [Webversion auf Plesk](docs/plesk.md) · [Desktop](docs/desktop.md)
 
 ## Sofort loslegen
 
@@ -117,7 +117,9 @@ Regeln, die das Projekt technisch absichert:
 - VLANs: Switch-Ports gehören zu einem VLAN (Access) oder übertragen als Trunk alle VLANs mit 802.1Q-Tag; die MAC-Tabelle gilt je VLAN.
 - Spanning Tree (vereinfacht, verkürzte Zeiten): Switches wählen per BPDU eine Root-Bridge und blockieren redundante Ports; nach einem Ausfall wird neu berechnet. Schleifen sind erlaubt; ohne STP erkennt der Simulator den Broadcast-Sturm, warnt beim Verkabeln und zeigt ein Banner mit den betroffenen Geräten. Ports zu Endgeräten leiten sofort weiter (wie PortFast).
 - **Erweiterte Einstellungen**: Rechts nur die Grundeinstellungen, alles Weitere in einem Fenster mit Reitern (Adressen, Anschlüsse, Routing, NAT, DHCP, VLAN & STP, WLAN, Dienste …); mit ◀ ▶ direkt zum nächsten Gerät. Die Routing-Tabelle ist farbig nach Herkunft und direkt bearbeitbar. Eingaben speichern beim Verlassen des Feldes, ohne «Übernehmen».
-- **Demo-Netze**: zu jedem Protokoll ein fertig konfiguriertes Netz, per Knopfdruck geöffnet oder vorgeführt (Simulation startet, Ping/Webseite/E-Mail laufen automatisch); jede Demo wird bei jedem Release geprüft.
+- **Demo-Netze**: zu jedem Protokoll ein fertig konfiguriertes Netz, per Knopfdruck geöffnet oder vorgeführt (Simulation startet, Ping/Webseite/E-Mail laufen automatisch); viele auch **Schritt für Schritt** mit einem Avatar als Lehrperson, den alle selbst einstellen können. Jede Demo wird bei jedem Release geprüft.
+- **SNAT und DNAT** getrennt: PAT, statisches SNAT, Portweiterleitung, statisches DNAT und 1:1-NAT; die NAT-Tabelle zeigt die Art jedes Eintrags.
+- **Fenster und Bereiche**: Geräte-Fenster verschiebbar und mehrere gleichzeitig offen; Shop, Eigenschaften und Paketliste lassen sich ein- und ausfahren.
 - **Einzelschritt mit OSI-Farben**: Pakete zeigen ihre Schichten ineinander; jeder Schritt packt ein ankommendes Paket eine Schicht weiter aus (Switch bis 2, Router bis 3, Ziel ganz). Maus über Gerät, Kabel oder Paket zeigt Details; mehrere Desktops lassen sich minimieren.
 - **Internet-Box (CPE)**: Modem, Router mit NAT, DHCP-Server und vier LAN-Buchsen in einem Gerät, mit Kabel-, Glasfaser- oder VDSL-Zugang.
 - **Funktionsprofile 1–5** (1. Lehrjahr bis Studium) oder eigene Auswahl blenden Funktionen ein und aus; Lehrpersonen verteilen die Auswahl als Datei, in der Webversion setzt der Admin Grenzen ([docs/funktionsprofile.md](docs/funktionsprofile.md)). Projekte, die mehr nutzen, schalten die nötigen Funktionen beim Öffnen ein.
@@ -132,14 +134,14 @@ Regeln, die das Projekt technisch absichert:
 - **Frontansicht und Rack**: Switch-Ports wie auf dem Gerät, Umstecken per Klick; die Rack-Ansicht zeigt alle Netzwerkgeräte pro Stockwerk.
 - **Dynamisches Routing**: OSPFv2 (Hello, DBD, LSR, LSU, LSAck, SPF nach Dijkstra), RIP v2 und BGP-4 (binär nach RFC 4271 über TCP 179); administrative Distanz entscheidet zwischen Quellen. Konfiguration per Formular oder CLI.
 - **Server und Client-Gruppen**: eigenes Server-Gerät für DHCP, DNS, Web und Mail; eine Client-Gruppe steht für bis zu 500 PCs, die ihre Adressen per DHCP beziehen.
-- **Kosten**: Richtpreise für alle Geräte, Kabel und Module, Total in CHF, EUR oder USD; Aufgaben können ein Budget verlangen. Preise im Shop je nach Profil ein- oder ausgeblendet.
+- **Kosten**: Richtpreise für alle Geräte, Kabel und Module, Total in CHF, EUR oder USD; Aufgaben können ein Budget verlangen. Preise im Shop je nach Profil ein- oder ausgeblendet; jeder Preis wird automatisch auf Plausibilität geprüft, die Marktprüfung erinnert halbjährlich ([docs/preise.md](docs/preise.md)).
 - **Doppelte Adressen**: Rotes Ausrufezeichen am Gerät, wenn zwei Geräte im selben Netz dieselbe IP-Adresse haben (auch per DHCP).
 - **IP-Rechner** (Taste I): Netz, Broadcast, Hostbereich, Binärdarstellung, Subnetting gleichmässig oder nach Bedarf (VLSM), Werte direkt übernehmen.
 - Konfigurationen werden nur auf Lesbarkeit geprüft. Fachliche Fehler (Gateway ausserhalb des Netzes, Netzadresse als Geräteadresse) sind erlaubt und werden als Warnung erklärt, damit Lehrpersonen Fehlersuche-Aufgaben bauen können.
 
 ## Aufgaben
 
-Der **Aufgaben-Katalog** im Simulator enthält 24 Übungen von ★ bis ★★★★★, jede mit automatischer Prüfung ([docs/lehrpersonen.md](docs/lehrpersonen.md)). Aufgabendateien enthalten zusätzlich Lernziele, die der Simulator auf Knopfdruck prüft (z.B. «PC 1 erreicht PC 2 per Ping»). Lehrpersonen erstellen sie direkt im Simulator in einem Formular (oder als JSON) und werten mit «Abgaben auswerten …» die Dateien einer ganzen Klasse auf einmal aus, mit Export als CSV für Excel. Beschreibung aller Prüfbausteine: [docs/aufgaben.md](docs/aufgaben.md). Musteraufgabe: [docs/aufgaben/zwei-subnetze.json](docs/aufgaben/zwei-subnetze.json).
+Der **Aufgaben-Katalog** im Simulator enthält 30 Übungen von ★ bis ★★★★★, jede mit automatischer Prüfung ([docs/lehrpersonen.md](docs/lehrpersonen.md)). Aufgabendateien enthalten zusätzlich Lernziele, die der Simulator auf Knopfdruck prüft (z.B. «PC 1 erreicht PC 2 per Ping»). Lehrpersonen erstellen sie direkt im Simulator in einem Formular (oder als JSON) und werten mit «Abgaben auswerten …» die Dateien einer ganzen Klasse auf einmal aus, mit Export als CSV für Excel. Beschreibung aller Prüfbausteine: [docs/aufgaben.md](docs/aufgaben.md). Musteraufgabe: [docs/aufgaben/zwei-subnetze.json](docs/aufgaben/zwei-subnetze.json).
 
 ## Beispiele
 
@@ -169,7 +171,7 @@ leyoNET ist eine eigenständige Neuentwicklung. Von FILIUS (Universität Siegen)
 
 ## Lizenz
 
-© 2026 Mark von Allmen und Mikael von Allmen. leyoNET ist freie Software unter der [GNU Affero General Public License v3 oder neuer](LICENSE) (AGPL-3.0-or-later):
+© 2026 Mark v. A. und Mikael v. A. – leyoNET ist freie Software unter der [GNU Affero General Public License v3 oder neuer](LICENSE) (AGPL-3.0-or-later):
 
 - Schulen, Lehrpersonen und Lernende dürfen leyoNET frei nutzen, kopieren und weitergeben, auch als Webversion auf dem eigenen Server.
 - Wer leyoNET verändert und weitergibt oder als Webdienst anbietet, muss den Quellcode seiner Fassung unter derselben Lizenz zugänglich machen.

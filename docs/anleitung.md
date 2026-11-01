@@ -38,6 +38,7 @@ Beim Start der Simulation wird automatisch ein Snapshot angelegt. Weitere entste
 2. **Verkabeln:** Mit **K** (oder im Shop unter «Verbindungen») ein Kabel wählen und nacheinander zwei Geräte anklicken. Der Simulator nimmt den nächsten freien passenden Anschluss. Wer den Anschluss selbst bestimmen will, stellt oben in der Zeichenfläche «Anschluss: aus Liste wählen» ein; dann erscheint bei jedem Gerät eine Liste mit allen Anschlüssen (belegte zeigen, womit sie verbunden sind). Passt die Kabelart nicht, erscheint ein Hinweis.
 3. **Konfigurieren:** Gerät anklicken; rechts erscheinen die Grundeinstellungen (Name, Adressen). Eingaben werden gespeichert, sobald man das Feld verlässt (Tab, Klick daneben oder Enter); ein «Übernehmen» braucht es nicht. Neben jedem Adressfeld öffnet der Rechner-Knopf den **IP-Rechner**.
 4. **Erweitert:** **Erweitert …** (Taste **E**, bei Endgeräten auch Doppelklick) öffnet alle Einstellungen in einem eigenen Fenster mit Reitern: Adressen, Anschlüsse, Routing, NAT, DHCP, VLAN & STP, WLAN, E-Mail, Dienste. Mit ◀ ▶ (oder Bild↑/Bild↓) geht es direkt zum vorherigen bzw. nächsten Gerät.
+   Die Fenster lassen sich am Kopf verschieben, und für mehrere Geräte können gleichzeitig Fenster offen sein.
 5. **Testen:** **M** drücken, ein Endgerät doppelklicken und im Desktop `ping 192.168.1.20` eingeben.
 
 Nützlich: **Strg+D** dupliziert die Auswahl, **F2** benennt um, **Entf** löscht, **Strg+Z** macht rückgängig.
@@ -98,7 +99,11 @@ In der Simulation zeigt die Paketliste unten jeden Rahmen. Ein Klick öffnet die
 
 ## Demo-Netze
 
-**Datei → Demo-Netze …** (oder ▶ in der Werkzeugleiste) bietet zu jedem Protokoll ein fertig eingerichtetes Netz. «Vorführen» startet die Simulation und zeigt das Protokoll in Aktion, «Öffnen» lädt es zum Erkunden.
+**Datei → Demo-Netze …** (oder ▶ in der Werkzeugleiste) bietet zu jedem Protokoll ein fertig eingerichtetes Netz. «Vorführen» startet die Simulation und zeigt das Protokoll in Aktion, «Öffnen» lädt es zum Erkunden. Bei vielen Demos erklärt **Schritt für Schritt** ein Avatar den Testfall; mit «Weiter» geht es zum nächsten Schritt. Den Avatar stellst du dir selbst ein (Klick auf ihn oder **Hilfe → Avatar anpassen …**).
+
+## Mehr Platz
+
+Die Bereiche links (Shop), rechts (Eigenschaften) und unten (Paketliste) fahren mit den Griffen ‹ › am Rand der Zeichenfläche oder unter **Ansicht** ein und aus.
 
 ## Kosten
 

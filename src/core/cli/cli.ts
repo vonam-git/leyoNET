@@ -1254,7 +1254,8 @@ export function runningConfig(device: Device): string[] {
     lines.push(`ip route ${r.network}/${prefix} ${via}`);
   }
   if (device.routes?.length) lines.push('!');
-  for (const r of device.staticNat ?? []) lines.push(`ip nat inside source static ${r.inside} ${r.outside}`);
+  // Nur 1:1-NAT hat eine Entsprechung in der Befehlszeile; reines SNAT/DNAT wird im Formular eingestellt.
+  for (const r of device.staticNat ?? []) lines.push(r.kind ? `! ${r.kind.toUpperCase()} ${r.inside} <-> ${r.outside} (Formular)` : `ip nat inside source static ${r.inside} ${r.outside}`);
   if (device.staticNat?.length) lines.push('!');
   const prefixOf = (n: RoutedNetwork) => `${n.network}/${parseMask(n.mask)}`;
   const common = (c: { passive?: number[]; defaultOriginate?: boolean; redistribute?: RedistributeSource[] }) => [

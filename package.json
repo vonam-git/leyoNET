@@ -33,10 +33,10 @@
     "vitest": "^4.1.12"
   },
   "license": "AGPL-3.0-or-later",
-  "author": "Mark von Allmen & Mikael von Allmen",
+  "author": "Mark v. A. & Mikael v. A.",
   "contributors": [
-    "Mark von Allmen",
-    "Mikael von Allmen"
+    "Mark v. A.",
+    "Mikael v. A."
   ],
   "homepage": "https://github.com/vonam-git/leyoNET",
   "repository": { "type": "git", "url": "https://github.com/vonam-git/leyoNET.git" }

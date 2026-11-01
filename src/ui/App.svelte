@@ -13,6 +13,7 @@
   import Inspector from './components/Inspector.svelte';
   import MenuBar from './components/MenuBar.svelte';
   import PacketList from './components/PacketList.svelte';
+  import PanelToggles from './components/PanelToggles.svelte';
   import Palette from './components/Palette.svelte';
   import ShopFlyout from './components/ShopFlyout.svelte';
   import SimControls from './components/SimControls.svelte';
@@ -137,8 +138,8 @@
   };
 
   function onkeydown(event: KeyboardEvent) {
-    // Offene Dialoge behandeln ihre Tasten selbst.
-    if (document.querySelector('dialog[open]')) return;
+    // Offene Dialoge und Geräte-Fenster behandeln ihre Tasten selbst.
+    if (document.querySelector('dialog[open]') || (event.target as Element | null)?.closest('.device-window')) return;
     if (handleShortcut(event)) {
       event.preventDefault();
       return;
@@ -157,11 +158,11 @@
 <svelte:window {onkeydown} {onpagehide} />
 <svelte:document {onvisibilitychange} />
 
-<div class="app" class:help-open={dialogs.help !== null}>
+<div class="app" class:help-open={dialogs.help !== null} class:no-left={!ui.panels.left} class:no-right={!ui.panels.right}>
   <MenuBar />
   <ToolBar />
   <div class="body">
-    <div class="left">
+    <div class="left" hidden={!ui.panels.left}>
       <div class="left-scroll">
         <Palette />
         <TaskPanel />
@@ -176,8 +177,10 @@
       <FloorBar />
       <Canvas />
       <CliWindow />
-      {#if editor.acting && ui.has('tool.sniffer')}
+      <PanelToggles />
+      {#if editor.acting && ui.has('tool.sniffer') && ui.panels.bottom}
         <div class="packet-panel">
+          <PanelToggles inside />
           <PacketList />
         </div>
       {/if}
@@ -185,7 +188,7 @@
         <Desktop />
       {/if}
     </main>
-    <Inspector />
+    {#if ui.panels.right}<Inspector />{/if}
   </div>
 </div>
 <DialogHost />
@@ -233,12 +236,34 @@
     min-height: 0;
   }
   .packet-panel {
+    position: relative;
     height: 40%;
     min-height: 180px;
+  }
+  .no-left .body {
+    grid-template-columns: minmax(0, 1fr) 310px;
+  }
+  .no-right .body {
+    grid-template-columns: 210px minmax(0, 1fr);
+  }
+  .no-left.no-right .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .left[hidden] {
+    display: none;
   }
   @media (max-width: 1100px) {
     .body {
       grid-template-columns: 180px minmax(0, 1fr) 260px;
+    }
+    .no-left .body {
+      grid-template-columns: minmax(0, 1fr) 260px;
+    }
+    .no-right .body {
+      grid-template-columns: 180px minmax(0, 1fr);
+    }
+    .no-left.no-right .body {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 </style>

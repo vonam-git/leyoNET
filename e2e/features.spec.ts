@@ -200,3 +200,56 @@ test('Kosten in anderer Währung', async ({ page }) => {
   await dialog.getByRole('radio', { name: 'EUR' }).click();
   await expect(dialog).toContainText("1'155");
 });
+
+test('Mehrere Geräte-Fenster, verschiebbar; Bereiche ein- und ausfahren', async ({ page }) => {
+  await openProject(page, example('zwei-subnetze'));
+  await page.getByRole('button', { name: /^PC 1,/ }).click();
+  await page.keyboard.press('e');
+  // Zweites Gerät über die Befehlssuche wählen und rechts «Erweitert …».
+  await page.locator('.zoom').click();
+  await page.keyboard.press('Control+k');
+  await page.keyboard.type('Router 1');
+  await page.keyboard.press('Enter');
+  await page.locator('aside.inspector').getByRole('button', { name: /^Erweitert/ }).click();
+  await expect(page.getByRole('dialog', { name: 'PC 1' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Router 1' })).toBeVisible();
+  const win = page.getByRole('dialog', { name: 'Router 1' });
+  const before = (await win.boundingBox())!;
+  const head = win.locator('header');
+  const box = (await head.boundingBox())!;
+  await page.mouse.move(box.x + 320, box.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 420, box.y + 100, { steps: 5 });
+  await page.mouse.up();
+  const after = (await win.boundingBox())!;
+  expect(Math.round(after.x - before.x)).toBe(100);
+  await win.getByRole('button', { name: 'Schliessen' }).click();
+  await page.getByRole('dialog', { name: 'PC 1' }).press('Escape');
+  await expect(page.locator('.device-window')).toHaveCount(0);
+  // Shop und Eigenschaften einfahren
+  await page.getByRole('button', { name: 'Shop einfahren' }).click();
+  await expect(page.getByRole('navigation', { name: 'Geräte' })).toBeHidden();
+  await page.getByRole('button', { name: 'Eigenschaften einfahren' }).click();
+  await expect(page.locator('aside.inspector')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Shop ausfahren' }).click();
+  await expect(page.getByRole('navigation', { name: 'Geräte' })).toBeVisible();
+});
+
+test('Geführte Demo mit Avatar: Schritte, SNAT und DNAT im NAT-Reiter', async ({ page }) => {
+  await page.getByRole('button', { name: 'Demo-Netze …' }).click();
+  await page.locator('li').filter({ hasText: 'SNAT: Quelladresse ersetzen' }).getByRole('button', { name: /Schritt für Schritt/ }).click();
+  const tour = page.getByRole('dialog', { name: 'SNAT: Quelladresse ersetzen' });
+  await expect(tour).toContainText('Schritt 1 von 6');
+  await tour.getByRole('button', { name: /Weiter/ }).click();
+  const router = page.getByRole('dialog', { name: 'Firmenrouter' });
+  await expect(router.getByRole('tab', { name: 'NAT' })).toHaveAttribute('aria-selected', 'true');
+  await expect(router).toContainText('SNAT: Quelladresse ersetzen');
+  await expect(router).toContainText('DNAT: Zieladresse ersetzen');
+  await expect(router).toContainText('192.168.0.25 → 203.0.113.5');
+  await tour.getByRole('button', { name: 'Avatar anpassen …' }).click();
+  await page.getByRole('button', { name: 'Vollbart' }).click();
+  await expect(page.getByRole('button', { name: 'Vollbart' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('dialog', { name: 'Avatar der Lehrperson' }).getByRole('button', { name: 'Schliessen' }).click();
+  await tour.getByRole('button', { name: 'Führung beenden' }).click();
+  await expect(tour).toBeHidden();
+});

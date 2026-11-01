@@ -735,4 +735,178 @@ export const CATALOG: CatalogEntry[] = [
       };
     },
   },
+  {
+    id: 'duplicate-ip',
+    stars: 1,
+    level: 1,
+    build() {
+      const s = new Start()
+        .add('switch', 'Switch', 0, -140)
+        .add('pc', 'PC 1', -300, 120)
+        .add('pc', 'PC 2', 0, 140)
+        .add('notebook', 'Notebook', 300, 120)
+        .link('PC 1', 'Switch')
+        .link('PC 2', 'Switch')
+        .link('Notebook', 'Switch')
+        .host('PC 1', '10.0.0.1', '24')
+        .host('PC 2', '10.0.0.2', '24')
+        .host('Notebook', '10.0.0.2', '24');
+      return {
+        topology: s.topology,
+        tasks: task('duplicateIp', 1, [
+          goal('duplicateIp', 1, { type: 'noDuplicateIp' }),
+          goal('duplicateIp', 2, { type: 'ping', from: 'PC 1', to: 'PC 2' }),
+          goal('duplicateIp', 3, { type: 'ping', from: 'PC 1', to: 'Notebook' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'static-routes',
+    stars: 2,
+    features: ['routing.static'],
+    level: 2,
+    build() {
+      const s = new Start()
+        .add('pc', 'PC A', -460, 0)
+        .router('Router 1', -160, 0, ['192.168.10.1/24', '10.0.0.1/30'])
+        .router('Router 2', 160, 0, ['10.0.0.2/30', '192.168.20.1/24'])
+        .add('pc', 'PC B', 460, 0)
+        .link('PC A', 'Router 1')
+        .link('Router 1', 'Router 2')
+        .link('Router 2', 'PC B')
+        .host('PC A', '192.168.10.10', '24', '192.168.10.1')
+        .host('PC B', '192.168.20.10', '24', '192.168.20.1');
+      return {
+        topology: s.topology,
+        tasks: task('staticRoutes', 2, [
+          goal('staticRoutes', 1, { type: 'routeLearned', device: 'Router 1', network: '192.168.20.0/24' }),
+          goal('staticRoutes', 2, { type: 'routeLearned', device: 'Router 2', network: '192.168.10.0/24' }),
+          goal('staticRoutes', 3, { type: 'ping', from: 'PC A', to: 'PC B' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'cpe-home',
+    stars: 2,
+    features: ['device.cpe', 'device.internet', 'medium.access', 'service.web'],
+    level: 2,
+    build() {
+      const s = new Start()
+        .add('pc', 'PC', -460, -120)
+        .add('notebook', 'Notebook', -460, 120)
+        .add('cpe', 'Internet-Box', -200, 0, { modem: 'cable' })
+        .router('Provider', 120, 0, ['203.0.113.1/30', '198.51.100.1/24'], 'internet')
+        .add('server', 'Webserver', 420, 0)
+        .link('PC', 'Internet-Box')
+        .link('Notebook', 'Internet-Box')
+        .link('Internet-Box', 'Provider', 'coax')
+        .link('Provider', 'Webserver')
+        .host('Webserver', '198.51.100.10', '24', '198.51.100.1')
+        .web('Webserver', t('catalog.cpeHome.page'))
+        .apply((t, id) => {
+          for (const n of ['PC', 'Notebook']) t = unwrap(configureHost(t, id(n), { ip: '', mask: '', dhcp: true }));
+          return t;
+        });
+      return {
+        topology: s.topology,
+        tasks: task('cpeHome', 2, [
+          goal('cpeHome', 1, { type: 'dhcpLease', device: 'Notebook' }),
+          goal('cpeHome', 2, { type: 'http', from: 'Notebook', url: 'http://198.51.100.10/' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'port-forward',
+    stars: 3,
+    features: ['net.nat', 'device.internet', 'service.web'],
+    level: 3,
+    build() {
+      const s = new Start()
+        .add('pc', 'NAS', -440, 0)
+        .router('Heimrouter', -150, 0, ['192.168.1.1/24', '203.0.113.2/30'])
+        .router('Internet', 150, 0, ['203.0.113.1/30', '198.51.100.1/24'], 'internet')
+        .add('notebook', 'Unterwegs', 440, 0)
+        .link('NAS', 'Heimrouter')
+        .link('Heimrouter', 'Internet')
+        .link('Internet', 'Unterwegs')
+        .host('NAS', '192.168.1.20', '24', '192.168.1.1')
+        .host('Unterwegs', '198.51.100.20', '24', '198.51.100.1')
+        .nat('Heimrouter', 1)
+        .route('Heimrouter', '0.0.0.0', '0.0.0.0', '203.0.113.1')
+        .web('NAS', t('catalog.portForward.page'));
+      return {
+        topology: s.topology,
+        tasks: task('portForward', 3, [
+          goal('portForward', 1, { type: 'http', from: 'Unterwegs', url: 'http://203.0.113.2:8080/' }),
+          goal('portForward', 2, { type: 'seenAs', from: 'NAS', to: 'Unterwegs', address: '203.0.113.2' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'snat-mail',
+    stars: 4,
+    features: ['net.nat', 'net.staticNat', 'device.internet'],
+    level: 4,
+    build() {
+      const s = new Start()
+        .add('pc', 'PC', -420, -140)
+        .add('server', 'Mailserver', -420, 140)
+        .add('switch', 'Switch', -220, 0)
+        .router('Firmenrouter', 0, 0, ['192.168.0.1/24', '203.0.113.2/29'])
+        .router('Internet', 240, 0, ['203.0.113.1/29', '198.51.100.1/24'], 'internet')
+        .add('server', 'Partner', 460, 0)
+        .link('PC', 'Switch')
+        .link('Mailserver', 'Switch')
+        .link('Switch', 'Firmenrouter')
+        .link('Firmenrouter', 'Internet')
+        .link('Internet', 'Partner')
+        .host('PC', '192.168.0.10', '24', '192.168.0.1')
+        .host('Mailserver', '192.168.0.25', '24', '192.168.0.1')
+        .host('Partner', '198.51.100.25', '24', '198.51.100.1')
+        .nat('Firmenrouter', 1)
+        .route('Firmenrouter', '0.0.0.0', '0.0.0.0', '203.0.113.1');
+      return {
+        topology: s.topology,
+        tasks: task('snatMail', 4, [
+          goal('snatMail', 1, { type: 'seenAs', from: 'Mailserver', to: 'Partner', address: '203.0.113.5' }),
+          goal('snatMail', 2, { type: 'seenAs', from: 'PC', to: 'Partner', address: '203.0.113.2' }),
+          goal('snatMail', 3, { type: 'noPing', from: 'Partner', to: '203.0.113.5' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'dnat-web',
+    stars: 4,
+    features: ['net.nat', 'net.staticNat', 'device.internet', 'service.web'],
+    level: 4,
+    build() {
+      const s = new Start()
+        .add('server', 'Webserver', -420, 0)
+        .add('switch', 'Switch', -220, 0)
+        .router('Firmenrouter', 0, 0, ['192.168.0.1/24', '203.0.113.2/29'])
+        .router('Internet', 240, 0, ['203.0.113.1/29', '198.51.100.1/24'], 'internet')
+        .add('pc', 'Kunde', 460, 0)
+        .link('Webserver', 'Switch')
+        .link('Switch', 'Firmenrouter')
+        .link('Firmenrouter', 'Internet')
+        .link('Internet', 'Kunde')
+        .host('Webserver', '192.168.0.80', '24', '192.168.0.1')
+        .host('Kunde', '198.51.100.20', '24', '198.51.100.1')
+        .nat('Firmenrouter', 1)
+        .route('Firmenrouter', '0.0.0.0', '0.0.0.0', '203.0.113.1')
+        .web('Webserver', t('catalog.dnatWeb.page'));
+      return {
+        topology: s.topology,
+        tasks: task('dnatWeb', 4, [
+          goal('dnatWeb', 1, { type: 'http', from: 'Kunde', url: 'http://203.0.113.6/' }),
+          goal('dnatWeb', 2, { type: 'seenAs', from: 'Webserver', to: 'Kunde', address: '203.0.113.2' }),
+        ]),
+      };
+    },
+  },
 ];

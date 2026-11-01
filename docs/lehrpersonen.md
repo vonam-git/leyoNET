@@ -29,6 +29,8 @@ Profile und Funktionsdateien: [funktionsprofile.md](funktionsprofile.md).
 | Routing | Statische Routen, OSPF, RIP, BGP | `tracert` über die Router, Protokollmeldungen, gelernte Routen |
 | Zugang | NAT, Internet-Box (CPE), serielle Leitung mit PPP, WLAN-Mesh | NAT-Tabelle, DOCSIS-Aufbau, LCP/IPCP, Mesh |
 
+**Schritt für Schritt** (bei ARP/Ping, Gateway, DHCP, DNS/HTTP, SNAT, DNAT und Internet-Box): Ein Avatar als Lehrperson erklärt den Testfall in kleinen Schritten. Er hebt Geräte hervor, öffnet die passenden Einstellungen, startet Aktionen und hält die Simulation an, damit die Klasse im Einzelschritt mitgeht. Jede Person kann den Avatar selbst einstellen (Frisur, Bart, Brille, Hautton, Shirt, Headset); gespeichert wird nur das Aussehen, im eigenen Browser.
+
 Tipp: Vorführen, dann mit **Leertaste** anhalten und mit **N** im Einzelschritt weitergehen. Jedes ankommende Paket wird dabei Schicht für Schicht ausgepackt (OSI-Farben unten eingeblendet), was die Kapselung gut sichtbar macht. Jede Demo wird bei jedem Release automatisch geprüft (`src/ui/demos.test.ts`); die Dateien liegen auch in [docs/beispiele](beispiele).
 
 ## Aufgabenkatalog
@@ -41,11 +43,14 @@ Tipp: Vorführen, dann mit **Leertaste** anhalten und mit **N** im Einzelschritt
 | ★ | Pakete mitschneiden | ARP-Anfrage und -Antwort in der Paketliste finden |
 | ★ | Büro mit Budget | Switch wählen und verkabeln, Kosten unter einer Grenze |
 | ★ | Gast aussperren | Switch-Port abschalten, ohne das Kabel zu ziehen |
+| ★ | Wer hat die Adresse doppelt? | doppelte IP-Adresse finden und beheben |
 | ★★ | Kleines LAN mit Switch | Switch und Adressen |
 | ★★ | Zwei Netze mit einem Router | Router und Gateways |
 | ★★ | Ein ganzes Schulzimmer | Client-Gruppe mit 25 PCs per DHCP versorgen |
 | ★★ | VLANs dokumentieren | VLANs benennen und einfärben |
 | ★★ | Glasfaseranschluss | ONT per Glasfaser mit dem Provider verbinden |
+| ★★ | Zwei Router, zwei statische Routen | Hin- und Rückweg mit statischen Routen |
+| ★★ | Internet-Box anschliessen | CPE mit WAN-Adresse und Provider-Gateway einrichten |
 | ★★★ | Adressen per DHCP verteilen | DHCP-Server |
 | ★★★ | Webseite über DNS aufrufen | DNS-Eintrag und Client-Konfiguration |
 | ★★★ | WLAN im Klassenzimmer | Access Point und WLAN-Clients |
@@ -54,11 +59,14 @@ Tipp: Vorführen, dann mit **Leertaste** anhalten und mit **N** im Einzelschritt
 | ★★★ | VDSL-Anschluss | Telefonleitung, Training und PPPoE |
 | ★★★ | Subnetze nach Bedarf (VLSM) | VLSM mit dem IP-Rechner |
 | ★★★ | RIP in der Kette | dynamisches Routing mit RIP |
+| ★★★ | Das NAS von unterwegs erreichen | Portweiterleitung (DNAT) |
 | ★★★★ | Netze mit VLANs trennen | Access-Ports |
 | ★★★★ | Router-on-a-Stick | Trunks und Subinterfaces |
 | ★★★★ | Standorte über eine serielle Leitung | serielle Leitung mit PPP und statischen Routen |
 | ★★★★ | Routing mit OSPF | Nachbarschaften und gelernte Routen |
-| ★★★★ | Webserver mit eigener öffentlicher Adresse | statisches NAT |
+| ★★★★ | Webserver mit eigener öffentlicher Adresse | 1:1-NAT |
+| ★★★★ | SNAT: feste Absenderadresse für den Mailserver | statisches SNAT, ohne Zugang von aussen |
+| ★★★★ | DNAT: Webserver unter eigener Adresse | statisches DNAT, ausgehend weiter PAT |
 | ★★★★★ | Campus mit Layer-3-Switch und Glasfaser | SVIs, DHCP-Relay, Glasfaser-Uplinks |
 | ★★★★★ | Zwei autonome Systeme mit BGP | eBGP, angekündigte Netze |
 

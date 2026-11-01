@@ -1530,8 +1530,12 @@ export function addStaticNat(t: Topology, id: string, rule: StaticNat): Result<T
   if (parseIp(inside) === null) return { ok: false, error: { code: 'invalidIp', params: { value: inside }, field: 'inside' } };
   if (parseIp(outside) === null) return { ok: false, error: { code: 'invalidIp', params: { value: outside }, field: 'outside' } };
   const list = device.staticNat ?? [];
-  if (list.some((r) => r.inside === inside || r.outside === outside)) return { ok: false, error: { code: 'duplicateNat', field: 'inside' } };
-  return ok(updateDevice(t, id, (d) => ({ ...d, staticNat: [...list, { inside, outside }] })));
+  // Eine innere Adresse hat höchstens eine Quell-Übersetzung, eine äussere höchstens ein Ziel.
+  const snat = (r: StaticNat) => r.kind !== 'dnat';
+  const dnat = (r: StaticNat) => r.kind !== 'snat';
+  const clash = list.some((r) => (snat(r) && snat(rule) && r.inside === inside) || (dnat(r) && dnat(rule) && r.outside === outside) || (r.inside === inside && r.outside === outside));
+  if (clash) return { ok: false, error: { code: 'duplicateNat', field: 'inside' } };
+  return ok(updateDevice(t, id, (d) => ({ ...d, staticNat: [...list, { inside, outside, ...(rule.kind ? { kind: rule.kind } : {}) }] })));
 }
 
 export function removeStaticNat(t: Topology, id: string, index: number): Result<Topology> {

@@ -4,9 +4,11 @@
   import { SHOP, itemLabel } from '../shop';
   import { shop } from '../state/shop.svelte';
   import { ui } from '../state/ui.svelte';
+  import { editor } from '../state/editor.svelte';
+  import { typeLabel } from '../labels';
   import Icon from './Icon.svelte';
 
-  /** Befehlssuche (Strg+K): Befehle und Shop-Artikel per Tastatur finden und ausführen. */
+  /** Befehlssuche (Strg+K): Befehle, Geräte und Shop-Artikel per Tastatur finden und ausführen. */
   let { onclose }: { onclose: () => void } = $props();
   let dialog: HTMLDialogElement;
   let query = $state('');
@@ -33,7 +35,21 @@
     const items = SHOP.filter((item) => item.features.every((f) => ui.has(f))).map(
       (item): Entry => ({ id: `shop.${item.id}`, label: itemLabel(item), detail: t('menu.insert'), icon: 'plus', run: () => shop.use(item), disabled: false }),
     );
-    const all = [...commands, ...items];
+    // Geräte nach Namen: wählen und in die Mitte holen.
+    const devices = editor.topology.devices.map(
+      (d): Entry => ({
+        id: `device.${d.id}`,
+        label: d.name,
+        detail: typeLabel(d.type),
+        icon: 'pointer',
+        run: () => {
+          editor.select({ kind: 'device', id: d.id });
+          editor.centerSelection();
+        },
+        disabled: false,
+      }),
+    );
+    const all = query.trim() ? [...devices, ...commands, ...items] : [...commands, ...items];
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
     return words.length ? all.filter((e) => words.every((w) => `${e.label} ${e.detail}`.toLowerCase().includes(w))).slice(0, 30) : all.slice(0, 30);
   });

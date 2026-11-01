@@ -1,4 +1,4 @@
-import type { Device } from '../model/types';
+import type { Device, StaticNat } from '../model/types';
 import { LIMITED_BROADCAST, broadcastOf, formatIp, isCgnatRange, isPrivate, parseIp } from '../net/ipv4';
 import { buildRoutes, decodeIface, interfaceAddresses, lookupRoute, macOfIface, relayOf, subifId, type IfaceAddress, type Route } from '../net/routing';
 import {
@@ -477,7 +477,7 @@ export interface NatEntry {
   forwarded: boolean;
   expires: number;
   /** Art der Übersetzung: PAT (viele intern → eine Adresse), statisch 1:1, Portweiterleitung, CGNAT beim Provider. */
-  kind?: 'pat' | 'static' | 'dnat' | 'cgnat';
+  kind?: 'pat' | 'static' | 'snat' | 'dnat' | 'cgnat';
 }
 
 type Flow = { protocol: NatEntry['protocol']; port: number };
@@ -549,6 +549,30 @@ export class PatTable {
     if (!entry || entry.expires <= this.ctx.now) return null;
     entry.expires = this.ctx.now + NAT_TIMEOUT;
     return { ...packet, dst: entry.inside, payload: withFlowPort(packet.payload, 'dst', entry.insidePort) };
+  }
+
+  /**
+   * Antwort einer übersetzten Verbindung (statisches SNAT/DNAT, Portweiterleitung):
+   * Absender wird wieder die äussere Adresse. PAT-Einträge gehen über `outbound`.
+   */
+  reverse(packet: Ipv4Packet): Ipv4Packet | null {
+    const flow = flowOf(packet.payload, 'src');
+    if (!flow) return null;
+    const entry = this.#byInside.get(`${flow.protocol}:${packet.src}:${flow.port}`);
+    if (!entry || entry.expires <= this.ctx.now || entry.kind === 'pat' || entry.kind === 'cgnat') return null;
+    entry.expires = this.ctx.now + NAT_TIMEOUT;
+    return { ...packet, src: entry.outside, payload: withFlowPort(packet.payload, 'src', entry.outsidePort) };
+  }
+
+  /** Verbindung merken, ohne Port zu ändern (statisches SNAT/DNAT). */
+  track(kind: 'snat' | 'dnat', protocol: NatEntry['protocol'], inside: string, outside: string, port: number): boolean {
+    const existing = this.#byInside.get(`${protocol}:${inside}:${port}`);
+    if (existing && existing.outside === outside && existing.expires > this.ctx.now) {
+      existing.expires = this.ctx.now + NAT_TIMEOUT;
+      return false;
+    }
+    this.remember({ protocol, inside, insidePort: port, outside, outsidePort: port, forwarded: kind === 'dnat', expires: this.ctx.now + NAT_TIMEOUT, kind });
+    return true;
   }
 
   lookupOutside(protocol: NatEntry['protocol'], outside: string, port: number): NatEntry | undefined {
@@ -716,7 +740,7 @@ export class RouterNode extends ForwardingNode {
   }
 
   natEntries(): NatEntry[] {
-    const statics: NatEntry[] = (this.ctx.device()?.staticNat ?? []).map((r) => ({
+    const statics: NatEntry[] = (this.ctx.device()?.staticNat ?? []).filter((r) => !r.kind).map((r) => ({
       protocol: 'icmp',
       inside: r.inside,
       insidePort: 0,
@@ -729,34 +753,57 @@ export class RouterNode extends ForwardingNode {
     return [...statics, ...this.nat.entries()];
   }
 
-  #staticFor(field: 'inside' | 'outside', ip: string) {
-    return this.ctx.device()?.staticNat?.find((r) => r[field] === ip);
+  /** Statische Regel für eine Adresse; `kinds`: welche Arten in Frage kommen (undefined = 1:1). */
+  #staticFor(field: 'inside' | 'outside', ip: string, kinds: (StaticNat['kind'])[]) {
+    return this.ctx.device()?.staticNat?.find((r) => r[field] === ip && kinds.includes(r.kind));
   }
 
-  /** Proxy-ARP: Der Router antwortet für die öffentlichen Adressen des statischen NAT. */
+  /** Proxy-ARP: Der Router antwortet für die öffentlichen Adressen des statischen NAT (alle Arten). */
   protected override answersArpFor(index: number, ip: string): boolean {
-    return this.#isNat(index) && !!this.#staticFor('outside', ip);
+    return this.#isNat(index) && !!this.#staticFor('outside', ip, [undefined, 'snat', 'dnat']);
   }
 
   /**
-   * Ausgehend ins Internet: Statisches NAT ersetzt nur die Adresse (1:1),
-   * sonst teilen sich alle die Router-Adresse und werden über Ports unterschieden (PAT).
+   * Ausgehend ins Internet (SNAT, Quelladresse ersetzen):
+   *  - 1:1-NAT ersetzt nur die Adresse,
+   *  - Antworten auf DNAT/Portweiterleitung gehen mit der äusseren Adresse hinaus,
+   *  - statisches SNAT ersetzt die Adresse und merkt sich die Verbindung,
+   *  - sonst teilen sich alle die Router-Adresse (PAT, Masquerading).
    */
   protected override outbound(inIface: IfaceAddress, outIface: IfaceAddress, packet: Ipv4Packet): Ipv4Packet | null {
     if (!this.#isNat(outIface.index) || this.#isNat(inIface.index)) return packet;
-    const fixed = this.#staticFor('inside', packet.src);
-    if (fixed) return { ...packet, src: fixed.outside };
+    const oneToOne = this.#staticFor('inside', packet.src, [undefined]);
+    if (oneToOne) return { ...packet, src: oneToOne.outside };
+    const reply = this.nat.reverse(packet);
+    if (reply) return reply;
+    const snat = this.#staticFor('inside', packet.src, ['snat']);
+    if (snat) {
+      const flow = flowOf(packet.payload, 'src');
+      if (!flow || this.nat.track('snat', flow.protocol, packet.src, snat.outside, flow.port)) this.ctx.print('nat.snat', { inside: packet.src, outside: snat.outside });
+      return { ...packet, src: snat.outside };
+    }
     return this.nat.outbound(packet, formatIp(outIface.ip));
   }
 
-  /** Eingehend: statisches NAT, bekannte Verbindung oder Portweiterleitung (DNAT) → interner Rechner. */
+  /**
+   * Eingehend aus dem Internet (DNAT, Zieladresse ersetzen): 1:1-NAT oder
+   * statisches DNAT, Antwort auf eine bekannte Verbindung (PAT, SNAT) oder
+   * Portweiterleitung → interner Rechner. Statisches SNAT allein lässt keine
+   * neuen Verbindungen von aussen herein.
+   */
   protected override inbound(iface: IfaceAddress, packet: Ipv4Packet): Ipv4Packet | null {
     if (!this.#isNat(iface.index)) return null;
-    const fixed = this.#staticFor('outside', packet.dst);
-    if (fixed) return { ...packet, dst: fixed.inside };
-    if (packet.dst !== formatIp(iface.ip)) return null;
     const known = this.nat.inbound(packet);
     if (known) return known;
+    const fixed = this.#staticFor('outside', packet.dst, [undefined, 'dnat']);
+    if (fixed) {
+      if (fixed.kind === 'dnat') {
+        const flow = flowOf(packet.payload, 'dst');
+        if (!flow || this.nat.track('dnat', flow.protocol, fixed.inside, fixed.outside, flow.port)) this.ctx.print('nat.dnat', { outside: fixed.outside, inside: fixed.inside });
+      }
+      return { ...packet, dst: fixed.inside };
+    }
+    if (packet.dst !== formatIp(iface.ip)) return null;
     const flow = flowOf(packet.payload, 'dst');
     if (!flow) return null;
     const rule = (this.ctx.device()?.portForwards ?? []).find((f) => f.protocol === flow.protocol && f.port === flow.port);

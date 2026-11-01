@@ -21,6 +21,8 @@
   import DeviceNode from './DeviceNode.svelte';
   import HoverCard from './HoverCard.svelte';
   import PortPicker from './PortPicker.svelte';
+  import TourPanel from './TourPanel.svelte';
+  import { tour } from '../state/tour.svelte';
 
   let svg: SVGSVGElement;
   let width = $state(0);
@@ -341,6 +343,12 @@
       {#if source && pointer}
         <line class="rubber" x1={source.position.x} y1={source.position.y} x2={pointer.x} y2={pointer.y} />
       {/if}
+      {#if tour.highlight}
+        {@const target = getDevice(editor.topology, tour.highlight)}
+        {#if target}
+          <circle class="tour-ring" cx={target.position.x} cy={target.position.y} r="46" />
+        {/if}
+      {/if}
       {#each editor.topology.devices as device (device.id)}
         <DeviceNode {device} onpointerdown={onDevicePointerDown} faded={offFloor(device)} racked={!!device.rack} />
       {/each}
@@ -377,6 +385,7 @@
   {#if editor.topology.devices.length === 0}
     <p class="empty">{t('canvas.empty')}</p>
   {/if}
+  <TourPanel />
   {#if hover && editor.acting}
     <HoverCard target={hover.target} x={hover.x} y={hover.y} {width} />
   {/if}
@@ -439,6 +448,26 @@
   }
   .acting :global(.cable:hover .wire) {
     stroke-width: 5;
+  }
+  .tour-ring {
+    fill: none;
+    stroke: #f59e0b;
+    stroke-width: 4;
+    pointer-events: none;
+    animation: tour-pulse 1.4s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  @keyframes tour-pulse {
+    50% {
+      transform: scale(1.12);
+      opacity: 0.55;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tour-ring {
+      animation: none;
+    }
   }
   .packet .envelope {
     fill: var(--dot, var(--accent));

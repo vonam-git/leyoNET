@@ -45,6 +45,7 @@ const KEYS = {
   theme: 'netzwerk-simulator.theme',
   addresses: 'netzwerk-simulator.addresses',
   currency: 'netzwerk-simulator.currency',
+  panels: 'netzwerk-simulator.panels',
   oldLevel: 'netzwerk-simulator.level',
 };
 
@@ -91,6 +92,19 @@ function loadProfile(): StoredProfile | null {
   return null;
 }
 
+export type PanelName = 'left' | 'right' | 'bottom';
+
+function readPanels(): Record<PanelName, boolean> {
+  const all = { left: true, right: true, bottom: true };
+  try {
+    const raw = JSON.parse(read('netzwerk-simulator.panels') ?? '{}') as Record<string, unknown>;
+    for (const k of ['left', 'right', 'bottom'] as const) if (typeof raw[k] === 'boolean') all[k] = raw[k];
+  } catch {
+    // Ungültig: alle Bereiche zeigen.
+  }
+  return all;
+}
+
 class Ui {
   /** Webversion mit Server (Sessions, Rückmeldungen, Admin). */
   readonly online = detectServer();
@@ -103,6 +117,8 @@ class Ui {
   floor = $state<number | 'all'>('all');
   /** IP-Adressen mit «privat/öffentlich» an den Geräten zeigen. */
   showAddresses = $state(read(KEYS.addresses) !== '0');
+  /** Seitenbereiche ein- oder ausgefahren (Shop links, Eigenschaften rechts, Paketliste unten). */
+  panels = $state<Record<PanelName, boolean>>(readPanels());
   currency = $state<Currency>((['EUR', 'USD'] as const).find((c) => c === read(KEYS.currency)) ?? 'CHF');
 
   /** Neue Regeln vom Server übernehmen; ohne eigene Wahl gilt das Standardprofil. */
@@ -224,6 +240,11 @@ class Ui {
 
   setShowPrices(on: boolean) {
     this.setFeature('tool.prices', on);
+  }
+
+  togglePanel(name: PanelName) {
+    this.panels[name] = !this.panels[name];
+    write(KEYS.panels, JSON.stringify(this.panels));
   }
 
   setTheme(theme: Theme) {

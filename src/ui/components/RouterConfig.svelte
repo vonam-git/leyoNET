@@ -64,14 +64,19 @@
 
   // --- Statisches NAT -----------------------------------------------------------
 
-  let staticDraft = $state({ inside: '', outside: '' });
-  let staticError = $state<string | null>(null);
+  // Drei Arten: SNAT (nur ausgehend), DNAT (nur eingehend), 1:1 (beides).
+  type StaticKind = 'snat' | 'dnat' | 'both';
+  let staticDraft = $state<Record<StaticKind, { inside: string; outside: string }>>({ snat: { inside: '', outside: '' }, dnat: { inside: '', outside: '' }, both: { inside: '', outside: '' } });
+  let staticError = $state<{ kind: StaticKind; text: string } | null>(null);
+  const kindOf = (k: StaticKind) => (k === 'both' ? undefined : k);
+  const rulesOf = (k: StaticKind) => (device.staticNat ?? []).map((rule, index) => ({ rule, index })).filter(({ rule }) => rule.kind === kindOf(k));
 
-  function addStatic(event: SubmitEvent) {
+  function addStatic(event: SubmitEvent, kind: StaticKind) {
     event.preventDefault();
-    const failure = editor.addStaticNat(device.id, staticDraft);
-    staticError = failure ? t(`error.${failure.code}`, failure.params) : null;
-    if (!failure) staticDraft = { inside: '', outside: '' };
+    const draft = staticDraft[kind];
+    const failure = editor.addStaticNat(device.id, { inside: draft.inside, outside: draft.outside, ...(kind !== 'both' ? { kind } : {}) });
+    staticError = failure ? { kind, text: t(`error.${failure.code}`, failure.params) } : null;
+    if (!failure) staticDraft[kind] = { inside: '', outside: '' };
   }
 
   // --- CGNAT (Provider) ---------------------------------------------------------
@@ -239,6 +244,7 @@
   <svelte:element this={box} class="section" open={part ? undefined : device.interfaces.some((i) => i.nat)} data-help="nat">
   <svelte:element this={head}>{t('nat.title')}</svelte:element>
   <p class="muted small-text">{t('nat.hint')}</p>
+  <p class="muted small-text">{t('nat.outsideChoose')}</p>
   {#each device.interfaces as iface, index (iface.index)}
     <label class="nat">
       <input type="checkbox" checked={!!iface.nat} onchange={(e) => editor.setInterfaceNat(device.id, index, e.currentTarget.checked)} />
@@ -247,43 +253,74 @@
   {/each}
 
   {#if device.interfaces.some((i) => i.nat)}
-    <h4>{t('nat.forwards')}</h4>
-    {#each device.portForwards ?? [] as forward, i (i)}
-      <div class="forward">
-        <span class="mono">{forward.protocol.toUpperCase()} :{forward.port} → {forward.to}:{forward.toPort}</span>
-        <button class="small" onclick={() => editor.removePortForward(device.id, i)} aria-label={t('nat.removeForward')}>✕</button>
-      </div>
-    {/each}
-    <form class="add-forward" onsubmit={addForward}>
-      <select bind:value={forwardDraft.protocol} aria-label={t('nat.protocol')}>
-        <option value="tcp">TCP</option>
-        <option value="udp">UDP</option>
-      </select>
-      <input bind:value={forwardDraft.port} inputmode="numeric" placeholder="80" aria-label={t('nat.port')} />
-      <input bind:value={forwardDraft.to} placeholder="192.168.0.20" aria-label={t('nat.to')} autocomplete="off" spellcheck="false" />
-      <input bind:value={forwardDraft.toPort} inputmode="numeric" placeholder="80" aria-label={t('nat.toPort')} />
-      <button type="submit" disabled={!forwardDraft.to.trim()} aria-label={t('nat.addForward')} title={t('nat.addForward')}>+</button>
-    </form>
-    {#if forwardError}
-      <p class="error" role="alert">{forwardError}</p>
-    {/if}
-
-    {#if ui.has('net.staticNat')}
-      <h4 data-help="staticNat">{t('nat.static')}</h4>
-      <p class="muted small-text">{t('nat.staticHint')}</p>
-      {#each device.staticNat ?? [] as rule, i (i)}
+    {#snippet staticRules(kind: StaticKind, arrow: string, insideFirst: boolean)}
+      {#each rulesOf(kind) as { rule, index } (index)}
         <div class="forward">
-          <span class="mono">{rule.inside} ⇄ {rule.outside}</span>
-          <button class="small" disabled={!editor.editable} onclick={() => editor.removeStaticNat(device.id, i)} aria-label={t('nat.removeStatic')}>✕</button>
+          <span class="mono">{insideFirst ? `${rule.inside} ${arrow} ${rule.outside}` : `${rule.outside} ${arrow} ${rule.inside}`}</span>
+          <button class="small" disabled={!editor.editable} onclick={() => editor.removeStaticNat(device.id, index)} aria-label={t('nat.removeStatic')}>✕</button>
         </div>
       {/each}
-      <form class="add-static" onsubmit={addStatic}>
-        <input bind:value={staticDraft.inside} placeholder="192.168.0.80" aria-label={t('nat.inside')} disabled={!editor.editable} />
-        <span>⇄</span>
-        <input bind:value={staticDraft.outside} placeholder="203.0.113.5" aria-label={t('nat.outside')} disabled={!editor.editable} />
-        <button type="submit" disabled={!editor.editable || !staticDraft.inside.trim() || !staticDraft.outside.trim()}>+</button>
+      <form class="add-static" onsubmit={(e) => addStatic(e, kind)}>
+        {#if insideFirst}
+          <input bind:value={staticDraft[kind].inside} placeholder="192.168.0.80" aria-label={t('nat.inside')} disabled={!editor.editable} />
+          <span>{arrow}</span>
+          <input bind:value={staticDraft[kind].outside} placeholder="203.0.113.5" aria-label={t('nat.outside')} disabled={!editor.editable} />
+        {:else}
+          <input bind:value={staticDraft[kind].outside} placeholder="203.0.113.5" aria-label={t('nat.outside')} disabled={!editor.editable} />
+          <span>{arrow}</span>
+          <input bind:value={staticDraft[kind].inside} placeholder="192.168.0.80" aria-label={t('nat.inside')} disabled={!editor.editable} />
+        {/if}
+        <button type="submit" disabled={!editor.editable || !staticDraft[kind].inside.trim() || !staticDraft[kind].outside.trim()} aria-label={t(`nat.add.${kind}`)} title={t(`nat.add.${kind}`)}>+</button>
       </form>
-      {#if staticError}<p class="error" role="alert">{staticError}</p>{/if}
+      {#if staticError?.kind === kind}<p class="error" role="alert">{staticError.text}</p>{/if}
+    {/snippet}
+
+    <div class="nat-block snat">
+      <h4>{t('nat.snat.title')}</h4>
+      <p class="muted small-text">{t('nat.snat.hint')}</p>
+      <p class="sub-head">{t('nat.snat.pat')}</p>
+      <p class="muted small-text">{t('nat.snat.patHint')}</p>
+      {#if ui.has('net.staticNat')}
+        <p class="sub-head" data-help="staticNat">{t('nat.snat.static')}</p>
+        {@render staticRules('snat', '→', true)}
+      {/if}
+    </div>
+
+    <div class="nat-block dnat">
+      <h4>{t('nat.dnat.title')}</h4>
+      <p class="muted small-text">{t('nat.dnat.hint')}</p>
+      <p class="sub-head">{t('nat.forwards')}</p>
+      {#each device.portForwards ?? [] as forward, i (i)}
+        <div class="forward">
+          <span class="mono">{forward.protocol.toUpperCase()} :{forward.port} → {forward.to}:{forward.toPort}</span>
+          <button class="small" onclick={() => editor.removePortForward(device.id, i)} aria-label={t('nat.removeForward')}>✕</button>
+        </div>
+      {/each}
+      <form class="add-forward" onsubmit={addForward}>
+        <select bind:value={forwardDraft.protocol} aria-label={t('nat.protocol')}>
+          <option value="tcp">TCP</option>
+          <option value="udp">UDP</option>
+        </select>
+        <input bind:value={forwardDraft.port} inputmode="numeric" placeholder="80" aria-label={t('nat.port')} />
+        <input bind:value={forwardDraft.to} placeholder="192.168.0.20" aria-label={t('nat.to')} autocomplete="off" spellcheck="false" />
+        <input bind:value={forwardDraft.toPort} inputmode="numeric" placeholder="80" aria-label={t('nat.toPort')} />
+        <button type="submit" disabled={!forwardDraft.to.trim()} aria-label={t('nat.addForward')} title={t('nat.addForward')}>+</button>
+      </form>
+      {#if forwardError}
+        <p class="error" role="alert">{forwardError}</p>
+      {/if}
+      {#if ui.has('net.staticNat')}
+        <p class="sub-head">{t('nat.dnat.static')}</p>
+        {@render staticRules('dnat', '→', false)}
+      {/if}
+    </div>
+
+    {#if ui.has('net.staticNat')}
+      <div class="nat-block both">
+        <h4>{t('nat.static')}</h4>
+        <p class="muted small-text">{t('nat.staticHint')}</p>
+        {@render staticRules('both', '⇄', true)}
+      </div>
     {/if}
   {/if}
   </svelte:element>
@@ -357,12 +394,41 @@
     place-items: center;
     padding: 3px 5px !important;
   }
+  .nat-block {
+    margin-top: 10px;
+    padding: 6px 8px 8px;
+    border-left: 4px solid var(--k);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--k) 6%, transparent);
+  }
+  .nat-block h4 {
+    margin-top: 2px;
+    color: var(--k);
+  }
+  .nat-block.snat {
+    --k: #2563eb;
+  }
+  .nat-block.dnat {
+    --k: #c2410c;
+  }
+  .nat-block.both {
+    --k: #7c3aed;
+  }
+  .sub-head {
+    margin: 8px 0 2px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
   .add-static {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
     gap: 4px;
     align-items: center;
     margin-top: 4px;
+  }
+  .nat input {
+    width: auto;
+    flex: none;
   }
   .nat {
     display: flex;

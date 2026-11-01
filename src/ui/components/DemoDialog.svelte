@@ -1,6 +1,9 @@
 <script lang="ts">
   import { t } from '../../i18n';
   import { openDemo } from '../demoRunner';
+  import { tour } from '../state/tour.svelte';
+  import { dialogs } from '../state/dialogs.svelte';
+  import Avatar from './Avatar.svelte';
   import { DEMOS, DEMO_TOPICS, type Demo } from '../demos';
   import Modal from './Modal.svelte';
 
@@ -13,12 +16,21 @@
 
   function choose(demo: Demo, present: boolean) {
     onclose();
+    tour.stop();
     openDemo(demo, present);
+  }
+
+  function guide(demo: Demo) {
+    onclose();
+    tour.start(demo);
   }
 </script>
 
 <Modal title={t('demo.title')} {onclose} width={880}>
-  <p class="muted">{t('demo.intro')}</p>
+  <div class="intro">
+    <button class="avatar-btn" onclick={() => dialogs.show('avatar')} title={t('avatar.edit')} aria-label={t('avatar.edit')}><Avatar config={tour.avatar} size={64} /></button>
+    <p class="muted">{t('demo.intro')} {t('demo.introTour')}</p>
+  </div>
   {#each DEMO_TOPICS as topic (topic)}
     <h3>{t(`demo.topic.${topic}`)}</h3>
     <ul>
@@ -33,6 +45,7 @@
             <p class="show">▶ {t(`demo.${demo.id}.show`)}</p>
           </div>
           <div class="buttons">
+            {#if demo.tour}<button class="guide" onclick={() => guide(demo)}>🧑‍🏫 {t('demo.guide')}</button>{/if}
             <button class="primary" onclick={() => choose(demo, true)}>▶ {t('demo.present')}</button>
             <button onclick={() => choose(demo, false)}>{t('demo.open')}</button>
           </div>
@@ -43,6 +56,21 @@
 </Modal>
 
 <style>
+  .intro {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .avatar-btn {
+    padding: 0;
+    border: none;
+    background: none;
+    border-radius: 50%;
+  }
+  .guide {
+    background: color-mix(in srgb, #f59e0b 16%, var(--surface));
+    border-color: #f59e0b;
+  }
   ul {
     list-style: none;
     margin: 0;
