@@ -47,7 +47,7 @@
       {#if renaming === index}
         <form onsubmit={(e) => rename(e, index)}>
           <!-- svelte-ignore a11y_autofocus -->
-          <input bind:value={draft} maxlength="40" autofocus aria-label={t('floor.name')} onblur={() => (renaming = null)} />
+          <input bind:value={draft} maxlength="40" autofocus aria-label={t('floor.name')} onblur={() => renaming === index && rename(new SubmitEvent('submit'), index)} />
         </form>
       {:else}
         <button

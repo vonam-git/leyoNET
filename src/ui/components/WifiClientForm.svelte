@@ -1,6 +1,7 @@
 <script lang="ts">
   import { type Device } from '../../core';
   import { t } from '../../i18n';
+  import { autosave } from '../autosave';
   import { editor } from '../state/editor.svelte';
 
   /** Endgerät: mit welchem Funknetz es sich verbindet (SSID und Passwort). */
@@ -18,14 +19,18 @@
 
   const ssids = $derived([...new Set(editor.topology.devices.flatMap((d) => (d.wlan ? [d.wlan.ssid] : [])))]);
 
-  function apply(event: SubmitEvent) {
-    event.preventDefault();
+  function save(quiet: boolean): boolean {
     const failure = editor.setWifiClient(device.id, ssid.trim() ? { ssid, password: password || undefined } : null);
-    error = failure ? t(`error.${failure.code}`, failure.params) : null;
+    if (failure) {
+      if (!quiet) error = t(`error.${failure.code}`, failure.params);
+      return false;
+    }
+    error = null;
+    return true;
   }
 </script>
 
-<form onsubmit={apply}>
+<form use:autosave={save} onsubmit={(e) => (e.preventDefault(), save(false))}>
   <label class="row">
     <span>{t('wlan.ssid')}</span>
     <input bind:value={ssid} list="ssids-{device.id}" maxlength="32" placeholder={t('wifi.none')} />
@@ -39,7 +44,6 @@
   </label>
   {#if error}<p class="error" role="alert">{error}</p>{/if}
   <p class="muted">{t('wifi.hint')}</p>
-  <button type="submit">{t('config.apply')}</button>
 </form>
 
 <style>
@@ -73,8 +77,5 @@
     color: var(--danger);
     font-size: 0.75rem;
     margin: 0;
-  }
-  button {
-    justify-self: start;
   }
 </style>

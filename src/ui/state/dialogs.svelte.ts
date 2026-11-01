@@ -18,7 +18,8 @@ export type DialogName =
   | 'palette'
   | 'ipcalc'
   | 'vlans'
-  | 'costs';
+  | 'costs'
+  | 'demos';
 
 /** Werte, die der IP-Rechner übernehmen kann (z.B. in das Formular eines Rechners). */
 export interface IpCalcTarget {
@@ -33,6 +34,17 @@ class Dialogs {
   ipcalc = $state.raw<IpCalcTarget>({});
   /** Hilfe-Seitenleiste mit dem gewählten Thema. */
   help = $state<string | null>(null);
+  /** Erweiterte Einstellungen eines Geräts (eigenes Fenster mit Reitern), unabhängig von `open`. */
+  device = $state<{ id: string; tab: string } | null>(null);
+
+  /** Erweiterte Einstellungen öffnen; ohne Reiter der zuletzt gewählte (falls vorhanden). */
+  showDevice(id: string, tab?: string) {
+    this.device = { id, tab: tab ?? this.device?.tab ?? 'general' };
+  }
+
+  closeDevice() {
+    this.device = null;
+  }
 
   show(name: DialogName) {
     this.open = name;

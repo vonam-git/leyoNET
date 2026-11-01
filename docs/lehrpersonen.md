@@ -12,6 +12,25 @@
 
 Profile und Funktionsdateien: [funktionsprofile.md](funktionsprofile.md).
 
+## Demo-Netze zum Vorführen
+
+**Datei → Demo-Netze …** (oder ▶ in der Werkzeugleiste) enthält zu jedem Protokoll ein fertig konfiguriertes Netz. **Vorführen** lädt es, startet die Simulation und löst nach kurzer Zeit die passende Aktion aus, mit geöffnetem Desktop (z.B. Ping, `tracert`, Webseite, E-Mail). So lässt sich ein Protokoll im Unterricht ohne Vorbereitung zeigen. **Öffnen** lädt das Netz nur, zum Erklären oder Verändern. Das bisherige Projekt holt «Rückgängig» zurück.
+
+| Thema | Demo | Was die Klasse sieht |
+|---|---|---|
+| Grundlagen | ARP und Ping im LAN | ARP-Broadcast, Antwort, vier ICMP-Echos, MAC-Tabelle des Switches |
+| Grundlagen | Standardgateway | Paket an den Router, TTL sinkt |
+| Dienste | DHCP (DORA) | Discover, Offer, Request, Ack; `ipconfig /all` |
+| Dienste | DNS, TCP und HTTP | DNS-Abfrage, TCP-Handshake, HTTP im Browser |
+| Dienste | E-Mail | SMTP, IMAP |
+| Switching | VLAN und Spanning Tree | blockierter Port, 802.1Q-Tag auf dem Trunk |
+| Switching | Broadcast-Sturm | Schleife ohne STP, Sturm-Warnung |
+| Switching | Router-on-a-Stick, Layer-3-Switch | Routing zwischen VLANs, DHCP-Relay |
+| Routing | Statische Routen, OSPF, RIP, BGP | `tracert` über die Router, Protokollmeldungen, gelernte Routen |
+| Zugang | NAT, Internet-Box (CPE), serielle Leitung mit PPP, WLAN-Mesh | NAT-Tabelle, DOCSIS-Aufbau, LCP/IPCP, Mesh |
+
+Tipp: Vorführen, dann mit **Leertaste** anhalten und mit **N** im Einzelschritt weitergehen. Jedes ankommende Paket wird dabei Schicht für Schicht ausgepackt (OSI-Farben unten eingeblendet), was die Kapselung gut sichtbar macht. Jede Demo wird bei jedem Release automatisch geprüft (`src/ui/demos.test.ts`); die Dateien liegen auch in [docs/beispiele](beispiele).
+
 ## Aufgabenkatalog
 
 **Werkzeuge → Aufgaben-Katalog** enthält fertige Übungen mit automatischer Prüfung. Jede Übung schaltet beim Start die Funktionen ein, die sie braucht, sofern Profil und Admin das erlauben. Für jede gibt es im Code eine Musterlösung, die ein Test bei jedem Build prüft (`src/ui/catalog.test.ts`).

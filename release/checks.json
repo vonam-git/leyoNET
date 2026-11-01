@@ -1,6 +1,6 @@
 {
   "version": "0.5.0",
-  "date": "2026-10-30T12:50:24.161Z",
+  "date": "2026-11-01T13:53:11.586Z",
   "checks": [
     {
       "id": "privacy.noExternal",
@@ -30,7 +30,7 @@
       "id": "privacy.storage",
       "category": "privacy",
       "status": "pass",
-      "detail": "Browser-Speicher nur für Technik: netzwerk-simulator.addresses, netzwerk-simulator.class, netzwerk-simulator.currency, netzwerk-simulator.features, netzwerk-simulator.level, netzwerk-simulator.locale, netzwerk-simulator.profile, netzwerk-simulator.session, netzwerk-simulator.theme"
+      "detail": "Browser-Speicher nur für Technik: netzwerk-simulator.addresses, netzwerk-simulator.class, netzwerk-simulator.currency, netzwerk-simulator.features, netzwerk-simulator.level, netzwerk-simulator.locale, netzwerk-simulator.portChoice, netzwerk-simulator.profile, netzwerk-simulator.session, netzwerk-simulator.theme"
     },
     {
       "id": "privacy.noIpLog",

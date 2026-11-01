@@ -4,7 +4,7 @@
  * Leerzeile = neuer Absatz, «- » = Aufzählung, **fett**, [[thema]] = Verweis.
  */
 export const HELP_GROUPS: { id: string; topics: string[] }[] = [
-  { id: 'start', topics: ['overview', 'modes', 'shop', 'simulation', 'shortcuts', 'features', 'tasks', 'costs'] },
+  { id: 'start', topics: ['overview', 'modes', 'shop', 'simulation', 'advanced', 'demos', 'shortcuts', 'features', 'tasks', 'costs'] },
   {
     id: 'devices',
     topics: [
@@ -17,16 +17,17 @@ export const HELP_GROUPS: { id: string; topics: string[] }[] = [
       'device.router',
       'device.accesspoint',
       'device.modem',
+      'device.cpe',
       'device.internet',
     ],
   },
   { id: 'links', topics: ['cables', 'sfp', 'serial', 'wlan', 'roaming', 'access'] },
-  { id: 'addressing', topics: ['ip', 'subnetting', 'ipcalc', 'scopes', 'dhcp', 'dns'] },
+  { id: 'addressing', topics: ['ip', 'duplicates', 'subnetting', 'ipcalc', 'scopes', 'dhcp', 'dns'] },
   { id: 'switching', topics: ['switching', 'vlan', 'trunk', 'stp', 'routerOnAStick'] },
   { id: 'routing', topics: ['routing', 'ospf', 'rip', 'bgp'] },
   { id: 'nat', topics: ['nat', 'staticNat', 'portForward', 'cgnat'] },
   { id: 'services', topics: ['web', 'mail', 'cli', 'ssh'] },
-  { id: 'analysis', topics: ['sniffer', 'osi', 'filter', 'pcap'] },
+  { id: 'analysis', topics: ['sniffer', 'osi', 'osiStep', 'filter', 'pcap'] },
   { id: 'documentation', topics: ['areas', 'racks', 'floors', 'snapshots'] },
 ];
 

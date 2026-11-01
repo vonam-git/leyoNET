@@ -67,6 +67,7 @@
     {#if shown('sim.cli')}
       <button class="icon" onclick={() => run('sim.cli')} disabled={!enabled('sim.cli')} title={tip('sim.cli')} aria-label={t('cli.open')}><Icon name="terminal" /></button>
     {/if}
+    <button class="icon" onclick={() => run('file.demos')} title={tip('file.demos')} aria-label={t('menu.file.demos')}><Icon name="play" /></button>
     <button class="icon" onclick={() => run('help.help')} title={tip('help.help')} aria-label={t('menu.help.help')}><Icon name="help" /></button>
   </div>
 

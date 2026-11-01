@@ -35,9 +35,10 @@ Beim Start der Simulation wird automatisch ein Snapshot angelegt. Weitere entste
 ## Ein Netz bauen
 
 1. **Gerät holen:** Im Shop links eine Kategorie anklicken (z.B. «Switches»). Es öffnet sich eine Liste mit Ausführungen, Anschlüssen und Richtpreis. Gerät auf die Fläche ziehen oder anklicken.
-2. **Verkabeln:** Mit **K** (oder im Shop unter «Verbindungen») ein Kabel wählen und nacheinander zwei Geräte anklicken. Der Simulator nimmt den nächsten freien passenden Anschluss. Passt die Kabelart nicht, erscheint ein Hinweis.
-3. **Konfigurieren:** Gerät anklicken; rechts erscheinen seine Einstellungen. Neben jedem Adressfeld öffnet der Rechner-Knopf den **IP-Rechner**. Dort zeigt «Übernehmen» die berechneten Werte direkt im Feld.
-4. **Testen:** **M** drücken, ein Endgerät anklicken und im Desktop `ping 192.168.1.20` eingeben.
+2. **Verkabeln:** Mit **K** (oder im Shop unter «Verbindungen») ein Kabel wählen und nacheinander zwei Geräte anklicken. Der Simulator nimmt den nächsten freien passenden Anschluss. Wer den Anschluss selbst bestimmen will, stellt oben in der Zeichenfläche «Anschluss: aus Liste wählen» ein; dann erscheint bei jedem Gerät eine Liste mit allen Anschlüssen (belegte zeigen, womit sie verbunden sind). Passt die Kabelart nicht, erscheint ein Hinweis.
+3. **Konfigurieren:** Gerät anklicken; rechts erscheinen die Grundeinstellungen (Name, Adressen). Eingaben werden gespeichert, sobald man das Feld verlässt (Tab, Klick daneben oder Enter); ein «Übernehmen» braucht es nicht. Neben jedem Adressfeld öffnet der Rechner-Knopf den **IP-Rechner**.
+4. **Erweitert:** **Erweitert …** (Taste **E**, bei Endgeräten auch Doppelklick) öffnet alle Einstellungen in einem eigenen Fenster mit Reitern: Adressen, Anschlüsse, Routing, NAT, DHCP, VLAN & STP, WLAN, E-Mail, Dienste. Mit ◀ ▶ (oder Bild↑/Bild↓) geht es direkt zum vorherigen bzw. nächsten Gerät.
+5. **Testen:** **M** drücken, ein Endgerät doppelklicken und im Desktop `ping 192.168.1.20` eingeben.
 
 Nützlich: **Strg+D** dupliziert die Auswahl, **F2** benennt um, **Entf** löscht, **Strg+Z** macht rückgängig.
 
@@ -52,6 +53,7 @@ Nützlich: **Strg+D** dupliziert die Auswahl, **F2** benennt um, **Entf** lösch
 | Router | Verbindet Netze. Ports wahlweise Ethernet oder seriell. NAT, OSPF, RIP, BGP. |
 | Access Point | WLAN-Funkzelle. |
 | Modem | Kabel, Glasfaser, Mobilfunk, ADSL oder VDSL zum Provider. |
+| Internet-Box (CPE) | Wie zu Hause: Modem, Router mit NAT, DHCP-Server und vier LAN-Buchsen in einem Gerät. Ab Werk LAN 192.168.1.1/24; einzutragen sind nur WAN-Adresse und Gateway des Providers. |
 | Internet | Provider mit öffentlichen Adressen und Webseiten. |
 
 ## Adressen sichtbar machen
@@ -62,7 +64,9 @@ Nützlich: **Strg+D** dupliziert die Auswahl, **F2** benennt um, **Entf** lösch
 - **orange: CGNAT** (100.64/10), vom Provider vergeben
 - **grün, fett: öffentlich**, im Internet erreichbar
 
-Ein Bereich «Öffentliches Netz» (mit Weltkugel) markiert ein ganzes Netz als öffentlich, z.B. eine DMZ.
+Ein Bereich «Öffentliches Netz» (mit Weltkugel) markiert ein ganzes Netz als öffentlich, z.B. eine DMZ. Bei Routern steht der Anschluss dezent davor, z.B. `eth0: 192.168.1.1/24`.
+
+**Doppelte Adressen:** Haben zwei Geräte im selben Netz dieselbe IP-Adresse, erscheint am Gerät ein rotes **!**, und das Formular warnt. Hinter verschiedenen Routern (zwei Heimnetze mit 192.168.1.1) ist dieselbe private Adresse erlaubt.
 
 ## VLANs mit Farben
 
@@ -71,6 +75,13 @@ Unter **Werkzeuge → VLANs** bekommt jedes VLAN eine Nummer, einen Namen und ei
 ## Schleifen und Spanning Tree
 
 Zwei Kabel zwischen denselben Switches oder ein Ring bilden eine Schleife. Ohne Spanning Tree (STP) kreisen Broadcasts darin endlos. Der Simulator erlaubt das absichtlich, zeigt beim Verkabeln eine Warnung und in der Simulation ein rotes Banner «Broadcast-Sturm». Abhilfe: STP auf den Switches einschalten, ein Kabel entfernen oder einen Port abschalten.
+
+## In der Simulation
+
+- **Desktops:** Doppelklick auf ein Endgerät öffnet seinen Desktop (Eingabeaufforderung, Browser, Mail). Mehrere können offen sein. Mit **—** minimieren; «Offene Desktops» in der Simulationsleiste holt sie zurück. Inhalte bleiben erhalten.
+- **Maus darüber:** Geräte zeigen Adressen, MAC, Gateway und die Grösse ihrer Tabellen; Kabel ihren Zustand und den Verkehr; Pakete Protokoll, Quelle, Ziel und OSI-Schichten.
+- **Leuchten an den Kabeln:** grün verbunden, orange Daten unterwegs, rot keine Verbindung.
+- **Einzelschritt mit OSI-Schichten:** Angehalten (Leertaste) zeigt jedes Paket seine Schichten ineinander, jede in ihrer Farbe. **N** packt ein ankommendes Paket beim Empfänger Schicht für Schicht aus: Ein Switch bis Schicht 2 (MAC), ein Router bis Schicht 3 (IP), das Ziel ganz. Ein Rechner, für den das Paket nicht bestimmt ist, verwirft es auf Schicht 2.
 
 ## Pakete mitschneiden
 
@@ -85,9 +96,13 @@ In der Simulation zeigt die Paketliste unten jeden Rahmen. Ein Klick öffnet die
 
 **Werkzeuge → Aufgaben-Katalog** enthält Übungen von ★ (Einstieg) bis ★★★★★ (Studium). Eine Aufgabe lädt ein Startnetz und zeigt unten ihre Lernziele. **Prüfen** sagt, was schon erfüllt ist und was fehlt. Viele Ziele haben einen Tipp.
 
+## Demo-Netze
+
+**Datei → Demo-Netze …** (oder ▶ in der Werkzeugleiste) bietet zu jedem Protokoll ein fertig eingerichtetes Netz. «Vorführen» startet die Simulation und zeigt das Protokoll in Aktion, «Öffnen» lädt es zum Erkunden.
+
 ## Kosten
 
-Jedes Gerät hat einen Richtpreis. Der Betrag in der Werkzeugleiste und **Ansicht → Kosten** zeigen das Total in CHF, EUR oder USD. Manche Aufgaben verlangen ein Budget.
+Jedes Gerät hat einen Richtpreis. Der Betrag in der Werkzeugleiste und **Ansicht → Kosten** zeigen das Total in CHF, EUR oder USD. Manche Aufgaben verlangen ein Budget. Ob der Shop Preise zeigt, hängt vom Profil ab (ab Profil 3); **Ansicht → Preise im Shop** schaltet sie ein oder aus.
 
 ## Tastenkürzel
 
@@ -97,6 +112,7 @@ Jedes Gerät hat einen Richtpreis. Der Betrag in der Werkzeugleiste und **Ansich
 | Leertaste / N | Simulation anhalten / einen Schritt weiter |
 | V, K, B | Auswählen, Kabel, Bereich |
 | Strg+D, F2, Entf | Duplizieren, Umbenennen, Löschen |
+| E | Erweiterte Einstellungen des gewählten Geräts (darin Bild↑/Bild↓: anderes Gerät) |
 | Strg+Z, Strg+Y | Rückgängig, Wiederholen |
 | Strg+C, Strg+V | Kopieren, Einfügen |
 | Strg+S, Strg+O, Alt+N | Speichern, Öffnen, Neues Netz |

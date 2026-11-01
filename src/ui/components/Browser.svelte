@@ -31,6 +31,16 @@
     });
   });
 
+  // Von aussen gestartet (z.B. eine Demo): Adresszeile nachführen.
+  let shownUrl = '';
+  $effect(() => {
+    const url = browser?.url;
+    if (url && url !== shownUrl) {
+      shownUrl = url;
+      address = url;
+    }
+  });
+
   function load(url: string) {
     address = url;
     simStore.browse(device.id, url);

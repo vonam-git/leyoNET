@@ -217,6 +217,15 @@ class Ui {
     });
   }
 
+  /** Preise im Shop und bei den Geräten (Funktion «tool.prices», je nach Profil). */
+  get showPrices(): boolean {
+    return this.has('tool.prices');
+  }
+
+  setShowPrices(on: boolean) {
+    this.setFeature('tool.prices', on);
+  }
+
   setTheme(theme: Theme) {
     this.theme = theme;
     write(KEYS.theme, theme);

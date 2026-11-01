@@ -50,6 +50,12 @@
       class="line"
       d="M-5 -5 L-12 -12 M-12 -7 V-12 H-7 M5 5 L12 12 M12 7 V12 H7 M5 -5 L12 -12 M7 -12 H12 V-7 M-5 5 L-12 12 M-7 12 H-12 V7"
     />
+  {:else if type === 'cpe'}
+    <!-- Internet-Box: Gehäuse in Hausform (Heimanschluss), Zugang oben, vier LAN-Buchsen unten. -->
+    <path d="M-22 13 V-3 L0 -17 L22 -3 V13 Z" />
+    <path class="line" d="M0 -17 V-23 M-4 -21 Q0 -25 4 -21" />
+    <path class="line" d="M-14 7 H-10 M-5 7 H-1 M4 7 H8 M13 7 H17" />
+    <circle class="fill" cx="0" cy="-3" r="2.4" />
   {:else if type === 'internet'}
     <path d="M-16 12 H16 A10 10 0 0 0 15 -7 A13 13 0 0 0 -9 -11 A11 11 0 0 0 -16 12 Z" />
     <path class="line" d="M-9 3 H9 M0 -6 V12 M-6 -3 Q0 3 -6 9 M6 -3 Q0 3 6 9" />

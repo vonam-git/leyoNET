@@ -6,7 +6,7 @@ import { runCommand } from './commands';
 import type { LeaseRecord } from './dhcp';
 import type { AccessTech, EthernetFrame } from './frames';
 import { ACCESS_PROFILES } from './access';
-import { MODEM_WAN } from '../model/links';
+import { isModemWan } from '../model/links';
 import type { DnsCacheEntry } from './dns';
 import { HostNode, type AddressState, type ConnectionInfo } from './host';
 import { ClientGroupNode, type GroupMemberState } from './group';
@@ -20,6 +20,7 @@ import type { PppStatus } from './ppp';
 import { EventQueue } from './queue';
 import { L3SwitchNode } from './l3switch';
 import { ModemNode, SwitchNode, type MacEntry, type ModemState, type StormState, type StpState } from './switch';
+import { CpeNode } from './cpe';
 
 /** Übertragungszeit pro Kabel in Millisekunden (virtuelle Zeit). */
 export const LINK_DELAY = 1;
@@ -297,7 +298,7 @@ export class Simulation {
   #accessOn(a: Endpoint, b: Endpoint): AccessTech | undefined {
     for (const end of [a, b]) {
       const device = getDevice(this.#topology, end.device);
-      if (device?.type === 'modem' && device.modem && end.iface === MODEM_WAN) return ACCESS_PROFILES[device.modem.kind].data;
+      if (device?.modem && isModemWan(device, end.iface)) return ACCESS_PROFILES[device.modem.kind].data;
     }
     return undefined;
   }
@@ -321,6 +322,8 @@ export class Simulation {
           ? new L3SwitchNode(ctx)
         : device.type === 'modem'
           ? new ModemNode(ctx)
+          : device.type === 'cpe'
+            ? new CpeNode(ctx)
           : device.type === 'router'
             ? new RouterNode(ctx)
             : device.type === 'internet'
