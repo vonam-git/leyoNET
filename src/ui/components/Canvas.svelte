@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { getDevice, type Device, type DocArea, type Point, type TagColor } from '../../core';
+  import { getDevice, itemsInRect, type Device, type DocArea, type Point, type TagColor } from '../../core';
   import { t } from '../../i18n';
   import { presetArea } from '../areaPresets';
   import { SHOP_MIME } from '../dnd';
@@ -35,6 +35,14 @@
   let areaDrag: { id: string; kind: 'move' | 'resize'; start: Point; origin: DocArea } | null = null;
   /** Neuer Bereich, der gerade aufgezogen wird. */
   let drawing = $state<{ from: Point; to: Point } | null>(null);
+  /** Auswahlrahmen (Entwurf): alles darin wählen; `click` gilt, solange die Maus kaum bewegt wurde. */
+  let frame = $state<{ from: Point; to: Point; additive: boolean; screen: Point; click?: () => void } | null>(null);
+  /** Mehrere Geräte und Bereiche gemeinsam ziehen (Auswahl oder Bereich mit Inhalt). */
+  let groupDrag: { start: Point; devices: string[]; areas: string[] } | null = null;
+  /** Leertaste gedrückt: Ziehen verschiebt die Ansicht. */
+  let spaceHeld = $state(false);
+
+  const visibleFloor = (floor: number | undefined) => ui.floor === 'all' || floor === undefined || floor === ui.floor;
 
   /** Liegt ein Gerät auf einem anderen als dem gewählten Stockwerk? */
   const offFloor = (d: Device) => ui.floor !== 'all' && (d.floor ?? 0) !== ui.floor;
@@ -157,12 +165,28 @@
     return editor.screenToWorld(p.x, p.y);
   }
 
+  function startGroupDrag(event: PointerEvent, devices: string[], areas: string[]) {
+    groupDrag = { start: world(event), devices, areas };
+    editor.beginDrag();
+    svg.setPointerCapture(event.pointerId);
+  }
+
   function onDevicePointerDown(event: PointerEvent, device: Device) {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || spaceHeld) return;
     event.stopPropagation();
     if (offFloor(device)) return;
     if (editor.tool === 'cable') {
       editor.cableClick(device.id);
+      return;
+    }
+    // Umschalt+Klick: zur Auswahl hinzufügen oder entfernen.
+    if (event.shiftKey && editor.editable) {
+      editor.toggleSelected('device', device.id);
+      return;
+    }
+    // Teil einer Mehrfachauswahl: alle zusammen ziehen.
+    if (editor.editable && editor.selection?.kind === 'group' && editor.isSelected('device', device.id)) {
+      startGroupDrag(event, editor.selectedDeviceIds, editor.selectedAreaIds);
       return;
     }
     editor.select({ kind: 'device', id: device.id });
@@ -174,25 +198,61 @@
   }
 
   function onAreaPointerDown(event: PointerEvent, area: DocArea, kind: 'move' | 'resize') {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || spaceHeld) return;
     event.stopPropagation();
+    if (kind === 'move') {
+      // Umschalt: Rahmen aufziehen (auch innerhalb eines Bereichs); ohne Bewegung Bereich zur Auswahl dazu.
+      if (event.shiftKey) {
+        startFrame(event, true, () => editor.toggleSelected('area', area.id));
+        return;
+      }
+      if (editor.selection?.kind === 'group' && editor.isSelected('area', area.id)) {
+        startGroupDrag(event, editor.selectedDeviceIds, editor.selectedAreaIds);
+        return;
+      }
+      editor.select({ kind: 'area', id: area.id });
+      // Bereich mit seinem Inhalt verschieben (Geräte darin, eingebaute Geräte); Alt: nur den Bereich.
+      if (!event.altKey) {
+        const inside = itemsInRect(editor.topology, area, visibleFloor).devices;
+        const racked = editor.topology.devices.filter((d) => d.rack === area.id).map((d) => d.id);
+        startGroupDrag(event, [...new Set([...inside, ...racked])], [area.id]);
+        return;
+      }
+    }
     editor.select({ kind: 'area', id: area.id });
     areaDrag = { id: area.id, kind, start: world(event), origin: area };
     editor.beginDrag();
     svg.setPointerCapture(event.pointerId);
   }
 
+  function startFrame(event: PointerEvent, additive: boolean, click?: () => void) {
+    const p = world(event);
+    frame = { from: p, to: p, additive, screen: local(event), ...(click ? { click } : {}) };
+    svg.setPointerCapture(event.pointerId);
+  }
+
   function onBackgroundPointerDown(event: PointerEvent) {
-    if (event.button !== 0 && event.button !== 1) return;
-    if (event.button === 0 && editor.tool === 'area') {
+    if (event.button > 2) return;
+    // Ansicht verschieben: mittlere oder rechte Maustaste, Leertaste + Ziehen.
+    if (event.button !== 0 || spaceHeld) {
+      panFrom = local(event);
+      svg.setPointerCapture(event.pointerId);
+      return;
+    }
+    if (editor.tool === 'area') {
       const p = world(event);
       drawing = { from: p, to: p };
       svg.setPointerCapture(event.pointerId);
       return;
     }
-    if (event.button === 0) {
-      if (editor.cableSource) editor.cancel();
-      else editor.select(null);
+    if (editor.cableSource) {
+      editor.cancel();
+    } else if (editor.editable && editor.tool === 'select') {
+      // Entwurf: Ziehen auf freier Fläche zieht einen Auswahlrahmen auf.
+      startFrame(event, event.shiftKey, event.shiftKey ? undefined : () => editor.select(null));
+      return;
+    } else {
+      editor.select(null);
     }
     panFrom = local(event);
     svg.setPointerCapture(event.pointerId);
@@ -201,7 +261,11 @@
   function onPointerMove(event: PointerEvent) {
     const p = world(event);
     pointer = p;
-    if (drawing) {
+    if (frame) {
+      frame = { ...frame, to: p };
+    } else if (groupDrag) {
+      editor.dragGroup({ x: p.x - groupDrag.start.x, y: p.y - groupDrag.start.y }, groupDrag.devices, groupDrag.areas);
+    } else if (drawing) {
       drawing = { ...drawing, to: p };
     } else if (areaDrag) {
       const dx = Math.round((p.x - areaDrag.start.x) / GRID) * GRID;
@@ -218,7 +282,25 @@
     }
   }
 
-  function onPointerUp() {
+  function onPointerUp(event: PointerEvent) {
+    if (frame) {
+      const f = frame;
+      frame = null;
+      const now = local(event);
+      if (Math.hypot(now.x - f.screen.x, now.y - f.screen.y) < 4) f.click?.();
+      else
+        editor.selectRect(
+          { x: Math.min(f.from.x, f.to.x), y: Math.min(f.from.y, f.to.y), width: Math.abs(f.to.x - f.from.x), height: Math.abs(f.to.y - f.from.y) },
+          f.additive,
+          visibleFloor,
+        );
+      return;
+    }
+    if (groupDrag) {
+      groupDrag = null;
+      editor.endDrag();
+      return;
+    }
     if (drawing) {
       const { from, to } = drawing;
       drawing = null;
@@ -250,6 +332,17 @@
       drag = null;
     }
     panFrom = null;
+  }
+
+  function onSpace(event: KeyboardEvent) {
+    if (event.key !== ' ') return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('input, textarea, select, [contenteditable], button, .device-window, .desktop')) return;
+    if (event.type === 'keyup') spaceHeld = false;
+    else if (editor.editable) {
+      spaceHeld = true;
+      event.preventDefault();
+    }
   }
 
   function onDragOver(event: DragEvent) {
@@ -286,12 +379,15 @@
   }
 </script>
 
+<svelte:window onkeydown={onSpace} onkeyup={onSpace} onblur={() => (spaceHeld = false)} />
+
 <!-- Hover-Details sind eine Ergänzung; dieselben Angaben stehen im Inspektor. -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="canvas" class:acting={editor.acting} bind:clientWidth={width} bind:clientHeight={height} onpointermove={onHoverMove} onpointerleave={() => (hover = null)}>
   <svg
     bind:this={svg}
     class:panning={panFrom !== null}
+    class:pan-ready={spaceHeld || editor.acting}
     class:cable-tool={editor.tool === 'cable' || editor.tool === 'area'}
     role="application"
     aria-label={t('canvas.label')}
@@ -301,6 +397,7 @@
     ondblclick={onDblClick}
     onpointercancel={onPointerUp}
     onpointerleave={() => (pointer = null)}
+    oncontextmenu={(e) => e.preventDefault()}
     ondragover={onDragOver}
     ondrop={onDrop}
   >
@@ -335,6 +432,15 @@
           width={Math.abs(drawing.to.x - drawing.from.x)}
           height={Math.abs(drawing.to.y - drawing.from.y)}
           rx="12"
+        />
+      {/if}
+      {#if frame}
+        <rect
+          class="frame"
+          x={Math.min(frame.from.x, frame.to.x)}
+          y={Math.min(frame.from.y, frame.to.y)}
+          width={Math.abs(frame.to.x - frame.from.x)}
+          height={Math.abs(frame.to.y - frame.from.y)}
         />
       {/if}
       {#each cables as { cable, a, b } (cable.id)}
@@ -430,6 +536,9 @@
     width: 100%;
     height: 100%;
     touch-action: none;
+    cursor: default;
+  }
+  svg.pan-ready {
     cursor: grab;
   }
   svg.panning {
@@ -526,6 +635,14 @@
     stroke: var(--accent);
     stroke-width: 2;
     stroke-dasharray: 8 5;
+    pointer-events: none;
+  }
+  .frame {
+    fill: color-mix(in srgb, var(--accent) 10%, transparent);
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+    vector-effect: non-scaling-stroke;
     pointer-events: none;
   }
   .rubber {

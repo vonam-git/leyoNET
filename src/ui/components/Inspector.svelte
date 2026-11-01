@@ -33,7 +33,7 @@
 <aside class="inspector" aria-labelledby="inspector-title">
   <div class="head">
     <h2 id="inspector-title">{t('inspector.title')}</h2>
-    <button class="help" onclick={() => dialogs.showHelp(device ? `device.${device.type}` : cable ? 'cables' : area ? 'areas' : 'overview')} title={t('help.contextHint')} aria-label={t('menu.help.help')}><Icon name="help" size={16} /></button>
+    <button class="help" onclick={() => dialogs.showHelp(device ? `device.${device.type}` : cable ? 'cables' : area ? 'areas' : editor.selection?.kind === 'group' ? 'selection' : 'overview')} title={t('help.contextHint')} aria-label={t('menu.help.help')}><Icon name="help" size={16} /></button>
   </div>
 
   {#if device && spec}
@@ -80,6 +80,23 @@
     <CableInspector {cable} />
   {:else if area}
     <AreaForm {area} />
+  {:else if editor.selection?.kind === 'group'}
+    {@const group = editor.selection}
+    <div class="group">
+      <p><strong>{t('selection.summary', { devices: group.devices.length, areas: group.areas.length })}</strong></p>
+      <ul class="names">
+        {#each editor.topology.devices.filter((d) => group.devices.includes(d.id)) as d (d.id)}<li>{d.name}</li>{/each}
+        {#each (editor.topology.areas ?? []).filter((a) => group.areas.includes(a.id)) as a (a.id)}<li class="muted">▢ {a.title}</li>{/each}
+      </ul>
+      <p class="muted hint">{t('selection.hint')}</p>
+      {#if editor.editable}
+        <div class="actions">
+          <button onclick={() => editor.copySelection()} title="{t('key.ctrl')}+C"><Icon name="copy" size={15} /> {t('menu.edit.copy')}</button>
+          <button onclick={() => editor.duplicateSelection()} title="{t('key.ctrl')}+D">{t('menu.edit.duplicate')}</button>
+          <button class="danger" onclick={() => editor.deleteSelection()}><Icon name="trash" size={15} /> {t('inspector.delete')}</button>
+        </div>
+      {/if}
+    </div>
   {:else}
     <div class="empty">
       <p class="muted">{t('inspector.nothing')}</p>
@@ -127,7 +144,21 @@
   .advanced:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent) 16%, var(--surface));
   }
+  .group p {
+    margin: 10px 0 6px;
+  }
+  .names {
+    margin: 0;
+    padding-left: 18px;
+    max-height: 220px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+  }
+  .hint {
+    font-size: 0.8rem;
+  }
   .actions {
+    flex-wrap: wrap;
     display: flex;
     gap: 6px;
     margin-top: 12px;

@@ -146,10 +146,9 @@
     }
     if ((event.target as Element | null)?.closest('input, textarea, select, [contenteditable], [role="menu"], [role="menubar"]')) return;
     const arrow = ARROWS[event.key];
-    const device = editor.selectedDevice;
-    if (arrow && device && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    if (arrow && editor.selection && editor.selection.kind !== 'cable' && !event.ctrlKey && !event.metaKey && !event.altKey) {
       const step = event.shiftKey ? 50 : 10;
-      editor.moveBy(device.id, arrow[0] * step, arrow[1] * step);
+      editor.nudgeSelection(arrow[0] * step, arrow[1] * step);
       event.preventDefault();
     }
   }

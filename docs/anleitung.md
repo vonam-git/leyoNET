@@ -43,6 +43,13 @@ Beim Start der Simulation wird automatisch ein Snapshot angelegt. Weitere entste
 
 Nützlich: **Strg+D** dupliziert die Auswahl, **F2** benennt um, **Entf** löscht, **Strg+Z** macht rückgängig.
 
+## Mehrere Geräte auf einmal
+
+- **Auswahlrahmen:** Im Entwurf auf freier Fläche ziehen. Gewählt werden alle Geräte, deren Mitte im Rahmen liegt, und Bereiche, die ganz darin liegen. Mit **Umschalt** kommt der Rahmen zur Auswahl dazu (auch innerhalb eines Bereichs), **Umschalt+Klick** nimmt einzelne Geräte dazu oder heraus, **Strg+A** wählt alles.
+- **Verschieben:** Ein gewähltes Gerät ziehen bewegt die ganze Auswahl, ebenso die Pfeiltasten. Ein Bereich nimmt beim Ziehen die Geräte darin mit; mit **Alt** nur den Bereich.
+- **Kopieren:** **Strg+C** und **Strg+V** (oder **Strg+D**) kopieren die Auswahl samt den Kabeln zwischen den Geräten. Ein einzelnes Gerät kommt ohne Adressen; eine Gruppe behält ihre Einstellungen, z.B. für eine zweite Filiale.
+- **Ansicht verschieben:** mit der rechten oder mittleren Maustaste ziehen, oder Leertaste halten und ziehen.
+
 ## Geräte im Überblick
 
 | Gerät | Wofür |
@@ -79,7 +86,7 @@ Zwei Kabel zwischen denselben Switches oder ein Ring bilden eine Schleife. Ohne 
 
 ## In der Simulation
 
-- **Desktops:** Doppelklick auf ein Endgerät öffnet seinen Desktop (Eingabeaufforderung, Browser, Mail). Mehrere können offen sein. Mit **—** minimieren; «Offene Desktops» in der Simulationsleiste holt sie zurück. Inhalte bleiben erhalten.
+- **Desktops:** Doppelklick auf ein Endgerät öffnet seinen Desktop (Eingabeaufforderung, Browser, Mail). Mehrere können offen sein. Mit **—** minimieren; «Offene Desktops» in der Simulationsleiste holt sie zurück. Inhalte bleiben erhalten. Desktops lassen sich am Kopf verschieben und unten rechts in der Grösse ändern.
 - **Maus darüber:** Geräte zeigen Adressen, MAC, Gateway und die Grösse ihrer Tabellen; Kabel ihren Zustand und den Verkehr; Pakete Protokoll, Quelle, Ziel und OSI-Schichten.
 - **Leuchten an den Kabeln:** grün verbunden, orange Daten unterwegs, rot keine Verbindung.
 - **Einzelschritt mit OSI-Schichten:** Angehalten (Leertaste) zeigt jedes Paket seine Schichten ineinander, jede in ihrer Farbe. **N** packt ein ankommendes Paket beim Empfänger Schicht für Schicht aus: Ein Switch bis Schicht 2 (MAC), ein Router bis Schicht 3 (IP), das Ziel ganz. Ein Rechner, für den das Paket nicht bestimmt ist, verwirft es auf Schicht 2.
@@ -99,7 +106,7 @@ In der Simulation zeigt die Paketliste unten jeden Rahmen. Ein Klick öffnet die
 
 ## Demo-Netze
 
-**Datei → Demo-Netze …** (oder ▶ in der Werkzeugleiste) bietet zu jedem Protokoll ein fertig eingerichtetes Netz. «Vorführen» startet die Simulation und zeigt das Protokoll in Aktion, «Öffnen» lädt es zum Erkunden. Bei vielen Demos erklärt **Schritt für Schritt** ein Avatar den Testfall; mit «Weiter» geht es zum nächsten Schritt. Den Avatar stellst du dir selbst ein (Klick auf ihn oder **Hilfe → Avatar anpassen …**).
+**Datei → Demo-Netze …** (oder ▶ in der Werkzeugleiste) bietet zu jedem Protokoll ein fertig eingerichtetes Netz. «Vorführen» startet die Simulation und zeigt das Protokoll in Aktion, «Öffnen» lädt es zum Erkunden. Bei vielen Demos erklärt **Schritt für Schritt** ein Avatar den Testfall; mit «Weiter» geht es zum nächsten Schritt. Den Avatar stellst du dir selbst ein (Klick auf ihn oder **Hilfe → Avatar anpassen …**). Mit **—** (oder Esc) blendest du die Sprechblase aus; der Avatar bleibt klein in der Ecke, ein Klick holt sie zurück. Eine beendete Führung blendet **Hilfe → Lehrperson einblenden** wieder ein.
 
 ## Mehr Platz
 
@@ -117,11 +124,12 @@ Jedes Gerät hat einen Richtpreis. Der Betrag in der Werkzeugleiste und **Ansich
 | Leertaste / N | Simulation anhalten / einen Schritt weiter |
 | V, K, B | Auswählen, Kabel, Bereich |
 | Strg+D, F2, Entf | Duplizieren, Umbenennen, Löschen |
+| Strg+A, Umschalt+Klick | Alles auswählen, zur Auswahl hinzufügen |
 | E | Erweiterte Einstellungen des gewählten Geräts (darin Bild↑/Bild↓: anderes Gerät) |
 | Strg+Z, Strg+Y | Rückgängig, Wiederholen |
 | Strg+C, Strg+V | Kopieren, Einfügen |
 | Strg+S, Strg+O, Alt+N | Speichern, Öffnen, Neues Netz |
-| A, R, C | Adressen, Rack-Ansicht, auf Auswahl zentrieren |
+| A, P, R, C | Adressen, Schnittstellen an Kabeln, Rack-Ansicht, auf Auswahl zentrieren |
 | I | IP-Rechner |
 | + / − / 0 | Vergrössern, Verkleinern, alles zeigen |
 | F1, ?, Strg+K | Hilfe, Tastenkürzel, Befehlssuche |
