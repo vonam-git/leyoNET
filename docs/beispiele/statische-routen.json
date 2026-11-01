@@ -1,0 +1,154 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "pc",
+        "name": "PC A",
+        "position": {
+          "x": 120,
+          "y": 320
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "ip": "192.168.10.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.10.1"
+      },
+      {
+        "id": "d2",
+        "type": "router",
+        "name": "Router 1",
+        "position": {
+          "x": 320,
+          "y": 200
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "192.168.10.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:02:01",
+            "ip": "10.0.0.1",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:02:02",
+            "sfpSlot": true
+          }
+        ],
+        "routes": [
+          {
+            "network": "192.168.20.0",
+            "mask": "255.255.255.0",
+            "gateway": "10.0.0.2"
+          }
+        ]
+      },
+      {
+        "id": "d3",
+        "type": "router",
+        "name": "Router 2",
+        "position": {
+          "x": 560,
+          "y": 200
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ip": "10.0.0.2",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:03:01",
+            "ip": "192.168.20.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:03:02",
+            "sfpSlot": true
+          }
+        ],
+        "routes": [
+          {
+            "network": "192.168.10.0",
+            "mask": "255.255.255.0",
+            "gateway": "10.0.0.1"
+          }
+        ]
+      },
+      {
+        "id": "d4",
+        "type": "pc",
+        "name": "PC B",
+        "position": {
+          "x": 760,
+          "y": 320
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ip": "192.168.20.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.20.1"
+      }
+    ],
+    "cables": [
+      {
+        "id": "c5",
+        "a": {
+          "device": "d1",
+          "iface": 0
+        },
+        "b": {
+          "device": "d2",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c6",
+        "a": {
+          "device": "d2",
+          "iface": 1
+        },
+        "b": {
+          "device": "d3",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c7",
+        "a": {
+          "device": "d3",
+          "iface": 1
+        },
+        "b": {
+          "device": "d4",
+          "iface": 0
+        }
+      }
+    ],
+    "nextId": 8
+  },
+  "configuration": {}
+}
+

@@ -1,19 +1,28 @@
 <script lang="ts">
-  import { buildRoutes, cableAt, logicalInterfaces, parseMask, type Device, type SerialEncapsulation, type StaticRoute } from '../../core';
+  import { cableAt, parseMask, subifId, type Device, type SerialEncapsulation } from '../../core';
   import { t } from '../../i18n';
   import { interfaceLabel } from '../labels';
+  import { autosave } from '../autosave';
   import { dialogs } from '../state/dialogs.svelte';
+  import { duplicates } from '../state/duplicates.svelte';
   import { editor } from '../state/editor.svelte';
   import { subnetSummary } from '../subnet';
   import { ui } from '../state/ui.svelte';
   import Icon from './Icon.svelte';
-  import RoutingProtocols from './RoutingProtocols.svelte';
-  import RoutingTable from './RoutingTable.svelte';
   import ScopeBadge from './ScopeBadge.svelte';
   import SubinterfaceConfig from './SubinterfaceConfig.svelte';
 
-  /** routesOnly: nur statische Routen (Layer-3-Switch, dessen Adressen auf den SVIs liegen). */
-  let { device, routesOnly = false }: { device: Device; routesOnly?: boolean } = $props();
+  /**
+   * Router und Internet-Knoten. `part` wählt einen Teil (rechts im Inspektor nur
+   * «interfaces», im erweiterten Dialog je Reiter einer); ohne `part` alles.
+   */
+  type Part = 'interfaces' | 'nat' | 'relay';
+  /** compact: rechts im Inspektor ohne Subinterfaces (die stehen im Dialog unter «Adressen»). */
+  let { device, part, compact = false }: { device: Device; part?: Part; compact?: boolean } = $props();
+  const show = (p: Part) => !part || part === p;
+  /** Im Dialog als Abschnitt mit Überschrift, sonst aufklappbar. */
+  const box = $derived(part ? 'section' : 'details');
+  const head = $derived(part ? 'h3' : 'summary');
 
   // --- Interfaces ------------------------------------------------------------
 
@@ -21,16 +30,21 @@
   let ifaceError = $state<{ index: number; field?: string; text: string } | null>(null);
 
   $effect(() => {
-    drafts = device.interfaces.map((i) => ({ ip: i.ip ?? '', mask: i.mask ?? '' }));
+    // Masken kurz als Präfix (/24) zeigen; gespeichert werden sie in Punktschreibweise.
+    drafts = device.interfaces.map((i) => ({ ip: i.ip ?? '', mask: i.mask && parseMask(i.mask) !== null ? `/${parseMask(i.mask)}` : (i.mask ?? '') }));
     ifaceError = null;
   });
 
-  function applyInterface(event: SubmitEvent, index: number) {
-    event.preventDefault();
+  function saveInterface(index: number, quiet: boolean): boolean {
     const draft = drafts[index];
-    if (!draft) return;
+    if (!draft || !ifaceDirty(index)) return true;
     const failure = editor.setInterfaceAddress(device.id, index, draft.ip, draft.mask);
-    ifaceError = failure ? { index, field: failure.field, text: t(`error.${failure.code}`, failure.params) } : null;
+    if (failure) {
+      if (!quiet) ifaceError = { index, field: failure.field, text: t(`error.${failure.code}`, failure.params) };
+      return false;
+    }
+    if (ifaceError?.index === index) ifaceError = null;
+    return true;
   }
 
   /** IP-Rechner öffnen; «Übernehmen» setzt die erste nutzbare Adresse (typisch für Router). */
@@ -68,16 +82,22 @@
     cgnatAddress = device.cgnatAddress ?? '';
   });
 
-  function applyCgnat(event: SubmitEvent) {
-    event.preventDefault();
+  function saveCgnat(quiet: boolean): boolean {
+    if (cgnatAddress.trim() === (device.cgnatAddress ?? '')) return true;
     const failure = editor.setCgnatAddress(device.id, cgnatAddress);
-    cgnatError = failure ? t(`error.${failure.code}`, failure.params) : null;
+    if (failure) {
+      if (!quiet) cgnatError = t(`error.${failure.code}`, failure.params);
+      return false;
+    }
+    cgnatError = null;
+    return true;
   }
 
   const ifaceDirty = (index: number) => {
     const saved = device.interfaces[index];
     const draft = drafts[index];
-    return !!draft && (draft.ip.trim() !== (saved?.ip ?? '') || draft.mask.trim() !== (saved?.mask ?? ''));
+    const mask = (m?: string) => (m?.trim() ? parseMask(m) : null);
+    return !!draft && (draft.ip.trim() !== (saved?.ip ?? '') || mask(draft.mask) !== mask(saved?.mask));
   };
 
   // --- NAT-Portweiterleitungen -------------------------------------------------
@@ -107,30 +127,20 @@
     relayError = null;
   });
 
-  function applyRelay(event: SubmitEvent, index: number) {
-    event.preventDefault();
+  function saveRelay(index: number, quiet: boolean): boolean {
+    if ((relays[index] ?? '').trim() === (device.interfaces[index]?.dhcpRelay ?? '')) return true;
     const failure = editor.setInterfaceRelay(device.id, index, relays[index] ?? '');
-    relayError = failure ? t(`error.${failure.code}`, failure.params) : null;
+    if (failure) {
+      if (!quiet) relayError = t(`error.${failure.code}`, failure.params);
+      return false;
+    }
+    relayError = null;
+    return true;
   }
 
-  // --- Statische Routen ------------------------------------------------------
-
-  let route = $state({ network: '', mask: '', gateway: '', iface: '' });
-  let routeError = $state<{ field?: string; text: string } | null>(null);
-  const unusable = $derived(new Set(buildRoutes(device).unusable));
-
-  function addRoute(event: SubmitEvent) {
-    event.preventDefault();
-    const input: StaticRoute = { network: route.network.trim(), mask: route.mask.trim() };
-    if (route.gateway.trim()) input.gateway = route.gateway.trim();
-    if (route.iface !== '') input.iface = Number(route.iface);
-    const failure = editor.addStaticRoute(device.id, input);
-    routeError = failure ? { field: failure.field, text: t(`error.${failure.code}`, failure.params) } : null;
-    if (!failure) route = { network: '', mask: '', gateway: '', iface: '' };
-  }
 </script>
 
-{#if !routesOnly}
+{#if show('interfaces')}
 <h3>{t('router.interfaces')}</h3>
 {#each device.interfaces as iface, index (iface.index)}
   {@const draft = drafts[index]}
@@ -161,7 +171,7 @@
         {/if}
       </div>
     {/if}
-    <form class="iface" onsubmit={(e) => applyInterface(e, index)}>
+    <form class="iface" use:autosave={(quiet) => saveInterface(index, quiet)} onsubmit={(e) => (e.preventDefault(), saveInterface(index, false))}>
       <span class="label">{interfaceLabel(device, index)}</span>
       <input
         aria-label={t('router.ifaceIp', { iface: interfaceLabel(device, index) })}
@@ -180,7 +190,6 @@
         bind:value={draft.mask}
         aria-invalid={ifaceError?.index === index && ifaceError.field === 'mask'}
       />
-      <button type="submit" disabled={!ifaceDirty(index)} aria-label={t('config.apply')} title={t('config.apply')}>✓</button>
       {#if ui.has('tool.ipCalculator')}
         <button type="button" class="calc" onclick={() => calc(index)} aria-label={t('menu.tool.ipcalc')} title={t('ipcalc.openHint')}><Icon name="calc" size={15} /></button>
       {/if}
@@ -189,24 +198,32 @@
       <p class="error" role="alert">{ifaceError.text}</p>
     {:else if iface.ip}
       <p class="muted small">{#if ui.has('tool.addressBadges')}<ScopeBadge ip={iface.ip} /> {/if}{subnetSummary(iface.ip, iface.mask)}</p>
+      {#if duplicates.has(device.id, iface.ip)}<p class="error small" role="alert">❗ {t('canvas.duplicateIp', { ip: iface.ip })}</p>{/if}
     {/if}
   {/if}
 {/each}
 
 {/if}
 
-{#if device.type === 'router' && ui.has('net.subinterfaces')}
+{#if compact && (device.subinterfaces ?? []).length > 0}
+  <ul class="subs">
+    {#each device.subinterfaces ?? [] as sub (sub.parent * 10000 + sub.vlan)}
+      <li><span class="label">{interfaceLabel(device, subifId(sub.parent, sub.vlan))}</span> <span class="mono">{sub.ip ?? '–'}{sub.mask ? `/${parseMask(sub.mask)}` : ''}</span></li>
+    {/each}
+  </ul>
+{/if}
+
+{#if show('interfaces') && !compact && device.type === 'router' && ui.has('net.subinterfaces')}
   <SubinterfaceConfig {device} />
 {/if}
 
-{#if device.type === 'internet' && ui.has('net.cgnat')}
-  <details class="section" open={!!device.cgnatAddress} data-help="cgnat">
-    <summary>{t('cgnat.title')}</summary>
+{#if show('nat') && device.type === 'internet' && ui.has('net.cgnat')}
+  <svelte:element this={box} class="section" open={part ? undefined : !!device.cgnatAddress} data-help="cgnat">
+    <svelte:element this={head}>{t('cgnat.title')}</svelte:element>
     <p class="muted small-text">{t('cgnat.hint')}</p>
-    <form class="relay" onsubmit={applyCgnat}>
+    <form class="relay" use:autosave={saveCgnat} onsubmit={(e) => (e.preventDefault(), saveCgnat(false))}>
       <span class="label">{t('cgnat.address')}</span>
       <input bind:value={cgnatAddress} placeholder="192.0.2.1" disabled={!editor.editable} aria-label={t('cgnat.address')} />
-      <button type="submit" disabled={!editor.editable || cgnatAddress.trim() === (device.cgnatAddress ?? '')}>✓</button>
     </form>
     {#if cgnatError}<p class="error" role="alert">{cgnatError}</p>{/if}
     {#each device.interfaces as iface, index (iface.index)}
@@ -215,12 +232,12 @@
         {t('cgnat.customerPort', { iface: interfaceLabel(device, index) })}
       </label>
     {/each}
-  </details>
+  </svelte:element>
 {/if}
 
-{#if device.type === 'router' && ui.has('net.nat')}
-  <details class="section" open={device.interfaces.some((i) => i.nat)} data-help="nat">
-  <summary>{t('nat.title')}</summary>
+{#if show('nat') && (device.type === 'router' || device.type === 'cpe') && ui.has('net.nat')}
+  <svelte:element this={box} class="section" open={part ? undefined : device.interfaces.some((i) => i.nat)} data-help="nat">
+  <svelte:element this={head}>{t('nat.title')}</svelte:element>
   <p class="muted small-text">{t('nat.hint')}</p>
   {#each device.interfaces as iface, index (iface.index)}
     <label class="nat">
@@ -269,15 +286,15 @@
       {#if staticError}<p class="error" role="alert">{staticError}</p>{/if}
     {/if}
   {/if}
-  </details>
+  </svelte:element>
 {/if}
 
-{#if ui.has('net.dhcpRelay') && !routesOnly && device.type !== 'internet'}
-<details class="section" open={device.interfaces.some((i) => i.dhcpRelay)} data-help="dhcp">
-<summary>{t('router.relay')}</summary>
+{#if show('relay') && ui.has('net.dhcpRelay') && device.type !== 'internet'}
+<svelte:element this={box} class="section" open={part ? undefined : device.interfaces.some((i) => i.dhcpRelay)} data-help="dhcp">
+<svelte:element this={head}>{t('router.relay')}</svelte:element>
 <p class="muted small-text">{t('router.relayHint')}</p>
 {#each device.interfaces as iface, index (iface.index)}
-  <form class="relay" onsubmit={(e) => applyRelay(e, index)}>
+  <form class="relay" use:autosave={(quiet) => saveRelay(index, quiet)} onsubmit={(e) => (e.preventDefault(), saveRelay(index, false))}>
     <span class="label">{interfaceLabel(device, index)}</span>
     <input
       aria-label={t('router.relayFor', { iface: interfaceLabel(device, index) })}
@@ -286,72 +303,15 @@
       spellcheck="false"
       bind:value={relays[index]}
     />
-    <button type="submit" disabled={(relays[index] ?? '').trim() === (iface.dhcpRelay ?? '')} aria-label={t('config.apply')} title={t('config.apply')}>✓</button>
   </form>
 {/each}
 {#if relayError}
   <p class="error" role="alert">{relayError}</p>
 {/if}
-</details>
+</svelte:element>
 {/if}
 
-{#if ui.has('routing.static')}
-<details class="section" open data-help="routing">
-<summary>{t('router.staticRoutes')}</summary>
-{#if (device.routes ?? []).length === 0}
-  <p class="muted small">{t('router.noRoutes')}</p>
-{:else}
-  <ul class="routes">
-    {#each device.routes ?? [] as r, i (i)}
-      <li class:unusable={unusable.has(i)}>
-        <span class="mono">{r.network}/{parseMask(r.mask)}</span>
-        <span>→ {r.gateway ?? interfaceLabel(device, r.iface ?? 0)}</span>
-        <button class="small" onclick={() => editor.removeStaticRoute(device.id, i)} aria-label={t('router.removeRoute')}>
-          ✕
-        </button>
-        {#if unusable.has(i)}
-          <span class="hint">{t('router.routeUnusable')}</span>
-        {/if}
-      </li>
-    {/each}
-  </ul>
-{/if}
 
-<form class="add-route" onsubmit={addRoute}>
-  <div class="grid">
-    <label>
-      <span>{t('router.network')}</span>
-      <input placeholder="10.1.0.0" autocomplete="off" spellcheck="false" bind:value={route.network} />
-    </label>
-    <label>
-      <span>{t('config.mask')}</span>
-      <input placeholder="/16" autocomplete="off" spellcheck="false" bind:value={route.mask} />
-    </label>
-    <label>
-      <span>{t('router.via')}</span>
-      <input placeholder="172.16.0.2" autocomplete="off" spellcheck="false" bind:value={route.gateway} />
-    </label>
-    <label>
-      <span>{t('router.iface')}</span>
-      <select bind:value={route.iface}>
-        <option value="">{t('router.ifaceAuto')}</option>
-        {#each logicalInterfaces(device) as id (id)}
-          <option value={String(id)}>{interfaceLabel(device, id)}</option>
-        {/each}
-      </select>
-    </label>
-  </div>
-  {#if routeError}
-    <p class="error" role="alert">{routeError.text}</p>
-  {/if}
-  <button type="submit" disabled={!editor.editable || !route.network.trim() || !route.mask.trim()}>{t('router.addRoute')}</button>
-</form>
-</details>
-{/if}
-
-<RoutingProtocols {device} />
-
-<RoutingTable {device} />
 
 <style>
   h3 {
@@ -363,6 +323,18 @@
     padding: 6px 8px;
     border: 1px solid var(--border);
     border-radius: 8px;
+  }
+  .subs {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    font-size: 0.8rem;
+    display: grid;
+    gap: 2px;
+  }
+  section.section {
+    border: none;
+    padding: 0;
   }
   .section summary {
     cursor: pointer;
@@ -422,13 +394,10 @@
   }
   .relay {
     display: grid;
-    grid-template-columns: 2.6rem minmax(0, 1fr) auto;
+    grid-template-columns: 2.6rem minmax(0, 1fr);
     gap: 4px;
     align-items: center;
     margin-top: 4px;
-  }
-  .relay button {
-    padding: 3px 8px;
   }
   .small-text {
     margin: 0 0 4px;
@@ -436,7 +405,7 @@
   }
   .iface {
     display: grid;
-    grid-template-columns: 2.6rem minmax(0, 1fr) 4.2rem auto auto;
+    grid-template-columns: 2.6rem minmax(0, 1fr) 4.2rem auto;
     gap: 4px;
     align-items: center;
     margin-top: 6px;
@@ -465,45 +434,6 @@
   }
   .iface button {
     padding: 3px 8px;
-  }
-  .routes {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    font-size: 0.8rem;
-  }
-  .routes li {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .routes li .small {
-    margin-left: auto;
-  }
-  .routes li.unusable .mono {
-    text-decoration: line-through;
-  }
-  .hint {
-    width: 100%;
-    font-size: 0.75rem;
-    color: var(--danger);
-  }
-  .add-route {
-    margin-top: 8px;
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 6px;
-    margin-bottom: 6px;
-  }
-  .grid label {
-    display: grid;
-    gap: 2px;
-    font-size: 0.75rem;
   }
   .small {
     font-size: 0.75rem;

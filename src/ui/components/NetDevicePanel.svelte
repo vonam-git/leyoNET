@@ -53,7 +53,7 @@
     <RoutingTable {device} live={deviceState?.routes} />
     <StateTables {device} arp={deviceState?.arp ?? []} {now} />
   {/if}
-{:else if isRouterType(device.type)}
+{:else if isRouterType(device.type) || device.type === 'cpe'}
   {#if device.type === 'internet'}
     <p class="muted">{t('internet.explain')}</p>
   {/if}
@@ -116,7 +116,7 @@
       {/each}
     </ul>
   {/if}
-  {#if device.type === 'router' && device.interfaces.some((i) => i.nat)}
+  {#if (device.type === 'router' || device.type === 'cpe') && device.interfaces.some((i) => i.nat)}
     <h3>{t('nat.table')}</h3>
     {#if (deviceState?.nat ?? []).length === 0}
       <p class="muted">{t('nat.empty')}</p>

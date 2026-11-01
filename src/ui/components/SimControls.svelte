@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { desktops } from '../state/desktop.svelte';
+  import DesktopTaskbar from './DesktopTaskbar.svelte';
   import { t } from '../../i18n';
   import { simStore, type Speed } from '../state/sim.svelte';
 
@@ -21,7 +23,11 @@
     </select>
   </label>
   <span class="clock">{t('sim.clock', { time: clock })}</span>
-  <span class="hint">{t('mode.actionHint')}</span>
+  {#if desktops.windows.length > 0}
+    <DesktopTaskbar />
+  {:else}
+    <span class="hint">{t('mode.actionHint')}</span>
+  {/if}
 </div>
 
 <style>

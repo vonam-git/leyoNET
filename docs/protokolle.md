@@ -40,6 +40,8 @@ Jedes Modem baut seine Verbindung nach dem passenden Standard auf. Die Schritte 
 | Mobilfunk (LTE) | Funk | RRC-Verbindung → Attach mit SIM (Authentisierung, Security Mode) → Default Bearer mit IP-Adresse; im pcap nur das IP-Paket |
 | ADSL2+ (G.992.5), VDSL2 (G.993.2) | Telefonleitung | Training (G.994.1-Handshake) → PPPoE-Discovery → PPP LCP → PAP → IPCP |
 
+Die **Internet-Box (CPE)** enthält dasselbe Modem: Mit Zugangstechnik baut ihr WAN-Anschluss die Leitung genauso auf, erst danach leitet ihr Router weiter. Dahinter arbeitet sie wie ein Heimrouter: Die LAN-Buchsen bilden einen internen Switch (ein Netz), der DHCP-Server vergibt Adressen im LAN, am WAN übersetzt NAT/PAT auf die öffentliche Adresse.
+
 Nicht simuliert: Dämpfung und Distanz der Leitung, Bandbreitenbegrenzung, Funkzellenwechsel im Mobilfunk.
 
 ## Broadcast-Sturm

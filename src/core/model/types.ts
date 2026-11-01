@@ -8,6 +8,7 @@ export type DeviceType =
   | 'router'
   | 'accesspoint'
   | 'modem'
+  | 'cpe'
   | 'internet';
 
 /**

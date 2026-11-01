@@ -52,8 +52,18 @@ export const WAN_MEDIUM: Record<ModemKind, Medium> = { cable: 'coax', fiber: 'fi
 /** Anschluss 1 eines Modems ist die WAN-Seite (zum Provider), Anschluss 0 die LAN-Buchse. */
 export const MODEM_WAN = 1;
 
+/** CPE (Internet-Box): Anschluss 0 ist WAN, Anschluss 1 trägt die LAN-Adresse (Gateway), 1–4 sind LAN-Buchsen. */
+export const CPE_WAN = 0;
+export const CPE_LAN = 1;
+
+/** WAN-Anschluss zum Provider: beim Modem Anschluss 1, bei der CPE Anschluss 0. */
 export function isModemWan(device: Device, iface: number): boolean {
-  return device.type === 'modem' && iface === MODEM_WAN;
+  return (device.type === 'modem' && iface === MODEM_WAN) || (device.type === 'cpe' && iface === CPE_WAN);
+}
+
+/** Geräte mit Zugangstechnik (Modem und CPE mit eingebautem Modem). */
+export function hasAccessTech(device: Device): boolean {
+  return (device.type === 'modem' || device.type === 'cpe') && !!device.modem;
 }
 
 /** Medium, das an diesem Anschluss passt (null = beliebig/mehrere). */
@@ -64,6 +74,7 @@ export function portMedium(device: Device, iface: number): Medium | null {
   if (port.sfpSlot) return 'fiber';
   if (device.type === 'accesspoint') return iface === 0 ? 'tp' : 'wireless';
   if (device.type === 'modem' && device.modem) return iface === MODEM_WAN ? WAN_MEDIUM[device.modem.kind] : 'tp';
+  if (device.type === 'cpe') return iface === CPE_WAN ? (device.modem ? WAN_MEDIUM[device.modem.kind] : null) : 'tp';
   return null;
 }
 
@@ -122,7 +133,7 @@ export function linkStatus(t: Topology, cable: Cable): LinkStatus {
   }
   if (medium === 'coax' || medium === 'dsl' || medium === 'cellular') {
     // Zugangsleitungen verbinden ein Modem passender Technik mit dem Provider.
-    const modem = a.type === 'modem' ? a : b.type === 'modem' ? b : null;
+    const modem = hasAccessTech(a) ? a : hasAccessTech(b) ? b : null;
     const other = modem === a ? b : a;
     if (!modem || !isProvider(other)) return { up: false, reason: 'wrongMedium' };
     return { up: true };

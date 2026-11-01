@@ -5,6 +5,8 @@
   import CatalogDialog from './CatalogDialog.svelte';
   import CommandPalette from './CommandPalette.svelte';
   import CostDialog from './CostDialog.svelte';
+  import DemoDialog from './DemoDialog.svelte';
+  import DeviceDialog from './DeviceDialog.svelte';
   import FeaturesDialog from './FeaturesDialog.svelte';
   import FeedbackDialog from './FeedbackDialog.svelte';
   import IpCalculator from './IpCalculator.svelte';
@@ -20,6 +22,10 @@
   /** Zeigt den gerade geöffneten Dialog (gesteuert über Menüs, Kürzel und Schaltflächen). */
   const close = () => dialogs.close();
 </script>
+
+{#if dialogs.device}
+  <DeviceDialog />
+{/if}
 
 {#if dialogs.open === 'about'}
   <AboutDialog onclose={close} />
@@ -53,4 +59,6 @@
   <VlanDialog onclose={close} />
 {:else if dialogs.open === 'costs'}
   <CostDialog onclose={close} />
+{:else if dialogs.open === 'demos'}
+  <DemoDialog onclose={close} />
 {/if}

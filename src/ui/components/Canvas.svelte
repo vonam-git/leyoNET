@@ -6,6 +6,11 @@
   import { SHOP_MIME } from '../dnd';
   import { SHOP } from '../shop';
   import { protocolOf } from '../packets';
+  import { layersOf } from '../osiSteps';
+  import { DEVICE_SPECS, hasCli } from '../../core';
+  import { openCli } from '../state/cli.svelte';
+  import { openDesktop } from '../state/desktop.svelte';
+  import { dialogs } from '../state/dialogs.svelte';
   import { GRID, editor } from '../state/editor.svelte';
   import { shop } from '../state/shop.svelte';
   import { simStore } from '../state/sim.svelte';
@@ -14,6 +19,8 @@
   import AreaShape from './AreaShape.svelte';
   import CableLine from './CableLine.svelte';
   import DeviceNode from './DeviceNode.svelte';
+  import HoverCard from './HoverCard.svelte';
+  import PortPicker from './PortPicker.svelte';
 
   let svg: SVGSVGElement;
   let width = $state(0);
@@ -59,26 +66,84 @@
     }),
   );
 
-  /** Rahmen unterwegs als Punkte, die vom Sender zum Empfänger wandern. */
-  const dots = $derived.by(() => {
+  /**
+   * Rahmen unterwegs als kleine Pakete, die vom Sender zum Empfänger wandern.
+   * Läuft die Simulation, sind sie nach Protokoll gefärbt. Im Einzelschritt
+   * (angehalten) zeigen sie ihre OSI-Schichten ineinander geschachtelt; ein
+   * ankommender Rahmen wird beim Empfänger Schicht für Schicht ausgepackt.
+   */
+  const osiView = $derived(simStore.paused);
+  const packets = $derived.by(() => {
     void simStore.tick;
     const sim = simStore.sim;
     if (!editor.acting || !sim) return [];
+    const unpackingId = simStore.unpacking?.entryId;
     return sim.getInFlight().flatMap((entry) => {
+      if (entry.id === unpackingId) return [];
       const from = getDevice(editor.topology, entry.from.device);
       const to = getDevice(editor.topology, entry.to.device);
       if (!from || !to) return [];
-      const progress = Math.min(1, Math.max(0, (sim.now - entry.sent) / (entry.arrives - entry.sent)));
+      const raw = Math.min(1, Math.max(0, (sim.now - entry.sent) / (entry.arrives - entry.sent)));
+      // Nicht unter den Gerätesymbolen verschwinden: Weg zwischen den Rändern der Symbole.
+      const length = Math.hypot(to.position.x - from.position.x, to.position.y - from.position.y);
+      const edge = length > 110 ? 42 / length : 0;
+      const progress = edge + (1 - 2 * edge) * raw;
       return [
         {
           id: entry.id,
           x: from.position.x + (to.position.x - from.position.x) * progress,
           y: from.position.y + (to.position.y - from.position.y) * progress,
           protocol: protocolOf(entry.frame).toLowerCase(),
+          label: protocolOf(entry.frame),
+          layers: osiView ? layersOf(editor.topology, entry).layers : [],
         },
       ];
     });
   });
+
+  /** Paket, das gerade beim Empfänger ausgepackt wird (Einzelschritt). */
+  const unpack = $derived.by(() => {
+    const u = simStore.unpacking;
+    if (!u || !editor.acting) return null;
+    const device = getDevice(editor.topology, u.deviceId);
+    if (!device) return null;
+    const layer = u.layers[u.index]!;
+    return { ...u, x: device.position.x, y: device.position.y - 64, layer, visible: u.layers.slice(u.index), last: u.index === u.layers.length - 1 };
+  });
+
+  /** Mauszeiger über Gerät, Kabel oder Paket (nur Simulation): Details-Karte. */
+  let hover = $state<{ target: string; x: number; y: number } | null>(null);
+  function onHoverMove(event: PointerEvent) {
+    if (!editor.acting || event.buttons) {
+      hover = null;
+      return;
+    }
+    const el = (event.target as Element | null)?.closest('[data-hover]');
+    const target = el?.getAttribute('data-hover');
+    if (!target) {
+      hover = null;
+      return;
+    }
+    const p = local(event);
+    hover = { target, x: p.x, y: p.y };
+  }
+
+  /**
+   * Doppelklick auf ein Gerät: in der Simulation Desktop des Endgeräts; Router
+   * und Switches öffnen ihre Befehlszeile, sonst die erweiterten Einstellungen.
+   * Am SVG behandelt, weil die Zeigererfassung beim Ziehen Klicks dorthin lenkt.
+   */
+  function onDblClick(event: MouseEvent) {
+    const el = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-hover^="device:"]');
+    const device = el ? getDevice(editor.topology, el.getAttribute('data-hover')!.slice(7)) : undefined;
+    if (!device) return;
+    if (editor.acting && DEVICE_SPECS[device.type].role === 'endpoint') openDesktop(device.id);
+    else if (hasCli(device.type) && ui.has('net.cli')) openCli(device.id);
+    else dialogs.showDevice(device.id);
+  }
+
+  /** Geschachtelte Rechtecke: äusserste Schicht zuerst. */
+  const shell = (i: number, w: number, h: number) => ({ x: -w / 2 + i * 3, y: -h / 2 + i * 2.6, width: Math.max(6, w - i * 6), height: Math.max(5, h - i * 5.2) });
 
   function local(event: { clientX: number; clientY: number }): Point {
     const rect = svg.getBoundingClientRect();
@@ -219,7 +284,9 @@
   }
 </script>
 
-<div class="canvas" bind:clientWidth={width} bind:clientHeight={height}>
+<!-- Hover-Details sind eine Ergänzung; dieselben Angaben stehen im Inspektor. -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="canvas" class:acting={editor.acting} bind:clientWidth={width} bind:clientHeight={height} onpointermove={onHoverMove} onpointerleave={() => (hover = null)}>
   <svg
     bind:this={svg}
     class:panning={panFrom !== null}
@@ -229,6 +296,7 @@
     onpointerdown={onBackgroundPointerDown}
     onpointermove={onPointerMove}
     onpointerup={onPointerUp}
+    ondblclick={onDblClick}
     onpointercancel={onPointerUp}
     onpointerleave={() => (pointer = null)}
     ondragover={onDragOver}
@@ -276,19 +344,65 @@
       {#each editor.topology.devices as device (device.id)}
         <DeviceNode {device} onpointerdown={onDevicePointerDown} faded={offFloor(device)} racked={!!device.rack} />
       {/each}
-      {#each dots as dot (dot.id)}
-        <circle class="dot-packet proto-{dot.protocol}" cx={dot.x} cy={dot.y} r="7" />
+      {#each packets as p (p.id)}
+        <g class="packet proto-{p.protocol}" transform="translate({p.x} {p.y})" data-hover="packet:{p.id}">
+          {#if p.layers.length > 0}
+            {#each p.layers as layer, i (layer)}
+              {@const r = shell(i, 30, 22)}
+              <rect class="shell" x={r.x} y={r.y} width={r.width} height={r.height} rx="3" style:fill="var(--osi-{layer})" />
+            {/each}
+          {:else}
+            <rect class="envelope" x="-10" y="-7" width="20" height="14" rx="2.5" />
+            <path class="flap" d="M-10 -6 L0 1 L10 -6" />
+          {/if}
+        </g>
       {/each}
+      {#if unpack}
+        <g class="unpack" transform="translate({unpack.x} {unpack.y})">
+          <line class="unpack-link" x1="0" y1="18" x2="0" y2="34" />
+          {#each unpack.visible as layer, i (layer)}
+            {@const r = shell(i, 46, 32)}
+            <rect class="shell" class:current={i === 0} x={r.x} y={r.y} width={r.width} height={r.height} rx="4" style:fill="var(--osi-{layer})" />
+          {/each}
+          <g class="unpack-label" transform="translate(30 -6)">
+            <text class="l1" style:fill="var(--osi-{unpack.layer})">{t('unpack.layer', { n: unpack.layer, name: t(`osi.${unpack.layer}.name`) })}</text>
+            <text class="l2" y="14">{unpack.names[unpack.layer] ?? ''}</text>
+            {#if unpack.last}<text class="l3" y="28">{t(`unpack.${unpack.outcome}`)}</text>{/if}
+          </g>
+        </g>
+      {/if}
     </g>
   </svg>
 
   {#if editor.topology.devices.length === 0}
     <p class="empty">{t('canvas.empty')}</p>
   {/if}
+  {#if hover && editor.acting}
+    <HoverCard target={hover.target} x={hover.x} y={hover.y} {width} />
+  {/if}
+  {#if editor.acting && osiView && (unpack || packets.length > 0)}
+    <div class="osi-legend" aria-label={t('unpack.legend')}>
+      <strong>{t('unpack.legend')}</strong>
+      <ol>
+        {#each [1, 2, 3, 4, 5, 6, 7] as n (n)}
+          <li class:current={unpack?.layer === n} class:done={!!unpack && unpack.layers.slice(0, unpack.index).includes(n as 1)} title={t(`osi.${n}.tip`)}>
+            <span class="sw" style:background="var(--osi-{n})"></span>{n}<span class="nm">{t(`osi.${n}.name`)}</span>
+          </li>
+        {/each}
+      </ol>
+      <span class="muted">{t('unpack.hint')}</span>
+    </div>
+  {/if}
   {#if editor.tool === 'cable'}
-    <p class="hint" role="status">
-      {source ? t('canvas.cableTarget', { name: source.name }) : t(`canvas.cableStart.${editor.medium}`)}
-    </p>
+    <div class="hint cable-hint">
+      <p role="status">{source ? t('canvas.cableTarget', { name: source.name }) : t(`canvas.cableStart.${editor.medium}`)}</p>
+      <fieldset class="choice">
+        <legend>{t('portPicker.mode')}</legend>
+        <label><input type="radio" name="port-choice" checked={editor.portChoice === 'auto'} onchange={() => editor.setPortChoice('auto')} /> {t('portPicker.auto')}</label>
+        <label><input type="radio" name="port-choice" checked={editor.portChoice === 'ask'} onchange={() => editor.setPortChoice('ask')} /> {t('portPicker.ask')}</label>
+      </fieldset>
+    </div>
+    <PortPicker />
   {:else if editor.tool === 'area'}
     <p class="hint" role="status">{t('canvas.areaDraw')}</p>
   {/if}
@@ -318,11 +432,65 @@
   .dot {
     fill: var(--grid);
   }
-  .dot-packet {
+  .acting :global(.device:hover .hit) {
+    stroke: var(--accent);
+    stroke-width: 2;
+    filter: drop-shadow(0 0 6px var(--selected-soft));
+  }
+  .acting :global(.cable:hover .wire) {
+    stroke-width: 5;
+  }
+  .packet .envelope {
     fill: var(--dot, var(--accent));
     stroke: var(--bg);
-    stroke-width: 2;
+    stroke-width: 1.5;
+  }
+  .packet .flap {
+    fill: none;
+    stroke: var(--bg);
+    stroke-width: 1.4;
+    stroke-linejoin: round;
+  }
+  .packet {
+    cursor: help;
+  }
+  .packet:hover {
+    filter: drop-shadow(0 0 3px var(--accent));
+  }
+  .shell {
+    stroke: var(--bg);
+    stroke-width: 1.2;
+  }
+  .unpack {
     pointer-events: none;
+  }
+  .unpack .shell.current {
+    stroke: var(--text);
+    stroke-width: 2;
+  }
+  .unpack-link {
+    stroke: var(--muted);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+  }
+  .unpack-label text {
+    font-size: 12px;
+    paint-order: stroke;
+    stroke: var(--bg);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+  }
+  .unpack-label .l1 {
+    font-weight: 700;
+  }
+  .unpack-label .l2 {
+    fill: var(--text);
+    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    font-size: 11px;
+  }
+  .unpack-label .l3 {
+    fill: var(--muted);
+    font-size: 11px;
   }
   .drawing {
     fill: var(--selected-soft);
@@ -350,6 +518,91 @@
     top: 45%;
     color: var(--muted);
     font-size: 1.1rem;
+  }
+  .osi-legend {
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px 10px;
+    padding: 5px 10px;
+    font-size: 0.72rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    pointer-events: none;
+    max-width: calc(100% - 24px);
+  }
+  .osi-legend ol {
+    display: flex;
+    gap: 2px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .osi-legend .nm {
+    display: none;
+  }
+  .osi-legend li.current .nm {
+    display: inline;
+    margin-left: 2px;
+  }
+  .osi-legend li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 1px 4px;
+    border-radius: 4px;
+  }
+  .osi-legend li.current {
+    font-weight: 700;
+    background: var(--selected-soft);
+  }
+  .osi-legend li.done {
+    opacity: 0.45;
+    text-decoration: line-through;
+  }
+  .osi-legend .sw {
+    width: 12px;
+    height: 10px;
+    border-radius: 2px;
+  }
+  .osi-legend .muted {
+    color: var(--muted);
+  }
+  .cable-hint {
+    pointer-events: auto;
+    display: grid;
+    gap: 4px;
+    justify-items: center;
+  }
+  .cable-hint p {
+    margin: 0;
+  }
+  .choice {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    border: none;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .choice legend {
+    float: left;
+    margin-right: 4px;
+  }
+  .choice label {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
   }
   .hint {
     top: 12px;

@@ -1,0 +1,223 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "pc",
+        "name": "PC AS 65001",
+        "position": {
+          "x": 100,
+          "y": 320
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "ip": "10.1.0.10",
+            "mask": "255.255.0.0"
+          }
+        ],
+        "gateway": "10.1.0.1"
+      },
+      {
+        "id": "d2",
+        "type": "router",
+        "name": "Router AS 65001",
+        "position": {
+          "x": 260,
+          "y": 180
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "10.1.0.1",
+            "mask": "255.255.0.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:02:01",
+            "ip": "172.16.12.1",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:02:02",
+            "sfpSlot": true
+          }
+        ],
+        "bgp": {
+          "asn": 65001,
+          "neighbors": [
+            {
+              "ip": "172.16.12.2",
+              "remoteAs": 65002
+            }
+          ],
+          "networks": [
+            {
+              "network": "10.1.0.0",
+              "mask": "255.255.0.0"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d3",
+        "type": "router",
+        "name": "Router AS 65002",
+        "position": {
+          "x": 480,
+          "y": 180
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ip": "172.16.12.2",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:03:01",
+            "ip": "172.16.23.2",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:03:02",
+            "sfpSlot": true
+          }
+        ],
+        "bgp": {
+          "asn": 65002,
+          "neighbors": [
+            {
+              "ip": "172.16.12.1",
+              "remoteAs": 65001
+            },
+            {
+              "ip": "172.16.23.3",
+              "remoteAs": 65003
+            }
+          ],
+          "networks": []
+        }
+      },
+      {
+        "id": "d4",
+        "type": "router",
+        "name": "Router AS 65003",
+        "position": {
+          "x": 700,
+          "y": 180
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ip": "172.16.23.3",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:04:01",
+            "ip": "10.3.0.1",
+            "mask": "255.255.0.0"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:04:02",
+            "sfpSlot": true
+          }
+        ],
+        "bgp": {
+          "asn": 65003,
+          "neighbors": [
+            {
+              "ip": "172.16.23.2",
+              "remoteAs": 65002
+            }
+          ],
+          "networks": [
+            {
+              "network": "10.3.0.0",
+              "mask": "255.255.0.0"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d5",
+        "type": "server",
+        "name": "Server AS 65003",
+        "position": {
+          "x": 860,
+          "y": 320
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ip": "10.3.0.10",
+            "mask": "255.255.0.0"
+          }
+        ],
+        "gateway": "10.3.0.1"
+      }
+    ],
+    "cables": [
+      {
+        "id": "c6",
+        "a": {
+          "device": "d1",
+          "iface": 0
+        },
+        "b": {
+          "device": "d2",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c7",
+        "a": {
+          "device": "d2",
+          "iface": 1
+        },
+        "b": {
+          "device": "d3",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c8",
+        "a": {
+          "device": "d3",
+          "iface": 1
+        },
+        "b": {
+          "device": "d4",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c9",
+        "a": {
+          "device": "d4",
+          "iface": 1
+        },
+        "b": {
+          "device": "d5",
+          "iface": 0
+        }
+      }
+    ],
+    "nextId": 10
+  },
+  "configuration": {}
+}
+

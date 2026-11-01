@@ -34,6 +34,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('device.internet', 'devices', 2),
   f('device.clientgroup', 'devices', 3),
   f('device.modem', 'devices', 3),
+  f('device.cpe', 'devices', 2),
   f('device.l3switch', 'devices', 4),
   // Verbindungen
   f('medium.fiber', 'media', 2),
@@ -74,6 +75,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('tool.addressBadges', 'tools', 2),
   f('tool.floors', 'tools', 2),
   f('tool.costs', 'tools', 2),
+  f('tool.prices', 'tools', 3),
   f('tool.racks', 'tools', 3),
   f('tool.taskEditor', 'tools', 1),
 ];

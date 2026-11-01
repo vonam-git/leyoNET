@@ -129,6 +129,8 @@ export const SHOP: readonly ShopItem[] = [
   device('accesspoint', 'wireless', 'accesspoint'),
 
   device('internet', 'internet', 'internet'),
+  device('cpe', 'internet', 'cpe'),
+  ...(['cable', 'fiber', 'vdsl'] as ModemKind[]).map((kind) => device(`cpe-${kind}`, 'internet', 'cpe', { options: { modem: kind }, features: ['medium.access'] })),
   ...(['cable', 'fiber', 'mobile', 'vdsl', 'adsl'] as ModemKind[]).map((kind) => device(`modem-${kind}`, 'internet', 'modem', { options: { modem: kind }, features: ['medium.access'] })),
 
   ...(['tp', 'fiber', 'wireless', 'serial', 'coax', 'dsl', 'cellular'] as Medium[]).map(

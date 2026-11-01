@@ -17,7 +17,7 @@ import {
 } from './frames';
 import type { NodeContext, SimNode } from './simulation';
 import { cableAt, deviceSeq, getDevice, otherEnd } from '../model/topology';
-import { MODEM_WAN } from '../model/links';
+import { isModemWan } from '../model/links';
 import type { ModemKind } from '../model/types';
 import { BGP_PORT, OSPF_ALL_ROUTERS, RIP_MULTICAST, RIP_PORT } from './frames';
 import { ACCESS_PROFILES, nextSteps, stepIndex } from './access';
@@ -827,7 +827,7 @@ export class InternetNode extends ForwardingNode {
     if (!cable) return undefined;
     const end = otherEnd(cable, device.id);
     const peer = getDevice(topology, end.device);
-    return peer?.type === 'modem' && end.iface === MODEM_WAN ? peer.modem?.kind : undefined;
+    return peer && isModemWan(peer, end.iface) ? peer.modem?.kind : undefined;
   }
 
   /** Provider-Seite der Zugangsleitungen: beginnt den Aufbau, wo die Norm es so vorsieht. */

@@ -60,6 +60,7 @@ const COMMANDS: Command[] = [
   // Datei
   { id: 'file.new', label: () => t('menu.file.new'), keys: ['Alt+N'], run: () => editor.clear(), icon: 'plus' },
   { id: 'file.open', label: () => t('menu.file.open'), keys: ['Mod+O'], run: () => void openProject() },
+  { id: 'file.demos', label: () => t('menu.file.demos'), run: () => dialogs.show('demos'), icon: 'play' },
   { id: 'file.save', label: () => t('menu.file.save'), keys: ['Mod+S'], run: saveProject, icon: 'download' },
   { id: 'file.pcap', label: () => t('menu.file.pcap'), run: exportPcap, visible: () => ui.has('tool.pcap'), enabled: () => (simStore.sim?.getPacketLog().length ?? 0) > 0 },
   { id: 'file.snapshots', label: () => t('menu.file.snapshots'), keys: ['Shift+Mod+S'], run: () => dialogs.show('snapshots'), visible: () => ui.has('tool.snapshots'), icon: 'snapshot' },
@@ -72,6 +73,7 @@ const COMMANDS: Command[] = [
   { id: 'edit.paste', label: () => t('menu.edit.paste'), keys: ['Mod+V'], run: () => editor.pasteArea(), enabled: () => editor.canPaste },
   { id: 'edit.duplicate', label: () => t('menu.edit.duplicate'), keys: ['Mod+D'], run: () => editor.duplicateSelection(), enabled: () => design() && (editor.selection?.kind === 'area' || !!selectedDevice()) },
   { id: 'edit.rename', label: () => t('menu.edit.rename'), keys: ['F2'], run: () => document.getElementById('inspector-name')?.focus(), enabled: () => !!selectedDevice() && design() },
+  { id: 'edit.advanced', label: () => t('menu.edit.advanced'), keys: ['E'], run: () => { const d = selectedDevice(); if (d) dialogs.showDevice(d.id); }, enabled: () => !!selectedDevice(), icon: 'gear' },
   { id: 'edit.delete', label: () => t('menu.edit.delete'), keys: ['Delete', 'Backspace'], run: () => editor.deleteSelection(), enabled: () => design() && !!editor.selection, icon: 'trash' },
   { id: 'edit.select', label: () => t('menu.edit.select'), keys: ['V'], run: () => editor.setTool('select'), checked: () => editor.tool === 'select', icon: 'pointer' },
   { id: 'edit.cable', label: () => t('menu.edit.cable'), keys: ['K'], run: () => editor.setTool(editor.tool === 'cable' ? 'select' : 'cable'), enabled: design, checked: () => editor.tool === 'cable', icon: 'cable' },
@@ -85,6 +87,7 @@ const COMMANDS: Command[] = [
   { id: 'view.center', label: () => t('menu.view.center'), keys: ['C'], run: () => editor.centerSelection(), enabled: () => !!editor.selection, icon: 'center' },
   { id: 'view.rack', label: () => t('menu.view.rack'), keys: ['R'], run: () => dialogs.show('rack'), visible: () => ui.has('tool.racks'), icon: 'rack' },
   { id: 'view.addresses', label: () => t('menu.view.addresses'), keys: ['A'], run: () => ui.setShowAddresses(!ui.showAddresses), checked: () => ui.showAddresses, visible: () => ui.has('tool.addressBadges') },
+  { id: 'view.prices', label: () => t('menu.view.prices'), run: () => ui.setShowPrices(!ui.showPrices), checked: () => ui.showPrices, visible: () => ui.permitted('tool.prices') && !ui.locked },
   { id: 'view.costs', label: () => t('menu.view.costs'), run: () => dialogs.show('costs'), visible: () => ui.has('tool.costs'), icon: 'coins' },
 
   // Simulation
@@ -182,6 +185,7 @@ export const MENUS: Menu[] = [
     entries: () => [
       { command: 'file.new' },
       { command: 'file.open' },
+      { command: 'file.demos' },
       { command: 'file.save' },
       { separator: true },
       { command: 'file.snapshots' },
@@ -200,6 +204,7 @@ export const MENUS: Menu[] = [
       { command: 'edit.paste' },
       { command: 'edit.duplicate' },
       { command: 'edit.rename' },
+      { command: 'edit.advanced' },
       { command: 'edit.delete' },
       { separator: true },
       { command: 'edit.select' },
@@ -228,6 +233,7 @@ export const MENUS: Menu[] = [
       { separator: true },
       { command: 'view.addresses' },
       { command: 'view.rack' },
+      { command: 'view.prices' },
       { command: 'view.costs' },
       { separator: true },
       {

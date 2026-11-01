@@ -228,6 +228,37 @@ export interface DeviceOptions {
   variant?: string;
 }
 
+/** Router und CPE können Adressen übersetzen (NAT, Portweiterleitung). */
+export function natCapable(device: Device): boolean {
+  return device.type === 'router' || device.type === 'cpe';
+}
+
+/**
+ * Werkseinstellung einer CPE (Internet-Box), wie bei echten Geräten:
+ * LAN 192.168.1.1/24, DHCP-Server für .100–.199, NAT am WAN-Anschluss.
+ * Die WAN-Adresse und das Gateway des Providers trägt man selbst ein.
+ */
+function cpeDefaults(device: Device): Partial<Device> {
+  return {
+    interfaces: device.interfaces.map((i) => (i.index === 0 ? { ...i, nat: true } : i.index === 1 ? { ...i, ip: '192.168.1.1', mask: '255.255.255.0' } : i)),
+    dhcpServer: { start: '192.168.1.100', end: '192.168.1.199', gateway: '192.168.1.1', dns: '192.168.1.1', leaseTime: 3600 },
+  };
+}
+
+/**
+ * Standardgateway eines Vermittlungsgeräts (z.B. das Gateway des Providers an
+ * der CPE): ersetzt die Route 0.0.0.0/0; leer entfernt sie.
+ */
+export function setDefaultGateway(t: Topology, id: string, gateway: string): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  const value = gateway.trim();
+  if (value && parseIp(value) === null) return { ok: false, error: { code: 'invalidIp', params: { value }, field: 'gateway' } };
+  const others = (device.routes ?? []).filter((r) => parseMask(r.mask) !== 0);
+  const routes = value ? [...others, { network: '0.0.0.0', mask: '0.0.0.0', gateway: value }] : others;
+  return ok(updateDevice(t, id, (d) => (routes.length ? { ...d, routes } : without(d, 'routes'))));
+}
+
 export function addDevice(
   t: Topology,
   type: DeviceType,
@@ -258,7 +289,8 @@ export function addDevice(
     device.dhcp = true;
     device.groupSize = Math.min(MAX_GROUP_SIZE, Math.max(2, options.groupSize ?? DEFAULT_GROUP_SIZE));
   }
-  if (type === 'modem' && options.modem) device.modem = { kind: options.modem };
+  if ((type === 'modem' || type === 'cpe') && options.modem) device.modem = { kind: options.modem };
+  if (type === 'cpe') Object.assign(device, cpeDefaults(device));
   return ok({ topology: { ...t, devices: [...t.devices, device], nextId: seq + 1 }, id: device.id });
 }
 
@@ -322,7 +354,7 @@ function checkMedium(a: Device, b: Device, medium: Medium): ErrorCode | null {
     if (!(a.type === 'accesspoint' || b.type === 'accesspoint') || !wifiCapable(a) || !wifiCapable(b)) return 'wirelessNeedsAccessPoint';
   }
   if (medium === 'coax' || medium === 'dsl' || medium === 'cellular') {
-    const modem = a.type === 'modem' ? a : b.type === 'modem' ? b : null;
+    const modem = a.type === 'modem' || a.type === 'cpe' ? a : b.type === 'modem' || b.type === 'cpe' ? b : null;
     const other = modem === a ? b : a;
     if (!modem || other.type !== 'internet') return 'accessLineNeedsModem';
   }
@@ -330,7 +362,23 @@ function checkMedium(a: Device, b: Device, medium: Medium): ErrorCode | null {
 }
 
 /** Verbindet zwei Geräte über deren jeweils ersten freien (zum Medium passenden) Anschluss. */
-export function connect(t: Topology, aId: string, bId: string, medium: Medium = 'tp'): Result<{ topology: Topology; id: string }> {
+/** CPE: zum Provider (Internet, Modem) der WAN-Anschluss, sonst zuerst die LAN-Buchsen. */
+function freeCpePort(t: Topology, device: Device, medium: Medium, peer: Device): NetInterface | undefined {
+  const free = freeInterfacesFor(t, device, medium);
+  const towardsProvider = peer.type === 'internet' || peer.type === 'modem';
+  return free.find((i) => (i.index === 0) === towardsProvider) ?? free[0];
+}
+
+/** Freie Anschlüsse eines Geräts, die das Medium annehmen (für die Auswahl beim Verbinden). */
+export function freeInterfacesFor(t: Topology, device: Device, medium: Medium): NetInterface[] {
+  return device.interfaces.filter((i) => !cableAt(t, { device: device.id, iface: i.index }) && portAccepts(device, i.index, medium));
+}
+
+/**
+ * Verbindet zwei Geräte. Ohne `ports` nimmt es je den ersten freien passenden
+ * Anschluss; mit `ports` die gewählten (müssen frei sein und passen).
+ */
+export function connect(t: Topology, aId: string, bId: string, medium: Medium = 'tp', ports: { a?: number; b?: number } = {}): Result<{ topology: Topology; id: string }> {
   const a = getDevice(t, aId);
   const b = getDevice(t, bId);
   if (!a || !b) return fail('unknownDevice');
@@ -340,10 +388,23 @@ export function connect(t: Topology, aId: string, bId: string, medium: Medium = 
   const mediumIssue = checkMedium(a, b, medium);
   if (mediumIssue) return fail(mediumIssue);
   // Schleifen zwischen Switches sind erlaubt: Ohne Spanning Tree zeigt die Simulation den Broadcast-Sturm.
-  const ia = freeInterfaceFor(t, a, medium);
-  if (!ia) return fail(noPortError(t, a, medium), { device: a.name });
-  const ib = freeInterfaceFor(t, b, medium);
-  if (!ib) return fail(noPortError(t, b, medium), { device: b.name });
+  const pick = (d: Device, wanted: number | undefined, peer: Device): Result<NetInterface> => {
+    if (wanted === undefined) {
+      const free = d.type === 'cpe' ? freeCpePort(t, d, medium, peer) : freeInterfaceFor(t, d, medium);
+      return free ? ok(free) : fail(noPortError(t, d, medium), { device: d.name });
+    }
+    const port = d.interfaces[wanted];
+    if (!port) return fail('unknownInterface');
+    if (cableAt(t, { device: d.id, iface: wanted })) return fail('interfaceInUse', { device: d.name, index: wanted });
+    if (!portAccepts(d, wanted, medium)) return fail('mediumNotSupported', { device: d.name });
+    return ok(port);
+  };
+  const pa = pick(a, ports.a, b);
+  if (!pa.ok) return pa;
+  const pb = pick(b, ports.b, a);
+  if (!pb.ok) return pb;
+  const ia = pa.value;
+  const ib = pb.value;
   const cable: Cable = {
     id: `c${t.nextId}`,
     a: { device: a.id, iface: ia.index },
@@ -828,7 +889,7 @@ export function setIpRouting(t: Topology, id: string, enabled: boolean): Result<
 export function setInterfaceNat(t: Topology, id: string, index: number, nat: boolean): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  if (device.type !== 'router') return fail('notARouter');
+  if (!natCapable(device)) return fail('notARouter');
   if (!device.interfaces[index]) return fail('unknownInterface');
   return ok(
     updateDevice(t, id, (d) => ({
@@ -845,7 +906,7 @@ export function setInterfaceNat(t: Topology, id: string, index: number, nat: boo
 export function addPortForward(t: Topology, id: string, forward: PortForward): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  if (device.type !== 'router') return fail('notARouter');
+  if (!natCapable(device)) return fail('notARouter');
   const validPort = (p: number) => Number.isInteger(p) && p >= 1 && p <= 65535;
   if (!validPort(forward.port)) return { ok: false, error: { code: 'invalidPort', field: 'port' } };
   if (!validPort(forward.toPort)) return { ok: false, error: { code: 'invalidPort', field: 'toPort' } };
@@ -1456,14 +1517,14 @@ export function setGroupSize(t: Topology, id: string, size: number): Result<Topo
 export function setModemKind(t: Topology, id: string, kind: ModemKind | null): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  if (device.type !== 'modem') return fail('notAModem');
+  if (device.type !== 'modem' && device.type !== 'cpe') return fail('notAModem');
   return ok(updateDevice(t, id, (d) => (kind ? { ...d, modem: { kind } } : without(d, 'modem'))));
 }
 
 export function addStaticNat(t: Topology, id: string, rule: StaticNat): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  if (device.type !== 'router') return fail('notARouter');
+  if (!natCapable(device)) return fail('notARouter');
   const inside = rule.inside.trim();
   const outside = rule.outside.trim();
   if (parseIp(inside) === null) return { ok: false, error: { code: 'invalidIp', params: { value: inside }, field: 'inside' } };
