@@ -44,6 +44,7 @@ const KEYS = {
   custom: 'netzwerk-simulator.features',
   theme: 'netzwerk-simulator.theme',
   addresses: 'netzwerk-simulator.addresses',
+  portLabels: 'netzwerk-simulator.portLabels',
   currency: 'netzwerk-simulator.currency',
   panels: 'netzwerk-simulator.panels',
   oldLevel: 'netzwerk-simulator.level',
@@ -117,6 +118,8 @@ class Ui {
   floor = $state<number | 'all'>('all');
   /** IP-Adressen mit «privat/öffentlich» an den Geräten zeigen. */
   showAddresses = $state(read(KEYS.addresses) !== '0');
+  /** Schnittstellennamen (z.B. Fa0/1) an den Kabelenden zeigen. */
+  showPortLabels = $state(read(KEYS.portLabels) !== '0');
   /** Seitenbereiche ein- oder ausgefahren (Shop links, Eigenschaften rechts, Paketliste unten). */
   panels = $state<Record<PanelName, boolean>>(readPanels());
   currency = $state<Currency>((['EUR', 'USD'] as const).find((c) => c === read(KEYS.currency)) ?? 'CHF');
@@ -255,6 +258,11 @@ class Ui {
   setShowAddresses(on: boolean) {
     this.showAddresses = on;
     write(KEYS.addresses, on ? '1' : '0');
+  }
+
+  setShowPortLabels(on: boolean) {
+    this.showPortLabels = on;
+    write(KEYS.portLabels, on ? '1' : '0');
   }
 
   setCurrency(currency: Currency) {

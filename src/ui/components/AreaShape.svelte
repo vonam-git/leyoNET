@@ -19,7 +19,7 @@
     onresize: (event: PointerEvent, area: DocArea) => void;
   } = $props();
 
-  const selected = $derived(editor.selection?.kind === 'area' && editor.selection.id === area.id);
+  const selected = $derived(editor.isSelected('area', area.id));
   const color = $derived(TAG_HEX[area.color]);
   const info = $derived(area.network ? networkInfo(area.network) : null);
 

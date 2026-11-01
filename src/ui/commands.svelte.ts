@@ -9,6 +9,7 @@ import { dialogs } from './state/dialogs.svelte';
 import { editor } from './state/editor.svelte';
 import { shop } from './state/shop.svelte';
 import { simStore, type Speed } from './state/sim.svelte';
+import { tour } from './state/tour.svelte';
 import { ui, type Theme } from './state/ui.svelte';
 
 /**
@@ -70,9 +71,10 @@ const COMMANDS: Command[] = [
   // Bearbeiten
   { id: 'edit.undo', label: () => t('menu.edit.undo'), keys: ['Mod+Z'], run: () => editor.undo(), enabled: () => editor.canUndo, icon: 'undo' },
   { id: 'edit.redo', label: () => t('menu.edit.redo'), keys: ['Mod+Y', 'Shift+Mod+Z'], run: () => editor.redo(), enabled: () => editor.canRedo, icon: 'redo' },
-  { id: 'edit.copy', label: () => t('menu.edit.copy'), keys: ['Mod+C'], run: () => editor.copyArea(), enabled: () => editor.selection?.kind === 'area' },
-  { id: 'edit.paste', label: () => t('menu.edit.paste'), keys: ['Mod+V'], run: () => editor.pasteArea(), enabled: () => editor.canPaste },
-  { id: 'edit.duplicate', label: () => t('menu.edit.duplicate'), keys: ['Mod+D'], run: () => editor.duplicateSelection(), enabled: () => design() && (editor.selection?.kind === 'area' || !!selectedDevice()) },
+  { id: 'edit.copy', label: () => t('menu.edit.copy'), keys: ['Mod+C'], run: () => editor.copySelection(), enabled: () => design() && editor.canCopy },
+  { id: 'edit.paste', label: () => t('menu.edit.paste'), keys: ['Mod+V'], run: () => editor.paste(), enabled: () => editor.canPaste },
+  { id: 'edit.duplicate', label: () => t('menu.edit.duplicate'), keys: ['Mod+D'], run: () => editor.duplicateSelection(), enabled: () => design() && editor.canCopy },
+  { id: 'edit.selectAll', label: () => t('menu.edit.selectAll'), keys: ['Mod+A'], run: () => editor.selectAll((f) => ui.floor === 'all' || f === undefined || f === ui.floor), enabled: () => design() && editor.topology.devices.length + (editor.topology.areas?.length ?? 0) > 0 },
   { id: 'edit.rename', label: () => t('menu.edit.rename'), keys: ['F2'], run: () => document.getElementById('inspector-name')?.focus(), enabled: () => !!selectedDevice() && design() },
   { id: 'edit.advanced', label: () => t('menu.edit.advanced'), keys: ['E'], run: () => { const d = selectedDevice(); if (d) dialogs.showDevice(d.id); }, enabled: () => !!selectedDevice(), icon: 'gear' },
   { id: 'edit.delete', label: () => t('menu.edit.delete'), keys: ['Delete', 'Backspace'], run: () => editor.deleteSelection(), enabled: () => design() && !!editor.selection, icon: 'trash' },
@@ -87,6 +89,8 @@ const COMMANDS: Command[] = [
   { id: 'view.fit', label: () => t('menu.view.fit'), keys: ['0'], run: () => editor.fit(), icon: 'fit' },
   { id: 'view.center', label: () => t('menu.view.center'), keys: ['C'], run: () => editor.centerSelection(), enabled: () => !!editor.selection, icon: 'center' },
   { id: 'view.rack', label: () => t('menu.view.rack'), keys: ['R'], run: () => dialogs.show('rack'), visible: () => ui.has('tool.racks'), icon: 'rack' },
+  { id: 'view.portLabels', label: () => t('menu.view.portLabels'), keys: ['P'], run: () => ui.setShowPortLabels(!ui.showPortLabels), checked: () => ui.showPortLabels },
+  { id: 'view.tour', label: () => t('tour.show'), run: () => tour.reopen(), enabled: () => tour.canReopen, icon: 'play' },
   { id: 'view.addresses', label: () => t('menu.view.addresses'), keys: ['A'], run: () => ui.setShowAddresses(!ui.showAddresses), checked: () => ui.showAddresses, visible: () => ui.has('tool.addressBadges') },
   { id: 'view.panelLeft', label: () => t('menu.view.panelLeft'), run: () => ui.togglePanel('left'), checked: () => ui.panels.left },
   { id: 'view.panelRight', label: () => t('menu.view.panelRight'), run: () => ui.togglePanel('right'), checked: () => ui.panels.right },
@@ -207,6 +211,7 @@ export const MENUS: Menu[] = [
       { command: 'edit.copy' },
       { command: 'edit.paste' },
       { command: 'edit.duplicate' },
+      { command: 'edit.selectAll' },
       { command: 'edit.rename' },
       { command: 'edit.advanced' },
       { command: 'edit.delete' },
@@ -240,6 +245,7 @@ export const MENUS: Menu[] = [
       { command: 'view.panelBottom' },
       { separator: true },
       { command: 'view.addresses' },
+      { command: 'view.portLabels' },
       { command: 'view.rack' },
       { command: 'view.prices' },
       { command: 'view.costs' },
@@ -308,6 +314,7 @@ export const MENUS: Menu[] = [
       { command: 'help.guide' },
       { command: 'help.shortcuts' },
       { command: 'help.avatar' },
+      { command: 'view.tour' },
       { command: 'help.palette' },
       { separator: true },
       { command: 'help.privacy' },
@@ -335,6 +342,12 @@ function matches(binding: string, event: KeyboardEvent): boolean {
   return event.key.toLowerCase() === key.toLowerCase();
 }
 
+const NATIVE_TEXT_KEYS = new Set(['Mod+C', 'Mod+V', 'Mod+A', 'Mod+X']);
+const textSelected = () => {
+  const selection = typeof window !== 'undefined' ? window.getSelection() : null;
+  return !!selection && !selection.isCollapsed && selection.toString().trim() !== '';
+};
+
 /** Tastendruck einem Befehl zuordnen; true = erledigt. */
 export function handleShortcut(event: KeyboardEvent): boolean {
   const inField = !!(event.target as Element | null)?.closest('input, textarea, select, [contenteditable], .cli-input');
@@ -343,6 +356,8 @@ export function handleShortcut(event: KeyboardEvent): boolean {
     for (const binding of c.keys) {
       const plain = !binding.includes('Mod') && !binding.startsWith('F') && binding !== 'Escape';
       if (inField && plain) continue;
+      // Strg+C/V/A in Textfeldern, Terminals oder bei markiertem Text: dem Browser überlassen.
+      if (NATIVE_TEXT_KEYS.has(binding) && (inField || textSelected() || (event.target as Element | null)?.closest('.desktop, .device-window, [role="log"]'))) continue;
       if (!matches(binding, event)) continue;
       if (c.visible && !c.visible()) return false;
       if (c.enabled && !c.enabled()) return false;

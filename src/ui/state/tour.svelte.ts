@@ -16,6 +16,10 @@ class Tour {
   step = $state(0);
   /** Hervorgehobenes Gerät (ID). */
   highlight = $state<string | null>(null);
+  /** Ausgeblendet: nur der kleine Avatar bleibt sichtbar und holt die Führung zurück. */
+  hidden = $state(false);
+  /** Zuletzt beendete Führung, damit sie sich wieder einblenden lässt. */
+  #last = $state.raw<{ demo: Demo; step: number; generation: number } | null>(null);
   #generation = -1;
 
   get steps(): TourStep[] {
@@ -38,6 +42,7 @@ class Tour {
     this.demo = demo;
     this.#generation = editor.generation;
     this.step = 0;
+    this.hidden = false;
     this.#apply(0, true);
   }
 
@@ -58,8 +63,40 @@ class Tour {
   }
 
   stop() {
+    if (this.demo) this.#last = { demo: this.demo, step: this.step, generation: this.#generation };
     this.demo = null;
     this.highlight = null;
+    this.hidden = false;
+  }
+
+  /** Sprechblase ausblenden, Führung bleibt beim aktuellen Schritt. */
+  hide() {
+    this.hidden = true;
+  }
+
+  /** Lässt sich die Führung (wieder) einblenden? */
+  get canReopen(): boolean {
+    return (this.demo !== null && this.hidden) || (this.demo === null && this.#last !== null);
+  }
+
+  /**
+   * Führung wieder einblenden: ausgeblendet → beim selben Schritt weiter;
+   * beendet → beim letzten Schritt, solange dasselbe Projekt offen ist,
+   * sonst die Demo von vorne.
+   */
+  reopen() {
+    if (this.demo) {
+      this.hidden = false;
+      return;
+    }
+    const last = this.#last;
+    if (!last) return;
+    if (last.generation !== editor.generation) return this.start(last.demo);
+    this.demo = last.demo;
+    this.#generation = last.generation;
+    this.step = last.step;
+    this.hidden = false;
+    this.#apply(last.step, false);
   }
 
   #id(name: string | undefined): string | null {

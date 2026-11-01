@@ -253,3 +253,58 @@ test('Geführte Demo mit Avatar: Schritte, SNAT und DNAT im NAT-Reiter', async (
   await tour.getByRole('button', { name: 'Führung beenden' }).click();
   await expect(tour).toBeHidden();
 });
+
+test('Mehrfachauswahl: Rahmen, gemeinsam verschieben, kopieren und einfügen', async ({ page }) => {
+  await openProject(page, example('zwei-subnetze'));
+  const canvas = page.getByRole('application');
+  const box = (await canvas.boundingBox())!;
+  const devices = page.locator('.device');
+  const count = await devices.count();
+  const cables = await page.locator('.cable').count();
+  await page.mouse.move(box.x + 4, box.y + 4);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width - 4, box.y + box.height - 4, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.locator('.inspector')).toContainText(`Auswahl: ${count} Geräte`);
+  const hit = page.locator('.device .hit').first();
+  const before = (await hit.boundingBox())!;
+  const last = page.locator('.device .hit').last();
+  const lastBefore = (await last.boundingBox())!;
+  await page.mouse.move(before.x + 20, before.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(before.x + 80, before.y + 20, { steps: 5 });
+  await page.mouse.up();
+  // Alle zusammen verschoben, Auswahl bleibt.
+  expect((await last.boundingBox())!.x).toBeGreaterThan(lastBefore.x + 40);
+  await expect(page.locator('.inspector')).toContainText(`Auswahl: ${count} Geräte`);
+  await page.keyboard.press('Control+c');
+  await page.keyboard.press('Control+v');
+  await expect(devices).toHaveCount(count * 2);
+  await expect(page.locator('.cable')).toHaveCount(cables * 2);
+  await page.keyboard.press('Delete');
+  await expect(devices).toHaveCount(count);
+});
+
+test('Schnittstellennamen an Kabeln ein- und ausblenden', async ({ page }) => {
+  await openProject(page, example('zwei-subnetze'));
+  await expect(page.locator('text.port').first()).toBeVisible();
+  await page.getByRole('menubar').getByRole('menuitem', { name: 'Ansicht', exact: true }).click();
+  await page.getByRole('menu').getByRole('menuitemcheckbox', { name: /Schnittstellen an Kabeln/ }).click();
+  await expect(page.locator('text.port')).toHaveCount(0);
+  await page.keyboard.press('p');
+  await expect(page.locator('text.port').first()).toBeVisible();
+});
+
+test('Lehrperson aus- und wieder einblenden', async ({ page }) => {
+  await page.getByRole('button', { name: 'Demo-Netze …' }).click();
+  await page.locator('li').filter({ hasText: 'DNAT' }).first().getByRole('button', { name: /Schritt für Schritt/ }).click();
+  await page.getByRole('button', { name: /^Weiter ›/ }).click();
+  await page.getByRole('button', { name: 'Ausblenden' }).click();
+  await expect(page.locator('.tour .bubble')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Lehrperson einblenden' }).click();
+  await expect(page.locator('.tour')).toContainText('Schritt 2 von');
+  await page.getByRole('button', { name: 'Führung beenden' }).click();
+  await expect(page.locator('.tour')).toHaveCount(0);
+  await menu(page, 'Hilfe', 'Lehrperson einblenden');
+  await expect(page.locator('.tour')).toContainText('Schritt 2 von');
+});

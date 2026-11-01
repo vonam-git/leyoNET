@@ -30,6 +30,7 @@
   <div class="intro">
     <button class="avatar-btn" onclick={() => dialogs.show('avatar')} title={t('avatar.edit')} aria-label={t('avatar.edit')}><Avatar config={tour.avatar} size={64} /></button>
     <p class="muted">{t('demo.intro')} {t('demo.introTour')}</p>
+    {#if tour.canReopen}<button class="guide resume" onclick={() => { onclose(); tour.reopen(); }}>🧑‍🏫 {t('tour.show')}</button>{/if}
   </div>
   {#each DEMO_TOPICS as topic (topic)}
     <h3>{t(`demo.topic.${topic}`)}</h3>
@@ -66,6 +67,9 @@
     border: none;
     background: none;
     border-radius: 50%;
+  }
+  .resume {
+    flex: none;
   }
   .guide {
     background: color-mix(in srgb, #f59e0b 16%, var(--surface));

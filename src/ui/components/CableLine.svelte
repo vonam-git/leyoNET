@@ -2,6 +2,7 @@
   import { isSwitchType, linkStatus, mediumOf, vlanColor, type Cable, type Device } from '../../core';
   import { t } from '../../i18n';
   import { interfaceLabel } from '../labels';
+  import { ui } from '../state/ui.svelte';
   import { editor } from '../state/editor.svelte';
   import { simStore } from '../state/sim.svelte';
   import { TAG_HEX } from '../tags';
@@ -171,7 +172,7 @@
   {#if blocked}
     <text class="blocked-label" x={(a.position.x + b.position.x) / 2} y={(a.position.y + b.position.y) / 2 + 14}>{t('switch.blockedCable')}</text>
   {/if}
-  {#if geometry.labels}
+  {#if geometry.labels && ui.showPortLabels}
     <text class="port" x={geometry.labels.a.x} y={geometry.labels.a.y} style:fill={endColor(a, cable.a.iface)}>{labelA}</text>
     <text class="port" x={geometry.labels.b.x} y={geometry.labels.b.y} style:fill={endColor(b, cable.b.iface)}>{labelB}</text>
   {/if}
