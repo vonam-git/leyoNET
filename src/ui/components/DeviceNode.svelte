@@ -28,7 +28,7 @@
     return floors[device.floor ?? 0]?.name ?? '';
   });
 
-  const selected = $derived(editor.selection?.kind === 'device' && editor.selection.id === device.id);
+  const selected = $derived(editor.isSelected('device', device.id));
   const isSource = $derived(editor.cableSource === device.id);
   const isEndpoint = $derived(DEVICE_SPECS[device.type].role === 'endpoint');
 
@@ -88,7 +88,7 @@
   aria-pressed={selected}
   aria-label={t('canvas.device', { name: device.name, type: typeLabel(device.type) })}
   onpointerdown={(e) => onpointerdown(e, device)}
-  onfocus={() => editor.tool === 'select' && editor.select({ kind: 'device', id: device.id })}
+  onfocus={(e) => editor.tool === 'select' && (e.currentTarget as Element).matches(':focus-visible') && !editor.isSelected('device', device.id) && editor.select({ kind: 'device', id: device.id })}
   {onkeydown}
 >
   {#if racked}

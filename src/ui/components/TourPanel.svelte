@@ -23,12 +23,20 @@
   function onkeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       event.stopPropagation();
-      tour.stop();
+      tour.hide();
     }
   }
 </script>
 
-{#if tour.demo}
+{#if tour.demo && tour.hidden}
+  <!-- Ausgeblendet: Der Avatar bleibt in der Ecke und holt die Führung zurück. -->
+  <div class="tour mini">
+    <button class="avatar-btn" onclick={() => tour.reopen()} title={t('tour.show')} aria-label={t('tour.show')}>
+      <Avatar config={tour.avatar} size={56} />
+      <span class="badge" aria-hidden="true">{tour.step + 1}/{tour.steps.length}</span>
+    </button>
+  </div>
+{:else if tour.demo}
   <div class="tour" role="dialog" aria-labelledby="tour-title" aria-describedby="tour-text" tabindex="-1" {onkeydown}>
     <button class="avatar-btn" onclick={() => dialogs.show('avatar')} title={t('avatar.edit')} aria-label={t('avatar.edit')}>
       <Avatar config={tour.avatar} size={84} {talking} />
@@ -42,6 +50,7 @@
       <div class="buttons">
         <button onclick={() => tour.back()} disabled={tour.step === 0}>‹ {t('tour.back')}</button>
         <button class="primary" onclick={() => tour.next()}>{last ? t('tour.finish') : `${t('tour.next')} ›`}</button>
+        <button class="ghost" onclick={() => tour.hide()} aria-label={t('tour.hide')} title="{t('tour.hide')} (Esc)">—</button>
         <button class="ghost" onclick={() => tour.stop()} aria-label={t('tour.close')} title={t('tour.close')}>✕</button>
       </div>
     </div>
@@ -66,6 +75,39 @@
     background: none;
     border-radius: 50%;
     filter: drop-shadow(0 6px 14px rgba(15, 23, 42, 0.25));
+  }
+  .avatar-btn {
+    position: relative;
+  }
+  .badge {
+    position: absolute;
+    right: -4px;
+    bottom: -2px;
+    padding: 1px 5px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #fff;
+    background: #f59e0b;
+    border-radius: 8px;
+  }
+  .mini .avatar-btn {
+    animation: wave 2.4s ease-in-out 1;
+  }
+  @keyframes wave {
+    20% {
+      transform: rotate(-8deg);
+    }
+    40% {
+      transform: rotate(6deg);
+    }
+    60% {
+      transform: rotate(0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mini .avatar-btn {
+      animation: none;
+    }
   }
   .bubble {
     position: relative;

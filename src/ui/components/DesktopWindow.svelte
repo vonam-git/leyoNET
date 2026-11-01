@@ -32,6 +32,28 @@
   );
   const dnsSummary = $derived((device?.dnsServer?.records ?? []).map((r) => `${r.name}  ${r.type}  ${r.value}  (TTL ${r.ttl} s)`));
 
+  // --- Verschieben am Kopf (innerhalb des Zeichenbereichs) ---------------------
+  let el = $state<HTMLElement>()!;
+  let drag: { dx: number; dy: number } | null = null;
+  function onHeadDown(event: PointerEvent) {
+    if (event.button !== 0 || (event.target as Element).closest('button')) return;
+    const box = el.getBoundingClientRect();
+    const parent = el.offsetParent!.getBoundingClientRect();
+    drag = { dx: event.clientX - box.left + parent.left, dy: event.clientY - box.top + parent.top };
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+  function onHeadMove(event: PointerEvent) {
+    if (!drag) return;
+    const parent = el.offsetParent as HTMLElement;
+    // Immer ein Stück des Kopfes sichtbar lassen.
+    win.x = Math.min(parent.clientWidth - 120, Math.max(160 - el.offsetWidth, event.clientX - drag.dx));
+    win.y = Math.min(parent.clientHeight - 40, Math.max(0, event.clientY - drag.dy));
+  }
+  function onHeadUp() {
+    drag = null;
+  }
+
   function onkeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       event.stopPropagation();
@@ -42,10 +64,14 @@
 
 {#if device}
   <div
+    bind:this={el}
     class="desktop"
     class:active
     hidden={win.minimized}
+    class:placed={win.x !== undefined}
     style:--offset="{(index % 5) * 26}px"
+    style:left={win.x !== undefined ? `${win.x}px` : undefined}
+    style:top={win.y !== undefined ? `${win.y}px` : undefined}
     role="dialog"
     aria-labelledby="desktop-title-{win.deviceId}"
     tabindex="-1"
@@ -53,7 +79,8 @@
     onpointerdown={() => (desktops.active = win.deviceId)}
     onfocusin={() => (desktops.active = win.deviceId)}
   >
-    <header>
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <header onpointerdown={onHeadDown} onpointermove={onHeadMove} onpointerup={onHeadUp} onpointercancel={onHeadUp} title={t('desktop.dragHint')}>
       <h2 id="desktop-title-{win.deviceId}">{t('desktop.title', { name: device.name })}</h2>
       <span class="buttons">
         <button class="win" onclick={() => minimizeDesktop(win.deviceId)} aria-label={t('desktop.minimize')} title={t('desktop.minimize')}>—</button>
@@ -103,7 +130,15 @@
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
     overflow: hidden;
+    resize: both;
+    min-width: 320px;
+    min-height: 220px;
+    max-width: calc(100% - 8px);
+    max-height: calc(100% - 8px);
     z-index: 5;
+  }
+  .desktop.placed {
+    right: auto;
   }
   .desktop[hidden] {
     display: none;
@@ -124,6 +159,9 @@
     align-items: center;
     justify-content: space-between;
     padding: 6px 8px 6px 12px;
+    cursor: move;
+    user-select: none;
+    touch-action: none;
     background: var(--accent);
     color: var(--on-accent);
   }

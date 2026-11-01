@@ -108,7 +108,11 @@ import {
   setVlanDef,
   wouldLoopWithoutStp,
   noPortError,
-  duplicateDevice,
+  extractFragment,
+  itemsInRect,
+  moveGroup,
+  pasteFragment,
+  type Fragment,
   type BgpConfig,
   type DeviceOptions,
   type ModemKind,
@@ -119,6 +123,7 @@ import {
   type VlanDef,
 } from '../../core';
 import { simStore } from './sim.svelte';
+import { ui } from './ui.svelte';
 import { t } from '../../i18n';
 import { errorText, interfaceLabel } from '../labels';
 
@@ -132,7 +137,13 @@ function readPortChoice(): 'auto' | 'ask' {
   }
 }
 
-export type Selection = { kind: 'device'; id: string } | { kind: 'cable'; id: string } | { kind: 'area'; id: string } | null;
+export type Selection =
+  | { kind: 'device'; id: string }
+  | { kind: 'cable'; id: string }
+  | { kind: 'area'; id: string }
+  /** Mehrere Geräte und Bereiche (Rahmen aufziehen oder Umschalt+Klick). */
+  | { kind: 'group'; devices: string[]; areas: string[] }
+  | null;
 export type Tool = 'select' | 'cable' | 'area';
 export type Mode = 'design' | 'simulation';
 
@@ -223,6 +234,57 @@ class Editor {
     return selection?.kind === 'area' ? this.topology.areas?.find((a) => a.id === selection.id) : undefined;
   }
 
+  /** Alle gewählten Geräte (eines oder mehrere). */
+  get selectedDeviceIds(): string[] {
+    const sel = this.selection;
+    return sel?.kind === 'group' ? sel.devices : sel?.kind === 'device' ? [sel.id] : [];
+  }
+
+  /** Alle gewählten Bereiche (einer oder mehrere). */
+  get selectedAreaIds(): string[] {
+    const sel = this.selection;
+    return sel?.kind === 'group' ? sel.areas : sel?.kind === 'area' ? [sel.id] : [];
+  }
+
+  isSelected(kind: 'device' | 'area', id: string): boolean {
+    const sel = this.selection;
+    if (!sel) return false;
+    if (sel.kind === 'group') return (kind === 'device' ? sel.devices : sel.areas).includes(id);
+    return sel.kind === kind && sel.id === id;
+  }
+
+  /** Mehrfachauswahl setzen; ein einzelnes Element wird zur normalen Auswahl. */
+  #setGroup(devices: string[], areas: string[]) {
+    if (devices.length + areas.length === 0) this.selection = null;
+    else if (devices.length === 1 && areas.length === 0) this.selection = { kind: 'device', id: devices[0]! };
+    else if (areas.length === 1 && devices.length === 0) this.selection = { kind: 'area', id: areas[0]! };
+    else this.selection = { kind: 'group', devices, areas };
+  }
+
+  /** Rahmen aufziehen: alles darin wählen; mit Umschalt zur bisherigen Auswahl dazu. */
+  selectRect(rect: { x: number; y: number; width: number; height: number }, additive: boolean, visible?: (floor: number | undefined) => boolean) {
+    const found = itemsInRect(this.topology, rect, visible);
+    const devices = additive ? [...new Set([...this.selectedDeviceIds, ...found.devices])] : found.devices;
+    const areas = additive ? [...new Set([...this.selectedAreaIds, ...found.areas])] : found.areas;
+    this.#setGroup(devices, areas);
+  }
+
+  /** Umschalt+Klick: Gerät oder Bereich zur Auswahl hinzufügen oder entfernen. */
+  toggleSelected(kind: 'device' | 'area', id: string) {
+    const toggle = (list: string[]) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+    const devices = kind === 'device' ? toggle(this.selectedDeviceIds) : this.selectedDeviceIds;
+    const areas = kind === 'area' ? toggle(this.selectedAreaIds) : this.selectedAreaIds;
+    this.#setGroup(devices, areas);
+  }
+
+  /** Strg+A: alles auf dem angezeigten Stockwerk wählen. */
+  selectAll(visible: (floor: number | undefined) => boolean = () => true) {
+    this.#setGroup(
+      this.topology.devices.filter((d) => visible(d.floor ?? 0)).map((d) => d.id),
+      (this.topology.areas ?? []).filter((a) => visible(a.floor)).map((a) => a.id),
+    );
+  }
+
   // --- Meldungen -----------------------------------------------------------
 
   notify(text: string, kind: Message['kind'] = 'info') {
@@ -271,7 +333,12 @@ class Editor {
   }
 
   #dropStaleReferences() {
-    if (this.selection && !this.selectedDevice && !this.selectedCable && !this.selectedArea) this.selection = null;
+    const sel = this.selection;
+    if (sel?.kind === 'group') {
+      const devices = sel.devices.filter((id) => getDevice(this.topology, id));
+      const areas = sel.areas.filter((id) => this.topology.areas?.some((a) => a.id === id));
+      this.#setGroup(devices, areas);
+    } else if (sel && !this.selectedDevice && !this.selectedCable && !this.selectedArea) this.selection = null;
     if (this.cableSource && !getDevice(this.topology, this.cableSource)) this.cableSource = null;
   }
 
@@ -522,6 +589,22 @@ class Editor {
 
   deleteSelection() {
     const selection = this.selection;
+    if (selection?.kind === 'group') {
+      if (!this.editable) return;
+      let next = this.topology;
+      for (const id of selection.devices) {
+        const r = removeDevice(next, id);
+        if (r.ok) next = r.value;
+      }
+      for (const id of selection.areas) {
+        const r = removeArea(next, id);
+        if (r.ok) next = r.value;
+      }
+      this.#commit(next);
+      this.selection = null;
+      this.#dropStaleReferences();
+      return;
+    }
     if (selection?.kind === 'area' && this.editable) {
       const next = this.#check(removeArea(this.topology, selection.id));
       if (next) this.#commit(next);
@@ -577,6 +660,21 @@ class Editor {
     if (moved.ok) this.topology = moved.value;
   }
 
+  /** Mehrfachauswahl ziehen: alle um denselben (am Raster ausgerichteten) Abstand ab dem Start. */
+  dragGroup(delta: Point, devices = this.selectedDeviceIds, areas = this.selectedAreaIds) {
+    const base = this.#dragBase;
+    if (!base || !this.editable) return;
+    this.topology = moveGroup(base, devices, areas, { x: snap(delta.x), y: snap(delta.y) });
+  }
+
+  /** Pfeiltasten: Auswahl um einen Schritt verschieben (ein Schritt im Verlauf). */
+  nudgeSelection(dx: number, dy: number) {
+    const sel = this.selection;
+    if (sel?.kind === 'device') return this.moveBy(sel.id, dx, dy);
+    if (!this.editable || (sel?.kind !== 'group' && sel?.kind !== 'area')) return;
+    this.#commit(moveGroup(this.topology, this.selectedDeviceIds, this.selectedAreaIds, { x: dx, y: dy }));
+  }
+
   endDrag() {
     const base = this.#dragBase;
     this.#dragBase = null;
@@ -630,48 +728,70 @@ class Editor {
     if (next) this.#commit(next);
   }
 
-  // --- Bereiche kopieren und einfügen -------------------------------------------
+  // --- Kopieren, Einfügen, Duplizieren ------------------------------------------
 
-  #clipboard: Omit<DocArea, 'id'> | null = null;
+  /** Kopierte Geräte (mit Kabeln dazwischen) und Bereiche; nur in diesem Fenster. */
+  #clipboard = $state.raw<Fragment | null>(null);
+  #pasteCount = 0;
 
   get canPaste() {
     return this.#clipboard !== null && this.editable;
   }
 
-  copyArea(): boolean {
+  get canCopy() {
+    return this.selectedDeviceIds.length + this.selectedAreaIds.length > 0;
+  }
+
+  /** Strg+C: gewählte Geräte und Bereiche merken. */
+  copySelection(): boolean {
+    if (!this.canCopy) return false;
+    const fragment = extractFragment(this.topology, this.selectedDeviceIds, this.selectedAreaIds);
+    this.#clipboard = fragment;
+    this.#pasteCount = 0;
     const area = this.selectedArea;
-    if (!area) return false;
-    const { id: _id, ...rest } = area;
-    this.#clipboard = rest;
-    this.notify(t('area.copied', { title: area.title }));
+    if (area) this.notify(t('area.copied', { title: area.title }));
+    else this.notify(t('clipboard.copied', { n: fragment.devices.length + fragment.areas.length }));
     return true;
   }
 
-  /** Fügt die kopierte Fläche versetzt ein (mehrfach einfügen: jedes Mal weiter versetzt). */
-  pasteArea(): boolean {
+  /** Strg+V: Kopie versetzt einfügen (mehrfach einfügen: jedes Mal weiter versetzt) und wählen. */
+  paste(): boolean {
     const copy = this.#clipboard;
     if (!copy || !this.editable) return false;
-    const offset = 40;
-    this.addArea({ ...copy, x: copy.x + offset, y: copy.y + offset, title: t('area.copyTitle', { title: copy.title }) });
-    this.#clipboard = { ...copy, x: copy.x + offset, y: copy.y + offset };
+    this.#pasteCount++;
+    this.#insert(copy, this.#pasteCount);
     return true;
+  }
+
+  /**
+   * Versatz für die n-te Kopie: ein einzelnes Element leicht schräg daneben,
+   * eine Gruppe mit Abstand darunter, damit sich nichts überdeckt.
+   */
+  #pasteOffset(fragment: Fragment, n: number): Point {
+    if (fragment.devices.length + fragment.areas.length <= 1) return { x: 40 * n, y: 40 * n };
+    const ys = [
+      ...fragment.devices.flatMap((d) => [d.position.y - 40, d.position.y + 70]),
+      ...fragment.areas.flatMap((a) => [a.y, a.y + a.height]),
+    ];
+    return { x: 0, y: snap((Math.max(...ys) - Math.min(...ys) + 40) * n) };
+  }
+
+  #insert(fragment: Fragment, n: number) {
+    const titled = { ...fragment, areas: fragment.areas.map((a) => ({ ...a, title: t('area.copyTitle', { title: a.title }) })) };
+    const floor = ui.floor === 'all' ? undefined : ui.floor;
+    const r = pasteFragment(this.topology, titled, this.#pasteOffset(fragment, n), floor);
+    this.#commit(r.topology);
+    this.#setGroup(r.devices, r.areas);
+  }
+
+  /** Strg+D: Auswahl verdoppeln, ohne die Zwischenablage zu verändern. */
+  duplicateSelection() {
+    if (!this.editable || !this.canCopy) return;
+    this.#insert(extractFragment(this.topology, this.selectedDeviceIds, this.selectedAreaIds), 1);
   }
 
   duplicateArea() {
-    if (this.copyArea()) this.pasteArea();
-  }
-
-  /** Strg+D: gewähltes Gerät (ohne Adressen und Kabel) oder gewählten Bereich verdoppeln. */
-  duplicateSelection() {
-    if (!this.editable) return;
-    if (this.selection?.kind === 'area') return this.duplicateArea();
-    const device = this.selectedDevice;
-    if (!device) return;
-    const base = device.name.replace(/\s*\d+$/, '') || t(`defaultName.${device.type}`);
-    const copy = this.#check(duplicateDevice(this.topology, device.id, suggestName(this.topology, base)));
-    if (!copy) return;
-    this.#commit(copy.topology);
-    this.selection = { kind: 'device', id: copy.id };
+    this.duplicateSelection();
   }
 
   // --- Neue Einstellungen (Ports, WLAN, Pro-Funktionen) ----------------------
@@ -1081,6 +1201,13 @@ class Editor {
   #selectionCenter(): Point | undefined {
     const device = this.selectedDevice;
     if (device) return device.position;
+    const ids = this.selectedDeviceIds;
+    const areas = (this.topology.areas ?? []).filter((a) => this.selectedAreaIds.includes(a.id));
+    const points = [
+      ...this.topology.devices.filter((d) => ids.includes(d.id)).map((d) => d.position),
+      ...areas.map((a) => ({ x: a.x + a.width / 2, y: a.y + a.height / 2 })),
+    ];
+    if (points.length > 0) return { x: points.reduce((s, p) => s + p.x, 0) / points.length, y: points.reduce((s, p) => s + p.y, 0) / points.length };
     const cable = this.selectedCable;
     if (!cable) return undefined;
     const a = getDevice(this.topology, cable.a.device);

@@ -7,6 +7,9 @@ export interface DesktopWindow {
   deviceId: string;
   app: string;
   minimized: boolean;
+  /** Position nach dem Verschieben (Pixel im Zeichenbereich); ohne Angabe gestaffelt oben rechts. */
+  x?: number;
+  y?: number;
 }
 
 export const desktops = $state<{ windows: DesktopWindow[]; active: string | null }>({ windows: [], active: null });
