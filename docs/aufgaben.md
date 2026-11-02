@@ -37,6 +37,9 @@ Ein vollständiges Beispiel liegt in [aufgaben/zwei-subnetze.json](aufgaben/zwei
 | `text` | Lernziel, wie es die Lernenden sehen. |
 | `check` | Prüfbaustein (siehe unten). |
 | `hint` | Optionaler Tipp, der erscheint, solange das Ziel nicht erfüllt ist. |
+| `points` | Punkte für das Ziel (ganze Zahl, höchstens 100); fehlt = 1. |
+
+Auf oberster Ebene gibt es zusätzlich `difficulty` (1–5 Sterne), `grading: true` (Note nach Schweizer Skala: 5 × Punkte / Maximum + 1, auf Zehntel gerundet) und `noSelfCheck: true` (der Knopf «Prüfen» ist für Lernende ausgeblendet, z.B. an Prüfungen). Im Aufgabeneditor sind das die Felder «Schwierigkeit», «Note berechnen» und «Lernende prüfen nicht selbst».
 
 ## Prüfbausteine
 
@@ -52,7 +55,7 @@ Statische Prüfungen schauen nur auf das gebaute Netz. **Dynamische** Prüfungen
 | `gateway` | `device`, `gateway`? | ein Standardgateway eingetragen ist (optional: genau dieses) |
 | `ping` ⚡ | `from`, `to` (Gerätename, IP oder DNS-Name) | mindestens eine Echo-Antwort ankommt |
 | `http` ⚡ | `from`, `url`, `status`? (Standard 200) | der Webbrowser die Seite mit diesem Status erhält |
-| `dhcpLease` ⚡ | `device` | das Gerät per DHCP eine Adresse erhält |
+| `dhcpLease` ⚡ | `device`, `ip`?, `dns`? | das Gerät per DHCP eine Adresse erhält (optional genau diese, z.B. bei einer festen Zuweisung, und optional mit diesem DNS-Server) |
 | `mail` ⚡ | `from` (Gerät mit E-Mail-Konto), `to` (Adresse) | der Mailserver eine Nachricht an diese Adresse annimmt |
 | `noPing` ⚡ | `from`, `to` | **keine** Echo-Antwort ankommt (Netze getrennt) |
 | `routeLearned` ⚡ | `device`, `network` (z.B. `"10.2.0.0/16"`), `protocol`? (`ospf`, `rip`, `bgp`) | der Router nach 25 s virtueller Zeit (Zeit für das Routingprotokoll) eine Route in dieses Netz kennt (optional: gelernt über dieses Protokoll) |
@@ -65,9 +68,28 @@ Statische Prüfungen schauen nur auf das gebaute Netz. **Dynamische** Prüfungen
 | `budget` | `max` (CHF) | die Richtpreise aller Geräte, Kabel und Module zusammen höchstens `max` ergeben |
 | `linkUp` | `a`, `b`, `medium`? (`tp`, `fiber`, `wireless`, `serial`, `coax`, `dsl`, `cellular`) | die beiden Geräte direkt verbunden sind, die Verbindung aktiv ist (keine abgeschalteten Ports, passende Kapselung …) und optional die Art stimmt |
 | `vlanDocumented` | `vlan` (Nummer) | das VLAN unter **Werkzeuge → VLANs** einen Namen und eine Farbe hat |
+| `device` | `names` (Liste), `deviceType`? | Geräte mit diesen Namen vorhanden sind (optional alle vom Typ) |
+| `address` | `device`, `address` (z.B. `"10.33.0.1/22"`) | ein Anschluss des Geräts genau diese Adresse mit diesem Präfix hat |
+| `dhcpServer` | `device`, `start`, `end`, `gateway`?, `dns`? | der DHCP-Server mit diesem Bereich (und optional diesen Optionen) eingerichtet ist |
+| `dnsRecord` | `device`, `name`, `value` | der DNS-Server einen A-Eintrag Name → Adresse hat |
+| `area` | `title`, `color`?, `network`? | ein Bereich auf der Zeichenfläche existiert, dessen Titel den Text enthält (optional mit Farbe und Netz) |
 | `packetSeen` | `protocol` (z.B. `"DNS"`, `"ICMP"`, `"HTTP"`), `from`?, `to`? | in der Simulation bereits ein solches Paket gesendet wurde |
 
 `packetSeen` ist die einzige Prüfung, die auf das Handeln der Lernenden schaut. Beispiel: «Du hast selbst eine DNS-Anfrage ausgelöst» → `{ "type": "packetSeen", "protocol": "DNS" }`.
+
+## Prüfungen
+
+**Werkzeuge → Prüfung erstellen …** baut die praktische Prüfung «Firmennetz mit drei Standorten» (Hauptsitz und zwei Filialen mit DHCP/DNS-Server, Transportnetzen und Intranet mit Webserver):
+
+- Fünf Varianten (A–E) mit unterschiedlichen Firmen, Netzen und Präfixen sind vorbereitet. «Neue Variante würfeln» erzeugt eine weitere, alle Werte lassen sich von Hand anpassen. Der Dialog prüft die Vorgabe (Netze überlappen nicht, DHCP-Bereich und feste Adressen liegen im Netz usw.) und rechnet die Netzinfos aus.
+- **Prüfungsdatei speichern**: leeres Netz mit der Aufgabe (75 Punkte: je Standort 21, Netzwerkdienste 12; Note; «Prüfen» ausgeblendet). Diese Datei bekommen die Lernenden.
+- **Musterlösung speichern/öffnen**: das fertige Netz, das alle Punkte erreicht.
+- **Aufgabenblatt (HTML)**: im Browser öffnen und als PDF drucken.
+- **Prüfung laden**: öffnet die Aufgabe im Aufgabenbereich; dort lässt sie sich mit «Bearbeiten» im Aufgabeneditor weiter ändern (Ziele, Punkte, Texte).
+
+Ausgewertet wird mit **Abgaben auswerten …**: alle abgegebenen `.json`-Dateien auf einmal wählen, die Tabelle zeigt Punkte und Note je Datei, «Als CSV speichern» erzeugt die Notenliste.
+
+> Die fünf vorbereiteten Varianten stehen im öffentlichen Quellcode. Für eine echte Prüfung eine Variante würfeln oder die Werte anpassen.
 
 ## Sicherheit
 
@@ -75,6 +97,6 @@ Aufgabendateien enthalten nur Daten. Unbekannte Prüfbausteine werden beim Öffn
 
 ## Abgaben auswerten
 
-Im Aufgabenbereich öffnet **«Abgaben auswerten …»** einen Dialog für Lehrpersonen: Dort wählt man alle `.json`-Dateien der Klasse auf einmal. Der Simulator prüft jede Datei gegen die geladene Aufgabe (ist keine geladen, gegen die Aufgabe in der Datei) und zeigt eine Tabelle Datei × Ziel mit Punktzahl. Fährt man mit der Maus über ein ✗, erscheint der Grund. «Als CSV speichern» erzeugt eine Tabelle für Excel (Semikolon-getrennt, 1 = erfüllt, 0 = nicht erfüllt, – = nicht prüfbar).
+Im Aufgabenbereich öffnet **«Abgaben auswerten …»** einen Dialog für Lehrpersonen: Dort wählt man alle `.json`-Dateien der Klasse auf einmal. Der Simulator prüft jede Datei gegen die geladene Aufgabe (ist keine geladen, gegen die Aufgabe in der Datei) und zeigt eine Tabelle Datei × Ziel mit Punktzahl. Fährt man mit der Maus über ein ✗, erscheint der Grund. «Als CSV speichern» erzeugt eine Tabelle für Excel (Semikolon-getrennt, 1 = erfüllt, 0 = nicht erfüllt, – = nicht prüfbar). Haben Ziele Punkte, stehen statt 1/0 die erreichten Punkte da, dazu das Total und bei `grading` die Note.
 
 Ziele vom Typ `packetSeen` hängen davon ab, was die Lernenden in der Simulation selbst ausgelöst haben. Das steht nicht in der Datei, darum werden sie bei der Auswertung übersprungen und zählen nicht zur Punktzahl. Alle Dateien bleiben auf dem Gerät der Lehrperson.

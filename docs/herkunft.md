@@ -19,7 +19,7 @@ Dieses Dokument hält fest, woher Code, Texte und Grafiken stammen. Es dient als
 | clsx | MIT | Hilfsfunktion von Svelte | ebenda |
 | Tauri und Rust-Pakete | MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0 u.a. | nur Desktop-Version | `src-tauri/THIRD_PARTY_RUST.md` |
 
-Nicht ausgeliefert, nur zum Bauen und Testen: Vite, TypeScript, Vitest, Playwright, svelte-check, vite-plugin-singlefile, Tauri-CLI. Diese Werkzeuge stehen ebenfalls unter freien Lizenzen. Die Release-Prüfung listet sie unter `licenses.tools`.
+Nicht ausgeliefert, nur zum Bauen und Testen: Vite, TypeScript, Vitest, Playwright, svelte-check, vite-plugin-singlefile, Tauri-CLI und pdf-lib (MIT, erzeugt die Arbeitsblätter in `docs/arbeitsblaetter`; die PDFs nutzen nur die Standardschrift Helvetica, nicht eingebettet). Diese Werkzeuge stehen ebenfalls unter freien Lizenzen. Die Release-Prüfung listet sie unter `licenses.tools`.
 
 Alle diese Lizenzen sind mit der AGPL-3.0, unter der leyoNET steht, verträglich.
 
@@ -33,7 +33,7 @@ Alle diese Lizenzen sind mit der AGPL-3.0, unter der leyoNET steht, verträglich
 | Logo und Symbol (`branding/leyoNET.svg`, `branding/favicon.svg`) | eigene Gestaltung von Mark; App-Symbole der Desktop-Version daraus erzeugt (`npx tauri icon`). Name und Logo sind nicht Teil der AGPL, siehe [NOTICE.md](../NOTICE.md) |
 | Logo-Schrift | Systemschrift «Courier New» bzw. Monospace des Geräts, nicht eingebettet |
 | Schriften | keine eingebetteten Schriften, es werden die Systemschriften genutzt |
-| Texte, Hilfe, Übungen, Beispiele | eigene Texte |
+| Texte, Hilfe, Übungen, Beispiele | eigene Texte; die Übungen zum Modul 117 und ihre Arbeitsblätter beruhen auf Unterrichtsunterlagen von Mark |
 | Server (`server/`) | eigene Implementierung, nur Node.js-Bordmittel |
 
 ## Vorbilder und Namen anderer

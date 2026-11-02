@@ -47,6 +47,21 @@
     return true;
   }
 
+  // --- Feste Zuweisungen (Reservierungen) --------------------------------------
+
+  /** Geräte, die ihre Adresse per DHCP beziehen: zur Auswahl der MAC. */
+  const clients = $derived(editor.topology.devices.filter((d) => d.dhcp && d.interfaces[0]));
+  let reservation = $state({ mac: '', ip: '' });
+  let reservationError = $state<{ field?: string; text: string } | null>(null);
+  const nameOfMac = (mac: string) => editor.topology.devices.find((d) => d.interfaces.some((i) => i.mac === mac))?.name;
+
+  function addReservation(event: SubmitEvent) {
+    event.preventDefault();
+    const failure = editor.addDhcpReservation(device.id, reservation);
+    reservationError = failure ? { field: failure.field, text: t(`error.${failure.code}`, failure.params) } : null;
+    if (!failure) reservation = { mac: '', ip: '' };
+  }
+
   // --- Weitere Bereiche für Netze hinter einem Relay ---------------------------
 
   type ScopeField = 'start' | 'end' | 'mask' | 'gateway' | 'dns';
@@ -91,6 +106,39 @@
 </form>
 
 {#if device.dhcpServer}
+  <h4 data-help="dhcp">{t('dhcpServer.reservations')}</h4>
+  <p class="muted">{t('dhcpServer.reservationsHint')}</p>
+  {#each device.dhcpServer.reservations ?? [] as r, i (r.mac)}
+    <div class="scope">
+      <span class="mono">{r.mac} → {r.ip}</span>
+      {#if nameOfMac(r.mac)}<span class="muted name">{nameOfMac(r.mac)}</span>{/if}
+      <button class="small" aria-label={t('dhcpServer.removeReservation')} disabled={!editor.editable} onclick={() => editor.removeDhcpReservation(device.id, i)}>✕</button>
+    </div>
+  {/each}
+  {#if editor.editable}
+    <form class="scope-form" onsubmit={addReservation}>
+      {#if clients.length}
+        <label class="field">
+          <span>{t('dhcpServer.reservation.device')}</span>
+          <select onchange={(e) => (reservation.mac = e.currentTarget.value)} value={reservation.mac}>
+            <option value="">{t('dhcpServer.reservation.pick')}</option>
+            {#each clients as c (c.id)}<option value={c.interfaces[0]!.mac}>{c.name} ({c.interfaces[0]!.mac})</option>{/each}
+          </select>
+        </label>
+      {/if}
+      <label class="field">
+        <span>{t('dhcpServer.reservation.mac')}</span>
+        <input bind:value={reservation.mac} placeholder="02:00:00:00:05:00" autocomplete="off" spellcheck="false" aria-invalid={reservationError?.field === 'mac'} />
+      </label>
+      <label class="field">
+        <span>{t('dhcpServer.reservation.ip')}</span>
+        <input bind:value={reservation.ip} autocomplete="off" spellcheck="false" inputmode="decimal" aria-invalid={reservationError?.field === 'ip'} />
+      </label>
+      {#if reservationError}<p class="error" role="alert">{reservationError.text}</p>{/if}
+      <button type="submit" disabled={!reservation.mac.trim() || !reservation.ip.trim()}>{t('dhcpServer.addReservation')}</button>
+    </form>
+  {/if}
+
   <h4>{t('dhcpServer.scopes')}</h4>
   <p class="muted">{t('dhcpServer.scopesHint')}</p>
   {#each device.dhcpServer.scopes ?? [] as scope, i (i)}
@@ -128,6 +176,17 @@
     padding: 2px 0;
     border-bottom: 1px solid var(--border);
     font-size: 0.8rem;
+  }
+  .name {
+    margin: 0 8px 0 auto;
+  }
+  select {
+    font-size: 0.8rem;
+    padding: 3px 6px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
   }
   .scope-form {
     margin-top: 6px;

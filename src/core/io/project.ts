@@ -31,6 +31,7 @@ import type {
 import { IP_MODES, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type IpMode, type RoutingMode } from '../model/types';
 import { formatCidr6, formatIp6, isLinkLocal6, isMulticast6, parseCidr6, parseIp6 } from '../net/ipv6';
 import { isValidName, normalizeName } from '../net/dns';
+import { normalizeMac } from '../net/dhcp';
 import { isValidPath } from '../net/http';
 import { checkMailAccount } from '../net/mail';
 import { readTasks, type TaskSet } from '../tasks/tasks';
@@ -427,6 +428,15 @@ function readDevice(v: unknown, path: string): Device {
           ...(sc.gateway !== undefined ? { gateway: ip(sc.gateway, `${sp}.gateway`) } : {}),
           ...(sc.dns !== undefined ? { dns: ip(sc.dns, `${sp}.dns`) } : {}),
         };
+      });
+    }
+    if (s.reservations !== undefined) {
+      server.reservations = arr(s.reservations, `${p}.reservations`).map((raw, i) => {
+        const rp = `${p}.reservations[${i}]`;
+        const r = obj(raw, rp);
+        const mac = normalizeMac(str(r.mac, `${rp}.mac`));
+        if (mac === null) throw new Invalid(`${rp}.mac`);
+        return { mac, ip: ip(r.ip, `${rp}.ip`) };
       });
     }
     device.dhcpServer = server;

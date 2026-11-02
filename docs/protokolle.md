@@ -25,7 +25,7 @@ Der Simulator sendet Pakete, die den Standards folgen. Jeder Rahmen lässt sich 
 | 3 | IPsec ESP (Tunnelmodus) | RFC 4301, RFC 4303 | Ganzes IPv4-Paket in ESP (IP-Protokoll 50) zwischen den Router-Adressen; SPI, Sequenznummer und 16 Byte ICV im Mitschnitt, Nutzlast nur verwürfelt (keine echte Verschlüsselung); kein Anti-Replay-Fenster, kein NAT-Traversal; Tunnelverkehr umgeht NAT |
 | 4 | UDP | RFC 768 | – |
 | 4 | TCP | RFC 9293 | Drei-Wege-Handshake, Sequenznummern in Bytes, MSS 1460, Wiederholung nach 1 s (höchstens dreimal), FIN/RST; feste Fenstergrösse, keine Staukontrolle |
-| 7 | DHCP | RFC 2131, RFC 2132 | Discover/Offer/Request/Ack, Relay (giaddr); Erneuerung nach halber Lease-Dauer |
+| 7 | DHCP | RFC 2131, RFC 2132 | Discover/Offer/Request/Ack, Relay (giaddr); Erneuerung nach halber Lease-Dauer; feste Zuweisungen (Reservierung nach MAC-Adresse, auch ausserhalb des Bereichs) |
 | 7 | DHCPv6 | RFC 9915 | Solicit/Advertise/Request/Reply mit IA_NA, DUID-LL aus der MAC; Server im Router (M-Flag im Router Advertisement), Adressen ab ::100; kein Relay, keine Präfix-Delegation |
 | 7 | DNS | RFC 1035 | A- und MX-Einträge, keine Rekursion; Cache nach TTL |
 | 7 | HTTP/1.1 | RFC 9112 | GET, Content-Length in Bytes (UTF-8), Bilder als Binärdaten; kein HTTPS |

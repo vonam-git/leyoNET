@@ -382,6 +382,14 @@ export interface DhcpServerConfig {
   leaseTime: number;
   /** Weitere Bereiche für entfernte Netze, die über ein DHCP-Relay angefragt werden. */
   scopes?: DhcpScope[];
+  /** Feste Zuweisungen: Dieses Gerät (MAC) bekommt immer diese Adresse, auch ausserhalb des Bereichs. */
+  reservations?: DhcpReservation[];
+}
+
+export interface DhcpReservation {
+  /** MAC-Adresse in Grossbuchstaben, z.B. "02:00:00:00:05:00". */
+  mac: string;
+  ip: string;
 }
 
 export interface DhcpScope {

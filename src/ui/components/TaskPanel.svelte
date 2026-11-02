@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { evaluateTasks, type GoalResult } from '../../core';
+  import { evaluateTasks, pointsOf, scoreOf, swissGrade, type GoalResult } from '../../core';
   import { t } from '../../i18n';
   import { editor } from '../state/editor.svelte';
   import { simStore } from '../state/sim.svelte';
@@ -13,6 +13,10 @@
 
   const tasks = $derived(editor.tasks);
   const passedCount = $derived(results?.filter((r) => r.passed).length ?? 0);
+  /** Punkte anzeigen, sobald ein Ziel eigene Punkte hat oder benotet wird. */
+  const withPoints = $derived(!!tasks && (tasks.grading || tasks.goals.some((g) => g.points !== undefined)));
+  const maxPoints = $derived(tasks ? tasks.goals.reduce((sum, g) => sum + pointsOf(g), 0) : 0);
+  const score = $derived(tasks && results ? scoreOf(tasks, results) : null);
 
   // Neue Aufgabe oder anderes Netz: alte Ergebnisse gelten nicht mehr.
   $effect(() => {
@@ -51,6 +55,7 @@
   {:else}
     {#if tasks.difficulty}<Stars n={tasks.difficulty} />{/if}
     <h3>{tasks.title}</h3>
+    {#if withPoints}<p class="muted">{t('tasks.maxPoints', { max: maxPoints })}{tasks.grading ? ` · ${t('tasks.gradeFormula')}` : ''}</p>{/if}
     {#if tasks.description}
       <p class="description">{tasks.description}</p>
     {/if}
@@ -61,6 +66,7 @@
           <span class="mark" aria-hidden="true">{result ? (result.passed ? '✓' : '✗') : '○'}</span>
           <span>
             {goal.text}
+            {#if withPoints}<span class="pts">({t('tasks.points', { n: pointsOf(goal) })})</span>{/if}
             {#if result}
               <span class="visually-hidden">{t(result.passed ? 'tasks.passed' : 'tasks.failed')}</span>
             {/if}
@@ -76,9 +82,16 @@
         </li>
       {/each}
     </ol>
-    <button class="check" onclick={check} disabled={checking}>{checking ? t('tasks.checking') : t('tasks.check')}</button>
+    {#if tasks.noSelfCheck}
+      <p class="muted">{t('tasks.noSelfCheck')}</p>
+    {:else}
+      <button class="check" onclick={check} disabled={checking}>{checking ? t('tasks.checking') : t('tasks.check')}</button>
+    {/if}
     {#if results}
-      <p class="summary" role="status">{t('tasks.summary', { passed: passedCount, total: tasks.goals.length })}</p>
+      <p class="summary" role="status">
+        {t('tasks.summary', { passed: passedCount, total: tasks.goals.length })}
+        {#if withPoints && score}<br />{t('tasks.score', { points: score.points, max: score.max })}{#if tasks.grading} · {t('tasks.grade', { grade: swissGrade(score.points, score.max).toFixed(1) })}{/if}{/if}
+      </p>
     {/if}
   {/if}
   {#if ui.has('tool.taskEditor')}<button class="small review" onclick={() => dialogs.show('review')} title={t('review.openHint')}>{t('review.open')}</button>{/if}
@@ -143,6 +156,10 @@
     display: block;
     margin-top: 2px;
     color: var(--muted);
+  }
+  .pts {
+    color: var(--muted);
+    white-space: nowrap;
   }
   .check {
     width: 100%;

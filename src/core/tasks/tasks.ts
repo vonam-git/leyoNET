@@ -8,7 +8,7 @@ import { cablesOf, otherEnd, vlanColor } from '../model/topology';
 import { linkStatus, mediumOf } from '../model/links';
 import { costOf } from '../model/costs';
 import { duplicateAddresses } from '../model/duplicates';
-import { MEDIA, type Device, type DeviceType, type Medium, type Topology } from '../model/types';
+import { MEDIA, type Device, type DeviceType, type Medium, type TagColor, type Topology } from '../model/types';
 import { formatIp, networkOf, parseIp, parseMask } from '../net/ipv4';
 import { protocolOf } from '../sim/protocol';
 import { Simulation, type PacketLogEntry } from '../sim/simulation';
@@ -24,7 +24,8 @@ export type Check =
   /** Gegenprobe: Der Ping darf NICHT ankommen (z.B. VLANs trennen). */
   | { type: 'noPing'; from: string; to: string }
   | { type: 'http'; from: string; url: string; status?: number }
-  | { type: 'dhcpLease'; device: string }
+  /** Gerät bezieht per DHCP eine Adresse (optional genau diese, optional mit diesem DNS-Server). */
+  | { type: 'dhcpLease'; device: string; ip?: string; dns?: string }
   | { type: 'mail'; from: string; to: string }
   | { type: 'packetSeen'; protocol: string; from?: string; to?: string }
   /** Router hat ein Netz über ein Routingprotokoll gelernt (oder überhaupt eine Route dorthin). */
@@ -46,7 +47,19 @@ export type Check =
   /** Direkte Verbindung zwischen zwei Geräten ist aktiv (optional mit bestimmtem Medium). */
   | { type: 'linkUp'; a: string; b: string; medium?: Medium }
   /** VLAN ist mit Farbe dokumentiert. */
-  | { type: 'vlanDocumented'; vlan: number };
+  | { type: 'vlanDocumented'; vlan: number }
+  /** Geräte mit diesen Namen (und optional diesem Typ) sind vorhanden. */
+  | { type: 'device'; names: string[]; deviceType?: DeviceType }
+  /** Ein Anschluss des Geräts hat diese feste Adresse mit Präfix, z.B. "10.33.0.1/22". */
+  | { type: 'address'; device: string; address: string }
+  /** DHCP-Server ist eingerichtet: Bereich, optional Gateway und DNS-Server, die er mitgibt. */
+  | { type: 'dhcpServer'; device: string; start: string; end: string; gateway?: string; dns?: string }
+  /** DNS-Server hat einen A-Eintrag (Name → Adresse). */
+  | { type: 'dnsRecord'; device: string; name: string; value: string }
+  /** Bereich auf der Zeichenfläche: Titel enthält den Text, optional Farbe und Netz. */
+  | { type: 'area'; title: string; color?: TagColor; network?: string };
+
+const TAG_COLOR_NAMES: readonly TagColor[] = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'gray'];
 
 export const CHECK_TYPES = [
   'deviceCount',
@@ -71,6 +84,11 @@ export const CHECK_TYPES = [
   'budget',
   'linkUp',
   'vlanDocumented',
+  'device',
+  'address',
+  'dhcpServer',
+  'dnsRecord',
+  'area',
 ] as const satisfies readonly Check['type'][];
 
 export interface Goal {
@@ -80,6 +98,8 @@ export interface Goal {
   check: Check;
   /** Hinweis, der bei nicht erfülltem Ziel angezeigt wird. */
   hint?: string;
+  /** Punkte für dieses Ziel (Prüfungen); fehlt = 1. */
+  points?: number;
 }
 
 export interface TaskSet {
@@ -87,7 +107,35 @@ export interface TaskSet {
   description?: string;
   /** Schwierigkeit von 1 (einfach) bis 5 (anspruchsvoll) Sternen. */
   difficulty?: number;
+  /** Prüfung: Note nach Schweizer Skala aus den Punkten (5 × Punkte / Maximum + 1). */
+  grading?: boolean;
+  /** Prüfung: «Prüfen» ist für Lernende ausgeblendet; ausgewertet wird mit «Abgaben auswerten». */
+  noSelfCheck?: boolean;
   goals: Goal[];
+}
+
+export const MAX_GOAL_POINTS = 100;
+
+/** Punkte eines Ziels (Standard 1). */
+export const pointsOf = (goal: Goal) => goal.points ?? 1;
+
+/** Note 1–6 nach Schweizer Skala, auf Zehntel gerundet. */
+export function swissGrade(points: number, max: number): number {
+  if (max <= 0) return 1;
+  return Math.round((5 * Math.min(points, max) / max + 1) * 10) / 10;
+}
+
+/** Erreichte und mögliche Punkte; Ziele in `skip` zählen nicht. */
+export function scoreOf(tasks: TaskSet, results: readonly { id: string; passed: boolean; skipped?: boolean }[]): { points: number; max: number } {
+  let points = 0;
+  let max = 0;
+  for (const goal of tasks.goals) {
+    const r = results.find((x) => x.id === goal.id);
+    if (!r || r.skipped) continue;
+    max += pointsOf(goal);
+    if (r.passed) points += pointsOf(goal);
+  }
+  return { points, max };
 }
 
 export interface GoalResult {
@@ -121,6 +169,27 @@ function networkOfDevice(device: Device): string | null {
   const ip = iface?.ip ? parseIp(iface.ip) : null;
   const prefix = iface?.mask ? parseMask(iface.mask) : null;
   return ip === null || prefix === null ? null : `${formatIp(networkOf(ip, prefix))}/${prefix}`;
+}
+
+/** "10.33.0.1/22" oder "10.33.0.1/255.255.252.0" → Adresse und Präfix. */
+function parseCidr(text: string): { ip: number; prefix: number } | null {
+  const [ipText = '', prefixText = ''] = text.trim().split('/');
+  const ip = parseIp(ipText);
+  const prefix = parseMask(prefixText);
+  return ip === null || prefix === null ? null : { ip, prefix };
+}
+
+const sameIp = (a: string | undefined, b: string) => a !== undefined && parseIp(a) !== null && parseIp(a) === parseIp(b);
+
+/** Boot-Simulation je Topologie: Prüfungen, die nur lesen (DHCP), teilen sie sich. */
+const bootCache = new WeakMap<Topology, Simulation>();
+function readOnlyBoot(topology: Topology): Simulation {
+  let sim = bootCache.get(topology);
+  if (!sim) {
+    sim = bootedSimulation(topology);
+    bootCache.set(topology, sim);
+  }
+  return sim;
 }
 
 function bootedSimulation(topology: Topology): Simulation {
@@ -234,8 +303,11 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       const device = need(check.device);
       if (!device) return missing(check.device);
       if (!device.dhcp) return fail(id, 'notDhcp', { name: device.name });
-      const ip = bootedSimulation(topology).getDeviceState(device.id).address?.ip;
-      return ip ? { id, passed: true } : fail(id, 'noLease', { name: device.name });
+      const address = readOnlyBoot(topology).getDeviceState(device.id).address;
+      if (!address?.ip) return fail(id, 'noLease', { name: device.name });
+      if (check.ip && !sameIp(address.ip, check.ip)) return fail(id, 'wrongLease', { name: device.name, actual: address.ip, expected: check.ip });
+      if (check.dns && !sameIp(address.dns, check.dns)) return fail(id, 'wrongLeaseDns', { name: device.name, actual: address.dns ?? '–', expected: check.dns });
+      return { id, passed: true };
     }
     case 'mail': {
       const from = need(check.from);
@@ -356,6 +428,58 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
     case 'vlanDocumented': {
       return vlanColor(topology, check.vlan) ? { id, passed: true } : fail(id, 'vlanUndocumented', { vlan: check.vlan });
     }
+    case 'device': {
+      for (const name of check.names) {
+        const device = need(name);
+        if (!device) return missing(name);
+        if (check.deviceType && device.type !== check.deviceType) return fail(id, 'wrongDeviceType', { name: device.name, expected: check.deviceType });
+      }
+      return { id, passed: true };
+    }
+    case 'address': {
+      const device = need(check.device);
+      if (!device) return missing(check.device);
+      const wanted = parseCidr(check.address);
+      if (!wanted) return fail(id, 'noAddress', { name: device.name });
+      const has = device.interfaces.some((i) => {
+        const ip = i.ip ? parseIp(i.ip) : null;
+        const prefix = i.mask ? parseMask(i.mask) : null;
+        return ip === wanted.ip && prefix === wanted.prefix;
+      });
+      return has ? { id, passed: true } : fail(id, 'addressMissing', { name: device.name, address: `${formatIp(wanted.ip)}/${wanted.prefix}` });
+    }
+    case 'dhcpServer': {
+      const device = need(check.device);
+      if (!device) return missing(check.device);
+      const s = device.dhcpServer;
+      if (!s) return fail(id, 'noDhcpServer', { name: device.name });
+      const range = `${check.start} – ${check.end}`;
+      if (!sameIp(s.start, check.start) || !sameIp(s.end, check.end)) return fail(id, 'wrongDhcpRange', { name: device.name, actual: `${s.start} – ${s.end}`, expected: range });
+      if (check.gateway && !sameIp(s.gateway, check.gateway)) return fail(id, 'wrongDhcpOption', { name: device.name, option: 'Gateway', expected: check.gateway });
+      if (check.dns && !sameIp(s.dns, check.dns)) return fail(id, 'wrongDhcpOption', { name: device.name, option: 'DNS', expected: check.dns });
+      return { id, passed: true };
+    }
+    case 'dnsRecord': {
+      const device = need(check.device);
+      if (!device) return missing(check.device);
+      if (!device.dnsServer) return fail(id, 'noDnsServer', { name: device.name });
+      const name = check.name.trim().toLowerCase().replace(/\.$/, '');
+      const found = device.dnsServer.records.some((r) => r.type === 'A' && r.name === name && sameIp(r.value, check.value));
+      return found ? { id, passed: true } : fail(id, 'dnsRecordMissing', { name: device.name, record: `${name} → ${check.value}` });
+    }
+    case 'area': {
+      const wanted = check.title.trim().toLowerCase();
+      const areas = (topology.areas ?? []).filter((a) => a.kind !== 'rack' && a.title.toLowerCase().includes(wanted));
+      if (areas.length === 0) return fail(id, 'areaMissing', { title: check.title });
+      const net = check.network ? parseCidr(check.network) : null;
+      const fits = areas.some((a) => {
+        if (check.color && a.color !== check.color) return false;
+        if (!net) return true;
+        const actual = a.network ? parseCidr(a.network) : null;
+        return actual !== null && actual.prefix === net.prefix && networkOf(actual.ip, actual.prefix) === networkOf(net.ip, net.prefix);
+      });
+      return fits ? { id, passed: true } : fail(id, 'areaIncomplete', { title: check.title, color: check.color ?? '–', network: check.network ?? '–' });
+    }
   }
 }
 
@@ -385,6 +509,8 @@ export function readTasks(value: unknown, invalid: (path: string) => never): Tas
     ...(t.difficulty !== undefined
       ? { difficulty: typeof t.difficulty === 'number' && Number.isInteger(t.difficulty) && t.difficulty >= 1 && t.difficulty <= 5 ? t.difficulty : invalid('tasks.difficulty') }
       : {}),
+    ...(t.grading !== undefined ? (typeof t.grading === 'boolean' ? (t.grading ? { grading: true } : {}) : invalid('tasks.grading')) : {}),
+    ...(t.noSelfCheck !== undefined ? (typeof t.noSelfCheck === 'boolean' ? (t.noSelfCheck ? { noSelfCheck: true } : {}) : invalid('tasks.noSelfCheck')) : {}),
     goals: goals.map((raw, i): Goal => {
       const p = `tasks.goals[${i}]`;
       if (!isObject(raw)) invalid(p);
@@ -430,9 +556,12 @@ export function readTasks(value: unknown, invalid: (path: string) => never): Tas
           check = { type, from: str(c.from, `${cp}.from`), url: str(c.url, `${cp}.url`), ...(status !== undefined ? { status } : {}) };
           break;
         }
-        case 'dhcpLease':
-          check = { type, device: str(c.device, `${cp}.device`) };
+        case 'dhcpLease': {
+          const ip = optStr(c.ip, `${cp}.ip`);
+          const dns = optStr(c.dns, `${cp}.dns`);
+          check = { type, device: str(c.device, `${cp}.device`), ...(ip ? { ip } : {}), ...(dns ? { dns } : {}) };
           break;
+        }
         case 'mail':
           check = { type, from: str(c.from, `${cp}.from`), to: str(c.to, `${cp}.to`) };
           break;
@@ -483,11 +612,37 @@ export function readTasks(value: unknown, invalid: (path: string) => never): Tas
           check = { type, vlan: vlan! };
           break;
         }
+        case 'device': {
+          const deviceType = c.deviceType;
+          if (deviceType !== undefined && !(DEVICE_TYPES as readonly unknown[]).includes(deviceType)) invalid(`${cp}.deviceType`);
+          check = { type, names: names(c.names, `${cp}.names`), ...(deviceType ? { deviceType: deviceType as DeviceType } : {}) };
+          break;
+        }
+        case 'address':
+          check = { type, device: str(c.device, `${cp}.device`), address: str(c.address, `${cp}.address`) };
+          break;
+        case 'dhcpServer': {
+          const gateway = optStr(c.gateway, `${cp}.gateway`);
+          const dns = optStr(c.dns, `${cp}.dns`);
+          check = { type, device: str(c.device, `${cp}.device`), start: str(c.start, `${cp}.start`), end: str(c.end, `${cp}.end`), ...(gateway ? { gateway } : {}), ...(dns ? { dns } : {}) };
+          break;
+        }
+        case 'dnsRecord':
+          check = { type, device: str(c.device, `${cp}.device`), name: str(c.name, `${cp}.name`), value: str(c.value, `${cp}.value`) };
+          break;
+        case 'area': {
+          if (c.color !== undefined && !(TAG_COLOR_NAMES as readonly unknown[]).includes(c.color)) invalid(`${cp}.color`);
+          const network = optStr(c.network, `${cp}.network`);
+          check = { type, title: str(c.title, `${cp}.title`), ...(c.color ? { color: c.color as TagColor } : {}), ...(network ? { network } : {}) };
+          break;
+        }
         default:
           return invalid(`${cp}.type`);
       }
       const hint = optStr(g.hint, `${p}.hint`);
-      return { id, text: str(g.text, `${p}.text`), check, ...(hint ? { hint } : {}) };
+      const points = optNum(g.points, `${p}.points`);
+      if (points !== undefined && points > MAX_GOAL_POINTS) invalid(`${p}.points`);
+      return { id, text: str(g.text, `${p}.text`), check, ...(hint ? { hint } : {}), ...(points !== undefined ? { points } : {}) };
     }),
   };
 }

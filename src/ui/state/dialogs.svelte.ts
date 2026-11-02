@@ -12,6 +12,7 @@ export type DialogName =
   | 'session'
   | 'catalog'
   | 'review'
+  | 'exam'
   | 'taskEditor'
   | 'features'
   | 'shortcuts'

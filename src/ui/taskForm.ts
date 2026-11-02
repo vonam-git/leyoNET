@@ -49,7 +49,11 @@ export const CHECK_FIELDS: Record<Check['type'], FieldSpec[]> = {
     { key: 'url', kind: 'text' },
     { key: 'status', kind: 'number', optional: true },
   ],
-  dhcpLease: [{ key: 'device', kind: 'device' }],
+  dhcpLease: [
+    { key: 'device', kind: 'device' },
+    { key: 'ip', kind: 'text', optional: true, label: 'leaseIp' },
+    { key: 'dns', kind: 'text', optional: true, label: 'leaseDns' },
+  ],
   mail: [
     { key: 'from', kind: 'device', label: 'mailFrom' },
     { key: 'to', kind: 'text', label: 'mailTo' },
@@ -88,6 +92,31 @@ export const CHECK_FIELDS: Record<Check['type'], FieldSpec[]> = {
     { key: 'medium', kind: 'choice', optional: true, options: ['tp', 'fiber', 'wireless', 'serial', 'coax', 'dsl', 'cellular'] },
   ],
   vlanDocumented: [{ key: 'vlan', kind: 'number' }],
+  device: [
+    { key: 'names', kind: 'devices', label: 'deviceNames' },
+    { key: 'deviceType', kind: 'deviceType', optional: true },
+  ],
+  address: [
+    { key: 'device', kind: 'device' },
+    { key: 'address', kind: 'text', label: 'cidrAddress' },
+  ],
+  dhcpServer: [
+    { key: 'device', kind: 'device' },
+    { key: 'start', kind: 'text', label: 'rangeStart' },
+    { key: 'end', kind: 'text', label: 'rangeEnd' },
+    { key: 'gateway', kind: 'text', optional: true },
+    { key: 'dns', kind: 'text', optional: true, label: 'leaseDns' },
+  ],
+  dnsRecord: [
+    { key: 'device', kind: 'device' },
+    { key: 'name', kind: 'text', label: 'dnsName' },
+    { key: 'value', kind: 'text', label: 'dnsValue' },
+  ],
+  area: [
+    { key: 'title', kind: 'text', label: 'areaTitle' },
+    { key: 'color', kind: 'choice', optional: true, label: 'areaColor', options: ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'gray'] },
+    { key: 'network', kind: 'text', optional: true },
+  ],
 };
 
 /** Protokollnamen, wie sie die Paketliste zeigt. */
@@ -99,11 +128,19 @@ export interface GoalDraft {
   hint: string;
   type: Check['type'];
   fields: Record<string, string>;
+  /** Punkte als Text; leer = 1. */
+  points: string;
 }
 
 export interface TaskDraft {
   title: string;
   description: string;
+  /** Sterne 1–5 als Text; leer = keine Angabe. */
+  difficulty: string;
+  /** Prüfung mit Note. */
+  grading: boolean;
+  /** «Prüfen» für Lernende ausblenden. */
+  noSelfCheck: boolean;
   goals: GoalDraft[];
 }
 
@@ -113,12 +150,15 @@ export function toDraft(tasks: TaskSet): TaskDraft {
   return {
     title: tasks.title,
     description: tasks.description ?? '',
+    difficulty: tasks.difficulty ? String(tasks.difficulty) : '',
+    grading: tasks.grading === true,
+    noSelfCheck: tasks.noSelfCheck === true,
     goals: tasks.goals.map((goal) => {
       const fields: Record<string, string> = {};
       for (const [key, value] of Object.entries(goal.check)) {
         if (key !== 'type') fields[key] = Array.isArray(value) ? value.join(', ') : String(value);
       }
-      return { id: goal.id, text: goal.text, hint: goal.hint ?? '', type: goal.check.type, fields };
+      return { id: goal.id, text: goal.text, hint: goal.hint ?? '', type: goal.check.type, fields, points: goal.points !== undefined ? String(goal.points) : '' };
     }),
   };
 }
@@ -127,7 +167,7 @@ export function emptyGoal(draft: TaskDraft, type: Check['type'] = 'ping'): GoalD
   const ids = new Set(draft.goals.map((g) => g.id));
   let n = draft.goals.length + 1;
   while (ids.has(`ziel-${n}`)) n++;
-  return { id: `ziel-${n}`, text: '', hint: '', type, fields: {} };
+  return { id: `ziel-${n}`, text: '', hint: '', type, fields: {}, points: '' };
 }
 
 /** Vorschlag für den Lernziel-Text aus den Feldern, z.B. «PC 1 erreicht PC 2 per Ping.» */
@@ -159,14 +199,25 @@ export function fromDraft(draft: TaskDraft): { ok: true; tasks: TaskSet } | { ok
         check[spec.key] = value;
       }
     }
+    const points = goal.points.trim();
+    if (points && !/^\d+$/.test(points)) return { ok: false, error: { goal: i, field: 'points', code: 'notANumber' } };
     goals.push({
+      ...(points ? { points: Number(points) } : {}),
       id: goal.id,
       text: goal.text.trim() || suggestedText(goal),
       check,
       ...(goal.hint.trim() ? { hint: goal.hint.trim() } : {}),
     });
   }
-  const raw = { title: draft.title.trim(), ...(draft.description.trim() ? { description: draft.description.trim() } : {}), goals };
+  const difficulty = Number(draft.difficulty);
+  const raw = {
+    title: draft.title.trim(),
+    ...(draft.description.trim() ? { description: draft.description.trim() } : {}),
+    ...(difficulty >= 1 && difficulty <= 5 ? { difficulty } : {}),
+    ...(draft.grading ? { grading: true } : {}),
+    ...(draft.noSelfCheck ? { noSelfCheck: true } : {}),
+    goals,
+  };
   // Letzte Sicherung: dieselbe Prüfung wie beim Öffnen einer Datei.
   return {
     ok: true,

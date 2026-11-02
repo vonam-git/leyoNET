@@ -22,6 +22,7 @@ import type {
   WifiClient,
   WlanConfig,
   DhcpScope,
+  DhcpReservation,
   DhcpServerConfig,
   DnsRecord,
   Endpoint,
@@ -97,6 +98,10 @@ export type ErrorCode =
   | 'dhcpRangeOutsideSubnet'
   | 'dhcpRangeOrder'
   | 'dhcpRangeReserved'
+  | 'invalidMac'
+  | 'dhcpReservationIsServer'
+  | 'dhcpReservationDuplicateMac'
+  | 'dhcpReservationDuplicateIp'
   | 'dhcpLeaseTime'
   | 'invalidDnsName'
   | 'dnsTtl'
@@ -765,9 +770,33 @@ export function setDhcpServer(t: Topology, id: string, config: DhcpServerConfig 
   return ok(
     updateDevice(t, id, (d) => {
       const { dhcpServer: existing, ...rest } = d;
-      // Zusätzliche Bereiche bleiben erhalten, wenn nur der Hauptbereich geändert wird.
+      // Zusätzliche Bereiche und Reservierungen bleiben erhalten, wenn nur der Hauptbereich geändert wird.
       const scopes = config?.scopes ?? existing?.scopes;
-      return config ? { ...rest, dhcpServer: normalizeDhcpServer({ ...config, ...(scopes ? { scopes } : {}) }) } : rest;
+      const reservations = config?.reservations ?? existing?.reservations;
+      return config ? { ...rest, dhcpServer: normalizeDhcpServer({ ...config, ...(scopes ? { scopes } : {}), ...(reservations ? { reservations } : {}) }) } : rest;
+    }),
+  );
+}
+
+/** Feste Zuweisung im DHCP-Server: Das Gerät mit dieser MAC bekommt immer diese Adresse. */
+export function addDhcpReservation(t: Topology, id: string, reservation: DhcpReservation): Result<Topology> {
+  const device = getDevice(t, id);
+  const config = device?.dhcpServer;
+  if (!device || !config) return fail('serviceDisabled');
+  const next = { ...config, reservations: [...(config.reservations ?? []), reservation] };
+  const issue = checkDhcpServer(device, next);
+  if (issue) return { ok: false, error: { code: issue.code as ErrorCode, params: issue.params, field: issue.field } };
+  return ok(updateDevice(t, id, (d) => ({ ...d, dhcpServer: normalizeDhcpServer(next) })));
+}
+
+export function removeDhcpReservation(t: Topology, id: string, index: number): Result<Topology> {
+  const config = getDevice(t, id)?.dhcpServer;
+  if (!config?.reservations?.[index]) return fail('unknownRoute');
+  const reservations = config.reservations.filter((_, i) => i !== index);
+  return ok(
+    updateDevice(t, id, (d) => {
+      const { reservations: _r, ...rest } = config;
+      return { ...d, dhcpServer: reservations.length ? { ...rest, reservations } : rest };
     }),
   );
 }

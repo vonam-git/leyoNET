@@ -77,6 +77,27 @@ Tipp: Vorführen, dann mit **Leertaste** anhalten und mit **N** im Einzelschritt
 | ★★★★★ | Campus mit Layer-3-Switch und Glasfaser | SVIs, DHCP-Relay, Glasfaser-Uplinks |
 | ★★★★★ | Zwei autonome Systeme mit BGP | eBGP, angekündigte Netze |
 
+## Modul 117: Übungen, Arbeitsblätter und Prüfung
+
+Im Aufgaben-Katalog gibt es die Reihe **«Modul 117»** (Filter oben im Katalog) mit den Übungen aus Block 6 «IP und Router» und Block 7 «Netzwerkdienste»:
+
+| Sterne | Übung | Arbeitsblatt |
+|---|---|---|
+| ★ | UE03 Router01 – Auftrag 1: Ein Netz mit zwei Switches | M06C_M117_UE03_Router01 |
+| ★ | UE03 Router01 – Auftrag 2: Zwei Netze an denselben Switches | M06C_M117_UE03_Router01 |
+| ★★ | UE03 Router01 – Auftrag 3: Maske /25 | M06C_M117_UE03_Router01 |
+| ★★ | UE03 Router01 – Auftrag 4: Maske /26 (optional) | M06C_M117_UE03_Router01 |
+| ★★ | UE04 Router02 – Auftrag 1: Ein Router verbindet Sursee und Zürich | M06D_M117_UE04_Router02 |
+| ★★★ | UE04 Router02 – Auftrag 2: Zwei Router mit Transfernetz | M06D_M117_UE04_Router02 |
+| ★★★★ | UE05 Router03: Drei Standorte mit Standleitungen | M06E_M117_UE05_Router03 |
+| ★★★ | UE01 Netzwerkdienste: Firmennetz Watch SA mit DHCP | M07A_M117_UE01_Netzwerkdienste |
+| ★★★★ | UE02 Netzwerkdienste: Webserver, DNS und feste Zuweisungen | M07B_M117_UE02_Netzwerkdienste |
+| ★★★★★ | UE03 Netzwerkdienste: Firmennetz Holzer AG (Prüfungsvorbereitung mit Punkten und Note) | M07C_M117_UE03_Netzwerkdienste |
+
+Zu jeder Übung gibt es ein **ausfüllbares Arbeitsblatt** (PDF) mit den Fragen, die sich nicht automatisch prüfen lassen (Netz-ID, Beobachtungen, Begründungen), dazu eine Version mit Musterlösung: [docs/arbeitsblaetter](arbeitsblaetter/README.md). Die Lernenden geben das ausgefüllte PDF und ihre Projektdateien über die Plattform der Klasse ab (z.B. Teams oder Moodle); ausgewertet wird mit **«Abgaben auswerten …»**.
+
+Die praktische Prüfung (LB3) erstellt **Werkzeuge → Prüfung erstellen …**: fünf vorbereitete Varianten oder eine gewürfelte, mit Prüfungsdatei, Musterlösung und Aufgabenblatt; 75 Punkte, Note = 5 × Punkte / 75 + 1. Für Prüfungen ist «Prüfen» für die Lernenden ausgeblendet. Details: [aufgaben.md](aufgaben.md#prüfungen). Die fünf Varianten stehen im öffentlichen Quellcode; für die echte Prüfung eine Variante würfeln oder anpassen.
+
 ## Eigene Aufgaben
 
 Unter **Werkzeuge → Aufgabe erstellen** entsteht eine Aufgabe aus dem aktuellen Netz und Prüfbausteinen. Gespeichert wird sie als `.json`, die Lernende öffnen. Beschreibung aller Bausteine: [aufgaben.md](aufgaben.md).
