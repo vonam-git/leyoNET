@@ -1,0 +1,69 @@
+import { describe, expect, it } from 'vitest';
+import { emptyTopology, evaluateTasks, parseProject, scoreOf, serializeProject, swissGrade } from '../core';
+import { setLocale } from '../i18n';
+import { EXAM_POINTS, EXAM_PRESETS, buildExamSolution, buildExamTasks, checkExamSpec, randomExam, siteFacts } from './exam';
+
+setLocale('de');
+
+describe('Prüfungen «Firmennetz mit drei Standorten»', () => {
+  for (const spec of EXAM_PRESETS) {
+    it(`Variante ${spec.id} (${spec.company}): Vorgabe gültig, Musterlösung erreicht ${EXAM_POINTS.total} Punkte`, () => {
+      expect(checkExamSpec(spec)).toBeNull();
+      const tasks = buildExamTasks(spec);
+      expect(tasks.goals.reduce((s, g) => s + (g.points ?? 1), 0)).toBe(EXAM_POINTS.total);
+      const solution = buildExamSolution(spec);
+      const results = evaluateTasks(solution, tasks);
+      const failed = results.filter((r) => !r.passed).map((r) => `${r.id}: ${JSON.stringify(r.reason)}`);
+      expect(failed).toEqual([]);
+      expect(scoreOf(tasks, results)).toEqual({ points: 75, max: 75 });
+      // Projektdatei mit Aufgabe lässt sich wieder öffnen.
+      const reopened = parseProject(serializeProject(solution, tasks));
+      expect(reopened.ok && reopened.tasks?.goals.length).toBe(tasks.goals.length);
+    });
+  }
+
+  it('leere Abgabe gibt 0 Punkte und Note 1', () => {
+    const tasks = buildExamTasks(EXAM_PRESETS[0]!);
+    const score = scoreOf(tasks, evaluateTasks(emptyTopology(), tasks));
+    expect(score.points).toBe(0);
+    expect(swissGrade(score.points, score.max)).toBe(1);
+  });
+
+  it('Teilleistung: falsche Farbe und fehlender DNS-Eintrag kosten Punkte', () => {
+    const spec = EXAM_PRESETS[1]!;
+    const tasks = buildExamTasks(spec);
+    let solution = buildExamSolution({ ...spec, sites: [spec.sites[0], spec.sites[1], { ...spec.sites[2], color: 'gray' }] });
+    const server = solution.devices.find((d) => d.name === 'DHCP Baar')!;
+    solution = { ...solution, devices: solution.devices.map((d) => (d.id === server.id ? { ...d, dnsServer: { records: [] } } : d)) };
+    const results = evaluateTasks(solution, tasks);
+    expect(results.filter((r) => !r.passed).map((r) => r.id)).toEqual(['s3-area', 'd-dns-2', 'd-http-2']);
+    const score = scoreOf(tasks, results);
+    expect(score.points).toBe(75 - 2 - 1 - 1);
+    expect(swissGrade(score.points, 75)).toBe(5.7);
+  });
+
+  it('Varianten unterscheiden sich in Netzen, Präfixen und Namen', () => {
+    const prefixes = new Set(EXAM_PRESETS.flatMap((s) => s.sites.map((x) => siteFacts(x).prefix)));
+    expect(prefixes.size).toBeGreaterThanOrEqual(8);
+    expect(new Set(EXAM_PRESETS.map((s) => s.sites[0].network)).size).toBe(5);
+  });
+
+  it('zufällige Varianten sind gültig, wiederholbar und lösbar', () => {
+    expect(randomExam(42)).toEqual(randomExam(42));
+    for (const seed of [1, 7, 99, 2026]) {
+      const spec = randomExam(seed);
+      expect(checkExamSpec(spec)).toBeNull();
+      const tasks = buildExamTasks(spec);
+      const results = evaluateTasks(buildExamSolution(spec), tasks);
+      expect(results.filter((r) => !r.passed)).toEqual([]);
+    }
+  });
+
+  it('meldet Fehler in einer angepassten Vorgabe', () => {
+    const spec = EXAM_PRESETS[0]!;
+    expect(checkExamSpec({ ...spec, transfers: ['172.16.255.0/29', spec.transfers[1], spec.transfers[2]] })).toMatchObject({ code: 'transfer' });
+    expect(checkExamSpec({ ...spec, sites: [{ ...spec.sites[0], dhcpStart: '10.45.0.5' }, spec.sites[1], spec.sites[2]] })).toMatchObject({ code: 'outside' });
+    expect(checkExamSpec({ ...spec, sites: [spec.sites[0], { ...spec.sites[1], network: '10.44.1.0/24' }, spec.sites[2]] })).toMatchObject({ code: 'overlap' });
+    expect(checkExamSpec({ ...spec, intranet: { ...spec.intranet, domain: 'bern.ch' } })).toMatchObject({ code: 'domain' });
+  });
+});

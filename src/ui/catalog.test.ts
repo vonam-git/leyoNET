@@ -44,6 +44,7 @@ import {
 } from '../core';
 import { setLocale } from '../i18n';
 import { CATALOG } from './catalog';
+import { readdressUe03, solveHolzer, solveUe03a1, solveUe04a1, solveUe04a2, solveUe05, solveWatch1, solveWatch2 } from './catalogM117';
 
 setLocale('de');
 
@@ -71,6 +72,16 @@ const LOGS: Record<string, (t: Topology) => readonly PacketLogEntry[]> = {
 
 /** Musterlösungen: Jede Aufgabe muss lösbar sein. */
 const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
+  'm117-ue03-a1': solveUe03a1,
+  'm117-ue03-a2': (t) => readdressUe03(t, '24', ['PC03', 'PC05', 'PC06']),
+  'm117-ue03-a3': (t) => readdressUe03(t, '25'),
+  'm117-ue03-a4': (t) => readdressUe03(t, '26'),
+  'm117-ue04-a1': solveUe04a1,
+  'm117-ue04-a2': solveUe04a2,
+  'm117-ue05': solveUe05,
+  'm117-m07a': solveWatch1,
+  'm117-m07b': solveWatch2,
+  'm117-m07c': () => solveHolzer(),
   'sniff-arp': (t) => t,
   'budget-office': (t) => {
     const added = unwrap(addDevice(t, 'switch', 'Switch', { x: 0, y: 0 }, { ports: 8, sfpSlots: 0 }));
