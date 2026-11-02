@@ -1,6 +1,6 @@
 import { describe as group, expect, it } from 'vitest';
 import { checkDhcpServer } from '../net/dhcp';
-import { getDevice } from '../model/topology';
+import { addDhcpReservation, getDevice } from '../model/topology';
 import type { DhcpServerConfig } from '../model/types';
 import { Simulation } from './simulation';
 import { NetBuilder, describe } from './testing';
@@ -209,5 +209,43 @@ group('DHCP-Fehlerfälle', () => {
     expect(issue({ leaseTime: 5 })).toBe('dhcpLeaseTime');
     const notebookId = net.dhcpClient('NB9');
     expect(checkDhcpServer(getDevice(net.topology, notebookId)!, POOL)?.code).toBe('notAServer');
+  });
+});
+
+group('DHCP-Reservierung (feste Zuweisung per MAC)', () => {
+  it('reserviertes Gerät bekommt seine Adresse, auch ausserhalb des Bereichs; andere nicht', () => {
+    const { net, server, clients } = network(3);
+    const mac = getDevice(net.topology, clients[1]!)!.interfaces[0]!.mac.toLowerCase().replace(/:/g, '-');
+    net.apply((t) => addDhcpReservation(t, server, { mac, ip: '192.168.0.200' }));
+    expect(getDevice(net.topology, server)!.dhcpServer!.reservations![0]!.mac).toMatch(/^[0-9A-F:]+$/);
+    const sim = new Simulation(net.topology);
+    sim.runUntil(8000);
+    const ips = clients.map((id) => sim.getDeviceState(id).address?.ip);
+    expect(ips[1]).toBe('192.168.0.200');
+    expect(ips[0]).toMatch(/^192\.168\.0\.10[0-2]$/);
+    expect(ips[2]).toMatch(/^192\.168\.0\.10[0-2]$/);
+  });
+
+  it('Reservierung im Bereich wird keinem anderen Gerät gegeben', () => {
+    const { net, server, clients } = network(2);
+    const mac = getDevice(net.topology, clients[1]!)!.interfaces[0]!.mac;
+    net.apply((t) => addDhcpReservation(t, server, { mac, ip: '192.168.0.100' }));
+    const sim = new Simulation(net.topology);
+    sim.runUntil(8000);
+    expect(sim.getDeviceState(clients[1]!).address?.ip).toBe('192.168.0.100');
+    expect(sim.getDeviceState(clients[0]!).address?.ip).toBe('192.168.0.101');
+  });
+
+  it('prüft MAC, Netz und Doppelte', () => {
+    const { net, server } = network(1);
+    const t = net.topology;
+    expect(addDhcpReservation(t, server, { mac: 'xx', ip: '192.168.0.50' })).toMatchObject({ ok: false, error: { code: 'invalidMac' } });
+    expect(addDhcpReservation(t, server, { mac: '02:00:00:00:99:00', ip: '10.0.0.5' })).toMatchObject({ ok: false, error: { code: 'dhcpRangeOutsideSubnet' } });
+    expect(addDhcpReservation(t, server, { mac: '02:00:00:00:99:00', ip: '192.168.0.2' })).toMatchObject({ ok: false, error: { code: 'dhcpReservationIsServer' } });
+    const once = addDhcpReservation(t, server, { mac: '02:00:00:00:99:00', ip: '192.168.0.50' });
+    expect(once.ok).toBe(true);
+    if (!once.ok) return;
+    expect(addDhcpReservation(once.value, server, { mac: '02:00:00:00:99:00', ip: '192.168.0.51' })).toMatchObject({ ok: false, error: { code: 'dhcpReservationDuplicateMac' } });
+    expect(addDhcpReservation(once.value, server, { mac: '02:00:00:00:98:00', ip: '192.168.0.50' })).toMatchObject({ ok: false, error: { code: 'dhcpReservationDuplicateIp' } });
   });
 });

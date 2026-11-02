@@ -414,3 +414,21 @@ test('VPN: Tunnel steht, Ping durch den Tunnel, ESP in der Paketliste', async ({
   await expect(page.locator('.packets')).toContainText('IKE_AUTH');
   await expect(page.locator('.packets')).toContainText('ESP (verschlüsselt)');
 });
+
+test('Modul 117: Übung aus der Reihe starten, Prüfung erstellen und laden', async ({ page }) => {
+  await page.getByRole('button', { name: /Aufgaben-Katalog/ }).click();
+  const catalog = page.getByRole('dialog');
+  await catalog.getByRole('radio', { name: /Modul 117/ }).check();
+  await expect(catalog.locator('li')).toHaveCount(10);
+  await expect(catalog).toContainText('Arbeitsblatt: M06C_M117_UE03_Router01.pdf');
+  await catalog.locator('li').filter({ hasText: 'Auftrag 1: Ein Netz mit zwei Switches' }).getByRole('button', { name: 'Starten' }).click();
+  await expect(page.locator('.tasks')).toContainText('PC01 erreicht PC06');
+  await menu(page, 'Werkzeuge', 'Prüfung erstellen …');
+  const exam = page.getByRole('dialog', { name: /Prüfung erstellen/ });
+  await exam.getByRole('combobox').first().selectOption('C');
+  await expect(exam).toContainText('Vorgabe in Ordnung');
+  await exam.getByRole('button', { name: 'Prüfung laden' }).click();
+  await expect(page.locator('.tasks')).toContainText('Seeland Logistik');
+  await expect(page.locator('.tasks')).toContainText('Maximal 75 Punkte');
+  await expect(page.locator('.tasks').getByRole('button', { name: 'Prüfen' })).toHaveCount(0);
+});

@@ -37,8 +37,8 @@
   function draftError(e: DraftError): string {
     if (e.code === 'noGoals') return t('taskForm.noGoals');
     if (e.goal === undefined) return t('taskForm.required', { field: t(`taskForm.${e.field}`) });
-    const spec = CHECK_FIELDS[draft.goals[e.goal]!.type].find((f) => f.key === e.field)!;
-    const field = t(`taskForm.field.${spec.label ?? spec.key}`);
+    const spec = CHECK_FIELDS[draft.goals[e.goal]!.type].find((f) => f.key === e.field);
+    const field = t(`taskForm.field.${spec ? (spec.label ?? spec.key) : e.field}`);
     return t(e.code === 'required' ? 'taskForm.requiredIn' : 'taskForm.notANumber', { n: e.goal + 1, field });
   }
 
@@ -148,6 +148,18 @@
         {t('taskForm.description')}
         <textarea class="description" bind:value={draft.description}></textarea>
       </label>
+      <div class="exam">
+        <label class="field">
+          {t('taskForm.difficulty')}
+          <select bind:value={draft.difficulty}>
+            <option value="">–</option>
+            {#each ['1', '2', '3', '4', '5'] as n (n)}<option value={n}>{'★'.repeat(Number(n))}</option>{/each}
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" bind:checked={draft.grading} /> {t('taskForm.grading')}</label>
+        <label class="check"><input type="checkbox" bind:checked={draft.noSelfCheck} /> {t('taskForm.noSelfCheck')}</label>
+        <span class="muted total">{t('taskForm.total', { points: draft.goals.reduce((sum, g) => sum + (Number(g.points) || (g.points.trim() ? 0 : 1)), 0) })}</span>
+      </div>
 
       <h3>{t('taskForm.goals')}</h3>
       <ol class="goals">
@@ -201,10 +213,16 @@
                 {t('taskForm.text')}
                 <input bind:value={goal.text} placeholder={suggestedText(goal)} />
               </label>
-              <label class="field">
-                {t('taskForm.hint')}
-                <input bind:value={goal.hint} />
-              </label>
+              <div class="hint-row">
+                <label class="field">
+                  {t('taskForm.hint')}
+                  <input bind:value={goal.hint} />
+                </label>
+                <label class="field points">
+                  {t('taskForm.field.points')}
+                  <input bind:value={goal.points} placeholder="1" inputmode="numeric" />
+                </label>
+              </div>
             </fieldset>
           </li>
         {/each}
@@ -300,6 +318,30 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 4px;
+  }
+  .exam {
+    display: flex;
+    gap: 16px;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+  .exam .check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+  .exam .check input {
+    width: auto;
+  }
+  .total {
+    margin-bottom: 8px;
+  }
+  .hint-row {
+    display: grid;
+    grid-template-columns: 1fr 6em;
+    gap: 8px;
   }
   .description {
     min-height: 3.5em;

@@ -2,6 +2,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { COMMANDS } from '../core/sim/commands';
+import { DEVICE_TYPES } from '../core/model/devices';
+import { CHECK_TYPES } from '../core/tasks/tasks';
 import de from './de.json';
 
 function sourceFiles(dir: string): string[] {
@@ -59,5 +61,10 @@ describe('Sprachdatei', () => {
     for (const key of dynamic) if (!(key in de)) missing.add(key);
     expect(checked).toBeGreaterThan(30);
     expect([...missing]).toEqual([]);
+  });
+
+  it('hat Namen für jeden Gerätetyp und Texte für jeden Prüfbaustein', () => {
+    const keys = [...DEVICE_TYPES.map((t) => `device.${t}`), ...CHECK_TYPES.map((t) => `taskForm.type.${t}`)];
+    expect(keys.filter((k) => !(k in de))).toEqual([]);
   });
 });

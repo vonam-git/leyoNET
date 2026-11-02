@@ -19,7 +19,7 @@ describe('Aufgaben-Formular', () => {
   });
 
   it('ergänzt fehlende Lernziel-Texte und wandelt Zahlen und Gerätelisten', () => {
-    const draft = { title: 'Test', description: '', goals: [] as ReturnType<typeof emptyGoal>[] };
+    const draft = { title: 'Test', description: '', difficulty: '', grading: false, noSelfCheck: false, goals: [] as ReturnType<typeof emptyGoal>[] };
     draft.goals.push({ ...emptyGoal(draft), fields: { from: 'PC 1', to: 'PC 2' } });
     draft.goals.push({ ...emptyGoal(draft, 'deviceCount'), fields: { min: '3' } });
     draft.goals.push({ ...emptyGoal(draft, 'sameNetwork'), fields: { devices: 'PC 1,  PC 2 ,' } });
@@ -32,7 +32,7 @@ describe('Aufgaben-Formular', () => {
   });
 
   it('meldet fehlende Pflichtfelder und falsche Zahlen', () => {
-    const draft = { title: 'Test', description: '', goals: [] as ReturnType<typeof emptyGoal>[] };
+    const draft = { title: 'Test', description: '', difficulty: '', grading: false, noSelfCheck: false, goals: [] as ReturnType<typeof emptyGoal>[] };
     expect(fromDraft({ ...draft, title: ' ' })).toEqual({ ok: false, error: { field: 'title', code: 'required' } });
     expect(fromDraft(draft)).toMatchObject({ ok: false, error: { code: 'noGoals' } });
     draft.goals.push({ ...emptyGoal(draft), fields: { from: 'PC 1' } });
@@ -48,7 +48,19 @@ describe('Aufgaben-Formular', () => {
       expect(de).toHaveProperty([`taskForm.type.${type}`]);
       expect(de).toHaveProperty([`taskForm.text.${type}`]);
       for (const spec of CHECK_FIELDS[type]) expect(de).toHaveProperty([`taskForm.field.${spec.label ?? spec.key}`]);
-      expect(suggestedText({ id: 'x', text: '', hint: '', type, fields: {} })).not.toMatch(/\{/);
+      expect(suggestedText({ id: 'x', text: '', hint: '', type, fields: {}, points: '' })).not.toMatch(/\{/);
     }
+  });
+});
+
+describe('Aufgaben-Formular: Prüfung mit Punkten', () => {
+  it('übernimmt Sterne, Note und Punkte hin und zurück', () => {
+    const draft = { title: 'Prüfung', description: '', difficulty: '4', grading: true, noSelfCheck: true, goals: [] as ReturnType<typeof emptyGoal>[] };
+    draft.goals.push({ ...emptyGoal(draft, 'address'), fields: { device: 'R_Bern', address: '1.2.3.1/24' }, points: '3' });
+    draft.goals.push({ ...emptyGoal(draft, 'area'), fields: { title: 'Bern', color: 'green' } });
+    const result = fromDraft(draft);
+    expect(result.ok && result.tasks).toMatchObject({ difficulty: 4, grading: true, noSelfCheck: true, goals: [{ points: 3 }, { check: { type: 'area', color: 'green' } }] });
+    if (result.ok) expect(fromDraft(toDraft(result.tasks))).toEqual(result);
+    expect(fromDraft({ ...draft, goals: [{ ...draft.goals[0]!, points: 'x' }] })).toMatchObject({ ok: false, error: { field: 'points' } });
   });
 });

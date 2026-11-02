@@ -245,7 +245,7 @@ export class DhcpServer {
     const mac = msg.clientMac;
 
     if (msg.op === 'discover') {
-      const ip = this.#pick(mac, start, end, own.ip);
+      const ip = this.#pick(mac, scope, own.ip);
       if (ip === null) {
         this.#ctx.print('dhcpServer.exhausted', { mac });
         return;
@@ -262,7 +262,9 @@ export class DhcpServer {
       const requested = msg.requestedIp ?? packet.src;
       const value = parseIp(requested);
       const known = this.#offers.get(mac)?.ip === requested || this.#leases.get(mac)?.ip === requested;
-      const valid = value !== null && value >= start && value <= end && known && !this.#takenByOther(requested, mac);
+      const reserved = scope.reserved.get(mac.toUpperCase());
+      const inRange = value !== null && (value === reserved || (value >= start && value <= end && !this.#reservedForOther(scope, value, mac)));
+      const valid = inRange && known && !this.#takenByOther(requested, mac);
       const replyTo = packet.src === '0.0.0.0' ? '255.255.255.255' : packet.src;
       if (!valid) {
         this.#ctx.print('dhcpServer.nak', { ip: requested, mac });
@@ -288,15 +290,24 @@ export class DhcpServer {
     return busy(this.#leases) || busy(this.#offers);
   }
 
-  /** Bisherige Adresse des Clients, sonst die kleinste freie im Bereich. */
-  #pick(mac: string, start: number, end: number, ownIp: number): number | null {
+  /** Ist die Adresse für ein anderes Gerät reserviert? */
+  #reservedForOther(scope: ResolvedScope, ip: number, mac: string): boolean {
+    for (const [other, value] of scope.reserved) if (value === ip && other !== mac.toUpperCase()) return true;
+    return false;
+  }
+
+  /** Reservierte Adresse, sonst die bisherige des Clients, sonst die kleinste freie im Bereich. */
+  #pick(mac: string, scope: ResolvedScope, ownIp: number): number | null {
+    const { start, end } = scope;
+    const reserved = scope.reserved.get(mac.toUpperCase());
+    if (reserved !== undefined) return reserved;
     const now = this.#ctx.now;
     for (const previous of [this.#leases.get(mac), this.#offers.get(mac)]) {
       const ip = previous && previous.expires > now ? parseIp(previous.ip) : null;
-      if (ip !== null && ip >= start && ip <= end) return ip;
+      if (ip !== null && ip >= start && ip <= end && !this.#reservedForOther(scope, ip, mac)) return ip;
     }
     for (let ip = start; ip <= end; ip++) {
-      if (ip !== ownIp && !this.#takenByOther(formatIp(ip), mac)) return ip;
+      if (ip !== ownIp && !this.#reservedForOther(scope, ip, mac) && !this.#takenByOther(formatIp(ip), mac)) return ip;
     }
     return null;
   }

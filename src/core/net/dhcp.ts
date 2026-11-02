@@ -1,14 +1,16 @@
-import type { Device, DhcpScope, DhcpServerConfig } from '../model/types';
+import type { Device, DhcpReservation, DhcpScope, DhcpServerConfig } from '../model/types';
 import { canHostServices } from '../model/devices';
+import { MAC_PATTERN } from '../model/mac';
 import { broadcastOf, formatIp, maskToText, networkOf, parseIp, parseMask } from './ipv4';
 
 export const DEFAULT_LEASE_TIME = 3600;
 export const MIN_LEASE_TIME = 30;
 export const MAX_LEASE_TIME = 7 * 24 * 3600;
+export const MAX_DHCP_RESERVATIONS = 50;
 
 export interface DhcpIssue {
   code: string;
-  field: 'start' | 'end' | 'gateway' | 'dns' | 'leaseTime' | 'server';
+  field: 'start' | 'end' | 'gateway' | 'dns' | 'leaseTime' | 'server' | 'mac' | 'ip';
   params?: Record<string, string | number>;
 }
 
@@ -46,6 +48,33 @@ export function checkDhcpServer(device: Device, config: DhcpServerConfig): DhcpI
   if (!Number.isInteger(config.leaseTime) || config.leaseTime < MIN_LEASE_TIME || config.leaseTime > MAX_LEASE_TIME) {
     return { code: 'dhcpLeaseTime', field: 'leaseTime', params: { min: MIN_LEASE_TIME, max: MAX_LEASE_TIME } };
   }
+  const reservations = config.reservations ?? [];
+  if (reservations.length > MAX_DHCP_RESERVATIONS) return { code: 'tooMany', field: 'mac', params: { max: MAX_DHCP_RESERVATIONS } };
+  for (let i = 0; i < reservations.length; i++) {
+    const issue = checkReservation(reservations[i]!, ownIp, prefix, reservations.slice(0, i));
+    if (issue) return issue;
+  }
+  return null;
+}
+
+/** «02-00-00-00-05-00» oder «02:00:00:00:05:00» → Grossbuchstaben mit Doppelpunkten; null bei ungültiger Eingabe. */
+export function normalizeMac(text: string): string | null {
+  const mac = text.trim().toUpperCase().replace(/-/g, ':');
+  return MAC_PATTERN.test(mac) ? mac : null;
+}
+
+/** Reservierung: gültige MAC, Adresse im Netz des Servers (nicht Netz-/Broadcastadresse, nicht der Server selbst), keine Doppelten. */
+function checkReservation(r: DhcpReservation, ownIp: number, prefix: number, before: readonly DhcpReservation[]): DhcpIssue | null {
+  const mac = normalizeMac(r.mac);
+  if (mac === null) return { code: 'invalidMac', field: 'mac', params: { value: r.mac.trim() } };
+  const ip = parseIp(r.ip);
+  if (ip === null) return { code: 'invalidIp', field: 'ip', params: { value: r.ip.trim() } };
+  const net = `${formatIp(networkOf(ownIp, prefix))}/${prefix}`;
+  if (networkOf(ip, prefix) !== networkOf(ownIp, prefix)) return { code: 'dhcpRangeOutsideSubnet', field: 'ip', params: { ip: r.ip.trim(), net } };
+  if (prefix <= 30 && (ip === networkOf(ownIp, prefix) || ip === broadcastOf(ownIp, prefix))) return { code: 'dhcpRangeReserved', field: 'ip', params: { net } };
+  if (ip === ownIp) return { code: 'dhcpReservationIsServer', field: 'ip', params: { ip: r.ip.trim() } };
+  if (before.some((o) => normalizeMac(o.mac) === mac)) return { code: 'dhcpReservationDuplicateMac', field: 'mac', params: { mac } };
+  if (before.some((o) => parseIp(o.ip) === ip)) return { code: 'dhcpReservationDuplicateIp', field: 'ip', params: { ip: formatIp(ip) } };
   return null;
 }
 
@@ -54,6 +83,7 @@ export function normalizeDhcpServer(config: DhcpServerConfig): DhcpServerConfig 
   if (config.gateway?.trim()) result.gateway = config.gateway.trim();
   if (config.dns?.trim()) result.dns = config.dns.trim();
   if (config.scopes?.length) result.scopes = config.scopes.map(normalizeScope);
+  if (config.reservations?.length) result.reservations = config.reservations.map((r) => ({ mac: normalizeMac(r.mac) ?? r.mac, ip: r.ip.trim() }));
   return result;
 }
 
@@ -95,6 +125,8 @@ export interface ResolvedScope {
   start: number;
   end: number;
   prefix: number;
+  /** Feste Zuweisungen in diesem Netz: MAC → Adresse. */
+  reserved: Map<string, number>;
   gateway?: string;
   dns?: string;
 }
@@ -114,7 +146,12 @@ export function scopeFor(device: Device, giaddr?: string): ResolvedScope | null 
     const start = parseIp(config.start);
     const end = parseIp(config.end);
     if (start === null || end === null || networkOf(start, ownPrefix) !== networkOf(ownIp, ownPrefix)) return null;
-    return { start, end, prefix: ownPrefix, ...(config.gateway ? { gateway: config.gateway } : {}), ...(config.dns ? { dns: config.dns } : {}) };
+    const reserved = new Map<string, number>();
+    for (const r of config.reservations ?? []) {
+      const ip = parseIp(r.ip);
+      if (ip !== null && networkOf(ip, ownPrefix) === networkOf(ownIp, ownPrefix)) reserved.set(r.mac.toUpperCase(), ip);
+    }
+    return { start, end, prefix: ownPrefix, reserved, ...(config.gateway ? { gateway: config.gateway } : {}), ...(config.dns ? { dns: config.dns } : {}) };
   }
   for (const scope of config.scopes ?? []) {
     const start = parseIp(scope.start);
@@ -122,7 +159,7 @@ export function scopeFor(device: Device, giaddr?: string): ResolvedScope | null 
     const prefix = parseMask(scope.mask);
     if (start === null || end === null || prefix === null) continue;
     if (networkOf(relay, prefix) !== networkOf(start, prefix)) continue;
-    return { start, end, prefix, ...(scope.gateway ? { gateway: scope.gateway } : {}), ...(scope.dns ? { dns: scope.dns } : {}) };
+    return { start, end, prefix, reserved: new Map(), ...(scope.gateway ? { gateway: scope.gateway } : {}), ...(scope.dns ? { dns: scope.dns } : {}) };
   }
   return null;
 }

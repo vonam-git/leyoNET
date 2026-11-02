@@ -17,6 +17,7 @@
 
   // Spalten: geladene Aufgabe, sonst die der ersten lesbaren Datei.
   const columns = $derived(editor.tasks ?? reviews.find((r) => r.ok)?.tasks ?? null);
+  const withPoints = $derived(!!columns && (columns.grading || columns.goals.some((g) => g.points !== undefined)));
 
   $effect(() => {
     dialog.showModal();
@@ -41,7 +42,7 @@
 
   function saveCsv() {
     if (!columns) return;
-    const csv = reviewCsv(columns, reviews, { file: t('review.file'), score: t('review.score'), error: t('review.error') });
+    const csv = reviewCsv(columns, reviews, { file: t('review.file'), score: t('review.score'), error: t('review.error'), points: t('review.points'), grade: t('review.grade') });
     const slug = columns.title.replace(/[^\p{L}\p{N}]+/gu, '-').toLowerCase();
     // BOM, damit Excel Umlaute richtig liest.
     downloadText(`auswertung-${slug}.csv`, '﻿' + csv, 'text/csv');
@@ -79,6 +80,8 @@
           <tr>
             <th scope="col">{t('review.file')}</th>
             <th scope="col" class="num">{t('review.score')}</th>
+            {#if withPoints}<th scope="col" class="num">{t('review.points')}</th>{/if}
+            {#if columns.grading}<th scope="col" class="num">{t('review.grade')}</th>{/if}
             {#each columns.goals as goal, i (goal.id)}
               <th scope="col" class="goal" title={goal.text}>{i + 1}</th>
             {/each}
@@ -95,6 +98,8 @@
               </th>
               {#if review.ok}
                 <td class="num">{review.passed}/{review.assessable}</td>
+                {#if withPoints}<td class="num">{review.points}/{review.maxPoints}</td>{/if}
+                {#if columns.grading}<td class="num grade">{(review.grade ?? 1).toFixed(1)}</td>{/if}
                 {#each columns.goals as goal (goal.id)}
                   {@const m = mark(review, goal.id)}
                   <td
@@ -114,7 +119,7 @@
                   </td>
                 {/each}
               {:else}
-                <td colspan={columns.goals.length + 1} class="error">{errorText(review.error)}</td>
+                <td colspan={columns.goals.length + 1 + (withPoints ? 1 : 0) + (columns.grading ? 1 : 0)} class="error">{errorText(review.error)}</td>
               {/if}
             </tr>
           {/each}
@@ -123,7 +128,7 @@
     </div>
     <ol class="legend muted">
       {#each columns.goals as goal (goal.id)}
-        <li>{goal.text}</li>
+        <li>{goal.text}{#if withPoints} ({t('tasks.points', { n: goal.points ?? 1 })}){/if}</li>
       {/each}
     </ol>
   {/if}

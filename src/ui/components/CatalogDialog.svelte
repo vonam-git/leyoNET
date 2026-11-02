@@ -12,6 +12,10 @@
 
   // Texte erst beim Öffnen erzeugen (aktuelle Sprache).
   const entries = $derived(CATALOG.map((entry) => ({ entry, preview: entry.build() })));
+  /** Reihen (z.B. Modul 117) als Filter; leer = alle Übungen. */
+  const SERIES = [...new Set(CATALOG.flatMap((e) => (e.series ? [e.series] : [])))];
+  let series = $state('');
+  const shown = $derived(series ? entries.filter((e) => e.entry.series === series) : entries);
 
   function start(entry: CatalogEntry) {
     const { topology, tasks } = entry.build();
@@ -25,8 +29,14 @@
 
 <Modal title={t('catalog.title')} {onclose} width={760}>
   <p class="muted">{t('catalog.intro')}</p>
+  {#if SERIES.length}
+    <div class="series" role="radiogroup" aria-label={t('catalog.series.label')}>
+      <label><input type="radio" name="series" value="" bind:group={series} /> {t('catalog.series.all')}</label>
+      {#each SERIES as id (id)}<label><input type="radio" name="series" value={id} bind:group={series} /> {t(`catalog.series.${id}`)}</label>{/each}
+    </div>
+  {/if}
   <ul>
-    {#each entries as { entry, preview } (entry.id)}
+    {#each shown as { entry, preview } (entry.id)}
       {@const locked = (entry.features ?? []).some((f: string) => !ui.permitted(f))}
       <li>
         <div class="stars"><Stars n={entry.stars} /></div>
@@ -34,7 +44,7 @@
           <strong>{preview.tasks.title}</strong>
           {#if entry.level}<span class="badge">{t('catalog.level', { level: entry.level })}</span>{/if}
           <p class="muted">{preview.tasks.description}</p>
-          <span class="muted small">{t('catalog.goals', { n: preview.tasks.goals.length })}</span>
+          <span class="muted small">{t('catalog.goals', { n: preview.tasks.goals.length })}{#if entry.sheet} · {t('catalog.sheet', { name: entry.sheet })}{/if}</span>
         </div>
         <button onclick={() => start(entry)} disabled={locked} title={locked ? t('catalog.proLocked') : undefined}>{t('catalog.start')}</button>
       </li>
@@ -64,6 +74,21 @@
   .text p {
     margin: 4px 0;
     font-size: 0.82rem;
+  }
+  .series {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 0 0 10px;
+    font-size: 0.85rem;
+  }
+  .series label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .series input {
+    width: auto;
   }
   .small {
     font-size: 0.75rem;

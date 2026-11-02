@@ -8,6 +8,9 @@ import {
   setInterfaceNat,
   addDhcpScope,
   removeDhcpScope,
+  addDhcpReservation,
+  removeDhcpReservation,
+  type DhcpReservation,
   setInterfaceRelay,
   addDevice,
   addDnsRecord,
@@ -475,6 +478,16 @@ class Editor {
 
   addDhcpScope(id: string, scope: DhcpScope): TopologyError | null {
     return this.#applyForm(addDhcpScope(this.topology, id, scope));
+  }
+
+  addDhcpReservation(id: string, reservation: DhcpReservation): TopologyError | null {
+    return this.#applyForm(addDhcpReservation(this.topology, id, reservation));
+  }
+
+  removeDhcpReservation(id: string, index: number) {
+    if (!this.editable) return;
+    const next = this.#check(removeDhcpReservation(this.topology, id, index));
+    if (next) this.#commit(next);
   }
 
   removeDhcpScope(id: string, index: number) {

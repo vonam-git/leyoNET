@@ -191,7 +191,9 @@
     if (!r) return '';
     if (!r.ok) return t('review.error');
     const counted = r.marks.filter((m) => !m.skipped);
-    return `${counted.filter((m) => m.passed).length}/${counted.length}`;
+    const goals = `${counted.filter((m) => m.passed).length}/${counted.length}`;
+    if (r.grade !== undefined) return `${goals} · ${r.points}/${r.maxPoints} P. · ${r.grade.toFixed(1)}`;
+    return goals;
   };
 
   async function setStatus(f: Feedback, status: 'open' | 'done') {
