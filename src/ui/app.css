@@ -36,6 +36,9 @@
   --proto-tcp: #e3e7ec;
   --proto-http: #fbdcdc;
   --proto-mail: #d9f0f7;
+  --proto-routing: #dff3d8;
+  --proto-stp: #f1e4d8;
+  --proto-link: #e4e9f2;
   --dot-arp: #c27c0e;
   --dot-icmp: #1d5fd6;
   --dot-dhcp: #067a52;
@@ -43,6 +46,9 @@
   --dot-tcp: #5b6676;
   --dot-http: #c0262d;
   --dot-mail: #0e7490;
+  --dot-routing: #3f8f1f;
+  --dot-stp: #8a5a2b;
+  --dot-link: #4b5f8a;
 
   --endpoint: #1d5fd6;
   --endpoint-soft: #dde8fc;
@@ -82,6 +88,9 @@
     --proto-tcp: #2b3440;
     --proto-http: #4a1f22;
     --proto-mail: #133a44;
+    --proto-routing: #24401a;
+    --proto-stp: #3d2c1d;
+    --proto-link: #252f45;
     --dot-arp: #f5b041;
     --dot-icmp: #6aa5ff;
     --dot-dhcp: #3ccf96;
@@ -89,6 +98,9 @@
     --dot-tcp: #9eaaba;
     --dot-http: #f2756a;
     --dot-mail: #5fd0e8;
+    --dot-routing: #8fd16a;
+    --dot-stp: #d6a77a;
+    --dot-link: #9fb3df;
 
     --endpoint: #6aa5ff;
     --endpoint-soft: #1c3252;
@@ -128,6 +140,9 @@
   --proto-tcp: #2b3440;
   --proto-http: #4a1f22;
   --proto-mail: #133a44;
+  --proto-routing: #24401a;
+  --proto-stp: #3d2c1d;
+  --proto-link: #252f45;
   --dot-arp: #f5b041;
   --dot-icmp: #6aa5ff;
   --dot-dhcp: #3ccf96;
@@ -135,6 +150,9 @@
   --dot-tcp: #9eaaba;
   --dot-http: #f2756a;
   --dot-mail: #5fd0e8;
+  --dot-routing: #8fd16a;
+  --dot-stp: #d6a77a;
+  --dot-link: #9fb3df;
 
   --endpoint: #6aa5ff;
   --endpoint-soft: #1c3252;
@@ -237,9 +255,34 @@ button[aria-pressed='true'] {
   --dot: #111827;
 }
 .proto-smtp,
-.proto-pop3 {
+.proto-pop3,
+.proto-imap {
   --proto: var(--proto-mail);
   --dot: var(--dot-mail);
+}
+
+.proto-ospf,
+.proto-rip,
+.proto-bgp {
+  --proto: var(--proto-routing);
+  --dot: var(--dot-routing);
+}
+.proto-stp {
+  --proto: var(--proto-stp);
+  --dot: var(--dot-stp);
+}
+/* Leitungsprotokolle: PPP, DOCSIS, GPON, DSL, Mobilfunk, WLAN-Verwaltung. */
+.proto-ppp-lcp,
+.proto-ppp-ipcp,
+.proto-docsis,
+.proto-pppoe,
+.proto-gpon,
+.proto-dsl,
+.proto-vdsl,
+.proto-lte,
+.proto-802-11 {
+  --proto: var(--proto-link);
+  --dot: var(--dot-link);
 }
 
 /* Farbe markiert die Rolle eines Geräts (Konzept, Abschnitt 8). */

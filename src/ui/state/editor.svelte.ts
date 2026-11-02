@@ -71,6 +71,7 @@ import {
   setInterfaceShutdown,
   setIpRouting,
   setRoutingMode,
+  setProjectTitle,
   type RoutingMode,
   setSubinterface,
   setSvi,
@@ -910,6 +911,12 @@ class Editor {
 
   removeSvi(id: string, vlan: number) {
     this.#edit(removeSvi(this.topology, id, vlan));
+  }
+
+  /** Projektname (auch im Entwurf und in der Simulation änderbar, er betrifft das Netz nicht). */
+  setTitle(title: string) {
+    const next = this.#check(setProjectTitle(this.topology, title));
+    if (next) this.#commit(next);
   }
 
   setRoutingMode(id: string, mode: RoutingMode) {

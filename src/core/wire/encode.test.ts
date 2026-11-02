@@ -114,3 +114,12 @@ group('Kodierung nach Norm', () => {
     expect(d.linkType).toBe(143);
   });
 });
+
+group('Schichten der Kabelmodem-Provisionierung', () => {
+  it('DHCP und TFTP des Modems laufen über IPv4 und UDP (Schicht 3, 4, 7)', () => {
+    for (const message of ['DHCPDISCOVER (CM)', 'DHCPACK (CM)', 'TFTP RRQ']) {
+      const wire = dissect({ src: '02:00:00:00:01:00', dst: 'FF:FF:FF:FF:FF:FF', payload: { kind: 'link', tech: 'docsis', message } }, 'coax');
+      expect([...new Set(wire.layers.map((l) => l.osi))], message).toEqual([1, 2, 3, 4, 7]);
+    }
+  });
+});

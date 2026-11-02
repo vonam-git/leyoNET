@@ -1,7 +1,7 @@
 import { DEVICE_SPECS, canAutoRoute, isDeviceType } from '../model/devices';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
 import { MAC_PATTERN } from '../model/mac';
-import { MAX_NAME_LENGTH, MAX_WEB_FILE, deviceSeq } from '../model/topology';
+import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, deviceSeq } from '../model/topology';
 import { MAX_GROUP_SIZE } from '../model/devices';
 import { checkBgp, checkOspf, checkRip, normalizeBgp, normalizeOspf, normalizeRip } from '../net/dynamic';
 import { logicalInterfaces } from '../net/routing';
@@ -295,7 +295,9 @@ function readTopology(v: unknown): Topology {
   }
   const highestAll = Math.max(highest, ...areas.map((a) => deviceSeq(a.id)));
   const nextId = typeof t.nextId === 'number' && Number.isInteger(t.nextId) && t.nextId > highestAll ? t.nextId : highestAll + 1;
+  const title = t.title !== undefined ? text(t.title, 'topology.title', MAX_TITLE_LENGTH).trim() : '';
   return {
+    ...(title ? { title } : {}),
     devices,
     cables,
     nextId,

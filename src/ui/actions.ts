@@ -3,6 +3,7 @@ import { t } from '../i18n';
 import { usedFeatures } from './features';
 import { errorText, featureName } from './labels';
 import { downloadText, projectFilename } from './persist/files';
+import { dialogs } from './state/dialogs.svelte';
 import { editor } from './state/editor.svelte';
 import { simStore } from './state/sim.svelte';
 import { ui } from './state/ui.svelte';
@@ -27,8 +28,14 @@ export function pickFile(accept: string): Promise<{ name: string; text: string }
   });
 }
 
+/** Speichern: zuerst nach dem Projektnamen fragen (vorausgefüllt). */
 export function saveProject() {
-  const filename = projectFilename();
+  dialogs.show('save');
+}
+
+/** Projektdatei herunterladen, Dateiname aus dem Projektnamen. */
+export function downloadProject() {
+  const filename = projectFilename(new Date(), editor.topology.title);
   downloadText(filename, serializeProject(editor.topology, editor.tasks, editor.snapshots));
   editor.notify(t('status.saved', { file: filename }));
 }
@@ -54,7 +61,10 @@ export async function openProject() {
     return;
   }
   if (editor.acting) editor.setMode('design');
-  editor.replace(parsed.topology, { undoable: true, tasks: parsed.tasks ?? null, snapshots: parsed.snapshots ?? [] });
+  // Ohne gespeicherten Namen: Dateiname als Projektname (ausser dem automatischen «netzwerk-Datum»).
+  const fromFile = file.name.replace(/\.json$/i, '');
+  const topology = parsed.topology.title || /^netzwerk-\d{4}-\d{2}-\d{2}/.test(fromFile) ? parsed.topology : { title: fromFile.slice(0, 80), ...parsed.topology };
+  editor.replace(topology, { undoable: true, tasks: parsed.tasks ?? null, snapshots: parsed.snapshots ?? [] });
   ensureProjectFeatures(t(parsed.tasks ? 'status.loadedTask' : 'status.loaded', { file: file.name, title: parsed.tasks?.title ?? '' }));
 }
 
@@ -70,7 +80,7 @@ export function exportPcap() {
   const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/octet-stream' }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = projectFilename().replace('.json', '.pcapng');
+  link.download = projectFilename(new Date(), editor.topology.title).replace(/\.json$/, '.pcapng');
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   editor.notify(t('pcap.saved', { count: log.length }));

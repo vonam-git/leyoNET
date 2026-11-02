@@ -9,11 +9,12 @@
   const clock = $derived((simStore.tick, ((simStore.sim?.now ?? 0) / 1000).toFixed(3)));
 </script>
 
-<div class="controls" role="toolbar" aria-label={t('sim.controls')}>
+<div class="controls" class:stepping={simStore.paused} role="toolbar" aria-label={t('sim.controls')}>
   <button onclick={() => simStore.togglePause()} aria-pressed={simStore.paused}>
     {simStore.paused ? `▶ ${t('sim.resume')}` : `⏸ ${t('sim.pause')}`}
   </button>
-  <button onclick={() => simStore.step()} title={t('sim.stepHint')}>⏭ {t('sim.step')}</button>
+  <button class="step" onclick={() => simStore.step()} title={t('sim.stepHint')}>⏭ {t('sim.step')}</button>
+  {#if simStore.paused}<span class="badge">{t('canvas.stepMode')}</span>{/if}
   <label>
     {t('sim.speed')}
     <select bind:value={simStore.speed}>
@@ -40,6 +41,26 @@
     background: var(--selected-soft);
     border-bottom: 1px solid var(--border);
     font-size: 0.85rem;
+  }
+  .controls.stepping {
+    color: #78350f;
+    background: #fef3c7;
+    border-bottom-color: #f59e0b;
+  }
+  .stepping .step {
+    font-weight: 700;
+    color: #78350f;
+    border-color: #f59e0b;
+    background: #fff;
+  }
+  .badge {
+    padding: 1px 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: #fff;
+    background: #d97706;
+    border-radius: 10px;
   }
   label {
     display: flex;
