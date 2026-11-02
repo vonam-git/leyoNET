@@ -16,7 +16,6 @@
     ['Shift + ← ↑ → ↓', 'shortcut.moveFar'],
     [t('shortcut.dragKey'), 'shortcut.frame'],
     [`${t('key.shift')} + ${t('shortcut.clickKey')}`, 'shortcut.shiftClick'],
-    [`Alt + ${t('shortcut.dragKey')}`, 'shortcut.areaOnly'],
     [t('shortcut.panKey'), 'shortcut.pan'],
     ['Esc', 'shortcut.cancel'],
   ];

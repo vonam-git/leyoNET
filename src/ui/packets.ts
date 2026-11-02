@@ -19,6 +19,9 @@ export interface PacketRow {
 
 export { protocolOf };
 
+/** CSS-Klasse für die Protokollfarbe, z.B. «PPP LCP» → «ppp-lcp», «802.11» → «802-11». */
+export const protocolClass = (protocol: string) => protocol.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
 function portLabel(port: number): string {
   const names: Record<number, string> = { 53: 'DNS', 67: 'DHCP-Server', 68: 'DHCP-Client', 520: 'RIP', ...TCP_APPS };
   return names[port] ? `${port} (${names[port]})` : String(port);

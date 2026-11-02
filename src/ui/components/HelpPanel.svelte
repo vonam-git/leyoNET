@@ -80,7 +80,8 @@
 <style>
   .help {
     position: fixed;
-    top: 0;
+    /* Unter der Menüleiste (34 px, Ebene 70), damit der Schliessen-Knopf immer erreichbar bleibt. */
+    top: 34px;
     right: 0;
     bottom: 0;
     width: min(420px, 100vw);

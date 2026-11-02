@@ -20,7 +20,8 @@ export type DialogName =
   | 'vlans'
   | 'costs'
   | 'demos'
-  | 'avatar';
+  | 'avatar'
+  | 'save';
 
 /** Werte, die der IP-Rechner übernehmen kann (z.B. in das Formular eines Rechners). */
 export interface IpCalcTarget {

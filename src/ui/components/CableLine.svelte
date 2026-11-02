@@ -21,8 +21,8 @@
   const selected = $derived(editor.selection?.kind === 'cable' && editor.selection.id === cable.id);
 
   /** Port-Beschriftung mit VLAN bzw. Trunk, damit die Aufteilung auf der Zeichenfläche sichtbar ist. */
-  function portLabel(device: Device, index: number): string {
-    const base = interfaceLabel(device, index);
+  function portLabel(device: Device, index: number, short = false): string {
+    const base = interfaceLabel(device, index, short);
     const iface = device.interfaces[index];
     if (!isSwitchType(device.type) || !iface) return base;
     if (iface.trunk) return `${base} · ${t('switch.trunkShort')}`;
@@ -41,6 +41,9 @@
 
   const labelA = $derived(portLabel(a, cable.a.iface));
   const labelB = $derived(portLabel(b, cable.b.iface));
+  /** Knapp auf der Zeichenfläche (P1 statt Port 1). */
+  const shortA = $derived(portLabel(a, cable.a.iface, true));
+  const shortB = $derived(portLabel(b, cable.b.iface, true));
 
   // Im Simulation: Ist ein Ende durch Spanning Tree blockiert?
   const blocked = $derived.by(() => {
@@ -173,8 +176,8 @@
     <text class="blocked-label" x={(a.position.x + b.position.x) / 2} y={(a.position.y + b.position.y) / 2 + 14}>{t('switch.blockedCable')}</text>
   {/if}
   {#if geometry.labels && ui.showPortLabels}
-    <text class="port" x={geometry.labels.a.x} y={geometry.labels.a.y} style:fill={endColor(a, cable.a.iface)}>{labelA}</text>
-    <text class="port" x={geometry.labels.b.x} y={geometry.labels.b.y} style:fill={endColor(b, cable.b.iface)}>{labelB}</text>
+    <text class="port" x={geometry.labels.a.x} y={geometry.labels.a.y} style:fill={endColor(a, cable.a.iface)}>{shortA}</text>
+    <text class="port" x={geometry.labels.b.x} y={geometry.labels.b.y} style:fill={endColor(b, cable.b.iface)}>{shortB}</text>
   {/if}
   {#if cable.loss}
     <text class="loss" x={(a.position.x + b.position.x) / 2} y={(a.position.y + b.position.y) / 2 - 8}>⚡ {cable.loss} %</text>

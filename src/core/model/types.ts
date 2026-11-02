@@ -417,6 +417,8 @@ export interface Floor {
 
 /** Unveränderlich: Jede Operation liefert eine neue Topologie. */
 export interface Topology {
+  /** Name des Projekts, z.B. «Übung 02»; wird auch zum Dateinamen beim Speichern. */
+  title?: string;
   devices: Device[];
   cables: Cable[];
   /** Nächste freie Nummer für Geräte- und Kabel-IDs, wird nie wiederverwendet. */

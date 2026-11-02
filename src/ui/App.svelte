@@ -51,7 +51,8 @@
   // Sprache der Seite für Vorlesehilfen und Silbentrennung.
   $effect(() => {
     document.documentElement.lang = locale();
-    document.title = t('app.title');
+    const title = editor.topology.title;
+    document.title = title ? `${title} – ${t('app.title')}` : t('app.title');
   });
 
   // In der Simulation läuft die Zeit, im Entwurf pausiert sie (Zustände bleiben).

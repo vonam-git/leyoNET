@@ -50,7 +50,7 @@ Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routi
 ## Mehrere Geräte auf einmal
 
 - **Auswahlrahmen:** Im Entwurf auf freier Fläche ziehen. Gewählt werden alle Geräte, deren Mitte im Rahmen liegt, und Bereiche, die ganz darin liegen. Mit **Umschalt** kommt der Rahmen zur Auswahl dazu (auch innerhalb eines Bereichs), **Umschalt+Klick** nimmt einzelne Geräte dazu oder heraus, **Strg+A** wählt alles.
-- **Verschieben:** Ein gewähltes Gerät ziehen bewegt die ganze Auswahl, ebenso die Pfeiltasten. Ein Bereich nimmt beim Ziehen die Geräte darin mit; mit **Alt** nur den Bereich.
+- **Verschieben:** Ein gewähltes Gerät ziehen bewegt die ganze Auswahl, ebenso die Pfeiltasten. Ein Bereich verschiebt nur sich selbst; Geräte darin kommen nur mit, wenn sie mitgewählt sind.
 - **Kopieren:** **Strg+C** und **Strg+V** (oder **Strg+D**) kopieren die Auswahl samt den Kabeln zwischen den Geräten. Ein einzelnes Gerät kommt ohne Adressen; eine Gruppe behält ihre Einstellungen, z.B. für eine zweite Filiale.
 - **Ansicht verschieben:** mit der rechten oder mittleren Maustaste ziehen, oder Leertaste halten und ziehen.
 
@@ -143,7 +143,7 @@ Kürzel wirken nicht, solange ein Eingabefeld aktiv ist.
 
 ## Speichern
 
-- **Lokale Datei / Desktop:** Der Stand wird im Browser bzw. App-Ordner automatisch gesichert. **Datei → Speichern** legt zusätzlich eine `.json`-Datei ab, die man abgeben oder weitergeben kann.
+- **Lokale Datei / Desktop:** Der Stand wird im Browser bzw. App-Ordner automatisch gesichert. **Datei → Speichern** (Strg+S) fragt nach dem Projektnamen (z.B. «Übung 02») und legt eine `.json`-Datei mit diesem Namen ab (Umlaute ausgeschrieben, z.B. `Uebung 02.json`). Den Namen kann man auch vorher oben links in der Werkzeugleiste eintragen. Die Datei kann man abgeben oder weitergeben.
 - **Webversion:** Oben rechts steht der Session-Code. Wer ihn kennt, öffnet die Arbeit auch auf einem anderen Gerät. Eine neue Session beginnt immer leer.
 
 Gespeichert wird nur die Netzwerk-Konfiguration: keine Namen, keine Konten (siehe [datenschutz.md](datenschutz.md)).
