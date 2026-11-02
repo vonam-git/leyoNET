@@ -6,8 +6,8 @@
 |---|---|---|---|
 | 1. Lehrjahr | 1 | Zwei PCs, Switch, Subnetze, Router, DHCP, erste Pakete (ARP, ICMP) | ★ – ★★ |
 | 1.–2. Lehrjahr | 2 | DNS, Web, WLAN, Internet, statische Routen, Ports abschalten, VLSM, Offerten (Budget) | ★★ – ★★★ |
-| 2.–3. Lehrjahr | 3 | VLANs mit Farben, STP und Broadcast-Sturm, NAT, Modems, Client-Gruppen, CLI | ★★★ |
-| 3.–4. Lehrjahr | 4 | Serielle WAN-Leitungen, OSPF, RIP, statisches NAT/DMZ, CGNAT, SSH, Hex und pcap | ★★★★ |
+| 2.–3. Lehrjahr | 3 | VLANs mit Farben, STP und Broadcast-Sturm, NAT, Firewall, Modems, Client-Gruppen, CLI | ★★★ |
+| 3.–4. Lehrjahr | 4 | Serielle WAN-Leitungen, OSPF, RIP, statisches NAT/DMZ, CGNAT, IPv6 (SLAAC, DHCPv6), DS-Lite, VPN, SSH, Hex und pcap | ★★★★ |
 | Fachhochschule | 5 | BGP zwischen autonomen Systemen | ★★★★★ |
 
 Profile und Funktionsdateien: [funktionsprofile.md](funktionsprofile.md).
@@ -28,8 +28,10 @@ Profile und Funktionsdateien: [funktionsprofile.md](funktionsprofile.md).
 | Switching | Router-on-a-Stick, Layer-3-Switch | Routing zwischen VLANs, DHCP-Relay |
 | Routing | Statische Routen, OSPF, RIP, BGP | `tracert` über die Router, Protokollmeldungen, gelernte Routen |
 | Zugang | NAT, Internet-Box (CPE), serielle Leitung mit PPP, WLAN-Mesh | NAT-Tabelle, DOCSIS-Aufbau, LCP/IPCP, Mesh |
+| Sicherheit | Firewall mit DMZ | Webseite erlaubt, Ping blockiert, Trefferzähler je Regel |
+| Sicherheit | VPN zwischen zwei Standorten | IKEv2-Aushandlung, ESP-Pakete im Internet, Tunnelstatus |
 
-**Schritt für Schritt** (bei ARP/Ping, Gateway, DHCP, DNS/HTTP, SNAT, DNAT und Internet-Box): Ein Avatar als Lehrperson erklärt den Testfall in kleinen Schritten. Er hebt Geräte hervor, öffnet die passenden Einstellungen, startet Aktionen und hält die Simulation an, damit die Klasse im Einzelschritt mitgeht. Jede Person kann den Avatar selbst einstellen (Frisur, Bart, Brille, Hautton, Shirt, Headset); gespeichert wird nur das Aussehen, im eigenen Browser.
+**Schritt für Schritt** (bei ARP/Ping, Gateway, DHCP, DNS/HTTP, SNAT, DNAT, Internet-Box, DS-Lite, Firewall und VPN): Ein Avatar als Lehrperson erklärt den Testfall in kleinen Schritten. Er hebt Geräte hervor, öffnet die passenden Einstellungen, startet Aktionen und hält die Simulation an, damit die Klasse im Einzelschritt mitgeht. Jede Person kann den Avatar selbst einstellen (Frisur, Bart, Brille, Hautton, Shirt, Headset); gespeichert wird nur das Aussehen, im eigenen Browser.
 
 Tipp: Vorführen, dann mit **Leertaste** anhalten und mit **N** im Einzelschritt weitergehen. Jedes ankommende Paket wird dabei Schicht für Schicht ausgepackt (OSI-Farben unten eingeblendet), was die Kapselung gut sichtbar macht. Jede Demo wird bei jedem Release automatisch geprüft (`src/ui/demos.test.ts`); die Dateien liegen auch in [docs/beispiele](beispiele).
 
@@ -61,6 +63,10 @@ Tipp: Vorführen, dann mit **Leertaste** anhalten und mit **N** im Einzelschritt
 | ★★★ | Subnetze nach Bedarf (VLSM) | VLSM mit dem IP-Rechner |
 | ★★★ | RIP in der Kette | dynamisches Routing mit RIP |
 | ★★★ | Das NAS von unterwegs erreichen | Portweiterleitung (DNAT) |
+| ★★★ | IPv6 einrichten | Router-Präfixe setzen, PCs per SLAAC |
+| ★★★ | Firewall: DMZ absichern | Standardregel «Verbieten», nur HTTP zum Webserver, LAN darf hinaus |
+| ★★★★ | DS-Lite einrichten | IPv4 im IPv6-Tunnel, AFTR mit CGNAT |
+| ★★★★ | VPN: Zürich und Bern verbinden | IPsec-Tunnel gespiegelt auf beiden Routern |
 | ★★★★ | Netze mit VLANs trennen | Access-Ports |
 | ★★★★ | Router-on-a-Stick | Trunks und Subinterfaces |
 | ★★★★ | Standorte über eine serielle Leitung | serielle Leitung mit PPP und statischen Routen |
@@ -81,6 +87,7 @@ Ideen für die neuen Funktionen:
 - **Fehlersuche Schleife:** Netz mit Ring ohne STP abgeben → `noStorm` und `ping`.
 - **Provider wechseln:** Gleiches Heimnetz mit Kabel-, Glasfaser- und Mobilfunkmodem → `modemOnline`, `linkUp` mit `medium`.
 - **Dynamisches Routing:** statische Routen durch OSPF ersetzen → `routeLearned` mit `protocol: "ospf"`, `neighbors`.
+- **Firewall-Fehlersuche:** Netz mit falsch geordneten Regeln abgeben (Verbieten vor Erlauben) → `http` und `noPing`.
 - **Dokumentation:** alle VLANs benennen und einfärben → `vlanDocumented`.
 
 ## Abgaben auswerten

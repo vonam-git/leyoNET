@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_SPECS, canAutoRoute, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterType, isSwitchType } from '../../core';
+  import { DEVICE_SPECS, canAutoRoute, canFirewall, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterType, isSwitchType } from '../../core';
   import { t } from '../../i18n';
   import { typeLabel } from '../labels';
   import { dialogs, type DeviceWindowState } from '../state/dialogs.svelte';
@@ -8,9 +8,12 @@
   import CpeConfig from './CpeConfig.svelte';
   import DeviceBasics from './DeviceBasics.svelte';
   import DhcpServerForm from './DhcpServerForm.svelte';
+  import FirewallConfig from './FirewallConfig.svelte';
   import DeviceIcon from './DeviceIcon.svelte';
   import GroupConfig from './GroupConfig.svelte';
   import HostConfigForm from './HostConfigForm.svelte';
+  import Ipv6Interfaces from './Ipv6Interfaces.svelte';
+  import Host6Form from './Host6Form.svelte';
   import HostPanel from './HostPanel.svelte';
   import Icon from './Icon.svelte';
   import MailAccountForm from './MailAccountForm.svelte';
@@ -20,12 +23,14 @@
   import PortTable from './PortTable.svelte';
   import RouterConfig from './RouterConfig.svelte';
   import RoutingEditor from './RoutingEditor.svelte';
+  import Routing6Editor from './Routing6Editor.svelte';
   import RoutingModeForm from './RoutingModeForm.svelte';
   import RoutingProtocols from './RoutingProtocols.svelte';
   import Services from './Services.svelte';
   import SviConfig from './SviConfig.svelte';
   import SwitchConfig from './SwitchConfig.svelte';
   import WifiClientForm from './WifiClientForm.svelte';
+  import VpnConfig from './VpnConfig.svelte';
   import WlanConfig from './WlanConfig.svelte';
 
   /**
@@ -53,7 +58,7 @@
   );
   const position = $derived(device ? order.findIndex((d) => d.id === device.id) : -1);
 
-  type TabId = 'general' | 'addresses' | 'ports' | 'routing' | 'nat' | 'relay' | 'dhcp' | 'switching' | 'wlan' | 'mail' | 'services' | 'modem' | 'group' | 'state';
+  type TabId = 'general' | 'addresses' | 'ports' | 'routing' | 'nat' | 'relay' | 'dhcp' | 'switching' | 'wlan' | 'mail' | 'services' | 'modem' | 'group' | 'state' | 'firewall' | 'vpn';
 
   const tabs = $derived.by((): TabId[] => {
     if (!device) return [];
@@ -69,6 +74,8 @@
     if (d.type === 'cpe') list.push('dhcp');
     if (((d.type === 'router' || d.type === 'cpe') && ui.has('net.nat')) || (d.type === 'internet' && ui.has('net.cgnat'))) list.push('nat');
     if (d.type === 'router' && ui.has('net.dhcpRelay')) list.push('relay');
+    if (canFirewall(d.type) && ui.has('net.firewall')) list.push('firewall');
+    if (d.type === 'router' && ui.has('net.vpn')) list.push('vpn');
     if (isSwitchType(d.type)) list.push('switching');
     if (d.type === 'accesspoint' || (role === 'endpoint' && canUseWifi(d) && ui.has('medium.wireless'))) list.push('wlan');
     if (role === 'endpoint' && ui.has('service.mail') && d.type !== 'clientgroup') list.push('mail');
@@ -82,7 +89,7 @@
     return wanted && tabs.includes(wanted) ? wanted : (tabs[0] ?? 'general');
   });
 
-  const HELP: Partial<Record<TabId, string>> = { routing: 'routing', nat: 'nat', relay: 'dhcp', dhcp: 'dhcp', wlan: 'wlan', mail: 'mail', switching: 'vlan', services: 'dhcp' };
+  const HELP: Partial<Record<TabId, string>> = { routing: 'routing', nat: 'nat', relay: 'dhcp', dhcp: 'dhcp', wlan: 'wlan', mail: 'mail', switching: 'vlan', services: 'dhcp', firewall: 'firewall', vpn: 'vpn' };
 
   // Gerät gelöscht oder Projekt gewechselt: schliessen.
   $effect(() => {
@@ -222,14 +229,16 @@
           {#if DEVICE_SPECS[device.type].role === 'endpoint'}<HostPanel {device} />{:else}<NetDevicePanel {device} />{/if}
         {:else if tab === 'addresses'}
           {#if DEVICE_SPECS[device.type].role === 'endpoint'}
-            <HostConfigForm {device} />
+            {#if editor.ipMode !== 'ipv6'}<HostConfigForm {device} />{/if}
+            {#if editor.ipMode !== 'ipv4'}<Host6Form {device} />{/if}
           {:else if device.type === 'l3switch'}
             <SviConfig {device} />
           {:else if device.type === 'cpe'}
             <CpeConfig {device} />
-          {:else}
+          {:else if editor.ipMode !== 'ipv6'}
             <RouterConfig {device} part="interfaces" />
           {/if}
+          {#if editor.ipMode !== 'ipv4' && (isRouterType(device.type) || device.type === 'cpe')}<Ipv6Interfaces {device} />{/if}
         {:else if tab === 'group'}
           <GroupConfig {device} />
         {:else if tab === 'ports'}
@@ -241,14 +250,21 @@
           <PortTable {device} />
         {:else if tab === 'routing'}
           {#if canAutoRoute(device.type)}<RoutingModeForm {device} />{/if}
-          <h3 data-help="routing">{editor.acting ? t('routing.title') : t('deviceDialog.routingTitle')}</h3>
-          <RoutingEditor {device} />
+          {#if editor.ipMode !== 'ipv6'}
+            <h3 data-help="routing">{editor.acting ? t('routing.title') : t('deviceDialog.routingTitle')}</h3>
+            <RoutingEditor {device} />
+          {/if}
+          {#if editor.ipMode !== 'ipv4' && device.type !== 'l3switch'}<Routing6Editor {device} />{/if}
           {#if !canAutoRoute(device.type) || routingModeOf(device) === 'dynamic'}<RoutingProtocols {device} />{/if}
         {:else if tab === 'nat'}
           <RouterConfig {device} part="nat" />
         {:else if tab === 'dhcp'}
           <h3>{t('services.dhcp')}</h3>
           <DhcpServerForm {device} />
+        {:else if tab === 'firewall'}
+          <FirewallConfig {device} />
+        {:else if tab === 'vpn'}
+          <VpnConfig {device} />
         {:else if tab === 'relay'}
           <RouterConfig {device} part="relay" />
         {:else if tab === 'switching'}

@@ -10,8 +10,8 @@
  */
 const files = import.meta.glob('../../docs/beispiele/*.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
 
-export type DemoTopic = 'basics' | 'services' | 'switching' | 'routing' | 'access';
-export const DEMO_TOPICS: readonly DemoTopic[] = ['basics', 'services', 'switching', 'routing', 'access'];
+export type DemoTopic = 'basics' | 'services' | 'switching' | 'routing' | 'access' | 'security';
+export const DEMO_TOPICS: readonly DemoTopic[] = ['basics', 'services', 'switching', 'routing', 'access', 'security'];
 
 /** Aktion nach `at` Millisekunden Simulationszeit auf einem Gerät (nach Namen). */
 export type DemoAction =
@@ -81,6 +81,16 @@ export const DEMOS: readonly Demo[] = [
       { highlight: 'Router 1', window: { device: 'Router 1', tab: 'routing' } },
       { sim: true, pause: true, action: { at: 0, device: 'PC 1', command: 'ping 192.168.2.10' }, highlight: 'Router 1' },
       { pause: false, highlight: 'PC 2' },
+    ] },
+  { id: 'ipv6', file: 'ipv6-slaac.json', topic: 'basics', layers: [2, 3], actions: [{ at: 3000, device: 'PC 1', command: 'ping 2001:db8:b::100' }], check: { kind: 'ping', device: 'PC 1' }, until: 10_000,
+    tour: [
+      { sim: false, highlight: 'Router' },
+      { highlight: 'Router', window: { device: 'Router', tab: 'addresses' } },
+      { sim: true, pause: true, highlight: 'PC 1' },
+      { pause: false, highlight: 'PC 1', window: { device: 'PC 1', tab: 'state' } },
+      { highlight: 'Notebook', window: { device: 'Notebook', tab: 'state' } },
+      { pause: true, action: { at: 0, device: 'PC 1', command: 'ping 2001:db8:b::100' }, highlight: 'PC 1' },
+      { pause: false, highlight: 'Router' },
     ] },
   // Dienste
   { id: 'dhcp', file: 'dhcp.json', topic: 'services', layers: [7], actions: [{ at: 4500, device: 'Notebook 1', command: 'ipconfig /all' }], check: { kind: 'dhcp', devices: ['Notebook 1', 'Notebook 2', 'PC 1'] }, until: 10_000,
@@ -180,8 +190,38 @@ export const DEMOS: readonly Demo[] = [
       { action: { at: 0, device: 'Notebook', browse: 'http://198.51.100.10/' }, highlight: 'Notebook' },
       { highlight: 'Internet-Box', window: { device: 'Internet-Box', tab: 'state' } },
     ] },
+  { id: 'dsLite', file: 'ds-lite.json', topic: 'access', layers: [3, 4, 7], actions: [{ at: 3500, device: 'Notebook', browse: 'http://198.51.100.80/' }], check: { kind: 'browser', device: 'Notebook', contains: 'nur über IPv4' }, until: 9000,
+    tour: [
+      { sim: false, highlight: 'Internet-Box' },
+      { highlight: 'Internet-Box', window: { device: 'Internet-Box', tab: 'addresses' } },
+      { highlight: 'Provider', window: { device: 'Provider', tab: 'addresses' } },
+      { sim: true, pause: false, highlight: 'Notebook' },
+      { pause: true, action: { at: 0, device: 'Notebook', browse: 'http://198.51.100.80/' }, highlight: 'Internet-Box' },
+      { pause: false, highlight: 'Provider', window: { device: 'Provider', tab: 'state' } },
+      { highlight: 'Webserver' },
+    ] },
   { id: 'ppp', file: 'seriell-ppp.json', topic: 'access', layers: [1, 2], actions: [{ at: 1500, device: 'PC Zürich', command: 'ping 192.168.2.10' }], check: { kind: 'ping', device: 'PC Zürich' }, until: 10_000 },
   { id: 'wlan', file: 'wlan-mesh.json', topic: 'access', layers: [1, 2], actions: [{ at: 600, device: 'Notebook OG', command: 'ping 192.168.50.5' }], check: { kind: 'ping', device: 'Notebook OG' }, until: 10_000 },
+  // Sicherheit
+  { id: 'firewall', file: 'firewall.json', topic: 'security', layers: [3, 4], actions: [{ at: 600, device: 'Aussen', browse: 'http://203.0.113.80/' }, { at: 3000, device: 'Aussen', command: 'ping 192.168.1.10' }], check: { kind: 'browser', device: 'Aussen', contains: 'DMZ' }, until: 9000,
+    tour: [
+      { sim: false, highlight: 'Firewall' },
+      { highlight: 'Firewall', window: { device: 'Firewall', tab: 'firewall' } },
+      { sim: true, pause: false, action: { at: 0, device: 'Aussen', browse: 'http://203.0.113.80/' }, highlight: 'Webserver' },
+      { action: { at: 0, device: 'Aussen', command: 'ping 192.168.1.10' }, highlight: 'Firewall' },
+      { action: { at: 0, device: 'Büro-PC', command: 'ping 198.51.100.10' }, highlight: 'Büro-PC' },
+      { highlight: 'Firewall', window: { device: 'Firewall', tab: 'firewall' } },
+    ] },
+  { id: 'vpn', file: 'vpn.json', topic: 'security', layers: [3, 4], actions: [{ at: 1000, device: 'PC Zürich', command: 'ping 192.168.2.20' }], check: { kind: 'ping', device: 'PC Zürich', min: 3 }, until: 10_000,
+    tour: [
+      { sim: false, highlight: 'Internet' },
+      { highlight: 'Router Zürich', window: { device: 'Router Zürich', tab: 'vpn' } },
+      { highlight: 'Router Bern', window: { device: 'Router Bern', tab: 'vpn' } },
+      { sim: true, pause: true, action: { at: 0, device: 'PC Zürich', command: 'ping 192.168.2.20' }, highlight: 'Router Zürich' },
+      { pause: false, highlight: 'Internet' },
+      { highlight: 'Router Zürich', window: { device: 'Router Zürich', tab: 'vpn' } },
+      { action: { at: 0, device: 'PC Zürich', browse: 'http://192.168.2.20/' }, highlight: 'Server Bern' },
+    ] },
 ];
 
 /** Projektdatei einer Demo (Text, wie in docs/beispiele/). */

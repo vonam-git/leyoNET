@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ipv6StateView from './Ipv6StateView.svelte';
   import { isRouterType, isSwitchType, type Device } from '../../core';
   import { t } from '../../i18n';
   import { interfaceLabel } from '../labels';
@@ -13,6 +14,7 @@
   const now = $derived((simStore.tick, simStore.sim?.now ?? 0));
 </script>
 
+<Ipv6StateView {device} state={deviceState?.ipv6} />
 {#if deviceState?.storm}
   <p class="alert" role="alert">⚠ {t('storm.device', { rate: deviceState.storm.rate })}</p>
 {/if}

@@ -340,3 +340,77 @@ test('Projektname wird zum Dateinamen; Hilfe lässt sich schliessen', async ({ p
   await page.locator('aside.help').getByRole('button', { name: 'Schliessen' }).click();
   await expect(page.locator('aside.help')).toHaveCount(0);
 });
+
+test('IPv6: SLAAC, Ping über den Router, IP-Version umschalten', async ({ page }) => {
+  await openProject(page, example('ipv6-slaac'));
+  const ipMode = page.getByRole('radiogroup', { name: 'IP-Version' });
+  await expect(ipMode.getByRole('radio', { name: 'IPv6' })).toBeChecked();
+  await page.getByRole('radio', { name: 'Simulation' }).click();
+  await page.getByRole('button', { name: 'PC 1, Rechner' }).click();
+  await page.getByRole('button', { name: 'Desktop öffnen' }).click();
+  const input = page.getByLabel('Befehl eingeben');
+  await input.fill('ping 2001:db8:b::100');
+  await input.press('Enter');
+  await expect(page.getByRole('log')).toContainText('Antwort von 2001:db8:b::100', { timeout: 15_000 });
+  await page.locator('.packets input[type="search"]').fill('ndp');
+  await expect(page.locator('.packets')).toContainText('Neighbor Solicitation');
+  await page.getByRole('radio', { name: 'Entwurf' }).click();
+  await ipMode.getByRole('radio', { name: 'v4 + v6' }).click();
+  await expect(ipMode.getByRole('radio', { name: 'v4 + v6' })).toBeChecked();
+});
+
+test('DS-Lite: Webseite über den IPv6-Tunnel', async ({ page }) => {
+  await openProject(page, example('ds-lite'));
+  await page.getByRole('radio', { name: 'Simulation' }).click();
+  await page.waitForTimeout(3000);
+  await page.getByRole('button', { name: 'Notebook, Notebook' }).click();
+  await page.getByRole('button', { name: 'Desktop öffnen' }).click();
+  await page.getByRole('tab', { name: 'Webbrowser' }).click();
+  const url = page.locator('#browser-url');
+  await url.fill('http://198.51.100.80/');
+  await url.press('Enter');
+  await expect(page.locator('.desktop')).toContainText('200 OK', { timeout: 15_000 });
+});
+
+test('Firewall: Regel hinzufügen, Webseite erlaubt, Ping blockiert', async ({ page }) => {
+  await openProject(page, example('firewall'));
+  await page.getByRole('button', { name: /^Firewall,/ }).click();
+  await page.keyboard.press('e');
+  const dialog = page.getByRole('dialog', { name: 'Firewall' });
+  await dialog.getByRole('tab', { name: 'Firewall' }).click();
+  await expect(dialog.locator('tr.rule')).toHaveCount(2);
+  // Neue Regel: DNS (UDP 53) zum Webserver erlauben.
+  await dialog.getByLabel('Protokoll').selectOption('udp');
+  await dialog.getByLabel('Zielport').fill('53');
+  await dialog.locator('tr.add').getByLabel('Ziel', { exact: true }).fill('203.0.113.80');
+  await dialog.getByRole('button', { name: 'Regel hinzufügen' }).click();
+  await expect(dialog.locator('tr.rule')).toHaveCount(3);
+  await expect(dialog.locator('tr.rule').nth(2)).toContainText('UDP 53');
+  await dialog.getByRole('button', { name: 'Schliessen' }).click();
+  await page.getByRole('radio', { name: 'Simulation' }).click();
+  await page.getByRole('button', { name: /^Aussen,/ }).click();
+  await page.getByRole('button', { name: 'Desktop öffnen' }).click();
+  const input = page.getByLabel('Befehl eingeben');
+  await input.fill('ping 192.168.1.10');
+  await input.press('Enter');
+  await expect(page.getByRole('log')).toContainText('Zeitüberschreitung', { timeout: 15_000 });
+  await page.getByRole('tab', { name: 'Webbrowser' }).click();
+  const url = page.locator('#browser-url');
+  await url.fill('http://203.0.113.80/');
+  await url.press('Enter');
+  await expect(page.locator('.desktop')).toContainText('200 OK', { timeout: 15_000 });
+});
+
+test('VPN: Tunnel steht, Ping durch den Tunnel, ESP in der Paketliste', async ({ page }) => {
+  await openProject(page, example('vpn'));
+  await page.getByRole('radio', { name: 'Simulation' }).click();
+  await page.getByRole('button', { name: /^PC Zürich,/ }).click();
+  await page.getByRole('button', { name: 'Desktop öffnen' }).click();
+  const input = page.getByLabel('Befehl eingeben');
+  await input.fill('ping 192.168.2.20');
+  await input.press('Enter');
+  await expect(page.getByRole('log')).toContainText('Antwort von 192.168.2.20', { timeout: 15_000 });
+  await page.locator('.packets input[type="search"]').fill('vpn');
+  await expect(page.locator('.packets')).toContainText('IKE_AUTH');
+  await expect(page.locator('.packets')).toContainText('ESP (verschlüsselt)');
+});

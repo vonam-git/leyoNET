@@ -43,6 +43,38 @@ Beim Start der Simulation wird automatisch ein Snapshot angelegt. Weitere entste
 
 Nützlich: **Strg+D** dupliziert die Auswahl, **F2** benennt um, **Entf** löscht, **Strg+Z** macht rückgängig.
 
+## IPv6
+
+Oben in der Werkzeugleiste stellst du die **IP-Version** ein: **IPv4**, **v4 + v6** (beides) oder **IPv6**. Mit IPv6 hat jedes Gerät ein eigenes IPv6-Feld:
+
+- **Endgeräte:** «IPv6 automatisch» (der Router kündigt sein Präfix an, das Gerät bildet seine Adresse selbst = SLAAC, oder holt sie per DHCPv6) oder eine feste Adresse wie `2001:db8:1::10/64` mit Standardgateway.
+- **Router:** je Anschluss eine Adresse mit `/64`, z.B. `2001:db8:1::1/64`. Mit «Adressen per DHCPv6 vergeben» verteilt der Router die Adressen selbst.
+- Statt ARP fragen die Geräte per **Neighbor Discovery** nach der MAC. `ping 2001:db8:2::20`, `tracert`, `ipconfig` und `netsh interface ipv6 show neighbors` funktionieren in der Eingabeaufforderung.
+- **DS-Lite:** Die Internet-Box tunnelt IPv4 durch das IPv6-Netz des Providers; der Provider übersetzt per CGNAT. Siehe Demo «DS-Lite».
+
+## Firewall
+
+Im Fenster **Erweitert … → Firewall** (Router, Internet-Box und Endgeräte, ab Profil 3) schaltest du die Firewall ein. Sicher ist der Start mit **«alles verbieten, was nicht erlaubt ist»**. Dann trägst du Regeln ein:
+
+- **Aktion** (Erlauben/Verbieten), **Protokoll** (TCP, UDP, ICMP, alle) und bei TCP/UDP den **Zielport**, z.B. 80 für Webseiten.
+- **Quelle** und **Ziel**: `any`, eine Adresse (`203.0.113.80`) oder ein Netz (`192.168.1.0/24`). Beim Router kannst du zusätzlich den **Eingang** wählen.
+- Die Regeln gelten **von oben nach unten**, die erste passende entscheidet. Mit ↑ ↓ änderst du die Reihenfolge.
+
+**Zustandsbehaftet** (Standard): Antworten auf erlaubte Verbindungen kommen ohne eigene Regel zurück. Ein Router filtert, was er weiterleitet; ein Endgerät filtert, was bei ihm ankommt. In der Simulation zeigt der Reiter, wie oft jede Regel gegriffen hat, und die Konsole des Geräts meldet blockierte Pakete. Siehe Demo «Firewall mit DMZ».
+
+## VPN zwischen zwei Standorten
+
+Ein **Site-to-Site-VPN** (ab Profil 4) verbindet zwei private Netze über das Internet. Im Fenster **Erweitert … → VPN** beider Router trägst du je einen Tunnel ein:
+
+| Feld | Router Zürich | Router Bern |
+|---|---|---|
+| Gegenstelle | 203.0.113.1 (WAN Bern) | 198.51.100.1 (WAN Zürich) |
+| Eigenes Netz | 192.168.1.0/24 | 192.168.2.0/24 |
+| Entferntes Netz | 192.168.2.0/24 | 192.168.1.0/24 |
+| Schlüssel | gleich | gleich |
+
+Das erste Paket ins entfernte Netz startet den Aufbau (IKEv2), danach laufen die Pakete verschlüsselt in **ESP**. Der Reiter zeigt in der Simulation den Status (aufgebaut, gescheitert mit Grund) und die Paketzähler. Mit dem Filter `vpn` siehst du nur Tunnelverkehr. Häufige Fehler: Netze nicht gespiegelt («Netze passen nicht»), unterschiedlicher Schlüssel («falscher Schlüssel»), falsche Gegenstelle («keine Antwort»). Siehe Demo «VPN: Zwei Standorte verbinden».
+
 ## Router: automatisches Routing
 
 Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routing**. Er findet dann alle Netze im Plan selbst, ohne dass du Routen eintragen musst. Jeder Router auf dem Weg braucht das Häkchen. Ohne Häkchen wählst du **statisch** (Routen von Hand) oder **dynamisch** (OSPF, RIP, BGP), im Fenster **Erweitert … → Routing**.

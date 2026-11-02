@@ -1,7 +1,8 @@
 import { DEVICE_SPECS, canAutoRoute, isDeviceType } from '../model/devices';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
 import { MAC_PATTERN } from '../model/mac';
-import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, deviceSeq } from '../model/topology';
+import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
+import { checkFirewall, checkVpnTunnel, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
 import { MAX_GROUP_SIZE } from '../model/devices';
 import { checkBgp, checkOspf, checkRip, normalizeBgp, normalizeOspf, normalizeRip } from '../net/dynamic';
 import { logicalInterfaces } from '../net/routing';
@@ -27,7 +28,8 @@ import type {
   RoutedNetwork,
   VlanDef,
 } from '../model/types';
-import { MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type RoutingMode } from '../model/types';
+import { IP_MODES, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type IpMode, type RoutingMode } from '../model/types';
+import { formatCidr6, formatIp6, isLinkLocal6, isMulticast6, parseCidr6, parseIp6 } from '../net/ipv6';
 import { isValidName, normalizeName } from '../net/dns';
 import { isValidPath } from '../net/http';
 import { checkMailAccount } from '../net/mail';
@@ -204,6 +206,13 @@ function vlanNumber(v: unknown, path: string): number {
   return n;
 }
 
+/** IPv6-Adresse ohne Präfix (Unicast), in Normalform nach RFC 5952. */
+function ip6(v: unknown, path: string): string {
+  const value = parseIp6(str(v, path));
+  if (value === null || isMulticast6(value) || value === 0n) throw new Invalid(path);
+  return formatIp6(value);
+}
+
 function text(v: unknown, path: string, max: number): string {
   const value = str(v, path);
   if (value.length > max) throw new Invalid(path);
@@ -295,9 +304,12 @@ function readTopology(v: unknown): Topology {
   }
   const highestAll = Math.max(highest, ...areas.map((a) => deviceSeq(a.id)));
   const nextId = typeof t.nextId === 'number' && Number.isInteger(t.nextId) && t.nextId > highestAll ? t.nextId : highestAll + 1;
+  if (t.ipMode !== undefined && !IP_MODES.includes(t.ipMode as IpMode)) throw new Invalid('topology.ipMode');
+  const ipMode = t.ipMode as IpMode | undefined;
   const title = t.title !== undefined ? text(t.title, 'topology.title', MAX_TITLE_LENGTH).trim() : '';
   return {
     ...(title ? { title } : {}),
+    ...(ipMode && ipMode !== 'ipv4' ? { ipMode } : {}),
     devices,
     cables,
     nextId,
@@ -378,6 +390,12 @@ function readDevice(v: unknown, path: string): Device {
       if (type !== 'internet') throw new Invalid(`${p}.cgnat`);
       iface.cgnat = true;
     }
+    if (io.ipv6 !== undefined) {
+      const c = parseCidr6(str(io.ipv6, `${p}.ipv6`));
+      if (!c || isMulticast6(c.address) || isLinkLocal6(c.address) || c.address === 0n) throw new Invalid(`${p}.ipv6`);
+      iface.ipv6 = formatCidr6(c.address, c.prefix);
+    }
+    if (io.dhcp6 !== undefined && bool(io.dhcp6, `${p}.dhcp6`)) iface.dhcp6 = true;
     return iface;
   });
 
@@ -621,6 +639,64 @@ function readDevice(v: unknown, path: string): Device {
   if (o.cgnatAddress !== undefined) {
     if (type !== 'internet') throw new Invalid(`${path}.cgnatAddress`);
     device.cgnatAddress = ip(o.cgnatAddress, `${path}.cgnatAddress`);
+  }
+  if (o.firewall !== undefined) {
+    const p = `${path}.firewall`;
+    const f = obj(o.firewall, p);
+    const config: FirewallConfig = {
+      defaultAction: f.defaultAction === 'deny' ? 'deny' : f.defaultAction === 'allow' ? 'allow' : (() => { throw new Invalid(`${p}.defaultAction`); })(),
+      rules: arr(f.rules, `${p}.rules`).map((raw, i) => {
+        const r = obj(raw, `${p}.rules[${i}]`);
+        return {
+          action: str(r.action, `${p}.rules[${i}].action`) as FirewallConfig['defaultAction'],
+          protocol: str(r.protocol, `${p}.rules[${i}].protocol`) as FirewallRule['protocol'],
+          src: str(r.src, `${p}.rules[${i}].src`),
+          dst: str(r.dst, `${p}.rules[${i}].dst`),
+          ...(r.port !== undefined ? { port: int(r.port, `${p}.rules[${i}].port`) } : {}),
+          ...(r.iface !== undefined ? { iface: int(r.iface, `${p}.rules[${i}].iface`) } : {}),
+        };
+      }),
+      ...(f.stateful === false ? { stateful: false } : {}),
+    };
+    if (!canFirewall(type)) throw new Invalid(p);
+    const checked = checkFirewall(config, interfaces.length);
+    if (!checked.ok) throw new Invalid(`${p}.${checked.error.field ?? 'rules'}`);
+    device.firewall = checked.value;
+  }
+  if (o.vpn !== undefined) {
+    if (type !== 'router') throw new Invalid(`${path}.vpn`);
+    const tunnels: VpnTunnel[] = [];
+    arr(o.vpn, `${path}.vpn`).forEach((raw, i) => {
+      const p = `${path}.vpn[${i}]`;
+      const v = obj(raw, p);
+      const checked = checkVpnTunnel({ name: str(v.name, `${p}.name`), peer: str(v.peer, `${p}.peer`), local: str(v.local, `${p}.local`), remote: str(v.remote, `${p}.remote`), key: str(v.key, `${p}.key`) }, tunnels);
+      if (!checked.ok) throw new Invalid(`${p}.${checked.error.field ?? ''}`);
+      tunnels.push(checked.value);
+    });
+    if (tunnels.length) device.vpn = tunnels;
+  }
+  if (o.ipv6Auto !== undefined && bool(o.ipv6Auto, `${path}.ipv6Auto`)) device.ipv6Auto = true;
+  if (o.gateway6 !== undefined) device.gateway6 = ip6(o.gateway6, `${path}.gateway6`);
+  if (o.routes6 !== undefined) {
+    device.routes6 = arr(o.routes6, `${path}.routes6`).map((raw, i) => {
+      const r = obj(raw, `${path}.routes6[${i}]`);
+      const route = {
+        network: str(r.network, `${path}.routes6[${i}].network`),
+        ...(r.gateway !== undefined ? { gateway: str(r.gateway, `${path}.routes6[${i}].gateway`) } : {}),
+        ...(r.iface !== undefined ? { iface: int(r.iface, `${path}.routes6[${i}].iface`) } : {}),
+      };
+      const checked = checkStaticRoute6({ ...device, routes6: [] }, route);
+      if (!checked.ok) throw new Invalid(`${path}.routes6[${i}]`);
+      return checked.value;
+    });
+  }
+  if (o.dsLite !== undefined) {
+    if (type !== 'cpe') throw new Invalid(`${path}.dsLite`);
+    device.dsLite = { aftr: ip6(obj(o.dsLite, `${path}.dsLite`).aftr, `${path}.dsLite.aftr`) };
+  }
+  if (o.aftr !== undefined && bool(o.aftr, `${path}.aftr`)) {
+    if (type !== 'internet') throw new Invalid(`${path}.aftr`);
+    device.aftr = true;
   }
   if (o.ospf !== undefined) {
     const p = `${path}.ospf`;

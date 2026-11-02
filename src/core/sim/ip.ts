@@ -12,6 +12,8 @@ import {
   type EthernetFrame,
   type IcmpMessage,
   type Ipv4Packet,
+  type Ipv6Packet,
+  type EspPacket,
   type PppControl,
   type OspfPacket,
   type TcpSegment,
@@ -21,7 +23,7 @@ import type { NodeContext, SimNode } from './simulation';
 import { cableAt, deviceSeq, getDevice, otherEnd } from '../model/topology';
 import { isModemWan } from '../model/links';
 import type { ModemKind } from '../model/types';
-import { BGP_PORT, OSPF_ALL_ROUTERS, RIP_MULTICAST, RIP_PORT } from './frames';
+import { BGP_PORT, IKE_PORT, OSPF_ALL_ROUTERS, RIP_MULTICAST, RIP_PORT } from './frames';
 import { ACCESS_PROFILES, nextSteps, stepIndex } from './access';
 import { PingRun, type IcmpApp } from './apps';
 import { SSH_PORT, startSshServer } from './ssh';
@@ -31,6 +33,10 @@ import { Ospf } from './ospf';
 import { Rip } from './rip';
 import { Bgp } from './bgp';
 import type { RoutingHost } from './routing-host';
+import { IPV4_ENABLED, Ip6Stack } from './ip6';
+import { Firewall } from './firewall';
+import { Vpn, type VpnState } from './vpn';
+import { matchesAddress } from '../model/security';
 
 export const ARP_TIMEOUT = 1000;
 export const ARP_ATTEMPTS = 2;
@@ -76,8 +82,43 @@ export class IpNode implements SimNode {
   #arp = new Map<string, ArpEntry>();
   #pending = new Map<string, PendingResolution>();
   #ipId = 0;
+  /** IPv6-Stack (nur aktiv, wenn das Projekt IPv6 verwendet). */
+  readonly v6: Ip6Stack;
+  /** Paketfilter (nur aktiv, wenn das Gerät eine Firewall hat). */
+  readonly firewall: Firewall;
 
-  constructor(readonly ctx: NodeContext) {}
+  constructor(readonly ctx: NodeContext) {
+    const self = this;
+    this.firewall = new Firewall(ctx, () => ctx.device()?.firewall);
+    this.v6 = new Ip6Stack(
+      {
+        ctx,
+        get forwarding() {
+          return self.forwarding;
+        },
+        sendFrame: (index, frame) => this.sendFrame(index, frame),
+        onIcmp6: (packet) => this.onIcmp6(packet),
+        onUdp6: (packet, datagram, index) => this.onUdp6(packet, datagram, index),
+        onTunnel: (packet, inner, index) => this.onTunnel(packet, inner, index),
+      },
+      () => this.effectiveDevice(),
+    );
+  }
+
+  /** IPv4 aktiv? Im Modus «nur IPv6» schweigt der IPv4-Stack. */
+  protected ipv4On(): boolean {
+    return IPV4_ENABLED(this.ctx.topology());
+  }
+
+  /** ICMPv6-Echo-Antworten und -Fehler für Anwendungen (Ping, Traceroute). */
+  protected onIcmp6(_packet: Ipv6Packet) {}
+
+  protected onUdp6(_packet: Ipv6Packet, _datagram: UdpDatagram, _index: number) {}
+
+  /** DS-Lite: getunneltes IPv4-Paket. true = erledigt. */
+  protected onTunnel(_packet: Ipv6Packet, _inner: Ipv4Packet, _index: number): boolean {
+    return false;
+  }
 
   /** Gerät mit der tatsächlich wirksamen Konfiguration (Endgeräte: ggf. per DHCP bezogen). */
   protected effectiveDevice(): Device | undefined {
@@ -86,7 +127,7 @@ export class IpNode implements SimNode {
 
   interfaces(): IfaceAddress[] {
     const device = this.effectiveDevice();
-    return device ? interfaceAddresses(device) : [];
+    return device && this.ipv4On() ? interfaceAddresses(device) : [];
   }
 
   routes(): Route[] {
@@ -106,7 +147,9 @@ export class IpNode implements SimNode {
   }
 
   state(): object {
-    return { arp: this.arpEntries() };
+    const ipv6 = this.v6.state();
+    const firewall = this.firewall.state();
+    return { arp: this.arpEntries(), ...(ipv6 ? { ipv6 } : {}), ...(firewall ? { firewall } : {}) };
   }
 
   /**
@@ -137,7 +180,12 @@ export class IpNode implements SimNode {
       return;
     }
     const mac = device && macOfIface(device, index);
+    if (frame.payload.kind === 'ipv6') {
+      if (mac && (frame.dst === mac || this.v6.acceptsMac(frame.dst, index))) this.v6.receive(index, frame.payload, frame.src);
+      return;
+    }
     if (!mac || (frame.dst !== mac && frame.dst !== BROADCAST_MAC && !this.acceptsMulticast(frame.dst))) return;
+    if (!this.ipv4On()) return;
     if (frame.payload.kind === 'arp') this.#onArp(index, frame.payload);
     else if (frame.payload.kind === 'ipv4') this.#onIp(index, frame.payload, frame.src);
   }
@@ -310,11 +358,52 @@ export class IpNode implements SimNode {
       return;
     }
     const broadcast = dst === LIMITED_BROADCAST || (iface !== undefined && dst === broadcastOf(iface.ip, iface.prefix));
+    if (this.forwarding && iface && this.intercept(iface, packet)) return;
     // NAT: Antworten an die Internet-Adresse des Routers gehen an den internen Rechner weiter.
     const translated = this.forwarding && iface ? this.inbound(iface, packet) : null;
     if (translated && iface) this.#forward(iface, translated);
-    else if (this.isOwn(dst) || broadcast) this.#deliver(packet, broadcast, index, srcMac);
+    else if (this.isOwn(dst) || broadcast) {
+      // Endgerät mit Firewall: eingehende Pakete prüfen (Broadcasts und DHCP-Antworten sind immer erlaubt).
+      const dhcpReply = packet.payload.kind === 'udp' && packet.payload.dstPort === DHCP_CLIENT_PORT;
+      if (!this.forwarding && !broadcast && !dhcpReply && !this.firewall.allows(packet, index)) return;
+      this.#deliver(packet, broadcast, index, srcMac);
+    }
     else if (this.forwarding && iface) this.#forward(iface, packet);
+  }
+
+  /** DS-Lite (B4): IPv4-Paket in den IPv6-Tunnel geben statt weiterleiten. true = erledigt. */
+  protected tunnelOut(_inIface: IfaceAddress, _packet: Ipv4Packet): boolean {
+    return false;
+  }
+
+  /** VPN: Paket ins entfernte Netz verschlüsselt durch den Tunnel schicken. true = erledigt. */
+  protected vpnRoute(_packet: Ipv4Packet): boolean {
+    return false;
+  }
+
+  /** VPN: eigenes Paket (z.B. Ping-Antwort des Routers) ins entfernte Netz; true = erledigt. */
+  protected vpnSend(_dst: string, _build: (src: string) => Ipv4Packet): boolean {
+    return false;
+  }
+
+  /** ESP-Pakete (IP-Protokoll 50) für Router mit VPN. */
+  protected onEsp(_packet: Ipv4Packet, _esp: EspPacket) {}
+
+  /** DS-Lite (AFTR): Antwort abfangen und zurück in den Tunnel geben. true = erledigt. */
+  protected intercept(_iface: IfaceAddress, _packet: Ipv4Packet): boolean {
+    return false;
+  }
+
+  /**
+   * Aus dem Tunnel ausgepacktes IPv4-Paket: zustellen oder weiterleiten, als
+   * käme es über ein eigenes Interface mit der Tunneladresse `via` (RFC 6333:
+   * B4 192.0.0.2, AFTR 192.0.0.1).
+   */
+  protected injectIpv4(packet: Ipv4Packet, via: string) {
+    const dst = parseIp(packet.dst);
+    if (dst === null) return;
+    if (this.isOwn(dst)) return this.#deliver(packet, false, -1);
+    this.#forward({ index: -1, mac: '', ip: parseIp(via) ?? 0, prefix: 29 }, packet);
   }
 
   /** Eingehende Übersetzung (NAT) vor der Zustellung; null = nichts zu übersetzen. */
@@ -333,6 +422,10 @@ export class IpNode implements SimNode {
       this.#icmpError(inIface, packet, 'timeExceeded');
       return;
     }
+    // Firewall des Routers: weitergeleitete Pakete prüfen (nach DNAT, vor SNAT).
+    if (!this.firewall.allows(packet, inIface.index)) return;
+    if (this.tunnelOut(inIface, { ...packet, ttl: packet.ttl - 1 })) return;
+    if (this.vpnRoute({ ...packet, ttl: packet.ttl - 1 })) return;
     const dst = parseIp(packet.dst)!;
     const route = lookupRoute(this.routes(), dst);
     const out = route && this.interfaces().find((i) => i.index === route.iface);
@@ -377,6 +470,8 @@ export class IpNode implements SimNode {
       this.onUdp(packet, payload, index, srcMac);
     } else if (payload.kind === 'tcp') {
       this.onTcp(packet, payload);
+    } else if (payload.kind === 'esp') {
+      this.onEsp(packet, payload);
     } else if (payload.type === 'echoRequest') {
       if (!broadcast) this.sendIp(packet.src, { ...payload, type: 'echoReply' }, { src: packet.dst });
     } else {
@@ -413,14 +508,14 @@ export class IpNode implements SimNode {
   sendIp(dstText: string, payload: Ipv4Packet['payload'], options: SendOptions = {}, onError?: (e: SendError) => void) {
     const dst = parseIp(dstText);
     if (dst === null) return;
-    const build = (src: string): Ipv4Packet => ({
-      kind: 'ipv4',
-      src: options.src ?? src,
-      dst: dstText,
-      ttl: options.ttl ?? DEFAULT_TTL,
-      id: ++this.#ipId,
-      payload,
-    });
+    const build = (src: string): Ipv4Packet => {
+      const packet: Ipv4Packet = { kind: 'ipv4', src: options.src ?? src, dst: dstText, ttl: options.ttl ?? DEFAULT_TTL, id: ++this.#ipId, payload };
+      // Endgerät mit Firewall: eigene Verbindungen merken, damit die Antworten herein dürfen.
+      if (!this.forwarding) this.firewall.track(packet);
+      return packet;
+    };
+
+    if (this.forwarding && !this.isOwn(dst) && this.vpnSend(dstText, build)) return;
 
     // Eigene Adresse und Loopback verlassen das Gerät nicht.
     if (this.isOwn(dst)) {
@@ -464,6 +559,12 @@ export class IpNode implements SimNode {
       payload: { kind: 'ipv4', src, dst: '255.255.255.255', ttl: DEFAULT_TTL, id: ++this.#ipId, payload },
     });
   }
+}
+
+/** DS-Lite: «192.168.1.10@2001:db8::2» → innere IPv4-Adresse und IPv6-Adresse des B4. */
+export function splitTunnel(inside: string): [string, string] {
+  const at = inside.indexOf('@');
+  return at < 0 ? [inside, ''] : [inside.slice(0, at), inside.slice(at + 1)];
 }
 
 export const NAT_TIMEOUT = 300_000;
@@ -511,7 +612,8 @@ export class PatTable {
 
   constructor(
     private readonly ctx: NodeContext,
-    private readonly kind: 'pat' | 'cgnat',
+    /** «dslite»: CGNAT im AFTR; `inside` ist dann «innere Adresse@IPv6 des B4». */
+    private readonly kind: 'pat' | 'cgnat' | 'dslite',
   ) {}
 
   entries(): NatEntry[] {
@@ -531,13 +633,18 @@ export class PatTable {
     const now = this.ctx.now;
     let entry = this.#byInside.get(`${flow.protocol}:${packet.src}:${flow.port}`);
     if (!entry || entry.expires <= now || entry.outside !== outside) {
-      entry = { protocol: flow.protocol, inside: packet.src, insidePort: flow.port, outside, outsidePort: this.#nextPort++, forwarded: false, expires: 0, kind: this.kind };
+      entry = { protocol: flow.protocol, inside: packet.src, insidePort: flow.port, outside, outsidePort: this.#nextPort++, forwarded: false, expires: 0, kind: this.kind === 'dslite' ? 'cgnat' : this.kind };
       this.remember(entry);
-      this.ctx.print(this.kind === 'cgnat' ? 'cgnat.new' : 'nat.new', {
-        protocol: flow.protocol.toUpperCase(),
-        inside: `${entry.inside}:${entry.insidePort}`,
-        outside: `${outside}:${entry.outsidePort}`,
-      });
+      if (this.kind === 'dslite') {
+        const [inside, b4] = splitTunnel(entry.inside);
+        this.ctx.print('dslite.new', { protocol: flow.protocol.toUpperCase(), inside: `${inside}:${entry.insidePort}`, b4, outside: `${outside}:${entry.outsidePort}` });
+      } else {
+        this.ctx.print(this.kind === 'cgnat' ? 'cgnat.new' : 'nat.new', {
+          protocol: flow.protocol.toUpperCase(),
+          inside: `${entry.inside}:${entry.insidePort}`,
+          outside: `${outside}:${entry.outsidePort}`,
+        });
+      }
     }
     entry.expires = now + NAT_TIMEOUT;
     return { ...packet, src: outside, payload: withFlowPort(packet.payload, 'src', entry.outsidePort) };
@@ -629,6 +736,7 @@ export class ForwardingNode extends IpNode {
     this.ospf.boot();
     this.rip.boot();
     this.bgp.boot();
+    this.v6.boot();
   }
 
   /**
@@ -708,10 +816,23 @@ export class RouterNode extends ForwardingNode {
   #pingId = 0x4000;
   readonly ppp: PppLinks;
 
+  /** Site-to-Site-VPN (IPsec). */
+  readonly vpn: Vpn;
+
   constructor(ctx: NodeContext) {
     super(ctx);
     const seq = deviceSeq(ctx.device()?.id ?? 'd0');
     this.nat = new PatTable(ctx, 'pat');
+    this.vpn = new Vpn(
+      {
+        ctx,
+        device: () => ctx.device(),
+        sendIp: (dst, payload, options, onError) => this.sendIp(dst, payload, options, onError),
+        // Fehlermeldungen (z.B. «TTL abgelaufen») tragen die Router-Adresse im eigenen VPN-Netz.
+        inject: (packet, local) => this.injectIpv4(packet, this.interfaces().map((i) => formatIp(i.ip)).find((ip) => matchesAddress(local, ip)) ?? '0.0.0.0'),
+      },
+      seq,
+    );
     startSshServer(this, ctx);
     this.ppp = new PppLinks(
       ctx,
@@ -742,6 +863,27 @@ export class RouterNode extends ForwardingNode {
 
   protected override onPpp(index: number, control: PppControl) {
     if (this.ctx.device()?.interfaces[index]?.encapsulation === 'ppp') this.ppp.receive(index, control);
+  }
+
+  protected override vpnRoute(packet: Ipv4Packet): boolean {
+    return this.vpn.route(packet);
+  }
+
+  /** Eigene Pakete ins entfernte Netz: Absender ist die Router-Adresse im eigenen VPN-Netz. */
+  protected override vpnSend(dst: string, build: (src: string) => Ipv4Packet): boolean {
+    const tunnel = this.ctx.device()?.vpn?.find((t) => matchesAddress(t.remote, dst));
+    if (!tunnel) return false;
+    const own = this.interfaces().find((i) => matchesAddress(tunnel.local, formatIp(i.ip)));
+    if (!own) return false;
+    return this.vpn.route(build(formatIp(own.ip)));
+  }
+
+  protected override onEsp(packet: Ipv4Packet, esp: EspPacket) {
+    this.vpn.onEsp(packet, esp);
+  }
+
+  vpnState(): VpnState[] {
+    return this.vpn.state();
   }
 
   /** «ping» aus der Befehlszeile des Routers. */
@@ -842,7 +984,8 @@ export class RouterNode extends ForwardingNode {
   }
 
   override state(): object {
-    return { ...super.state(), nat: this.natEntries(), ...(this.ppp.status().length ? { ppp: this.ppp.status() } : {}) };
+    const vpn = this.vpn.state();
+    return { ...super.state(), nat: this.natEntries(), ...(this.ppp.status().length ? { ppp: this.ppp.status() } : {}), ...(vpn.length ? { vpn } : {}) };
   }
 
   /**
@@ -853,6 +996,7 @@ export class RouterNode extends ForwardingNode {
   protected override onUdp(packet: Ipv4Packet, datagram: UdpDatagram, index: number, srcMac: string) {
     const msg = datagram.payload;
     if (msg.kind === 'rip') return super.onUdp(packet, datagram, index, srcMac);
+    if (msg.kind === 'ike' && datagram.dstPort === IKE_PORT) return this.vpn.onIke(packet, msg);
     if (msg.kind !== 'dhcp' || datagram.dstPort !== DHCP_SERVER_PORT) return;
     const fromClient = msg.op === 'discover' || msg.op === 'request' || msg.op === 'release';
     if (fromClient) {
@@ -887,9 +1031,42 @@ export class InternetNode extends ForwardingNode {
   /** Zugangsleitungen, deren Aufbau begonnen hat (Kabel-ID), damit er nicht doppelt startet. */
   #access = new Set<string>();
 
+  /** DS-Lite: CGNAT für getunnelte Kunden (AFTR). */
+  readonly dsLite: PatTable;
+
   constructor(ctx: NodeContext) {
     super(ctx);
     this.cgnat = new PatTable(ctx, 'cgnat');
+    this.dsLite = new PatTable(ctx, 'dslite');
+  }
+
+  /** Öffentliche Adresse für die Übersetzung: CGNAT-Adresse oder erste eigene IPv4-Adresse. */
+  #publicAddress(): string | undefined {
+    const device = this.ctx.device();
+    const first = this.interfaces()[0];
+    return device?.cgnatAddress ?? (first ? formatIp(first.ip) : undefined);
+  }
+
+  /** AFTR: IPv4 aus dem Tunnel auspacken, per CGNAT übersetzen und ins Internet weiterleiten. */
+  protected override onTunnel(packet: Ipv6Packet, inner: Ipv4Packet, _index: number): boolean {
+    const device = this.ctx.device();
+    const address = this.#publicAddress();
+    if (!device?.aftr || !address) return false;
+    const translated = this.dsLite.outbound({ ...inner, src: `${inner.src}@${packet.src}` }, address);
+    this.injectIpv4(translated, '192.0.0.1');
+    return true;
+  }
+
+  /** AFTR: Antwort an die öffentliche Adresse zurück übersetzen und in den Tunnel zum B4 geben. */
+  protected override intercept(_iface: IfaceAddress, packet: Ipv4Packet): boolean {
+    const device = this.ctx.device();
+    if (!device?.aftr || packet.dst !== this.#publicAddress()) return false;
+    const back = this.dsLite.inbound(packet);
+    if (!back) return false;
+    const [inside, b4] = splitTunnel(back.dst);
+    if (!b4 || packet.ttl <= 1) return true;
+    this.v6.tunnel(b4, { ...back, dst: inside, ttl: packet.ttl - 1 });
+    return true;
   }
 
   /** Modem der Gegenseite an diesem Anschluss (mit seiner Technik). */
@@ -974,6 +1151,6 @@ export class InternetNode extends ForwardingNode {
   }
 
   override state(): object {
-    return { ...super.state(), nat: this.cgnat.entries() };
+    return { ...super.state(), nat: [...this.cgnat.entries(), ...this.dsLite.entries()] };
   }
 }

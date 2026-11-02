@@ -26,6 +26,11 @@ import {
   type Result,
   type TaskSet,
   type Topology,
+  configureHost6,
+  setCgnatAddress,
+  setInterfaceIpv6,
+  setIpMode,
+  setDefaultGateway,
 } from '../core';
 import { t } from '../i18n';
 
@@ -908,6 +913,62 @@ export const CATALOG: CatalogEntry[] = [
     },
   },
   {
+    id: 'ipv6-router',
+    stars: 3,
+    features: ['net.ipv6'],
+    level: 4,
+    build() {
+      const s = new Start()
+        .add('pc', 'PC A', -360, 0)
+        .add('router', 'Router', 0, 0)
+        .add('pc', 'PC B', 360, 0)
+        .link('PC A', 'Router')
+        .link('Router', 'PC B')
+        .apply((t, id) => {
+          let next = unwrap(setIpMode(t, 'ipv6'));
+          next = unwrap(configureHost6(next, id('PC A'), { auto: true }));
+          return unwrap(configureHost6(next, id('PC B'), { auto: true }));
+        });
+      return {
+        topology: s.topology,
+        tasks: task('ipv6Router', 3, [
+          goal('ipv6Router', 1, { type: 'ping', from: 'PC A', to: 'PC B' }),
+          goal('ipv6Router', 2, { type: 'ping', from: 'PC B', to: 'PC A' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'ds-lite',
+    stars: 4,
+    features: ['net.ipv6', 'net.dsLite', 'device.cpe', 'device.internet', 'service.web'],
+    level: 4,
+    build() {
+      const s = new Start()
+        .add('cpe', 'Internet-Box', -120, 0)
+        .add('internet', 'Provider', 200, 0)
+        .add('notebook', 'Notebook', -420, 0)
+        .add('server', 'Webserver', 500, 0)
+        .link('Internet-Box', 'Provider')
+        .link('Notebook', 'Internet-Box')
+        .link('Provider', 'Webserver')
+        .host('Webserver', '198.51.100.80', '24', '198.51.100.1')
+        .web('Webserver', '<h1>IPv4-Webseite</h1>')
+        .apply((t, id) => {
+          let next = unwrap(setIpMode(t, 'dual'));
+          next = unwrap(configureHost(next, id('Notebook'), { ip: '', mask: '', dhcp: true }));
+          next = unwrap(setInterfaceIpv6(next, id('Internet-Box'), 0, '2001:db8:ffff::2/64'));
+          next = unwrap(setInterfaceIpv6(next, id('Provider'), 0, '2001:db8:ffff::1/64'));
+          next = unwrap(setInterfaceAddress(next, id('Provider'), 1, '198.51.100.1', '24'));
+          return unwrap(setCgnatAddress(next, id('Provider'), '203.0.113.10'));
+        });
+      return {
+        topology: s.topology,
+        tasks: task('dsLite', 4, [goal('dsLite', 1, { type: 'http', from: 'Notebook', url: 'http://198.51.100.80/' })]),
+      };
+    },
+  },
+  {
     id: 'dnat-web',
     stars: 4,
     features: ['net.nat', 'net.staticNat', 'device.internet', 'service.web'],
@@ -933,6 +994,68 @@ export const CATALOG: CatalogEntry[] = [
         tasks: task('dnatWeb', 4, [
           goal('dnatWeb', 1, { type: 'http', from: 'Kunde', url: 'http://203.0.113.6/' }),
           goal('dnatWeb', 2, { type: 'seenAs', from: 'Webserver', to: 'Kunde', address: '203.0.113.2' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'firewall-dmz',
+    stars: 3,
+    features: ['net.firewall', 'service.web'],
+    level: 3,
+    build() {
+      const s = new Start()
+        .add('pc', 'Büro-PC', -360, 0)
+        .router('Firewall', 0, 0, ['192.168.1.1/24', '203.0.113.1/24', '198.51.100.1/24'])
+        .add('server', 'Webserver', 0, 240)
+        .add('pc', 'Aussen', 360, 0)
+        .link('Büro-PC', 'Firewall')
+        .link('Firewall', 'Webserver')
+        .link('Firewall', 'Aussen')
+        .host('Büro-PC', '192.168.1.10', '24', '192.168.1.1')
+        .host('Webserver', '203.0.113.80', '24', '203.0.113.1')
+        .host('Aussen', '198.51.100.10', '24', '198.51.100.1')
+        .web('Webserver', t('catalog.firewallDmz.page'));
+      return {
+        topology: s.topology,
+        tasks: task('firewallDmz', 3, [
+          goal('firewallDmz', 1, { type: 'http', from: 'Aussen', url: 'http://203.0.113.80/' }),
+          goal('firewallDmz', 2, { type: 'noPing', from: 'Aussen', to: 'Büro-PC' }),
+          goal('firewallDmz', 3, { type: 'noPing', from: 'Aussen', to: 'Webserver' }),
+          goal('firewallDmz', 4, { type: 'ping', from: 'Büro-PC', to: 'Aussen' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'vpn-sites',
+    stars: 4,
+    features: ['net.vpn', 'net.nat', 'device.internet'],
+    level: 4,
+    build() {
+      const s = new Start()
+        .add('pc', 'PC Zürich', -480, 0)
+        .router('Router Zürich', -240, 0, ['192.168.1.1/24', '198.51.100.1/30'])
+        .router('Internet', 0, 0, ['198.51.100.2/30', '203.0.113.2/30'], 'internet')
+        .router('Router Bern', 240, 0, ['203.0.113.1/30', '192.168.2.1/24'])
+        .add('pc', 'PC Bern', 480, 0)
+        .link('PC Zürich', 'Router Zürich')
+        .link('Router Zürich', 'Internet')
+        .link('Router Bern', 'Internet')
+        .link('Router Bern', 'PC Bern')
+        .host('PC Zürich', '192.168.1.10', '24', '192.168.1.1')
+        .host('PC Bern', '192.168.2.10', '24', '192.168.2.1')
+        .nat('Router Zürich', 1)
+        .nat('Router Bern', 0)
+        .apply((t, id) => {
+          const next = unwrap(setDefaultGateway(t, id('Router Zürich'), '198.51.100.2'));
+          return unwrap(setDefaultGateway(next, id('Router Bern'), '203.0.113.2'));
+        });
+      return {
+        topology: s.topology,
+        tasks: task('vpnSites', 4, [
+          goal('vpnSites', 1, { type: 'ping', from: 'PC Zürich', to: 'PC Bern' }),
+          goal('vpnSites', 2, { type: 'ping', from: 'PC Bern', to: 'PC Zürich' }),
         ]),
       };
     },

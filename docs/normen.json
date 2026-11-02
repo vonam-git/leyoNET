@@ -2,41 +2,194 @@
   "hinweis": "Verzeichnis aller Normen, die leyoNET in Code, Texten oder Doku nennt. Pflege und Ablauf: docs/normen.md. Jede neu zitierte Norm muss hier stehen, sonst schlägt npm run release fehl.",
   "pruefintervallMonate": 12,
   "rfc": {
-    "768": { "titel": "User Datagram Protocol", "verwendung": "UDP" },
-    "791": { "titel": "Internet Protocol", "verwendung": "IPv4-Kopf, Fragmentierung, TTL" },
-    "792": { "titel": "Internet Control Message Protocol", "verwendung": "ICMP, Ping, Traceroute" },
-    "826": { "titel": "An Ethernet Address Resolution Protocol", "verwendung": "ARP" },
-    "1035": { "titel": "Domain Names – Implementation and Specification", "verwendung": "DNS-Nachrichten" },
-    "1071": { "titel": "Computing the Internet Checksum", "verwendung": "Prüfsummen in IP, ICMP, UDP, TCP" },
-    "1123": { "titel": "Requirements for Internet Hosts – Application and Support", "verwendung": "Hostnamen" },
-    "1332": { "titel": "The PPP Internet Protocol Control Protocol (IPCP)", "verwendung": "PPP IPCP" },
-    "1542": { "titel": "Clarifications and Extensions for the Bootstrap Protocol", "verwendung": "DHCP-Relay (BOOTP)" },
-    "1661": { "titel": "The Point-to-Point Protocol (PPP)", "verwendung": "PPP, LCP" },
-    "1662": { "titel": "PPP in HDLC-like Framing", "verwendung": "Serielle Ports, HDLC-Rahmen" },
-    "1918": { "titel": "Address Allocation for Private Internets", "verwendung": "Private Adressbereiche" },
-    "1939": { "titel": "Post Office Protocol – Version 3", "verwendung": "POP3 im Mailserver" },
-    "2131": { "titel": "Dynamic Host Configuration Protocol", "verwendung": "DHCP" },
-    "2132": { "titel": "DHCP Options and BOOTP Vendor Extensions", "verwendung": "DHCP-Optionen" },
-    "2328": { "titel": "OSPF Version 2", "verwendung": "OSPF" },
-    "2453": { "titel": "RIP Version 2", "verwendung": "RIP v2" },
-    "2516": { "titel": "A Method for Transmitting PPP Over Ethernet (PPPoE)", "verwendung": "PPPoE bei DSL" },
-    "2606": { "titel": "Reserved Top Level DNS Names", "verwendung": "Beispieldomains .example" },
-    "3022": { "titel": "Traditional IP Network Address Translator", "verwendung": "NAT" },
-    "4253": { "titel": "The Secure Shell (SSH) Transport Layer Protocol", "verwendung": "SSH in der CLI" },
-    "4271": { "titel": "A Border Gateway Protocol 4 (BGP-4)", "verwendung": "BGP" },
-    "5227": { "titel": "IPv4 Address Conflict Detection", "verwendung": "Gratuitous ARP, Adresskonflikte" },
-    "5321": { "titel": "Simple Mail Transfer Protocol", "verwendung": "SMTP im Mailserver" },
-    "5737": { "titel": "IPv4 Address Blocks Reserved for Documentation", "verwendung": "Beispieladressen" },
-    "6598": { "titel": "IANA-Reserved IPv4 Prefix for Shared Address Space", "verwendung": "CGNAT 100.64.0.0/10" },
-    "6793": { "titel": "BGP Support for Four-Octet Autonomous System (AS) Number Space", "verwendung": "4-Byte-AS-Nummern" },
-    "9051": { "titel": "Internet Message Access Protocol (IMAP) – Version 4rev2", "verwendung": "IMAP im Mailserver" },
-    "9112": { "titel": "HTTP/1.1", "verwendung": "Webserver und Browser" },
-    "9293": { "titel": "Transmission Control Protocol (TCP)", "verwendung": "TCP" }
+    "768": {
+      "titel": "User Datagram Protocol",
+      "verwendung": "UDP"
+    },
+    "791": {
+      "titel": "Internet Protocol",
+      "verwendung": "IPv4-Kopf, Fragmentierung, TTL"
+    },
+    "792": {
+      "titel": "Internet Control Message Protocol",
+      "verwendung": "ICMP, Ping, Traceroute"
+    },
+    "826": {
+      "titel": "An Ethernet Address Resolution Protocol",
+      "verwendung": "ARP"
+    },
+    "1035": {
+      "titel": "Domain Names – Implementation and Specification",
+      "verwendung": "DNS-Nachrichten"
+    },
+    "1071": {
+      "titel": "Computing the Internet Checksum",
+      "verwendung": "Prüfsummen in IP, ICMP, UDP, TCP"
+    },
+    "1123": {
+      "titel": "Requirements for Internet Hosts – Application and Support",
+      "verwendung": "Hostnamen"
+    },
+    "1332": {
+      "titel": "The PPP Internet Protocol Control Protocol (IPCP)",
+      "verwendung": "PPP IPCP"
+    },
+    "1542": {
+      "titel": "Clarifications and Extensions for the Bootstrap Protocol",
+      "verwendung": "DHCP-Relay (BOOTP)"
+    },
+    "1661": {
+      "titel": "The Point-to-Point Protocol (PPP)",
+      "verwendung": "PPP, LCP"
+    },
+    "1662": {
+      "titel": "PPP in HDLC-like Framing",
+      "verwendung": "Serielle Ports, HDLC-Rahmen"
+    },
+    "1918": {
+      "titel": "Address Allocation for Private Internets",
+      "verwendung": "Private Adressbereiche"
+    },
+    "1939": {
+      "titel": "Post Office Protocol – Version 3",
+      "verwendung": "POP3 im Mailserver"
+    },
+    "2131": {
+      "titel": "Dynamic Host Configuration Protocol",
+      "verwendung": "DHCP"
+    },
+    "2132": {
+      "titel": "DHCP Options and BOOTP Vendor Extensions",
+      "verwendung": "DHCP-Optionen"
+    },
+    "2328": {
+      "titel": "OSPF Version 2",
+      "verwendung": "OSPF"
+    },
+    "2453": {
+      "titel": "RIP Version 2",
+      "verwendung": "RIP v2"
+    },
+    "2464": {
+      "titel": "Transmission of IPv6 Packets over Ethernet Networks",
+      "verwendung": "Ethertype 0x86DD, Multicast-MAC 33:33:xx:xx:xx:xx"
+    },
+    "2473": {
+      "titel": "Generic Packet Tunneling in IPv6 Specification",
+      "verwendung": "IPv4 in IPv6 (Next Header 4) für DS-Lite"
+    },
+    "2516": {
+      "titel": "A Method for Transmitting PPP Over Ethernet (PPPoE)",
+      "verwendung": "PPPoE bei DSL"
+    },
+    "2606": {
+      "titel": "Reserved Top Level DNS Names",
+      "verwendung": "Beispieldomains .example"
+    },
+    "3022": {
+      "titel": "Traditional IP Network Address Translator",
+      "verwendung": "NAT"
+    },
+    "3849": {
+      "titel": "IPv6 Address Prefix Reserved for Documentation",
+      "verwendung": "Beispieladressen 2001:db8::/32"
+    },
+    "4193": {
+      "titel": "Unique Local IPv6 Unicast Addresses",
+      "verwendung": "Private IPv6-Adressen fd00::/8"
+    },
+    "4253": {
+      "titel": "The Secure Shell (SSH) Transport Layer Protocol",
+      "verwendung": "SSH in der CLI"
+    },
+    "4271": {
+      "titel": "A Border Gateway Protocol 4 (BGP-4)",
+      "verwendung": "BGP"
+    },
+    "4291": {
+      "titel": "IP Version 6 Addressing Architecture",
+      "verwendung": "Adressarten, Link-Local, EUI-64, Solicited-Node-Multicast"
+    },
+    "4301": {
+      "titel": "Security Architecture for the Internet Protocol",
+      "verwendung": "IPsec, Site-to-Site-VPN, Traffic Selectors"
+    },
+    "4303": {
+      "titel": "IP Encapsulating Security Payload (ESP)",
+      "verwendung": "ESP (IP-Protokoll 50) im VPN-Tunnel"
+    },
+    "4443": {
+      "titel": "Internet Control Message Protocol (ICMPv6) for the Internet Protocol Version 6 (IPv6) Specification",
+      "verwendung": "ICMPv6: Echo, Destination Unreachable, Time Exceeded"
+    },
+    "4861": {
+      "titel": "Neighbor Discovery for IP version 6 (IPv6)",
+      "verwendung": "Neighbor/Router Solicitation und Advertisement statt ARP"
+    },
+    "4862": {
+      "titel": "IPv6 Stateless Address Autoconfiguration",
+      "verwendung": "SLAAC, Duplicate Address Detection"
+    },
+    "5227": {
+      "titel": "IPv4 Address Conflict Detection",
+      "verwendung": "Gratuitous ARP, Adresskonflikte"
+    },
+    "5321": {
+      "titel": "Simple Mail Transfer Protocol",
+      "verwendung": "SMTP im Mailserver"
+    },
+    "5737": {
+      "titel": "IPv4 Address Blocks Reserved for Documentation",
+      "verwendung": "Beispieladressen"
+    },
+    "5952": {
+      "titel": "A Recommendation for IPv6 Address Text Representation",
+      "verwendung": "Schreibweise von IPv6-Adressen"
+    },
+    "6333": {
+      "titel": "Dual-Stack Lite Broadband Deployments Following IPv4 Exhaustion",
+      "verwendung": "DS-Lite: B4 (Internet-Box), AFTR mit CGNAT beim Provider"
+    },
+    "6598": {
+      "titel": "IANA-Reserved IPv4 Prefix for Shared Address Space",
+      "verwendung": "CGNAT 100.64.0.0/10"
+    },
+    "6793": {
+      "titel": "BGP Support for Four-Octet Autonomous System (AS) Number Space",
+      "verwendung": "4-Byte-AS-Nummern"
+    },
+    "7296": {
+      "titel": "Internet Key Exchange Protocol Version 2 (IKEv2)",
+      "verwendung": "Tunnelaufbau des VPN (UDP 500)"
+    },
+    "8200": {
+      "titel": "Internet Protocol, Version 6 (IPv6) Specification",
+      "verwendung": "IPv6-Kopf, Hop Limit, Pseudo-Header für Prüfsummen"
+    },
+    "9051": {
+      "titel": "Internet Message Access Protocol (IMAP) – Version 4rev2",
+      "verwendung": "IMAP im Mailserver"
+    },
+    "9112": {
+      "titel": "HTTP/1.1",
+      "verwendung": "Webserver und Browser"
+    },
+    "9293": {
+      "titel": "Transmission Control Protocol (TCP)",
+      "verwendung": "TCP"
+    },
+    "9915": {
+      "titel": "Dynamic Host Configuration Protocol for IPv6 (DHCPv6)",
+      "verwendung": "DHCPv6: Solicit, Advertise, Request, Reply"
+    }
   },
   "weitere": [
     {
       "id": "IEEE 802.3",
-      "auch": ["IEEE 802.3ab", "IEEE 802.3z"],
+      "auch": [
+        "IEEE 802.3ab",
+        "IEEE 802.3z"
+      ],
       "organisation": "IEEE",
       "verwendung": "Ethernet, 1000BASE-T, 1000BASE-SX/LX",
       "aktuell": "IEEE 802.3-2022",
@@ -67,7 +220,10 @@
     },
     {
       "id": "IEEE 802.11",
-      "auch": ["IEEE 802.11i", "IEEE 802.11ac"],
+      "auch": [
+        "IEEE 802.11i",
+        "IEEE 802.11ac"
+      ],
       "organisation": "IEEE",
       "verwendung": "WLAN-Management, WPA2-Handshake, Wi-Fi 5",
       "aktuell": "IEEE 802.11-2024",

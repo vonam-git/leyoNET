@@ -12,10 +12,18 @@ export function protocolOf(frame: EthernetFrame): string {
   if (p.kind === 'stp') return 'STP';
   if (p.kind === 'ppp') return p.protocol === 'lcp' ? 'PPP LCP' : 'PPP IPCP';
   if (p.kind === 'link') return LINK_NAMES[p.tech];
+  if (p.kind === 'ipv6') {
+    const v6 = p.payload;
+    if (v6.kind === 'icmpv6') return 'ICMPv6';
+    // DS-Lite: Ein Analysator zeigt das innerste Protokoll des getunnelten IPv4-Pakets.
+    if (v6.kind === 'ipv4') return protocolOf({ ...frame, payload: v6 });
+    return v6.payload.kind === 'dhcpv6' ? 'DHCPv6' : v6.payload.kind.toUpperCase();
+  }
   const inner = p.payload;
   if (inner.kind === 'icmp') return 'ICMP';
+  if (inner.kind === 'esp') return 'ESP';
   if (inner.kind === 'ospf') return 'OSPF';
-  if (inner.kind === 'udp') return inner.payload.kind.toUpperCase();
+  if (inner.kind === 'udp') return inner.payload.kind === 'ike' ? 'IKEv2' : inner.payload.kind.toUpperCase();
   // TCP-Segmente mit Nutzdaten zählen zum Anwendungsprotokoll, reine Steuersegmente zu TCP.
   const app = TCP_APPS[inner.dstPort] ?? TCP_APPS[inner.srcPort];
   return inner.data && app ? app : 'TCP';

@@ -21,6 +21,20 @@ export type Medium = 'tp' | 'fiber' | 'wireless' | 'serial' | 'coax' | 'dsl' | '
 export const MEDIA: readonly Medium[] = ['tp', 'fiber', 'wireless', 'serial', 'coax', 'dsl', 'cellular'];
 
 /** Zugangstechnik eines Modems; bestimmt das Medium des WAN-Anschlusses und die Simulation. */
+/** «ipv4»: nur IPv4, «dual»: IPv4 und IPv6 (Dual Stack), «ipv6»: nur IPv6. */
+export type IpMode = 'ipv4' | 'dual' | 'ipv6';
+export const IP_MODES: readonly IpMode[] = ['ipv4', 'dual', 'ipv6'];
+
+/** Statische IPv6-Route: Zielnetz mit Präfix und nächster Router (oft eine Link-Local-Adresse mit Anschluss). */
+export interface StaticRoute6 {
+  network: string;
+  gateway?: string;
+  iface?: number;
+}
+
+import type { FirewallConfig, VpnTunnel } from './security';
+export type { FirewallConfig, FirewallRule, FirewallAction, FirewallProtocol, VpnTunnel } from './security';
+
 export type RoutingMode = 'auto' | 'static' | 'dynamic';
 export const ROUTING_MODES: readonly RoutingMode[] = ['auto', 'static', 'dynamic'];
 
@@ -78,6 +92,10 @@ export interface NetInterface {
   ospfCost?: number;
   /** Nur Internet (Provider): Kunden an diesem Anschluss erhalten CGNAT (100.64.0.0/10 wird übersetzt). */
   cgnat?: boolean;
+  /** IPv6-Adresse mit Präfix, z.B. "2001:db8:1::1/64" (RFC 5952). Link-Local entsteht automatisch. */
+  ipv6?: string;
+  /** Nur Router/Internet-Box: in diesem Netz Adressen per DHCPv6 vergeben (Router Advertisement mit M-Flag). */
+  dhcp6?: boolean;
 }
 
 /**
@@ -171,6 +189,10 @@ export interface Device {
   modem?: ModemConfig;
   /** Nur Router: statisches NAT 1:1 (Source-NAT mit Rückweg). */
   staticNat?: StaticNat[];
+  /** Router, Internet-Box, Endgeräte: Paketfilter (Router: weitergeleitete Pakete, Endgerät: eingehende). */
+  firewall?: FirewallConfig;
+  /** Nur Router: IPsec-Tunnel zu anderen Standorten (Site-to-Site-VPN). */
+  vpn?: VpnTunnel[];
   /** Nur Internet (Provider): öffentliche Adresse, hinter der CGNAT-Kunden erscheinen. */
   cgnatAddress?: string;
   /**
@@ -180,6 +202,16 @@ export interface Device {
    * mit eingerichtetem Protokoll dynamisch.
    */
   routingMode?: RoutingMode;
+  /** Endgeräte: IPv6 automatisch beziehen (SLAAC oder DHCPv6, je nach Router Advertisement). */
+  ipv6Auto?: boolean;
+  /** Endgeräte: IPv6-Standardgateway bei fester Adresse (globale oder Link-Local-Adresse des Routers). */
+  gateway6?: string;
+  /** Router, Internet-Box, Internet: statische IPv6-Routen. */
+  routes6?: StaticRoute6[];
+  /** Internet-Box: DS-Lite (RFC 6333). IPv4 aus dem Heimnetz geht im IPv6-Tunnel zum AFTR des Providers. */
+  dsLite?: { aftr: string };
+  /** Internet (Provider): arbeitet als AFTR für DS-Lite und übersetzt die getunnelten IPv4-Pakete per CGNAT. */
+  aftr?: boolean;
   /** Dynamisches Routing (Router und Layer-3-Switches). */
   ospf?: OspfConfig;
   bgp?: BgpConfig;
@@ -419,6 +451,8 @@ export interface Floor {
 export interface Topology {
   /** Name des Projekts, z.B. «Übung 02»; wird auch zum Dateinamen beim Speichern. */
   title?: string;
+  /** IP-Version des Projekts; fehlt = nur IPv4 (wie alle älteren Projekte). */
+  ipMode?: IpMode;
   devices: Device[];
   cables: Cable[];
   /** Nächste freie Nummer für Geräte- und Kabel-IDs, wird nie wiederverwendet. */

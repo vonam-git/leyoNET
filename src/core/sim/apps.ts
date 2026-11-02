@@ -1,4 +1,4 @@
-import type { IcmpMessage, Ipv4Packet } from './frames';
+import type { IcmpMessage, Ipv4Packet, Ipv6Packet } from './frames';
 import type { SendError } from './ip';
 import type { NodeContext } from './simulation';
 
@@ -13,6 +13,18 @@ export const TRACE_TIMEOUT = 2000;
 export interface IcmpHost {
   readonly ctx: NodeContext;
   sendIp(dst: string, payload: Ipv4Packet['payload'], options?: { ttl?: number }, onError?: (e: SendError) => void): void;
+}
+
+/**
+ * ICMPv6-Echo und -Fehler in der Form, die Ping und Traceroute kennen
+ * (Typ-Namen sind gleich; Hop Limit erscheint als TTL). null = nicht relevant.
+ */
+export function icmpView(packet: Ipv6Packet): Ipv4Packet | null {
+  const m = packet.payload;
+  if (m.kind !== 'icmpv6') return null;
+  if (m.type !== 'echoReply' && m.type !== 'destUnreachable' && m.type !== 'timeExceeded') return null;
+  const { target: _t, linkAddr: _l, flags: _f, prefix: _p, routerLifetime: _r, mtu: _m, ...rest } = m;
+  return { kind: 'ipv4', src: packet.src, dst: packet.dst, ttl: packet.hopLimit, id: 0, payload: { ...rest, kind: 'icmp', type: m.type } };
 }
 
 export interface IcmpApp {

@@ -7,6 +7,11 @@ import {
   type ArpPacket,
   type DhcpMessage,
   type DnsMessage,
+  type Dhcpv6Message,
+  type EspPacket,
+  type IkeMessage,
+  type Icmpv6Message,
+  type Ipv6Packet,
   type EthernetFrame,
   type IcmpMessage,
   type Ipv4Packet,
@@ -18,7 +23,8 @@ import {
   type TcpSegment,
   type UdpDatagram,
 } from '../sim/frames';
-import { Part, hex, internetChecksum, ipBytes, latin1, u16, u32, utf8, type WireField, type WireLayer } from './part';
+import { Part, hex, internetChecksum, ipBytes, latin1, macBytes, u16, u32, utf8, type WireField, type WireLayer } from './part';
+import { ip6Bytes } from '../net/ipv6';
 
 export type { WireField, WireLayer, OsiLayer } from './part';
 
@@ -191,7 +197,7 @@ function readable(data: string): string {
 }
 
 function portName(port: number): string {
-  const names: Record<number, string> = { 53: 'DNS', 67: 'DHCP Server', 68: 'DHCP Client', 520: 'RIP', ...TCP_APPS };
+  const names: Record<number, string> = { 53: 'DNS', 67: 'DHCP Server', 68: 'DHCP Client', 500: 'IKE', 520: 'RIP', 546: 'DHCPv6 Client', 547: 'DHCPv6 Server', ...TCP_APPS };
   return names[port] ? `${port} (${names[port]})` : String(port);
 }
 
@@ -199,19 +205,152 @@ function pseudoHeader(src: string, dst: string, protocol: number, length: number
   return [...ipBytes(src), ...ipBytes(dst), 0, protocol, ...u16(length)];
 }
 
-function udp(d: UdpDatagram, srcIp: string, dstIp: string): Part {
+/** Pseudo-Header für die Prüfsumme über IPv6 (RFC 8200, Abschnitt 8.1). */
+function pseudoHeader6(src: string, dst: string, nextHeader: number, length: number): number[] {
+  return [...ip6Bytes(src), ...ip6Bytes(dst), ...u32(length), 0, 0, 0, nextHeader];
+}
+
+function udp(d: UdpDatagram, srcIp: string, dstIp: string, v6 = false): Part {
   const p = new Part();
-  const inner = d.payload.kind === 'dhcp' ? dhcp(d.payload) : d.payload.kind === 'dns' ? dns(d.payload) : rip(d.payload);
+  const m = d.payload;
+  const inner = m.kind === 'dhcp' ? dhcp(m) : m.kind === 'dns' ? dns(m) : m.kind === 'dhcpv6' ? dhcp6(m) : m.kind === 'ike' ? ike(m) : rip(m);
   p.u16('udp.srcPort', d.srcPort, portName(d.srcPort));
   p.u16('udp.dstPort', d.dstPort, portName(d.dstPort));
   p.u16('udp.length', 8 + inner.length);
   const checksumAt = p.length;
   p.u16('udp.checksum', 0);
   p.append(inner);
-  const sum = internetChecksum([...pseudoHeader(srcIp, dstIp, 17, p.length), ...p.bytes]) || 0xffff;
+  const sum = internetChecksum([...(v6 ? pseudoHeader6(srcIp, dstIp, 17, p.length) : pseudoHeader(srcIp, dstIp, 17, p.length)), ...p.bytes]) || 0xffff;
   p.patch(checksumAt, u16(sum));
   p.fields.find((f) => f.key === 'udp.checksum')!.value = hex(sum, 4);
   p.close(4, 'UDP', 0);
+  return p;
+}
+
+// --- IPv6, ICMPv6, DHCPv6 ---------------------------------------------------------
+
+const DHCP6_TYPES: Record<Dhcpv6Message['type'], number> = { solicit: 1, advertise: 2, request: 3, reply: 7 };
+
+/** DUID-LL (Typ 3, Hardware Ethernet) aus der MAC-Adresse. */
+const duid = (mac: string) => [...u16(3), ...u16(1), ...macBytes(mac)];
+
+function dhcp6Option(p: Part, key: string, code: number, data: number[], shown: string) {
+  p.field(key, shown, [...u16(code), ...u16(data.length), ...data]);
+}
+
+/** DHCPv6 (RFC 9915): Nachrichtentyp, Transaktion, Optionen. */
+function dhcp6(m: Dhcpv6Message): Part {
+  const p = new Part();
+  p.u8('dhcp6.type', DHCP6_TYPES[m.type], `${DHCP6_TYPES[m.type]} (${m.type[0]!.toUpperCase()}${m.type.slice(1)})`);
+  p.field('dhcp6.xid', hex(m.xid & 0xffffff, 6), [(m.xid >> 16) & 0xff, (m.xid >> 8) & 0xff, m.xid & 0xff]);
+  dhcp6Option(p, 'dhcp6.clientId', 1, duid(m.clientMac), `DUID-LL ${m.clientMac}`);
+  if (m.serverMac) dhcp6Option(p, 'dhcp6.serverId', 2, duid(m.serverMac), `DUID-LL ${m.serverMac}`);
+  if (m.type === 'solicit' || m.type === 'request') dhcp6Option(p, 'dhcp6.elapsed', 8, u16(0), '0 ms');
+  const lifetime = m.lifetime ?? 0;
+  const iaAddr = m.address ? [...u16(5), ...u16(24), ...ip6Bytes(m.address), ...u32(Math.floor(lifetime / 2)), ...u32(lifetime)] : [];
+  dhcp6Option(p, 'dhcp6.iaNa', 3, [...u32(1), ...u32(Math.floor(lifetime / 2)), ...u32(Math.floor(lifetime * 0.8)), ...iaAddr], m.address ? `IAID 1, ${m.address}` : 'IAID 1');
+  if (m.dns) dhcp6Option(p, 'dhcp6.dns', 23, ip6Bytes(m.dns), m.dns);
+  p.close(7, 'DHCPv6', 0);
+  return p;
+}
+
+const ICMP6_TYPES: Record<Icmpv6Message['type'], number> = {
+  destUnreachable: 1,
+  timeExceeded: 3,
+  echoRequest: 128,
+  echoReply: 129,
+  routerSolicitation: 133,
+  routerAdvertisement: 134,
+  neighborSolicitation: 135,
+  neighborAdvertisement: 136,
+};
+
+/** ND-Option: Typ, Länge in 8-Byte-Einheiten, Daten (RFC 4861, Abschnitt 4.6). */
+function ndOption(p: Part, key: string, type: number, data: number[], shown: string) {
+  const length = Math.ceil((data.length + 2) / 8);
+  const padded = [...data, ...Array<number>(length * 8 - 2 - data.length).fill(0)];
+  p.field(key, shown, [type, length, ...padded]);
+}
+
+/** ICMPv6 (RFC 4443) mit Neighbor Discovery (RFC 4861); Prüfsumme über den IPv6-Pseudo-Header. */
+function icmpv6(m: Icmpv6Message, src: string, dst: string): Part {
+  const p = new Part();
+  const type = ICMP6_TYPES[m.type];
+  p.u8('icmp6.type', type, `${type} (${m.type})`);
+  const code = m.type === 'destUnreachable' ? (m.code === 'host' ? 3 : 0) : 0;
+  p.u8('icmp6.code', code, m.type === 'destUnreachable' ? `${code} (${m.code === 'host' ? 'address unreachable' : 'no route to destination'})` : code);
+  p.u16('icmp6.checksum', 0);
+  switch (m.type) {
+    case 'echoRequest':
+    case 'echoReply':
+      p.u16('icmp6.id', m.id, hex(m.id, 4));
+      p.u16('icmp6.seq', m.seq);
+      p.field('icmp6.data', `${m.size} Bytes`, Array.from({ length: m.size }, (_, i) => 0x61 + (i % 23)));
+      break;
+    case 'destUnreachable':
+    case 'timeExceeded': {
+      p.u32('icmp6.unused', 0);
+      // So viel vom auslösenden Paket wie möglich (hier: IPv6-Kopf und Echo-Kopf).
+      const o = m.original!;
+      const header = [0x60, 0, 0, 0, ...u16(8 + 32), 58, 1, ...ip6Bytes(o.src), ...ip6Bytes(o.dst)];
+      p.field('icmp6.original', `${o.src} → ${o.dst}`, [...header, 128, 0, 0, 0, ...u16(o.id), ...u16(o.seq)]);
+      break;
+    }
+    case 'routerSolicitation':
+      p.u32('icmp6.reserved', 0);
+      if (m.linkAddr) ndOption(p, 'nd.sourceLinkAddr', 1, macBytes(m.linkAddr), m.linkAddr);
+      break;
+    case 'routerAdvertisement': {
+      p.u8('nd.curHopLimit', 64);
+      const flags = (m.flags?.managed ? 0x80 : 0) | (m.flags?.other ? 0x40 : 0);
+      p.u8('nd.raFlags', flags, `${hex(flags, 2)} (M=${m.flags?.managed ? 1 : 0}, O=${m.flags?.other ? 1 : 0})`);
+      p.u16('nd.routerLifetime', m.routerLifetime ?? 0, `${m.routerLifetime ?? 0} s`);
+      p.u32('nd.reachable', 0);
+      p.u32('nd.retrans', 0);
+      if (m.linkAddr) ndOption(p, 'nd.sourceLinkAddr', 1, macBytes(m.linkAddr), m.linkAddr);
+      if (m.mtu) ndOption(p, 'nd.mtu', 5, [0, 0, ...u32(m.mtu)], String(m.mtu));
+      if (m.prefix) {
+        const pf = m.prefix;
+        const pflags = 0x80 | (pf.autonomous ? 0x40 : 0);
+        ndOption(p, 'nd.prefix', 3, [pf.length, pflags, ...u32(pf.valid), ...u32(pf.preferred), 0, 0, 0, 0, ...ip6Bytes(pf.network)], `${pf.network}/${pf.length} (L=1, A=${pf.autonomous ? 1 : 0})`);
+      }
+      break;
+    }
+    case 'neighborSolicitation':
+      p.u32('icmp6.reserved', 0);
+      p.field('nd.target', m.target ?? '', ip6Bytes(m.target ?? '::'));
+      if (m.linkAddr) ndOption(p, 'nd.sourceLinkAddr', 1, macBytes(m.linkAddr), m.linkAddr);
+      break;
+    case 'neighborAdvertisement': {
+      const f = (m.flags?.router ? 0x80 : 0) | (m.flags?.solicited ? 0x40 : 0) | (m.flags?.override ? 0x20 : 0);
+      p.field('nd.naFlags', `R=${m.flags?.router ? 1 : 0}, S=${m.flags?.solicited ? 1 : 0}, O=${m.flags?.override ? 1 : 0}`, [f, 0, 0, 0]);
+      p.field('nd.target', m.target ?? '', ip6Bytes(m.target ?? '::'));
+      if (m.linkAddr) ndOption(p, 'nd.targetLinkAddr', 2, macBytes(m.linkAddr), m.linkAddr);
+      break;
+    }
+  }
+  const sum = internetChecksum([...pseudoHeader6(src, dst, 58, p.length), ...p.bytes]);
+  p.patch(2, u16(sum));
+  p.fields.find((f) => f.key === 'icmp6.checksum')!.value = hex(sum, 4);
+  const nd = type >= 133 && type <= 136;
+  p.close(3, nd ? 'ICMPv6 (Neighbor Discovery)' : 'ICMPv6', 0);
+  return p;
+}
+
+/** IPv6-Kopf (RFC 8200): 40 Bytes, ohne Prüfsumme; Next Header 58 = ICMPv6, 17 = UDP, 4 = IPv4 (DS-Lite). */
+function ipv6(packet: Ipv6Packet): Part {
+  const inner = packet.payload;
+  const payload = inner.kind === 'icmpv6' ? icmpv6(inner, packet.src, packet.dst) : inner.kind === 'udp' ? udp(inner, packet.src, packet.dst, true) : ipv4(inner);
+  const nextHeader = inner.kind === 'icmpv6' ? 58 : inner.kind === 'udp' ? 17 : 4;
+  const p = new Part();
+  p.field('ip6.version', '6, Traffic Class 0, Flow Label 0', [0x60, 0, 0, 0]);
+  p.u16('ip6.payloadLength', payload.length);
+  p.u8('ip6.nextHeader', nextHeader, `${nextHeader} (${{ 58: 'ICMPv6', 17: 'UDP', 4: 'IPv4 (DS-Lite)' }[nextHeader]})`);
+  p.u8('ip6.hopLimit', packet.hopLimit);
+  p.field('ip6.src', packet.src, ip6Bytes(packet.src));
+  p.field('ip6.dst', packet.dst, ip6Bytes(packet.dst));
+  p.append(payload);
+  p.close(3, nextHeader === 4 ? 'IPv6 (DS-Lite-Tunnel)' : 'IPv6', 0, nextHeader === 4 ? { note: 'note.dsLite' } : undefined);
   return p;
 }
 
@@ -317,11 +456,77 @@ function ipv4Header(packet: Ipv4Packet, payloadLength: number, protocol: number,
   return header;
 }
 
+// --- IPsec: IKEv2 und ESP ---------------------------------------------------------
+
+/** Pseudozufällige Bytes aus einem Startwert (LCG); für Schlüsselmaterial und Verwürfelung in der Simulation. */
+function stream(seed: number, length: number): number[] {
+  let x = seed >>> 0 || 1;
+  return Array.from({ length }, () => {
+    x = (Math.imul(x, 1664525) + 1013904223) >>> 0;
+    return x >>> 24;
+  });
+}
+
+/** Generischer IKEv2-Payload-Kopf: nächster Payload, Flags, Länge (RFC 7296, 3.2). */
+function ikePayload(p: Part, key: string, next: number, data: number[], shown: string) {
+  p.field(key, shown, [next, 0, ...u16(4 + data.length), ...data]);
+}
+
+/** IKEv2 (RFC 7296): Kopf mit SPIs, Austauschtyp, Flags; IKE_AUTH ist verschlüsselt (SK-Payload). */
+function ike(m: IkeMessage): Part {
+  const p = new Part();
+  const init = m.exchange === 'IKE_SA_INIT';
+  // I-Flag: Nachricht vom ursprünglichen Initiator; R-Flag: Antwort.
+  const flags = (m.response ? 0x20 : 0x08);
+  const body = new Part();
+  if (init) {
+    ikePayload(body, 'ike.sa', 34, utf8('ENCR_AES_GCM_16(256) PRF_HMAC_SHA2_256 ECP_256'), 'AES-GCM-256, SHA-256, DH-Gruppe 19');
+    ikePayload(body, 'ike.ke', 40, [0, 19, 0, 0, ...stream(m.ispi ^ m.rspi ^ (m.response ? 0x5a : 0xa5), 64)], 'DH-Gruppe 19, 64 Bytes');
+    ikePayload(body, 'ike.nonce', 0, stream((m.response ? m.rspi : m.ispi) * 31, 32), '32 Bytes');
+  } else {
+    const content = `${m.proof ?? ''}|${m.tsi ?? ''}|${m.tsr ?? ''}|${m.notify ?? ''}`;
+    const plain = utf8(content);
+    const secret = plain.map((b, i) => b ^ stream(m.ispi + m.rspi, plain.length)[i]!);
+    ikePayload(body, 'ike.sk', 0, [...stream(m.msgId + 7, 16), ...secret, ...stream(m.rspi, 16)], m.notify ? `verschlüsselt (Notify ${m.notify})` : 'verschlüsselt (IDi/IDr, AUTH, SA, TSi, TSr)');
+  }
+  p.field('ike.ispi', hex(m.ispi, 16), [0, 0, 0, 0, ...u32(m.ispi)]);
+  p.field('ike.rspi', hex(m.rspi, 16), [0, 0, 0, 0, ...u32(m.rspi)]);
+  p.u8('ike.nextPayload', init ? 33 : 46, init ? '33 (SA)' : '46 (Encrypted and Authenticated)');
+  p.u8('ike.version', 0x20, '2.0');
+  p.u8('ike.exchange', init ? 34 : 35, init ? '34 (IKE_SA_INIT)' : '35 (IKE_AUTH)');
+  p.u8('ike.flags', flags, m.response ? '0x20 (Response)' : '0x08 (Initiator)');
+  p.u32('ike.msgId', m.msgId);
+  p.u32('ike.length', 28 + body.length);
+  p.append(body);
+  p.close(7, 'IKEv2', 0, { note: 'note.ike' });
+  return p;
+}
+
+/**
+ * ESP (RFC 4303): SPI, Sequenznummer, verschlüsselte Nutzlast (inneres
+ * IPv4-Paket mit Trailer) und Prüfwert (ICV). Die Verschlüsselung ist nur
+ * angedeutet: Die Bytes werden mit einem Schlüsselstrom verwürfelt.
+ */
+function esp(m: EspPacket): Part {
+  const p = new Part();
+  p.u32('esp.spi', m.spi, hex(m.spi, 8));
+  p.u32('esp.seq', m.seq);
+  const inner = ipv4(m.inner).bytes;
+  // Trailer: Auffüllen auf 4 Bytes, Länge der Auffüllung, Next Header 4 (IPv4, Tunnelmodus).
+  const padLength = (4 - ((inner.length + 2) % 4)) % 4;
+  const plain = [...inner, ...Array.from({ length: padLength }, (_, i) => i + 1), padLength, 4];
+  const key = stream(m.keyHash ^ m.seq, plain.length);
+  p.field('esp.encrypted', `${plain.length} Bytes (verschlüsselt)`, plain.map((b, i) => b ^ key[i]!));
+  p.field('esp.icv', '16 Bytes', stream(m.keyHash + m.seq * 2654435761, 16));
+  p.close(3, 'ESP (IPsec)', 0, { note: 'note.esp' });
+  return p;
+}
+
 function ipv4(packet: Ipv4Packet): Part {
   const inner = packet.payload;
   const payload =
-    inner.kind === 'icmp' ? icmp(inner) : inner.kind === 'udp' ? udp(inner, packet.src, packet.dst) : inner.kind === 'tcp' ? tcp(inner, packet.src, packet.dst) : ospf(inner);
-  const protocol = inner.kind === 'icmp' ? 1 : inner.kind === 'udp' ? 17 : inner.kind === 'tcp' ? 6 : 89;
+    inner.kind === 'icmp' ? icmp(inner) : inner.kind === 'udp' ? udp(inner, packet.src, packet.dst) : inner.kind === 'tcp' ? tcp(inner, packet.src, packet.dst) : inner.kind === 'esp' ? esp(inner) : ospf(inner);
+  const protocol = inner.kind === 'icmp' ? 1 : inner.kind === 'udp' ? 17 : inner.kind === 'tcp' ? 6 : inner.kind === 'esp' ? 50 : 89;
   const df = inner.kind === 'tcp';
   const header = ipv4Header(packet, payload.length, protocol, df);
   const p = new Part();
@@ -331,7 +536,7 @@ function ipv4(packet: Ipv4Packet): Part {
   p.field('ip.id', hex(packet.id & 0xffff, 4), header.slice(4, 6));
   p.field('ip.flags', df ? "0x4000 (Don't Fragment)" : '0x0000', header.slice(6, 8));
   p.field('ip.ttl', packet.ttl, [header[8]!]);
-  p.field('ip.protocol', `${protocol} (${{ 1: 'ICMP', 6: 'TCP', 17: 'UDP', 89: 'OSPF' }[protocol]})`, [header[9]!]);
+  p.field('ip.protocol', `${protocol} (${{ 1: 'ICMP', 6: 'TCP', 17: 'UDP', 50: 'ESP', 89: 'OSPF' }[protocol]})`, [header[9]!]);
   p.field('ip.checksum', hex((header[10]! << 8) | header[11]!, 4), header.slice(10, 12));
   p.field('ip.src', packet.src, header.slice(12, 16));
   p.field('ip.dst', packet.dst, header.slice(16, 20));
@@ -404,6 +609,7 @@ function payloadPart(frame: EthernetFrame): { part: Part; etherType: number; ppp
   const p = frame.payload;
   if (p.kind === 'arp') return { part: arp(p), etherType: 0x0806, pppProtocol: 0 };
   if (p.kind === 'ipv4') return { part: ipv4(p), etherType: 0x0800, pppProtocol: 0x0021 };
+  if (p.kind === 'ipv6') return { part: ipv6(p), etherType: 0x86dd, pppProtocol: 0x0057 };
   if (p.kind === 'stp') return { part: stp(p), etherType: 0, pppProtocol: 0 };
   if (p.kind === 'ppp') return { part: pppControl(p), etherType: 0, pppProtocol: p.protocol === 'lcp' ? 0xc021 : 0x8021 };
   return { part: new Part(), etherType: 0, pppProtocol: 0 };
@@ -417,7 +623,7 @@ function ethernet(frame: EthernetFrame, inner: Part, etherType: number, header =
     p.u16('eth.tpid', 0x8100, '0x8100 (802.1Q)');
     p.u16('eth.tci', frame.vlan & 0xfff, `PCP 0, VLAN ${frame.vlan}`);
   }
-  if (etherType) p.u16('eth.type', etherType, `${hex(etherType, 4)} (${{ 0x0800: 'IPv4', 0x0806: 'ARP', 0x8863: 'PPPoE Discovery', 0x8864: 'PPPoE Session', 0x888e: '802.1X' }[etherType] ?? ''})`);
+  if (etherType) p.u16('eth.type', etherType, `${hex(etherType, 4)} (${{ 0x0800: 'IPv4', 0x86dd: 'IPv6', 0x0806: 'ARP', 0x8863: 'PPPoE Discovery', 0x8864: 'PPPoE Session', 0x888e: '802.1X' }[etherType] ?? ''})`);
   else p.u16('eth.length', inner.length, `${inner.length} (IEEE 802.3)`);
   p.append(inner);
   p.close(2, frame.vlan !== undefined ? `${header} + 802.1Q` : header, 0, { note: 'note.ethernet' });

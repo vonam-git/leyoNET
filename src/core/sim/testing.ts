@@ -154,8 +154,16 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
   if (p.kind === 'stp') return `${route} STP root=${p.rootId} cost=${p.cost}`;
   if (p.kind === 'ppp') return `${route} PPP ${p.protocol.toUpperCase()} ${p.code}`;
   if (p.kind === 'link') return `${route} ${p.tech.toUpperCase()} ${p.message}`;
+  if (p.kind === 'ipv6') {
+    const v6 = p.payload;
+    if (v6.kind === 'icmpv6') return `${route} ICMPv6 ${v6.type}${v6.target ? ` ${v6.target}` : ''} ${p.src}>${p.dst}`;
+    if (v6.kind === 'ipv4') return `${route} DS-Lite ${p.src}>${p.dst} [${describe(topology, { ...entry, frame: { ...entry.frame, payload: v6 } }).slice(route.length + 1)}]`;
+    const m = v6.payload;
+    return `${route} ${m.kind === 'dhcpv6' ? `DHCPv6 ${m.type}${m.address ? ` ${m.address}` : ''}` : m.kind.toUpperCase()} ${p.src}>${p.dst}`;
+  }
   const inner = p.payload;
   if (inner.kind === 'ospf') return `${route} OSPF ${inner.type} ${inner.routerId}`;
+  if (inner.kind === 'esp') return `${route} ESP spi=0x${inner.spi.toString(16)} seq=${inner.seq} ${p.src}>${p.dst}`;
   if (inner.kind === 'tcp') {
     const data = inner.data ? ` "${inner.data.split('\r\n')[0]}"` : '';
     return `${route} TCP ${inner.srcPort}>${inner.dstPort} [${inner.flags.join(',')}] seq=${inner.seq} ack=${inner.ack}${data}`;
@@ -167,6 +175,8 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
       return `${route} DNS ${msg.response ? 'response' : 'query'} ${msg.question.name}${answer}`;
     }
     if (msg.kind === 'rip') return `${route} RIP ${msg.command} ${msg.entries.map((e) => `${e.network}/${e.metric}`).join(',')}`;
+    if (msg.kind === 'dhcpv6') return `${route} DHCPv6 ${msg.type}`;
+    if (msg.kind === 'ike') return `${route} IKEv2 ${msg.exchange}${msg.response ? ' response' : ''}${msg.notify ? ` ${msg.notify}` : ''}`;
     return `${route} DHCP ${msg.op} ${p.src}>${p.dst}`;
   }
   return `${route} ICMP ${inner.type} ${p.src}>${p.dst}`;

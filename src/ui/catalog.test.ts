@@ -4,6 +4,8 @@ import {
   addDevice,
   addDnsRecord,
   addStaticNat,
+  addVpnTunnel,
+  setFirewall,
   addPortForward,
   setDefaultGateway,
   addStaticRoute,
@@ -13,6 +15,9 @@ import {
   setPortSerial,
   setRip,
   setRoutingMode,
+  setInterfaceIpv6,
+  setDsLite,
+  setAftr,
   setInterfaceShutdown,
   setStp,
   setVlanDef,
@@ -139,6 +144,14 @@ const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
     for (const name of ['Router 1', 'Router 2', 'Router 3']) t = unwrap(setRoutingMode(t, byName(t, name), 'auto'));
     return t;
   },
+  'ipv6-router': (t) => {
+    t = unwrap(setInterfaceIpv6(t, byName(t, 'Router'), 0, '2001:db8:1::1/64'));
+    return unwrap(setInterfaceIpv6(t, byName(t, 'Router'), 1, '2001:db8:2::1/64'));
+  },
+  'ds-lite': (t) => {
+    t = unwrap(setDsLite(t, byName(t, 'Internet-Box'), '2001:db8:ffff::1'));
+    return unwrap(setAftr(t, byName(t, 'Provider'), true));
+  },
   'static-routes': (t) => {
     t = unwrap(addStaticRoute(t, byName(t, 'Router 1'), { network: '192.168.20.0', mask: '24', gateway: '10.0.0.2' }));
     return unwrap(addStaticRoute(t, byName(t, 'Router 2'), { network: '192.168.10.0', mask: '24', gateway: '10.0.0.1' }));
@@ -149,6 +162,20 @@ const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
   },
   'port-forward': (t) => unwrap(addPortForward(t, byName(t, 'Heimrouter'), { protocol: 'tcp', port: 8080, to: '192.168.1.20', toPort: 80 })),
   'snat-mail': (t) => unwrap(addStaticNat(t, byName(t, 'Firmenrouter'), { inside: '192.168.0.25', outside: '203.0.113.5', kind: 'snat' })),
+  'firewall-dmz': (t) =>
+    unwrap(
+      setFirewall(t, byName(t, 'Firewall'), {
+        defaultAction: 'deny',
+        rules: [
+          { action: 'allow', protocol: 'tcp', src: 'any', dst: '203.0.113.80', port: 80 },
+          { action: 'allow', protocol: 'any', src: '192.168.1.0/24', dst: 'any' },
+        ],
+      }),
+    ),
+  'vpn-sites': (t) => {
+    t = unwrap(addVpnTunnel(t, byName(t, 'Router Zürich'), { name: 'Bern', peer: '203.0.113.1', local: '192.168.1.0/24', remote: '192.168.2.0/24', key: 'Schulnetz' }));
+    return unwrap(addVpnTunnel(t, byName(t, 'Router Bern'), { name: 'Zürich', peer: '198.51.100.1', local: '192.168.2.0/24', remote: '192.168.1.0/24', key: 'Schulnetz' }));
+  },
   'dnat-web': (t) => unwrap(addStaticNat(t, byName(t, 'Firmenrouter'), { inside: '192.168.0.80', outside: '203.0.113.6', kind: 'dnat' })),
   'static-nat-dmz': (t) => unwrap(addStaticNat(t, byName(t, 'Firmenrouter'), { inside: '192.168.0.80', outside: '203.0.113.5' })),
   'bgp-two-as': (t) => {

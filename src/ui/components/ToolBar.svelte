@@ -97,6 +97,13 @@
       {ui.currency} {money(cost)}
     </button>
   {/if}
+  {#if ui.has('net.ipv6') || editor.ipMode !== 'ipv4'}
+    <div class="ipmode" role="radiogroup" aria-label={t('ipMode.label')} title={t('ipMode.hint')} data-help="ipv6">
+      {#each ['ipv4', 'dual', 'ipv6'] as const as mode (mode)}
+        <button role="radio" aria-checked={editor.ipMode === mode} disabled={!editor.editable && editor.ipMode !== mode} onclick={() => editor.setIpMode(mode)} title={t(`ipMode.${mode}.hint`)}>{t(`ipMode.${mode}`)}</button>
+      {/each}
+    </div>
+  {/if}
   <button class="chip" onclick={() => dialogs.show('features')} title={t('features.chipHint')}>
     <Icon name={ui.locked ? 'lock' : 'layers'} size={16} />
     {ui.profile === 'custom' ? t('profile.custom') : t(`profile.short.${ui.profile}`)}
@@ -213,6 +220,25 @@
     border-radius: 999px;
     font-size: 0.8rem;
     white-space: nowrap;
+  }
+  .ipmode {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .ipmode button {
+    padding: 3px 9px;
+    font-size: 0.75rem;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    white-space: nowrap;
+  }
+  .ipmode button[aria-checked='true'] {
+    color: var(--on-accent);
+    background: var(--accent);
+    font-weight: 600;
   }
   .cost {
     font-variant-numeric: tabular-nums;

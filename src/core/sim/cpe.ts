@@ -1,11 +1,12 @@
 import { ACCESS_PROFILES, nextSteps, stepIndex } from './access';
 import { DhcpServer, type DhcpHost } from './dhcp';
-import { BROADCAST_MAC, DHCP_SERVER_PORT, type EthernetFrame, type Ipv4Packet, type LinkControl, type UdpDatagram } from './frames';
+import { BROADCAST_MAC, DHCP_SERVER_PORT, type EthernetFrame, type Ipv4Packet, type Ipv6Packet, type LinkControl, type UdpDatagram } from './frames';
+import type { IfaceAddress } from '../net/routing';
 import { RouterNode } from './ip';
 import type { NodeContext } from './simulation';
 import { CPE_LAN, CPE_WAN } from '../model/links';
 import type { ModemKind } from '../model/types';
-import { formatIp } from '../net/ipv4';
+import { formatIp, parseIp, prefixToMask } from '../net/ipv4';
 
 /** So lange bleibt eine gelernte MAC-Adresse im internen Switch (wie beim Switch: 5 Minuten). */
 const MAC_TTL = 300_000;
@@ -170,6 +171,27 @@ export class CpeNode extends RouterNode {
     return true;
   }
 
+  /**
+   * DS-Lite (B4, RFC 6333): IPv4 aus dem Heimnetz, das nicht ins eigene LAN
+   * geht, wandert ohne NAT in einem IPv6-Paket zum AFTR des Providers.
+   */
+  protected override tunnelOut(inIface: IfaceAddress, packet: Ipv4Packet): boolean {
+    const aftr = this.ctx.device()?.dsLite?.aftr;
+    if (!aftr || inIface.index !== CPE_LAN) return false;
+    const dst = parseIp(packet.dst);
+    if (dst === null || this.interfaces().some((i) => (dst & prefixToMask(i.prefix)) >>> 0 === (i.ip & prefixToMask(i.prefix)) >>> 0)) return false;
+    this.v6.tunnel(aftr, packet, () => this.ctx.print('dslite.noTunnel', { aftr }));
+    return true;
+  }
+
+  /** DS-Lite: Antwort vom AFTR auspacken und ins Heimnetz weitergeben. */
+  protected override onTunnel(packet: Ipv6Packet, inner: Ipv4Packet): boolean {
+    const aftr = this.ctx.device()?.dsLite?.aftr;
+    if (!aftr || packet.src !== aftr) return false;
+    this.injectIpv4(inner, '192.0.0.2');
+    return true;
+  }
+
   /** DHCP-Server im LAN; alles andere wie beim Router (Relay, RIP). */
   protected override onUdp(packet: Ipv4Packet, datagram: UdpDatagram, index: number, srcMac: string) {
     const msg = datagram.payload;
@@ -206,5 +228,5 @@ export class CpeNode extends RouterNode {
 }
 
 function isMulticast(mac: string): boolean {
-  return /^01:00:5E:/i.test(mac);
+  return /^01:00:5E:/i.test(mac) || /^33:33:/i.test(mac);
 }

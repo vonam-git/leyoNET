@@ -1,0 +1,194 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "pc",
+        "name": "Büro-PC",
+        "position": {
+          "x": 120,
+          "y": 200
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "ip": "192.168.1.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.1.1"
+      },
+      {
+        "id": "d2",
+        "type": "router",
+        "name": "Firewall",
+        "position": {
+          "x": 420,
+          "y": 200
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "192.168.1.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:02:01",
+            "ip": "203.0.113.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "mac": "02:00:00:00:02:03",
+            "index": 2,
+            "ip": "198.51.100.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:02:02",
+            "sfpSlot": true
+          }
+        ],
+        "firewall": {
+          "rules": [
+            {
+              "action": "allow",
+              "protocol": "tcp",
+              "src": "any",
+              "dst": "203.0.113.80",
+              "port": 80
+            },
+            {
+              "action": "allow",
+              "protocol": "any",
+              "src": "192.168.1.0/24",
+              "dst": "any",
+              "iface": 0
+            }
+          ],
+          "defaultAction": "deny"
+        }
+      },
+      {
+        "id": "d3",
+        "type": "server",
+        "name": "Webserver",
+        "position": {
+          "x": 420,
+          "y": 440
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ip": "203.0.113.80",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "203.0.113.1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Webserver in der DMZ</h1><p>Port 80 ist von überall erreichbar. Alles andere sperrt die Firewall.</p>"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d4",
+        "type": "pc",
+        "name": "Aussen",
+        "position": {
+          "x": 740,
+          "y": 200
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ip": "198.51.100.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "198.51.100.1"
+      }
+    ],
+    "cables": [
+      {
+        "id": "c5",
+        "a": {
+          "device": "d1",
+          "iface": 0
+        },
+        "b": {
+          "device": "d2",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c6",
+        "a": {
+          "device": "d2",
+          "iface": 1
+        },
+        "b": {
+          "device": "d3",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c7",
+        "a": {
+          "device": "d2",
+          "iface": 2
+        },
+        "b": {
+          "device": "d4",
+          "iface": 0
+        }
+      }
+    ],
+    "nextId": 11,
+    "areas": [
+      {
+        "id": "a8",
+        "title": "LAN 192.168.1.0/24",
+        "color": "green",
+        "x": 40,
+        "y": 110,
+        "width": 220,
+        "height": 190,
+        "network": "192.168.1.0/24"
+      },
+      {
+        "id": "a9",
+        "title": "DMZ 203.0.113.0/24",
+        "color": "orange",
+        "x": 320,
+        "y": 360,
+        "width": 200,
+        "height": 180,
+        "network": "203.0.113.0/24"
+      },
+      {
+        "id": "a10",
+        "title": "Internet",
+        "color": "blue",
+        "x": 640,
+        "y": 110,
+        "width": 220,
+        "height": 190
+      }
+    ]
+  },
+  "configuration": {}
+}
+

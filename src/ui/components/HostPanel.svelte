@@ -3,6 +3,7 @@
   import { t } from '../../i18n';
   import { openDesktop } from '../state/desktop.svelte';
   import { simStore } from '../state/sim.svelte';
+  import { editor } from '../state/editor.svelte';
   import AddressView from './AddressView.svelte';
   import StateTables from './StateTables.svelte';
 
@@ -18,7 +19,7 @@
 <button class="open" onclick={() => openDesktop(device.id)}>{t('desktop.open')}</button>
 <p class="hint">{t('desktop.openHint')}</p>
 
-<StateTables {device} {arp} {now} />
+{#if editor.ipMode !== 'ipv6'}<StateTables {device} {arp} {now} />{/if}
 
 <style>
   .open {

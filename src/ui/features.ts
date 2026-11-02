@@ -57,6 +57,10 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('net.subinterfaces', 'network', 4),
   f('net.staticNat', 'network', 4),
   f('net.cgnat', 'network', 4),
+  f('net.firewall', 'network', 3),
+  f('net.vpn', 'network', 4),
+  f('net.ipv6', 'network', 4),
+  f('net.dsLite', 'network', 4),
   f('net.cli', 'network', 3),
   f('net.ssh', 'network', 4),
   // Routing
@@ -111,6 +115,7 @@ export function mediumFeature(medium: Medium): string | null {
 /** Funktionen, die ein Projekt verwendet: Beim Laden werden sie eingeschaltet, damit nichts verborgen wirkt. */
 export function usedFeatures(t: Topology): string[] {
   const used = new Set<string>();
+  if (t.ipMode && t.ipMode !== 'ipv4') used.add('net.ipv6');
   for (const d of t.devices) {
     used.add(deviceFeature(d.type));
     if (d.dhcpServer) used.add('service.dhcp');
@@ -127,6 +132,10 @@ export function usedFeatures(t: Topology): string[] {
     if (d.bgp) used.add('routing.bgp');
     if (d.routes?.length) used.add('routing.static');
     if (d.routingMode === 'auto') used.add('routing.auto');
+    if (d.ipv6Auto || d.gateway6 || d.routes6?.length) used.add('net.ipv6');
+    if (d.dsLite || d.aftr) used.add('net.dsLite');
+    if (d.firewall) used.add('net.firewall');
+    if (d.vpn?.length) used.add('net.vpn');
     if (d.vlanNames?.length) used.add('net.vlan');
     if (d.wlan?.mesh) used.add('net.wlanMesh');
     if (d.cli?.ssh) used.add('net.ssh');
@@ -137,6 +146,7 @@ export function usedFeatures(t: Topology): string[] {
       if (i.serial) used.add('medium.serial');
       if (i.cgnat) used.add('net.cgnat');
       if (i.sfp) used.add('medium.fiber');
+      if (i.ipv6) used.add('net.ipv6');
     }
   }
   for (const c of t.cables) {

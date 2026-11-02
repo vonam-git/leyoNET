@@ -1,4 +1,4 @@
-import { BROADCAST_MAC, TCP_APPS, decodeBgp, getDevice, protocolOf, type EthernetFrame, type PacketLogEntry, type Topology } from '../core';
+import { BROADCAST_MAC, TCP_APPS, decodeBgp, getDevice, normalizeIp6, protocolOf, type EthernetFrame, type Ipv4Packet, type Ipv6Packet, type PacketLogEntry, type Topology } from '../core';
 import { t } from '../i18n';
 import { interfaceLabel } from './labels';
 
@@ -34,6 +34,37 @@ function endpointLabel(topology: Topology, device: string, iface: number): strin
 
 const hex = (n: number) => `0x${n.toString(16).padStart(8, '0')}`;
 
+/** IPv4-Paket eines Rahmens, auch getunnelt in IPv6 (DS-Lite). */
+export function ipv4Of(frame: EthernetFrame): Ipv4Packet | null {
+  const p = frame.payload;
+  if (p.kind === 'ipv4') return p;
+  if (p.kind === 'ipv6' && p.payload.kind === 'ipv4') return p.payload;
+  return null;
+}
+
+/** ICMPv6 und DHCPv6 in der Spalte «Info». */
+function infoOf6(frame: EthernetFrame, p: Ipv6Packet): string {
+  const inner = p.payload;
+  if (inner.kind === 'ipv4') return `${t('packets.dslite', { src: p.src, dst: p.dst })} ${infoOf({ ...frame, payload: inner })}`;
+  if (inner.kind === 'udp') {
+    const m = inner.payload;
+    if (m.kind === 'dhcpv6') return t(`packets.dhcp6.${m.type}`, { address: m.address ?? '', xid: `0x${m.xid.toString(16).padStart(6, '0')}` });
+    return `UDP ${inner.srcPort} → ${inner.dstPort}`;
+  }
+  switch (inner.type) {
+    case 'neighborSolicitation':
+      return p.src === '::' ? t('packets.icmp6.dad', { target: inner.target ?? '' }) : t('packets.icmp6.neighborSolicitation', { target: inner.target ?? '' });
+    case 'neighborAdvertisement':
+      return t('packets.icmp6.neighborAdvertisement', { target: inner.target ?? '', mac: inner.linkAddr ?? '', router: inner.flags?.router ? ' (Router)' : '' });
+    case 'routerSolicitation':
+      return t('packets.icmp6.routerSolicitation');
+    case 'routerAdvertisement':
+      return t(inner.flags?.managed ? 'packets.icmp6.routerAdvertisementManaged' : 'packets.icmp6.routerAdvertisement', { prefix: inner.prefix ? `${inner.prefix.network}/${inner.prefix.length}` : '–' });
+    default:
+      return t(`packets.icmp.${inner.type}`, { seq: inner.seq, ttl: p.hopLimit, target: inner.original?.dst ?? '', what: t(`packets.unreachable.${inner.code ?? 'net'}`) });
+  }
+}
+
 /** Kurzbeschreibung eines Rahmens für die Spalte «Info». */
 export function infoOf(frame: EthernetFrame): string {
   const p = frame.payload;
@@ -51,6 +82,7 @@ export function infoOf(frame: EthernetFrame): string {
       .join(', ');
     return `${p.message}${fields ? ` – ${fields}` : ''}`;
   }
+  if (p.kind === 'ipv6') return (frame.access ? `[${frame.access.toUpperCase()}] ` : '') + infoOf6(frame, p);
   const inner = p.payload;
   const access = frame.access ? `[${frame.access.toUpperCase()}] ` : '';
   if (inner.kind === 'ospf') {
@@ -89,7 +121,12 @@ export function infoOf(frame: EthernetFrame): string {
     const continuation = app === 'HTTP' && !/^(GET|POST|HEAD|HTTP\/)/.test(first);
     return `${access}${continuation ? t('packets.tcp.continuation') : first} ${numbers}`;
   }
+  if (inner.kind === 'esp') return access + t('packets.esp', { spi: `0x${inner.spi.toString(16).padStart(8, '0')}`, seq: inner.seq });
   const msg = inner.payload;
+  if (msg.kind === 'ike') {
+    const what = msg.notify ? t(`packets.ike.${msg.notify}`) : t(`packets.ike.${msg.exchange}.${msg.response ? 'response' : 'request'}`);
+    return `${access}IKEv2 ${msg.exchange} · ${what}`;
+  }
   if (msg.kind === 'dns') {
     if (!msg.response) return access + t('packets.dns.query', { type: msg.question.type, name: msg.question.name });
     if (msg.rcode === 'nxdomain') return access + t('packets.dns.nxdomain', { name: msg.question.name });
@@ -98,6 +135,7 @@ export function infoOf(frame: EthernetFrame): string {
   if (msg.kind === 'rip') {
     return access + t(msg.command === 'request' ? 'packets.rip.request' : 'packets.rip.response', { routes: msg.entries.map((e) => `${e.network}/${e.metric}`).join(', ') });
   }
+  if (msg.kind === 'dhcpv6') return access + t(`packets.dhcp6.${msg.type}`, { address: msg.address ?? '', xid: hex(msg.xid) });
   return access + t(`packets.dhcp.${msg.op}`, { ip: msg.yourIp ?? msg.requestedIp ?? '', xid: hex(msg.xid) });
 }
 
@@ -106,6 +144,7 @@ function addresses(topology: Topology, entry: PacketLogEntry): [string, string] 
   const frame = entry.frame;
   const p = frame.payload;
   if (p.kind === 'ipv4') return [p.src, p.dst];
+  if (p.kind === 'ipv6') return [p.src, p.dst];
   if (frame.l2 || p.kind === 'link' || !frame.src) {
     const name = (id: string) => getDevice(topology, id)?.name ?? id;
     return [name(entry.from.device), name(entry.to.device)];
@@ -143,9 +182,18 @@ export interface FilterResult {
 const PROTOCOL_WORDS: Record<string, (proto: string, frame: EthernetFrame) => boolean> = {
   arp: (p) => p === 'ARP',
   icmp: (p) => p === 'ICMP',
-  ip: (_p, f) => f.payload.kind === 'ipv4',
-  tcp: (_p, f) => f.payload.kind === 'ipv4' && f.payload.payload.kind === 'tcp',
-  udp: (_p, f) => f.payload.kind === 'ipv4' && f.payload.payload.kind === 'udp',
+  ip: (_p, f) => !!ipv4Of(f),
+  ipv6: (_p, f) => f.payload.kind === 'ipv6',
+  icmpv6: (p) => p === 'ICMPv6',
+  ndp: (_p, f) => f.payload.kind === 'ipv6' && f.payload.payload.kind === 'icmpv6' && /^(router|neighbor)/.test(f.payload.payload.type),
+  dhcpv6: (p) => p === 'DHCPv6',
+  dslite: (_p, f) => f.payload.kind === 'ipv6' && f.payload.payload.kind === 'ipv4',
+  esp: (p) => p === 'ESP',
+  ike: (p) => p === 'IKEv2',
+  isakmp: (p) => p === 'IKEv2',
+  vpn: (p) => p === 'ESP' || p === 'IKEv2',
+  tcp: (_p, f) => ipv4Of(f)?.payload.kind === 'tcp',
+  udp: (_p, f) => ipv4Of(f)?.payload.kind === 'udp' || (f.payload.kind === 'ipv6' && f.payload.payload.kind === 'udp'),
   dhcp: (p) => p === 'DHCP',
   dns: (p) => p === 'DNS',
   http: (p) => p === 'HTTP',
@@ -172,8 +220,9 @@ const PROTOCOL_WORDS: Record<string, (proto: string, frame: EthernetFrame) => bo
 };
 
 function ports(frame: EthernetFrame): number[] {
-  if (frame.payload.kind !== 'ipv4') return [];
-  const inner = frame.payload.payload;
+  const p = frame.payload;
+  const inner = ipv4Of(frame)?.payload ?? (p.kind === 'ipv6' && p.payload.kind === 'udp' ? p.payload : null);
+  if (!inner) return [];
   return inner.kind === 'tcp' || inner.kind === 'udp' ? [inner.srcPort, inner.dstPort] : [];
 }
 
@@ -221,7 +270,9 @@ export function parseFilter(text: string): FilterResult {
       if (value === undefined) return fail(t('filter.error.value', { field }));
       const v = value.toLowerCase();
       const compare = (test: Predicate): Predicate => (negate ? (e, topo) => !test(e, topo) : test);
-      const ip = (e: PacketLogEntry) => (e.frame.payload.kind === 'ipv4' ? e.frame.payload : null);
+      const ip = (e: PacketLogEntry) => ipv4Of(e.frame);
+      const ip6 = (e: PacketLogEntry) => (e.frame.payload.kind === 'ipv6' ? e.frame.payload : null);
+      const same6 = (a: string | undefined) => !!a && normalizeIp6(a) === normalizeIp6(value);
       switch (field) {
         case 'ip.addr':
           return compare((e) => !!ip(e) && (ip(e)!.src === value || ip(e)!.dst === value));
@@ -229,6 +280,12 @@ export function parseFilter(text: string): FilterResult {
           return compare((e) => ip(e)?.src === value);
         case 'ip.dst':
           return compare((e) => ip(e)?.dst === value);
+        case 'ipv6.addr':
+          return compare((e) => same6(ip6(e)?.src) || same6(ip6(e)?.dst));
+        case 'ipv6.src':
+          return compare((e) => same6(ip6(e)?.src));
+        case 'ipv6.dst':
+          return compare((e) => same6(ip6(e)?.dst));
         case 'eth.addr':
           return compare((e) => e.frame.src.toLowerCase() === v || e.frame.dst.toLowerCase() === v);
         case 'eth.src':
@@ -241,9 +298,9 @@ export function parseFilter(text: string): FilterResult {
           const n = Number(value);
           const kind = field.split('.')[0];
           return compare((e) => {
-            const p = e.frame.payload;
-            if (p.kind !== 'ipv4') return false;
-            if (kind !== 'port' && p.payload.kind !== kind) return false;
+            const p = ipv4Of(e.frame)?.payload ?? (e.frame.payload.kind === 'ipv6' ? e.frame.payload.payload : null);
+            if (!p) return false;
+            if (kind !== 'port' && p.kind !== kind) return false;
             return ports(e.frame).includes(n);
           });
         }
