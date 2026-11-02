@@ -985,12 +985,12 @@ function showVersion(device: Device): string[] {
 
 const prefixText = (ip: number, prefix: number) => `${formatIp(networkOf(ip, prefix))}/${prefix}`;
 
-const ROUTE_CODES: Record<Route['kind'], string> = { connected: 'C', static: 'S', default: 'S', ospf: 'O', rip: 'R', bgp: 'B' };
+const ROUTE_CODES: Record<Route['kind'], string> = { connected: 'C', static: 'S', default: 'S', ospf: 'O', rip: 'R', bgp: 'B', auto: 'A' };
 
 /** Routingtabelle; in der Simulation inklusive dynamisch gelernter Routen. */
 export function showIpRoute(device: Device, env?: CliEnv): string[] {
   const routes = env?.state?.routes ?? buildRoutes(device).routes;
-  const lines = ['Codes: C - connected, S - static, O - OSPF, R - RIP, B - BGP', '       > - selected route, * - FIB route', ''];
+  const lines = ['Codes: C - connected, S - static, O - OSPF, R - RIP, B - BGP, A - automatic (leyoNET)', '       > - selected route, * - FIB route', ''];
   const sorted = [...routes].sort((a, b) => (a.network >>> 0) - (b.network >>> 0) || a.prefix - b.prefix || (a.distance ?? 0) - (b.distance ?? 0));
   const selected = new Set<string>();
   for (const r of sorted) {
@@ -1006,7 +1006,8 @@ export function showIpRoute(device: Device, env?: CliEnv): string[] {
     }
   }
   if (sorted.length === 0) lines.push('(no routes)');
-  if (!env?.state && (device.ospf || device.rip || device.bgp)) lines.push('', '% Dynamic routes appear while the simulation runs');
+  if (!env?.state && device.routingMode === 'auto') lines.push('', '% Automatic routing: routes appear while the simulation runs');
+  else if (!env?.state && (device.ospf || device.rip || device.bgp)) lines.push('', '% Dynamic routes appear while the simulation runs');
   return lines;
 }
 

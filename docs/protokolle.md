@@ -27,6 +27,8 @@ Der Simulator sendet Pakete, die den Standards folgen. Jeder Rahmen lässt sich 
 | 7 | RIP v2 | RFC 2453 | Update alle 5 s statt 30 s, Timeout 30 s statt 180 s; Split Horizon |
 | 7 | BGP-4 | RFC 4271 | Binär über TCP 179: OPEN, KEEPALIVE, UPDATE, NOTIFICATION; Pfadwahl nach AS-Pfad-Länge; keine Policies |
 
+**Automatisches Routing** (Häkchen beim Router oder Layer-3-Switch) ist kein Protokoll, sondern eine Abkürzung für Einsteiger: Die Simulation liest den Netzplan und trägt zu jedem Netz den Weg über die wenigsten Router ein (Code «A»). Nachbarn sind Router mit Anschlüssen im selben Netzabschnitt und Subnetz; abgeschaltete Anschlüsse zählen nicht. Führt ein Weg zum Provider oder zu einer Internet-Box, kommt eine Standardroute dazu. Es werden keine Pakete ausgetauscht, darum erscheint nichts in der Paketliste. Statische Routen und OSPF/RIP/BGP ruhen, solange das Häkchen gesetzt ist; ohne Häkchen wählt man «statisch» oder «dynamisch».
+
 Die Routingtabelle nutzt die übliche **administrative Distanz**: direkt 0, statisch 1, eBGP 20, OSPF 110, RIP 120, iBGP 200. Gewinnt das längste Präfix, bei Gleichstand die kleinere Distanz.
 
 ## Zugangsleitungen (Modems)

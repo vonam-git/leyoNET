@@ -10,6 +10,7 @@ export * from './net/ipv4';
 export * from './sim/frames';
 export * from './sim/simulation';
 export * from './net/routing';
+export { autoRoutes } from './net/autoroute';
 export * from './net/mail';
 export * from './sim/protocol';
 export * from './tasks/tasks';

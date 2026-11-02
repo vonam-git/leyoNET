@@ -21,6 +21,9 @@ export type Medium = 'tp' | 'fiber' | 'wireless' | 'serial' | 'coax' | 'dsl' | '
 export const MEDIA: readonly Medium[] = ['tp', 'fiber', 'wireless', 'serial', 'coax', 'dsl', 'cellular'];
 
 /** Zugangstechnik eines Modems; bestimmt das Medium des WAN-Anschlusses und die Simulation. */
+export type RoutingMode = 'auto' | 'static' | 'dynamic';
+export const ROUTING_MODES: readonly RoutingMode[] = ['auto', 'static', 'dynamic'];
+
 export type ModemKind = 'cable' | 'fiber' | 'mobile' | 'adsl' | 'vdsl';
 export const MODEM_KINDS: readonly ModemKind[] = ['cable', 'fiber', 'mobile', 'adsl', 'vdsl'];
 
@@ -170,6 +173,13 @@ export interface Device {
   staticNat?: StaticNat[];
   /** Nur Internet (Provider): öffentliche Adresse, hinter der CGNAT-Kunden erscheinen. */
   cgnatAddress?: string;
+  /**
+   * Routing-Art (Router und Layer-3-Switches): «auto» berechnet die Routen
+   * selbst aus dem Netzplan (für Einsteiger), «static» nur eigene statische
+   * Routen, «dynamic» zusätzlich OSPF/RIP/BGP. Fehlt = wie bisher: statisch,
+   * mit eingerichtetem Protokoll dynamisch.
+   */
+  routingMode?: RoutingMode;
   /** Dynamisches Routing (Router und Layer-3-Switches). */
   ospf?: OspfConfig;
   bgp?: BgpConfig;

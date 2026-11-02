@@ -118,6 +118,14 @@ export const DEMOS: readonly Demo[] = [
   { id: 'routerOnAStick', file: 'router-on-a-stick.json', topic: 'switching', layers: [2, 3], actions: [{ at: 600, device: 'PC Verwaltung', command: 'ping 192.168.20.11' }], check: { kind: 'ping', device: 'PC Verwaltung' }, until: 8000 },
   { id: 'l3switch', file: 'layer3-switch.json', topic: 'switching', layers: [2, 3], actions: [{ at: 5000, device: 'Notebook 1', command: 'ping 10.99.0.10' }], check: { kind: 'ping', device: 'Notebook 1' }, until: 15_000 },
   // Routing
+  { id: 'autoRouting', file: 'automatisches-routing.json', topic: 'routing', layers: [3], actions: [{ at: 600, device: 'PC A', command: 'tracert 192.168.30.10' }], check: { kind: 'trace', device: 'PC A' }, until: 10_000,
+    tour: [
+      { sim: false, highlight: 'Router 1' },
+      { highlight: 'Router 1', window: { device: 'Router 1', tab: 'routing' } },
+      { sim: true, pause: false, action: { at: 0, device: 'PC A', command: 'tracert 192.168.30.10' }, highlight: 'PC A' },
+      { highlight: 'Router 2', window: { device: 'Router 2', tab: 'routing' } },
+      { highlight: 'Router 1' },
+    ] },
   { id: 'static', file: 'statische-routen.json', topic: 'routing', layers: [3], actions: [{ at: 600, device: 'PC A', command: 'tracert 192.168.20.10' }], check: { kind: 'trace', device: 'PC A' }, until: 10_000 },
   { id: 'ospf', file: 'ospf.json', topic: 'routing', layers: [3], actions: [{ at: 9000, device: 'PC 1', command: 'tracert 192.168.2.10' }], check: { kind: 'trace', device: 'PC 1' }, until: 20_000 },
   { id: 'rip', file: 'rip.json', topic: 'routing', layers: [3, 4], actions: [{ at: 9000, device: 'PC 1', command: 'tracert 192.168.2.10' }], check: { kind: 'trace', device: 'PC 1' }, until: 20_000 },
