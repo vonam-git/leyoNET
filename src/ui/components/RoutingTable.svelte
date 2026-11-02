@@ -8,8 +8,8 @@
 
   const configured = $derived(buildRoutes(device));
   const routes = $derived(live ?? configured.routes);
-  const CODES: Record<Route['kind'], string> = { connected: 'C', static: 'S', default: 'S*', ospf: 'O', rip: 'R', bgp: 'B' };
-  const dynamic = $derived(routes.some((r) => r.kind === 'ospf' || r.kind === 'rip' || r.kind === 'bgp'));
+  const CODES: Record<Route['kind'], string> = { connected: 'C', static: 'S', default: 'S*', ospf: 'O', rip: 'R', bgp: 'B', auto: 'A' };
+  const dynamic = $derived(routes.some((r) => r.kind === 'ospf' || r.kind === 'rip' || r.kind === 'bgp' || r.kind === 'auto'));
 </script>
 
 <h3>{t('routing.title')}</h3>
@@ -49,6 +49,9 @@
 <style>
   .code {
     font-weight: 700;
+  }
+  .code-auto {
+    color: #d97706;
   }
   .code-ospf {
     color: #16a085;

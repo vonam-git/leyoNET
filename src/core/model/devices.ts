@@ -1,4 +1,4 @@
-import type { DeviceRole, DeviceType } from './types';
+import type { Device, DeviceRole, DeviceType, RoutingMode } from './types';
 
 export interface DeviceSpec {
   role: DeviceRole;
@@ -60,6 +60,17 @@ export function isSwitchType(type: DeviceType): boolean {
 /** Geräte mit eigener Routingtabelle (statische Routen). */
 export function hasRoutingTable(type: DeviceType): boolean {
   return isRouterType(type) || type === 'l3switch' || type === 'cpe';
+}
+
+/** Geräte mit wählbarer Routing-Art (automatisch, statisch, dynamisch). */
+export function canAutoRoute(type: DeviceType): boolean {
+  return type === 'router' || type === 'l3switch';
+}
+
+/** Wirksame Routing-Art; ohne Angabe wie bisher: dynamisch, sobald ein Protokoll eingerichtet ist. */
+export function routingModeOf(device: Device): RoutingMode {
+  if (!canAutoRoute(device.type)) return device.ospf || device.rip || device.bgp ? 'dynamic' : 'static';
+  return device.routingMode ?? (device.ospf || device.rip || device.bgp ? 'dynamic' : 'static');
 }
 
 /** Geräte, die in ein Rack eingebaut werden können. */

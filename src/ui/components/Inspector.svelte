@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_SPECS, isRouterType, isSwitchType } from '../../core';
+  import { DEVICE_SPECS, canAutoRoute, isRouterType, isSwitchType } from '../../core';
   import { t } from '../../i18n';
   import { dialogs } from '../state/dialogs.svelte';
   import { editor } from '../state/editor.svelte';
@@ -15,6 +15,7 @@
   import NetDevicePanel from './NetDevicePanel.svelte';
   import PortPanel from './PortPanel.svelte';
   import RouterConfig from './RouterConfig.svelte';
+  import RoutingModeForm from './RoutingModeForm.svelte';
   import SviConfig from './SviConfig.svelte';
   import WlanConfig from './WlanConfig.svelte';
 
@@ -59,6 +60,9 @@
       <SviConfig {device} />
     {:else if device.type === 'accesspoint'}
       <WlanConfig {device} />
+    {/if}
+    {#if editor.editable && canAutoRoute(device.type)}
+      <RoutingModeForm {device} compact />
     {/if}
 
     {#if isSwitchType(device.type) || device.type === 'router'}

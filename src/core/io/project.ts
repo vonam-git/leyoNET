@@ -1,4 +1,4 @@
-import { DEVICE_SPECS, isDeviceType } from '../model/devices';
+import { DEVICE_SPECS, canAutoRoute, isDeviceType } from '../model/devices';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
 import { MAC_PATTERN } from '../model/mac';
 import { MAX_NAME_LENGTH, MAX_WEB_FILE, deviceSeq } from '../model/topology';
@@ -27,7 +27,7 @@ import type {
   RoutedNetwork,
   VlanDef,
 } from '../model/types';
-import { MEDIA, MODEM_KINDS, SFP_MODULES } from '../model/types';
+import { MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type RoutingMode } from '../model/types';
 import { isValidName, normalizeName } from '../net/dns';
 import { isValidPath } from '../net/http';
 import { checkMailAccount } from '../net/mail';
@@ -533,6 +533,10 @@ function readDevice(v: unknown, path: string): Device {
     });
   }
   if (o.ipRouting !== undefined && !bool(o.ipRouting, `${path}.ipRouting`)) device.ipRouting = false;
+  if (o.routingMode !== undefined) {
+    if (!ROUTING_MODES.includes(o.routingMode as RoutingMode) || !canAutoRoute(device.type)) throw new Invalid(`${path}.routingMode`);
+    device.routingMode = o.routingMode as RoutingMode;
+  }
   if (o.wlan !== undefined) {
     const p = `${path}.wlan`;
     const w = obj(o.wlan, p);

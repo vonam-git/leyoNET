@@ -43,6 +43,10 @@ Beim Start der Simulation wird automatisch ein Snapshot angelegt. Weitere entste
 
 Nützlich: **Strg+D** dupliziert die Auswahl, **F2** benennt um, **Entf** löscht, **Strg+Z** macht rückgängig.
 
+## Router: automatisches Routing
+
+Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routing**. Er findet dann alle Netze im Plan selbst, ohne dass du Routen eintragen musst. Jeder Router auf dem Weg braucht das Häkchen. Ohne Häkchen wählst du **statisch** (Routen von Hand) oder **dynamisch** (OSPF, RIP, BGP), im Fenster **Erweitert … → Routing**.
+
 ## Mehrere Geräte auf einmal
 
 - **Auswahlrahmen:** Im Entwurf auf freier Fläche ziehen. Gewählt werden alle Geräte, deren Mitte im Rahmen liegt, und Bereiche, die ganz darin liegen. Mit **Umschalt** kommt der Rahmen zur Auswahl dazu (auch innerhalb eines Bereichs), **Umschalt+Klick** nimmt einzelne Geräte dazu oder heraus, **Strg+A** wählt alles.

@@ -8,7 +8,7 @@ Die Auswahl öffnet sich über den Profil-Chip in der Werkzeugleiste oder **Werk
 
 | Profil | Zielgruppe | Neu freigeschaltet |
 |---|---|---|
-| 1 Einstieg | 1. Lehrjahr | PC, Notebook, Switch, Router, Server, DHCP, Paketliste, OSI-Ansicht, IP-Rechner, Bereiche, Snapshots, Aufgaben erstellen |
+| 1 Einstieg | 1. Lehrjahr | PC, Notebook, Switch, Router, Server, automatisches Routing, DHCP, Paketliste, OSI-Ansicht, IP-Rechner, Bereiche, Snapshots, Aufgaben erstellen |
 | 2 Grundlagen | 1.–2. Lehrjahr | Access Point, Internet, Internet-Box (CPE), Glasfaser, WLAN, DNS, Web, Ports abschalten, statische Routen, Adressanzeige, Stockwerke, Kosten |
 | 3 Fortgeschritten | 2.–3. Lehrjahr | Client-Gruppen, Modems, Zugangsleitungen, E-Mail, Kabelschäden, VLANs, STP, WLAN-Mesh/Roaming, DHCP-Relay, NAT, CLI, Racks, Preise im Shop |
 | 4 Profi | 3.–4. Lehrjahr | L3-Switch, serielle Leitungen, Subinterfaces, statisches NAT, CGNAT, SSH, RIP, OSPF, Hex-Ansicht, pcap-Export |
@@ -67,5 +67,5 @@ Die Richtlinie gilt sofort für alle Sitzungen. In der lokalen Datei und der Des
 | Verbindungen | `medium.fiber`, `medium.wireless`, `medium.access` (Koax, DSL, Mobilfunk), `medium.serial` |
 | Dienste | `service.dhcp`, `service.dns`, `service.web`, `service.mail` |
 | Netzwerk | `net.portShutdown`, `net.cableDamage`, `net.vlan`, `net.stp`, `net.wlanMesh`, `net.dhcpRelay`, `net.nat`, `net.subinterfaces`, `net.staticNat`, `net.cgnat`, `net.cli`, `net.ssh` |
-| Routing | `routing.static`, `routing.rip`, `routing.ospf`, `routing.bgp` |
+| Routing | `routing.auto`, `routing.static`, `routing.rip`, `routing.ospf`, `routing.bgp` |
 | Werkzeuge | `tool.sniffer`, `tool.osi`, `tool.hex`, `tool.pcap`, `tool.ipCalculator`, `tool.areas`, `tool.snapshots`, `tool.addressBadges`, `tool.floors`, `tool.costs`, `tool.prices`, `tool.racks`, `tool.taskEditor` |

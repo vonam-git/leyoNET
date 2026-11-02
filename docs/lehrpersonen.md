@@ -44,6 +44,7 @@ Tipp: Vorführen, dann mit **Leertaste** anhalten und mit **N** im Einzelschritt
 | ★ | Büro mit Budget | Switch wählen und verkabeln, Kosten unter einer Grenze |
 | ★ | Gast aussperren | Switch-Port abschalten, ohne das Kabel zu ziehen |
 | ★ | Wer hat die Adresse doppelt? | doppelte IP-Adresse finden und beheben |
+| ★ | Drei Router, automatisch geroutet | automatisches Routing einschalten, auch beim Router in der Mitte |
 | ★★ | Kleines LAN mit Switch | Switch und Adressen |
 | ★★ | Zwei Netze mit einem Router | Router und Gateways |
 | ★★ | Ein ganzes Schulzimmer | Client-Gruppe mit 25 PCs per DHCP versorgen |

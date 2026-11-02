@@ -46,7 +46,7 @@ Router(config-if)#         Router(config-vlan)#    Router(config-line)#   Router
 | Befehl | Zeigt |
 |---|---|
 | `show running-config` | aktuelle Konfiguration (nur `#`) |
-| `show ip route` | Routingtabelle (C = direkt verbunden, S = statisch, O = OSPF, R = RIP, B = BGP; in Klammern Distanz/Metrik) |
+| `show ip route` | Routingtabelle (C = direkt verbunden, S = statisch, O = OSPF, R = RIP, B = BGP, A = automatisches Routing; in Klammern Distanz/Metrik) |
 | `show ip protocols` | aktive Routingprotokolle mit Netzen |
 | `show ip ospf neighbor` | OSPF-Nachbarn und ihr Zustand (Simulation) |
 | `show ip ospf database` | OSPF-Datenbank (LSAs, Simulation) |

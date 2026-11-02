@@ -762,6 +762,34 @@ export const CATALOG: CatalogEntry[] = [
     },
   },
   {
+    id: 'auto-routing',
+    stars: 1,
+    features: ['routing.auto'],
+    level: 1,
+    build() {
+      const s = new Start()
+        .add('pc', 'PC A', -520, 120)
+        .router('Router 1', -260, 0, ['192.168.10.1/24', '10.0.12.1/30'])
+        .router('Router 2', 0, 0, ['10.0.12.2/30', '10.0.23.1/30'])
+        .router('Router 3', 260, 0, ['10.0.23.2/30', '192.168.30.1/24'])
+        .add('pc', 'PC C', 520, 120)
+        .link('PC A', 'Router 1')
+        .link('Router 1', 'Router 2')
+        .link('Router 2', 'Router 3')
+        .link('Router 3', 'PC C')
+        .host('PC A', '192.168.10.10', '24', '192.168.10.1')
+        .host('PC C', '192.168.30.10', '24', '192.168.30.1');
+      return {
+        topology: s.topology,
+        tasks: task('autoRouting', 1, [
+          goal('autoRouting', 1, { type: 'routeLearned', device: 'Router 1', network: '192.168.30.0/24' }),
+          goal('autoRouting', 2, { type: 'routeLearned', device: 'Router 3', network: '192.168.10.0/24' }),
+          goal('autoRouting', 3, { type: 'ping', from: 'PC A', to: 'PC C' }),
+        ]),
+      };
+    },
+  },
+  {
     id: 'static-routes',
     stars: 2,
     features: ['routing.static'],

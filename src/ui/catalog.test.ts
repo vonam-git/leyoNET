@@ -12,6 +12,7 @@ import {
   setOspf,
   setPortSerial,
   setRip,
+  setRoutingMode,
   setInterfaceShutdown,
   setStp,
   setVlanDef,
@@ -134,6 +135,10 @@ const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
     return t;
   },
   'duplicate-ip': (t) => unwrap(configureHost(t, byName(t, 'Notebook'), { ip: '10.0.0.3', mask: '24' })),
+  'auto-routing': (t) => {
+    for (const name of ['Router 1', 'Router 2', 'Router 3']) t = unwrap(setRoutingMode(t, byName(t, name), 'auto'));
+    return t;
+  },
   'static-routes': (t) => {
     t = unwrap(addStaticRoute(t, byName(t, 'Router 1'), { network: '192.168.20.0', mask: '24', gateway: '10.0.0.2' }));
     return unwrap(addStaticRoute(t, byName(t, 'Router 2'), { network: '192.168.10.0', mask: '24', gateway: '10.0.0.1' }));
