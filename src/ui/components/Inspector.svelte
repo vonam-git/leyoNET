@@ -9,6 +9,8 @@
   import DeviceBasics from './DeviceBasics.svelte';
   import GroupConfig from './GroupConfig.svelte';
   import HostConfigForm from './HostConfigForm.svelte';
+  import Ipv6Interfaces from './Ipv6Interfaces.svelte';
+  import Host6Form from './Host6Form.svelte';
   import HostPanel from './HostPanel.svelte';
   import Icon from './Icon.svelte';
   import ModemConfig from './ModemConfig.svelte';
@@ -46,7 +48,8 @@
       {:else if device.type === 'clientgroup'}
         <GroupConfig {device} />
       {:else}
-        <HostConfigForm {device} />
+        {#if editor.ipMode !== 'ipv6'}<HostConfigForm {device} />{/if}
+        {#if editor.ipMode !== 'ipv4'}<Host6Form {device} />{/if}
       {/if}
     {:else if device.type === 'modem'}
       <ModemConfig {device} />
@@ -55,11 +58,14 @@
     {:else if editor.acting}
       <NetDevicePanel {device} />
     {:else if isRouterType(device.type)}
-      <RouterConfig {device} part="interfaces" compact />
+      {#if editor.ipMode !== 'ipv6'}<RouterConfig {device} part="interfaces" compact />{/if}
     {:else if device.type === 'l3switch'}
       <SviConfig {device} />
     {:else if device.type === 'accesspoint'}
       <WlanConfig {device} />
+    {/if}
+    {#if !editor.acting && editor.ipMode !== 'ipv4' && (isRouterType(device.type) || device.type === 'cpe')}
+      <Ipv6Interfaces {device} compact />
     {/if}
     {#if editor.editable && canAutoRoute(device.type)}
       <RoutingModeForm {device} compact />

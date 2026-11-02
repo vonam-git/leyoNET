@@ -7,7 +7,7 @@
 | 1. Lehrjahr | 1 | Zwei PCs, Switch, Subnetze, Router, DHCP, erste Pakete (ARP, ICMP) | ★ – ★★ |
 | 1.–2. Lehrjahr | 2 | DNS, Web, WLAN, Internet, statische Routen, Ports abschalten, VLSM, Offerten (Budget) | ★★ – ★★★ |
 | 2.–3. Lehrjahr | 3 | VLANs mit Farben, STP und Broadcast-Sturm, NAT, Modems, Client-Gruppen, CLI | ★★★ |
-| 3.–4. Lehrjahr | 4 | Serielle WAN-Leitungen, OSPF, RIP, statisches NAT/DMZ, CGNAT, SSH, Hex und pcap | ★★★★ |
+| 3.–4. Lehrjahr | 4 | Serielle WAN-Leitungen, OSPF, RIP, statisches NAT/DMZ, CGNAT, IPv6 (SLAAC, DHCPv6), DS-Lite, SSH, Hex und pcap | ★★★★ |
 | Fachhochschule | 5 | BGP zwischen autonomen Systemen | ★★★★★ |
 
 Profile und Funktionsdateien: [funktionsprofile.md](funktionsprofile.md).
@@ -61,6 +61,8 @@ Tipp: Vorführen, dann mit **Leertaste** anhalten und mit **N** im Einzelschritt
 | ★★★ | Subnetze nach Bedarf (VLSM) | VLSM mit dem IP-Rechner |
 | ★★★ | RIP in der Kette | dynamisches Routing mit RIP |
 | ★★★ | Das NAS von unterwegs erreichen | Portweiterleitung (DNAT) |
+| ★★★ | IPv6 einrichten | Router-Präfixe setzen, PCs per SLAAC |
+| ★★★★ | DS-Lite einrichten | IPv4 im IPv6-Tunnel, AFTR mit CGNAT |
 | ★★★★ | Netze mit VLANs trennen | Access-Ports |
 | ★★★★ | Router-on-a-Stick | Trunks und Subinterfaces |
 | ★★★★ | Standorte über eine serielle Leitung | serielle Leitung mit PPP und statischen Routen |

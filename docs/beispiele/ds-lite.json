@@ -1,0 +1,173 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "title": "Demo DS-Lite",
+    "devices": [
+      {
+        "id": "d1",
+        "type": "cpe",
+        "name": "Internet-Box",
+        "position": {
+          "x": 380,
+          "y": 260
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "nat": true,
+            "ipv6": "2001:db8:ffff::2/64"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:01:01",
+            "ip": "192.168.1.1",
+            "mask": "255.255.255.0",
+            "ipv6": "2001:db8:100:1::1/64"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:01:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:01:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:01:04"
+          }
+        ],
+        "dhcpServer": {
+          "start": "192.168.1.100",
+          "end": "192.168.1.199",
+          "gateway": "192.168.1.1",
+          "dns": "192.168.1.1",
+          "leaseTime": 3600
+        },
+        "dsLite": {
+          "aftr": "2001:db8:ffff::1"
+        }
+      },
+      {
+        "id": "d2",
+        "type": "internet",
+        "name": "Provider",
+        "position": {
+          "x": 660,
+          "y": 260
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ipv6": "2001:db8:ffff::1/64"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:02:01",
+            "ip": "198.51.100.1",
+            "mask": "255.255.255.0",
+            "ipv6": "2001:db8:200::1/64"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:02:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:02:03"
+          }
+        ],
+        "aftr": true,
+        "cgnatAddress": "203.0.113.10"
+      },
+      {
+        "id": "d3",
+        "type": "notebook",
+        "name": "Notebook",
+        "position": {
+          "x": 120,
+          "y": 260
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00"
+          }
+        ],
+        "dhcp": true,
+        "ipv6Auto": true
+      },
+      {
+        "id": "d4",
+        "type": "server",
+        "name": "Webserver",
+        "position": {
+          "x": 920,
+          "y": 260
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ip": "198.51.100.80",
+            "mask": "255.255.255.0",
+            "ipv6": "2001:db8:200::80/64"
+          }
+        ],
+        "gateway": "198.51.100.1",
+        "gateway6": "2001:db8:200::1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Webseite nur über IPv4</h1><p>Du kommst über DS-Lite: im IPv6-Tunnel bis zum Provider, dort per CGNAT ins IPv4-Internet.</p>"
+            }
+          ]
+        }
+      }
+    ],
+    "cables": [
+      {
+        "id": "c5",
+        "a": {
+          "device": "d1",
+          "iface": 0
+        },
+        "b": {
+          "device": "d2",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c6",
+        "a": {
+          "device": "d3",
+          "iface": 0
+        },
+        "b": {
+          "device": "d1",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c7",
+        "a": {
+          "device": "d2",
+          "iface": 1
+        },
+        "b": {
+          "device": "d4",
+          "iface": 0
+        }
+      }
+    ],
+    "nextId": 8,
+    "ipMode": "dual"
+  },
+  "configuration": {}
+}

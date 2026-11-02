@@ -1,4 +1,4 @@
-import { BROADCAST_MAC, DEVICE_SPECS, dissect, interfaceAddresses, isBridge, mediumOf, formatIp, type Device, type OsiLayer, type PacketLogEntry, type Topology } from '../core';
+import { BROADCAST_MAC, DEVICE_SPECS, dissect, isLinkLocal6, isMulticast6, parseCidr6, parseIp6, interfaceAddresses, isBridge, mediumOf, formatIp, type Device, type OsiLayer, type PacketLogEntry, type Topology } from '../core';
 
 /**
  * Einzelschritt mit OSI-Modell: Kommt ein Rahmen an, packt das Gerät ihn
@@ -29,7 +29,7 @@ export function layersOf(topology: Topology, entry: PacketLogEntry): { layers: O
   return { layers, names };
 }
 
-const MULTICAST = /^01:00:5E:/i;
+const MULTICAST = /^(01:00:5E:|33:33:)/i;
 
 export function unpackPlan(topology: Topology, entry: PacketLogEntry): UnpackPlan | null {
   const device = topology.devices.find((d) => d.id === entry.to.device);
@@ -49,8 +49,17 @@ export function unpackPlan(topology: Topology, entry: PacketLogEntry): UnpackPla
   if (DEVICE_SPECS[device.type].role === 'endpoint') return upTo(top, 'deliver');
   // Router: Paket für ihn selbst (eigene Adresse, Broadcast, Multicast) ganz auspacken, sonst weiterleiten.
   const payload = frame.payload;
+  if (payload.kind === 'ipv6') return isOwnAddress6(device, payload.dst) ? upTo(top, 'deliver') : upTo(3, 'route');
   if (payload.kind !== 'ipv4') return upTo(top, 'deliver');
   return isOwnAddress(device, payload.dst) ? upTo(top, 'deliver') : upTo(3, 'route');
+}
+
+/** IPv6: Multicast (ff00::/8), Link-Local und eigene Adressen gehören dem Gerät selbst. */
+function isOwnAddress6(device: Device, ip: string): boolean {
+  const value = parseIp6(ip);
+  if (value === null) return false;
+  if (isMulticast6(value) || isLinkLocal6(value)) return true;
+  return device.interfaces.some((i) => i.ipv6 && parseCidr6(i.ipv6)?.address === value) || (device.ipv6Auto === true && DEVICE_SPECS[device.type].role === 'endpoint');
 }
 
 function isOwnAddress(device: Device, ip: string): boolean {

@@ -7,6 +7,7 @@ import { checkStaticRoute, decodeIface, normalizeRoute } from '../net/routing';
 import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
 import { MIN_SIGNAL, portMedium, signalBetween } from './links';
 import { macFor } from './mac';
+import { formatCidr6, formatIp6, isLinkLocal6, isLoopback6, isMulticast6, isUnspecified6, networkOf6, parseCidr6, parseIp6 } from '../net/ipv6';
 import type {
   Cable,
   Device,
@@ -37,6 +38,8 @@ import type {
   OspfConfig,
   RipConfig,
   RoutingMode,
+  IpMode,
+  StaticRoute6,
   SerialEncapsulation,
   StaticNat,
   VlanDef,
@@ -75,6 +78,8 @@ export type ErrorCode =
   | 'gatewayWithoutAddress'
   | 'switchLoop'
   | 'notARouter'
+  | 'invalidIp6'
+  | 'ipv6Link'
   | 'unknownRoute'
   | 'networkHasHostBits'
   | 'routeNeedsTarget'
@@ -1486,6 +1491,156 @@ export function rackAt(t: Topology, x: number, y: number, floor?: number): DocAr
 
 function changePort(t: Topology, id: string, index: number, change: (i: NetInterface) => NetInterface): Topology {
   return updateDevice(t, id, (d) => ({ ...d, interfaces: d.interfaces.map((i) => (i.index === index ? change(i) : i)) }));
+}
+
+// --- IPv6 ------------------------------------------------------------------------
+
+/** IP-Version des Projekts (nur IPv4, beides, nur IPv6). */
+export function setIpMode(t: Topology, mode: IpMode): Result<Topology> {
+  if ((t.ipMode ?? 'ipv4') === mode) return ok(t);
+  if (mode === 'ipv4') return ok(without(t, 'ipMode'));
+  return ok({ ...t, ipMode: mode });
+}
+
+/** Unicast-Adresse, die man einem Anschluss geben darf (nicht ::, ::1, Multicast, Link-Local). */
+function checkUnicast6(text: string, field: string): Result<{ address: bigint; prefix: number }> {
+  const parsed = parseCidr6(text);
+  const bad = { ok: false as const, error: { code: 'invalidIp6' as ErrorCode, params: { value: text.trim() }, field } };
+  if (!parsed) return bad;
+  const { address } = parsed;
+  if (isUnspecified6(address) || isLoopback6(address) || isMulticast6(address) || isLinkLocal6(address)) return bad;
+  return ok(parsed);
+}
+
+/** IPv6-Adresse eines Anschlusses («2001:db8:1::1/64»); leer = keine. */
+export function setInterfaceIpv6(t: Topology, id: string, index: number, text: string): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!device.interfaces[index]) return fail('unknownInterface');
+  let value = '';
+  if (text.trim()) {
+    const checked = checkUnicast6(text, 'ipv6');
+    if (!checked.ok) return checked;
+    value = formatCidr6(checked.value.address, checked.value.prefix);
+  }
+  return ok(
+    updateDevice(t, id, (d) => ({
+      ...d,
+      interfaces: d.interfaces.map((i) => (i.index !== index ? i : value ? { ...i, ipv6: value } : without(i, 'ipv6'))),
+    })),
+  );
+}
+
+/** Router/Internet-Box: in diesem Netz IPv6-Adressen per DHCPv6 vergeben. */
+export function setInterfaceDhcp6(t: Topology, id: string, index: number, enabled: boolean): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!hasRoutingTable(device.type)) return fail('notARouter');
+  if (!device.interfaces[index]) return fail('unknownInterface');
+  return ok(
+    updateDevice(t, id, (d) => ({
+      ...d,
+      interfaces: d.interfaces.map((i) => (i.index !== index ? i : enabled ? { ...i, dhcp6: true } : without(i, 'dhcp6'))),
+    })),
+  );
+}
+
+export interface Host6Input {
+  /** Automatisch (SLAAC oder DHCPv6). */
+  auto: boolean;
+  address?: string;
+  gateway?: string;
+}
+
+/** IPv6 eines Endgeräts: automatisch oder feste Adresse mit Standardgateway. */
+export function configureHost6(t: Topology, id: string, input: Host6Input): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (DEVICE_SPECS[device.type].role !== 'endpoint') return fail('notAnEndpoint');
+  let address = '';
+  let gateway = '';
+  if (!input.auto) {
+    if (input.address?.trim()) {
+      const checked = checkUnicast6(input.address, 'ipv6');
+      if (!checked.ok) return checked;
+      address = formatCidr6(checked.value.address, checked.value.prefix);
+    }
+    if (input.gateway?.trim()) {
+      const g = parseIp6(input.gateway);
+      if (g === null || isMulticast6(g) || isUnspecified6(g)) return { ok: false, error: { code: 'invalidIp6', params: { value: input.gateway.trim() }, field: 'gateway6' } };
+      gateway = formatIp6(g);
+    }
+  }
+  return ok(
+    updateDevice(t, id, (d) => {
+      const { ipv6Auto: _a, gateway6: _g, ...rest } = d;
+      return {
+        ...rest,
+        interfaces: d.interfaces.map((i, n) => (n !== 0 ? i : address ? { ...i, ipv6: address } : without(i, 'ipv6'))),
+        ...(input.auto ? { ipv6Auto: true } : {}),
+        ...(gateway ? { gateway6: gateway } : {}),
+      };
+    }),
+  );
+}
+
+/** Prüft eine statische IPv6-Route und bringt sie in die Normalform. */
+export function checkStaticRoute6(device: Device, route: StaticRoute6): Result<StaticRoute6> {
+  const net = parseCidr6(route.network);
+  if (!net || isMulticast6(net.address)) return { ok: false, error: { code: 'invalidIp6', params: { value: route.network.trim() }, field: 'network' } };
+  if (networkOf6(net.address, net.prefix) !== net.address) return { ok: false, error: { code: 'networkHasHostBits', params: { network: formatCidr6(networkOf6(net.address, net.prefix), net.prefix) }, field: 'network' } };
+  let gateway: string | undefined;
+  if (route.gateway?.trim()) {
+    const g = parseIp6(route.gateway);
+    if (g === null || isMulticast6(g) || isUnspecified6(g)) return { ok: false, error: { code: 'invalidIp6', params: { value: route.gateway.trim() }, field: 'gateway' } };
+    if (isLinkLocal6(g) && route.iface === undefined) return { ok: false, error: { code: 'ipv6Link', field: 'iface' } };
+    gateway = formatIp6(g);
+  }
+  if (!gateway && route.iface === undefined) return { ok: false, error: { code: 'routeNeedsTarget', field: 'gateway' } };
+  if (route.iface !== undefined && !device.interfaces[route.iface]) return fail('unknownInterface');
+  const network = formatCidr6(net.address, net.prefix);
+  if ((device.routes6 ?? []).some((r) => r.network === network)) return { ok: false, error: { code: 'duplicateRoute', params: { network }, field: 'network' } };
+  return ok({ network, ...(gateway ? { gateway } : {}), ...(route.iface !== undefined ? { iface: route.iface } : {}) });
+}
+
+export function addStaticRoute6(t: Topology, id: string, route: StaticRoute6): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!hasRoutingTable(device.type)) return fail('notARouter');
+  const checked = checkStaticRoute6(device, route);
+  if (!checked.ok) return checked;
+  return ok(updateDevice(t, id, (d) => ({ ...d, routes6: [...(d.routes6 ?? []), checked.value] })));
+}
+
+export function removeStaticRoute6(t: Topology, id: string, index: number): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!device.routes6?.[index]) return fail('unknownRoute');
+  return ok(
+    updateDevice(t, id, (d) => {
+      const routes6 = (d.routes6 ?? []).filter((_, i) => i !== index);
+      return routes6.length ? { ...d, routes6 } : without(d, 'routes6');
+    }),
+  );
+}
+
+/** Internet-Box: DS-Lite mit der IPv6-Adresse des AFTR beim Provider; null = aus. */
+export function setDsLite(t: Topology, id: string, aftr: string | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (device.type !== 'cpe') return fail('notARouter');
+  if (aftr === null) return ok(updateDevice(t, id, (d) => without(d, 'dsLite')));
+  const a = parseIp6(aftr);
+  if (a === null || isMulticast6(a) || isLinkLocal6(a) || isUnspecified6(a)) return { ok: false, error: { code: 'invalidIp6', params: { value: aftr.trim() }, field: 'aftr' } };
+  return ok(updateDevice(t, id, (d) => ({ ...d, dsLite: { aftr: formatIp6(a) } })));
+}
+
+/** Internet (Provider): als AFTR für DS-Lite arbeiten. */
+export function setAftr(t: Topology, id: string, enabled: boolean): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (device.type !== 'internet') return fail('notARouter');
+  return ok(updateDevice(t, id, (d) => (enabled ? { ...d, aftr: true } : without(d, 'aftr'))));
 }
 
 function without<T extends object, K extends keyof T>(value: T, key: K): Omit<T, K> {

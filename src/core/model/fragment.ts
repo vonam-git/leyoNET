@@ -46,8 +46,9 @@ function baseName(name: string): string {
 
 /** Einzelnes Gerät ohne Adressen: Es landet meist im selben Netz wie das Original. */
 function stripAddresses(device: Device): Device {
-  const copy: Device = { ...device, interfaces: device.interfaces.map(({ ip: _ip, mask: _mask, ...rest }) => rest) };
+  const copy: Device = { ...device, interfaces: device.interfaces.map(({ ip: _ip, mask: _mask, ipv6: _v6, ...rest }) => rest) };
   delete copy.dhcpServer;
+  delete copy.gateway6;
   if (copy.svis) copy.svis = copy.svis.map(({ ip: _i, mask: _m, ...s }) => s);
   if (copy.subinterfaces) copy.subinterfaces = copy.subinterfaces.map(({ ip: _i, mask: _m, ...s }) => s);
   return copy;

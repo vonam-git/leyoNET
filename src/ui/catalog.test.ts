@@ -13,6 +13,9 @@ import {
   setPortSerial,
   setRip,
   setRoutingMode,
+  setInterfaceIpv6,
+  setDsLite,
+  setAftr,
   setInterfaceShutdown,
   setStp,
   setVlanDef,
@@ -138,6 +141,14 @@ const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
   'auto-routing': (t) => {
     for (const name of ['Router 1', 'Router 2', 'Router 3']) t = unwrap(setRoutingMode(t, byName(t, name), 'auto'));
     return t;
+  },
+  'ipv6-router': (t) => {
+    t = unwrap(setInterfaceIpv6(t, byName(t, 'Router'), 0, '2001:db8:1::1/64'));
+    return unwrap(setInterfaceIpv6(t, byName(t, 'Router'), 1, '2001:db8:2::1/64'));
+  },
+  'ds-lite': (t) => {
+    t = unwrap(setDsLite(t, byName(t, 'Internet-Box'), '2001:db8:ffff::1'));
+    return unwrap(setAftr(t, byName(t, 'Provider'), true));
   },
   'static-routes': (t) => {
     t = unwrap(addStaticRoute(t, byName(t, 'Router 1'), { network: '192.168.20.0', mask: '24', gateway: '10.0.0.2' }));

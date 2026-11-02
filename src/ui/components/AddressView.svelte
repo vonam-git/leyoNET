@@ -2,16 +2,20 @@
   import { parseMask, type Device } from '../../core';
   import { t } from '../../i18n';
   import { simStore } from '../state/sim.svelte';
+  import { editor } from '../state/editor.svelte';
+  import Ipv6StateView from './Ipv6StateView.svelte';
   import { subnetSummary } from '../subnet';
 
   /** Wirksame Netzwerkeinstellungen eines Endgeräts, inklusive DHCP-Lease. */
   let { device }: { device: Device } = $props();
 
   const address = $derived((simStore.tick, simStore.sim?.getDeviceState(device.id).address));
+  const ipv6 = $derived((simStore.tick, simStore.sim?.getDeviceState(device.id).ipv6));
   const now = $derived((simStore.tick, simStore.sim?.now ?? 0));
   const prefix = $derived(address?.mask ? parseMask(address.mask) : null);
 </script>
 
+{#if editor.ipMode !== 'ipv6'}
 <dl class="facts">
   <dt>{t('address.mode')}</dt>
   <dd>{t(`address.mode.${address?.mode ?? (device.dhcp ? 'dhcp' : 'static')}`)}</dd>
@@ -33,6 +37,8 @@
 {#if address?.ip}
   <p class="muted">{subnetSummary(address.ip, address.mask)}</p>
 {/if}
+{/if}
+<Ipv6StateView {device} state={ipv6} />
 
 <style>
   .facts {

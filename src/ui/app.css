@@ -230,11 +230,13 @@ button[aria-pressed='true'] {
   --proto: var(--proto-arp);
   --dot: var(--dot-arp);
 }
-.proto-icmp {
+.proto-icmp,
+.proto-icmpv6 {
   --proto: var(--proto-icmp);
   --dot: var(--dot-icmp);
 }
-.proto-dhcp {
+.proto-dhcp,
+.proto-dhcpv6 {
   --proto: var(--proto-dhcp);
   --dot: var(--dot-dhcp);
 }
