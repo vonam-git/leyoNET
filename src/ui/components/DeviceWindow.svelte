@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_SPECS, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterType, isSwitchType } from '../../core';
+  import { DEVICE_SPECS, canAutoRoute, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterType, isSwitchType } from '../../core';
   import { t } from '../../i18n';
   import { typeLabel } from '../labels';
   import { dialogs, type DeviceWindowState } from '../state/dialogs.svelte';
@@ -20,6 +20,7 @@
   import PortTable from './PortTable.svelte';
   import RouterConfig from './RouterConfig.svelte';
   import RoutingEditor from './RoutingEditor.svelte';
+  import RoutingModeForm from './RoutingModeForm.svelte';
   import RoutingProtocols from './RoutingProtocols.svelte';
   import Services from './Services.svelte';
   import SviConfig from './SviConfig.svelte';
@@ -239,9 +240,10 @@
           <h3>{t('inspector.interfaces')}</h3>
           <PortTable {device} />
         {:else if tab === 'routing'}
+          {#if canAutoRoute(device.type)}<RoutingModeForm {device} />{/if}
           <h3 data-help="routing">{editor.acting ? t('routing.title') : t('deviceDialog.routingTitle')}</h3>
           <RoutingEditor {device} />
-          <RoutingProtocols {device} />
+          {#if !canAutoRoute(device.type) || routingModeOf(device) === 'dynamic'}<RoutingProtocols {device} />{/if}
         {:else if tab === 'nat'}
           <RouterConfig {device} part="nat" />
         {:else if tab === 'dhcp'}

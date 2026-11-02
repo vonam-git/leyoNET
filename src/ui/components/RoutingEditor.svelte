@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { buildRoutes, formatIp, logicalInterfaces, maskToText, parseIp, parseMask, type Device, type Route, type StaticRoute } from '../../core';
+  import { autoRoutes, buildRoutes, routingModeOf, formatIp, logicalInterfaces, maskToText, parseIp, parseMask, type Device, type Route, type StaticRoute } from '../../core';
   import { t } from '../../i18n';
   import { interfaceLabel } from '../labels';
   import { editor } from '../state/editor.svelte';
@@ -15,8 +15,9 @@
   let { device }: { device: Device } = $props();
 
   type Kind = Route['kind'];
-  const CODES: Record<Kind, string> = { connected: 'C', static: 'S', default: 'S*', ospf: 'O', rip: 'R', bgp: 'B' };
-  const KINDS: Kind[] = ['connected', 'static', 'default', 'ospf', 'rip', 'bgp'];
+  const CODES: Record<Kind, string> = { connected: 'C', static: 'S', default: 'S*', ospf: 'O', rip: 'R', bgp: 'B', auto: 'A' };
+  const auto = $derived(routingModeOf(device) === 'auto');
+  const KINDS = $derived<Kind[]>(auto ? ['connected', 'auto'] : ['connected', 'static', 'default', 'ospf', 'rip', 'bgp']);
 
   interface Row {
     kind: Kind;
@@ -58,6 +59,8 @@
         unusable: unusable.has(index),
       };
     });
+    // Automatisches Routing: Vorschau der berechneten Routen; eigene statische ruhen.
+    if (auto) return [...connected, ...autoRoutes(editor.topology, device.id).map(fromRoute)];
     return [...connected, ...statics];
   });
 
@@ -139,7 +142,7 @@
           <tr class="reason"><td></td><td colspan="5">⚠ {t('router.routeUnusable')}</td></tr>
         {/if}
       {/each}
-      {#if editor.editable && ui.has('routing.static')}
+      {#if editor.editable && ui.has('routing.static') && !auto}
         <tr class="add">
           <td><span class="code">+</span></td>
           <td>
@@ -163,7 +166,9 @@
     </tbody>
   </table>
   {#if error}<p class="error" role="alert">{error.text}</p>{/if}
-  {#if editor.editable}
+  {#if auto}
+    <p class="muted hint">{t('routingMode.preview')}</p>
+  {:else if editor.editable}
     <p class="muted hint">{t('routing.addHint')} <button type="button" class="link" onclick={prepareDefault}>{t('routing.prepareDefault')}</button></p>
   {/if}
 </form>
@@ -204,6 +209,9 @@
   }
   .kind-bgp {
     --k: #9333ea;
+  }
+  .kind-auto {
+    --k: #d97706;
   }
   :global([data-theme='dark']) .kind-static,
   :global([data-theme='dark']) .kind-default {

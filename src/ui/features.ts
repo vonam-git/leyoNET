@@ -60,6 +60,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('net.cli', 'network', 3),
   f('net.ssh', 'network', 4),
   // Routing
+  f('routing.auto', 'routing', 1),
   f('routing.static', 'routing', 2),
   f('routing.rip', 'routing', 4),
   f('routing.ospf', 'routing', 4),
@@ -125,6 +126,7 @@ export function usedFeatures(t: Topology): string[] {
     if (d.rip) used.add('routing.rip');
     if (d.bgp) used.add('routing.bgp');
     if (d.routes?.length) used.add('routing.static');
+    if (d.routingMode === 'auto') used.add('routing.auto');
     if (d.vlanNames?.length) used.add('net.vlan');
     if (d.wlan?.mesh) used.add('net.wlanMesh');
     if (d.cli?.ssh) used.add('net.ssh');

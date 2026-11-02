@@ -1,4 +1,6 @@
-import type { Device, StaticNat } from '../model/types';
+import type { Device, StaticNat, Topology } from '../model/types';
+import { routingModeOf } from '../model/devices';
+import { autoRoutes } from '../net/autoroute';
 import { LIMITED_BROADCAST, broadcastOf, formatIp, isCgnatRange, isPrivate, parseIp } from '../net/ipv4';
 import { buildRoutes, decodeIface, interfaceAddresses, lookupRoute, macOfIface, relayOf, subifId, type IfaceAddress, type Route } from '../net/routing';
 import {
@@ -594,7 +596,7 @@ export class ForwardingNode extends IpNode {
   readonly rip: Rip;
   readonly bgp: Bgp;
   #version = 0;
-  #cache: { device: Device | undefined; version: number; routes: Route[] } | null = null;
+  #cache: { device: Device | undefined; topology: Topology; version: number; routes: Route[] } | null = null;
 
   constructor(ctx: NodeContext) {
     super(ctx);
@@ -602,7 +604,7 @@ export class ForwardingNode extends IpNode {
     const host: RoutingHost = {
       ctx,
       tcp: this.tcp,
-      device: () => ctx.device(),
+      device: () => this.routingDevice(),
       interfaces: () => this.interfaces(),
       routesExcept: (kind) => this.#combine(kind),
       sendMulticast: (index, group, payload) => this.sendMulticast(index, group, payload),
@@ -629,8 +631,29 @@ export class ForwardingNode extends IpNode {
     this.bgp.boot();
   }
 
+  /**
+   * Gerät, wie es die Routingprotokolle sehen: Bei Routing-Art «auto» oder
+   * «static» ruhen OSPF, RIP und BGP (ihre Einstellungen bleiben erhalten).
+   */
+  protected routingDevice(): Device | undefined {
+    const device = this.ctx.device();
+    if (!device || (!device.ospf && !device.rip && !device.bgp) || routingModeOf(device) === 'dynamic') return device;
+    let quiet = QUIET.get(device);
+    if (!quiet) {
+      const { ospf: _o, rip: _r, bgp: _b, ...rest } = device;
+      quiet = rest;
+      QUIET.set(device, quiet);
+    }
+    return quiet;
+  }
+
   #combine(except: 'ospf' | 'rip' | 'bgp' | null): Route[] {
     const routes = [...super.routes()];
+    const device = this.ctx.device();
+    if (device && routingModeOf(device) === 'auto') {
+      routes.push(...autoRoutes(this.ctx.topology(), device.id));
+      return routes;
+    }
     if (except !== 'ospf') routes.push(...this.ospf.routes());
     if (except !== 'rip') routes.push(...this.rip.routes());
     if (except !== 'bgp') routes.push(...this.bgp.routes());
@@ -639,14 +662,15 @@ export class ForwardingNode extends IpNode {
 
   override routes(): Route[] {
     const device = this.ctx.device();
-    if (this.#cache && this.#cache.device === device && this.#cache.version === this.#version) return this.#cache.routes;
+    const topology = this.ctx.topology();
+    if (this.#cache && this.#cache.device === device && this.#cache.topology === topology && this.#cache.version === this.#version) return this.#cache.routes;
     const routes = this.#combine(null);
-    this.#cache = { device, version: this.#version, routes };
+    this.#cache = { device, topology, version: this.#version, routes };
     return routes;
   }
 
   protected override joinedGroup(group: string): boolean {
-    const device = this.ctx.device();
+    const device = this.routingDevice();
     return (group === OSPF_ALL_ROUTERS && !!device?.ospf) || (group === RIP_MULTICAST && !!device?.rip);
   }
 
@@ -663,7 +687,7 @@ export class ForwardingNode extends IpNode {
   }
 
   override state(): object {
-    const device = this.ctx.device();
+    const device = this.routingDevice();
     return {
       ...super.state(),
       routes: this.routes(),
@@ -672,6 +696,9 @@ export class ForwardingNode extends IpNode {
     };
   }
 }
+
+/** Geräte ohne ruhende Protokolle, je Konfiguration nur einmal erzeugt. */
+const QUIET = new WeakMap<Device, Device>();
 
 /** Vermittlungsrechner: leitet weiter, kann als DHCP-Relay arbeiten und Adressen übersetzen (NAT). */
 export class RouterNode extends ForwardingNode {

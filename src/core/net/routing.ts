@@ -1,4 +1,4 @@
-import { DEVICE_SPECS } from '../model/devices';
+import { DEVICE_SPECS, routingModeOf } from '../model/devices';
 import type { Device, StaticRoute } from '../model/types';
 import { formatIp, maskToText, networkOf, parseIp, parseMask } from './ipv4';
 
@@ -65,7 +65,8 @@ export function relayOf(device: Device, id: number): string | undefined {
   return device.svis?.find((s) => s.vlan === ref.vlan)?.dhcpRelay;
 }
 
-export type RouteKind = 'connected' | 'static' | 'default' | 'ospf' | 'rip' | 'bgp';
+/** «auto»: vom automatischen Routing aus dem Netzplan berechnet (autoroute.ts). */
+export type RouteKind = 'connected' | 'static' | 'default' | 'ospf' | 'rip' | 'bgp' | 'auto';
 
 export interface Route {
   network: number;
@@ -137,6 +138,8 @@ export function buildRoutes(device: Device): { routes: Route[]; unusable: number
 
   // Layer-3-Switch mit «no ip routing»: nur die eigenen Netze, keine Routen.
   if (device.type === 'l3switch' && device.ipRouting === false) return { routes, unusable };
+  // Automatisches Routing: Die Simulation berechnet die Routen selbst, eigene statische ruhen.
+  if (routingModeOf(device) === 'auto') return { routes, unusable };
 
   (device.routes ?? []).forEach((r, n) => {
     const network = parseIp(r.network);

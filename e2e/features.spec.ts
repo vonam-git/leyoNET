@@ -308,3 +308,20 @@ test('Lehrperson aus- und wieder einblenden', async ({ page }) => {
   await menu(page, 'Hilfe', 'Lehrperson einblenden');
   await expect(page.locator('.tour')).toContainText('Schritt 2 von');
 });
+
+test('Automatisches Routing: Häkchen am Router, Ping über drei Router', async ({ page }) => {
+  await openProject(page, example('automatisches-routing'));
+  await page.locator('.device').filter({ hasText: 'Router 1' }).first().click();
+  const auto = page.locator('.inspector').getByRole('checkbox', { name: /Automatisches Routing/ });
+  await expect(auto).toBeChecked();
+  await auto.uncheck();
+  await expect(page.locator('.inspector').getByRole('radio', { name: 'Statisch' })).toBeChecked();
+  await auto.check();
+  await page.getByRole('radio', { name: 'Simulation' }).click();
+  await page.getByRole('button', { name: 'PC A, Rechner' }).click();
+  await page.getByRole('button', { name: 'Desktop öffnen' }).click();
+  const input = page.getByLabel('Befehl eingeben');
+  await input.fill('ping 192.168.30.10');
+  await input.press('Enter');
+  await expect(page.getByRole('log')).toContainText('Antwort von 192.168.30.10', { timeout: 15_000 });
+});

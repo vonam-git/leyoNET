@@ -4,7 +4,7 @@ import { isValidPath } from '../net/http';
 import { checkMailAccount, checkMailbox } from '../net/mail';
 import { checkHostConfig, maskToText, parseIp, parseMask, type HostConfigInput } from '../net/ipv4';
 import { checkStaticRoute, decodeIface, normalizeRoute } from '../net/routing';
-import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
+import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
 import { MIN_SIGNAL, portMedium, signalBetween } from './links';
 import { macFor } from './mac';
 import type {
@@ -36,6 +36,7 @@ import type {
   BgpConfig,
   OspfConfig,
   RipConfig,
+  RoutingMode,
   SerialEncapsulation,
   StaticNat,
   VlanDef,
@@ -871,6 +872,15 @@ export function removeSvi(t: Topology, id: string, vlan: number): Result<Topolog
 }
 
 /** Routing zwischen VLANs am Layer-3-Switch ein- oder ausschalten. */
+/** Routing-Art eines Routers oder Layer-3-Switches setzen (auto, statisch, dynamisch). */
+export function setRoutingMode(t: Topology, id: string, mode: RoutingMode): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canAutoRoute(device.type)) return fail('notARouter');
+  if (device.routingMode === mode) return ok(t);
+  return ok(updateDevice(t, id, (d) => ({ ...d, routingMode: mode })));
+}
+
 export function setIpRouting(t: Topology, id: string, enabled: boolean): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');

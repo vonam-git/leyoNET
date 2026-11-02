@@ -70,6 +70,8 @@ import {
   setInterfaceDescription,
   setInterfaceShutdown,
   setIpRouting,
+  setRoutingMode,
+  type RoutingMode,
   setSubinterface,
   setSvi,
   setVlanName,
@@ -908,6 +910,10 @@ class Editor {
 
   removeSvi(id: string, vlan: number) {
     this.#edit(removeSvi(this.topology, id, vlan));
+  }
+
+  setRoutingMode(id: string, mode: RoutingMode) {
+    this.#edit(setRoutingMode(this.topology, id, mode));
   }
 
   setIpRouting(id: string, enabled: boolean) {
