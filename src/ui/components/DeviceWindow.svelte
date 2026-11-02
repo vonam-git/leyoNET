@@ -11,6 +11,8 @@
   import DeviceIcon from './DeviceIcon.svelte';
   import GroupConfig from './GroupConfig.svelte';
   import HostConfigForm from './HostConfigForm.svelte';
+  import Ipv6Interfaces from './Ipv6Interfaces.svelte';
+  import Host6Form from './Host6Form.svelte';
   import HostPanel from './HostPanel.svelte';
   import Icon from './Icon.svelte';
   import MailAccountForm from './MailAccountForm.svelte';
@@ -20,6 +22,7 @@
   import PortTable from './PortTable.svelte';
   import RouterConfig from './RouterConfig.svelte';
   import RoutingEditor from './RoutingEditor.svelte';
+  import Routing6Editor from './Routing6Editor.svelte';
   import RoutingModeForm from './RoutingModeForm.svelte';
   import RoutingProtocols from './RoutingProtocols.svelte';
   import Services from './Services.svelte';
@@ -222,14 +225,16 @@
           {#if DEVICE_SPECS[device.type].role === 'endpoint'}<HostPanel {device} />{:else}<NetDevicePanel {device} />{/if}
         {:else if tab === 'addresses'}
           {#if DEVICE_SPECS[device.type].role === 'endpoint'}
-            <HostConfigForm {device} />
+            {#if editor.ipMode !== 'ipv6'}<HostConfigForm {device} />{/if}
+            {#if editor.ipMode !== 'ipv4'}<Host6Form {device} />{/if}
           {:else if device.type === 'l3switch'}
             <SviConfig {device} />
           {:else if device.type === 'cpe'}
             <CpeConfig {device} />
-          {:else}
+          {:else if editor.ipMode !== 'ipv6'}
             <RouterConfig {device} part="interfaces" />
           {/if}
+          {#if editor.ipMode !== 'ipv4' && (isRouterType(device.type) || device.type === 'cpe')}<Ipv6Interfaces {device} />{/if}
         {:else if tab === 'group'}
           <GroupConfig {device} />
         {:else if tab === 'ports'}
@@ -241,8 +246,11 @@
           <PortTable {device} />
         {:else if tab === 'routing'}
           {#if canAutoRoute(device.type)}<RoutingModeForm {device} />{/if}
-          <h3 data-help="routing">{editor.acting ? t('routing.title') : t('deviceDialog.routingTitle')}</h3>
-          <RoutingEditor {device} />
+          {#if editor.ipMode !== 'ipv6'}
+            <h3 data-help="routing">{editor.acting ? t('routing.title') : t('deviceDialog.routingTitle')}</h3>
+            <RoutingEditor {device} />
+          {/if}
+          {#if editor.ipMode !== 'ipv4' && device.type !== 'l3switch'}<Routing6Editor {device} />{/if}
           {#if !canAutoRoute(device.type) || routingModeOf(device) === 'dynamic'}<RoutingProtocols {device} />{/if}
         {:else if tab === 'nat'}
           <RouterConfig {device} part="nat" />

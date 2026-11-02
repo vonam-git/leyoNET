@@ -17,6 +17,7 @@ import type { Route } from '../net/routing';
 import type { OspfState } from './ospf';
 import type { BgpPeerInfo } from './bgp';
 import type { PppStatus } from './ppp';
+import type { Ip6State } from './ip6';
 import { EventQueue } from './queue';
 import { L3SwitchNode } from './l3switch';
 import { ModemNode, SwitchNode, type MacEntry, type ModemState, type StormState, type StpState } from './switch';
@@ -90,6 +91,8 @@ export interface DeviceState {
   /** Wirksame Routingtabelle (Router, Layer-3-Switches), inklusive gelernter Routen. */
   routes?: Route[];
   ppp?: PppStatus[];
+  /** IPv6: Adressen, Nachbarn (Neighbor Discovery), Routen. */
+  ipv6?: Ip6State;
 }
 
 /** Was ein Gerät von der Simulation sehen und auslösen darf. */

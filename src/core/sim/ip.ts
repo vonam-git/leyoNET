@@ -12,6 +12,7 @@ import {
   type EthernetFrame,
   type IcmpMessage,
   type Ipv4Packet,
+  type Ipv6Packet,
   type PppControl,
   type OspfPacket,
   type TcpSegment,
@@ -31,6 +32,7 @@ import { Ospf } from './ospf';
 import { Rip } from './rip';
 import { Bgp } from './bgp';
 import type { RoutingHost } from './routing-host';
+import { IPV4_ENABLED, Ip6Stack } from './ip6';
 
 export const ARP_TIMEOUT = 1000;
 export const ARP_ATTEMPTS = 2;
@@ -76,8 +78,40 @@ export class IpNode implements SimNode {
   #arp = new Map<string, ArpEntry>();
   #pending = new Map<string, PendingResolution>();
   #ipId = 0;
+  /** IPv6-Stack (nur aktiv, wenn das Projekt IPv6 verwendet). */
+  readonly v6: Ip6Stack;
 
-  constructor(readonly ctx: NodeContext) {}
+  constructor(readonly ctx: NodeContext) {
+    const self = this;
+    this.v6 = new Ip6Stack(
+      {
+        ctx,
+        get forwarding() {
+          return self.forwarding;
+        },
+        sendFrame: (index, frame) => this.sendFrame(index, frame),
+        onIcmp6: (packet) => this.onIcmp6(packet),
+        onUdp6: (packet, datagram, index) => this.onUdp6(packet, datagram, index),
+        onTunnel: (packet, inner, index) => this.onTunnel(packet, inner, index),
+      },
+      () => this.effectiveDevice(),
+    );
+  }
+
+  /** IPv4 aktiv? Im Modus «nur IPv6» schweigt der IPv4-Stack. */
+  protected ipv4On(): boolean {
+    return IPV4_ENABLED(this.ctx.topology());
+  }
+
+  /** ICMPv6-Echo-Antworten und -Fehler für Anwendungen (Ping, Traceroute). */
+  protected onIcmp6(_packet: Ipv6Packet) {}
+
+  protected onUdp6(_packet: Ipv6Packet, _datagram: UdpDatagram, _index: number) {}
+
+  /** DS-Lite: getunneltes IPv4-Paket. true = erledigt. */
+  protected onTunnel(_packet: Ipv6Packet, _inner: Ipv4Packet, _index: number): boolean {
+    return false;
+  }
 
   /** Gerät mit der tatsächlich wirksamen Konfiguration (Endgeräte: ggf. per DHCP bezogen). */
   protected effectiveDevice(): Device | undefined {
@@ -86,7 +120,7 @@ export class IpNode implements SimNode {
 
   interfaces(): IfaceAddress[] {
     const device = this.effectiveDevice();
-    return device ? interfaceAddresses(device) : [];
+    return device && this.ipv4On() ? interfaceAddresses(device) : [];
   }
 
   routes(): Route[] {
@@ -106,7 +140,8 @@ export class IpNode implements SimNode {
   }
 
   state(): object {
-    return { arp: this.arpEntries() };
+    const ipv6 = this.v6.state();
+    return { arp: this.arpEntries(), ...(ipv6 ? { ipv6 } : {}) };
   }
 
   /**
@@ -137,7 +172,12 @@ export class IpNode implements SimNode {
       return;
     }
     const mac = device && macOfIface(device, index);
+    if (frame.payload.kind === 'ipv6') {
+      if (mac && (frame.dst === mac || this.v6.acceptsMac(frame.dst, index))) this.v6.receive(index, frame.payload, frame.src);
+      return;
+    }
     if (!mac || (frame.dst !== mac && frame.dst !== BROADCAST_MAC && !this.acceptsMulticast(frame.dst))) return;
+    if (!this.ipv4On()) return;
     if (frame.payload.kind === 'arp') this.#onArp(index, frame.payload);
     else if (frame.payload.kind === 'ipv4') this.#onIp(index, frame.payload, frame.src);
   }
@@ -310,11 +350,34 @@ export class IpNode implements SimNode {
       return;
     }
     const broadcast = dst === LIMITED_BROADCAST || (iface !== undefined && dst === broadcastOf(iface.ip, iface.prefix));
+    if (this.forwarding && iface && this.intercept(iface, packet)) return;
     // NAT: Antworten an die Internet-Adresse des Routers gehen an den internen Rechner weiter.
     const translated = this.forwarding && iface ? this.inbound(iface, packet) : null;
     if (translated && iface) this.#forward(iface, translated);
     else if (this.isOwn(dst) || broadcast) this.#deliver(packet, broadcast, index, srcMac);
     else if (this.forwarding && iface) this.#forward(iface, packet);
+  }
+
+  /** DS-Lite (B4): IPv4-Paket in den IPv6-Tunnel geben statt weiterleiten. true = erledigt. */
+  protected tunnelOut(_inIface: IfaceAddress, _packet: Ipv4Packet): boolean {
+    return false;
+  }
+
+  /** DS-Lite (AFTR): Antwort abfangen und zurück in den Tunnel geben. true = erledigt. */
+  protected intercept(_iface: IfaceAddress, _packet: Ipv4Packet): boolean {
+    return false;
+  }
+
+  /**
+   * Aus dem Tunnel ausgepacktes IPv4-Paket: zustellen oder weiterleiten, als
+   * käme es über ein eigenes Interface mit der Tunneladresse `via` (RFC 6333:
+   * B4 192.0.0.2, AFTR 192.0.0.1).
+   */
+  protected injectIpv4(packet: Ipv4Packet, via: string) {
+    const dst = parseIp(packet.dst);
+    if (dst === null) return;
+    if (this.isOwn(dst)) return this.#deliver(packet, false, -1);
+    this.#forward({ index: -1, mac: '', ip: parseIp(via) ?? 0, prefix: 29 }, packet);
   }
 
   /** Eingehende Übersetzung (NAT) vor der Zustellung; null = nichts zu übersetzen. */
@@ -333,6 +396,7 @@ export class IpNode implements SimNode {
       this.#icmpError(inIface, packet, 'timeExceeded');
       return;
     }
+    if (this.tunnelOut(inIface, { ...packet, ttl: packet.ttl - 1 })) return;
     const dst = parseIp(packet.dst)!;
     const route = lookupRoute(this.routes(), dst);
     const out = route && this.interfaces().find((i) => i.index === route.iface);
@@ -466,6 +530,12 @@ export class IpNode implements SimNode {
   }
 }
 
+/** DS-Lite: «192.168.1.10@2001:db8::2» → innere IPv4-Adresse und IPv6-Adresse des B4. */
+export function splitTunnel(inside: string): [string, string] {
+  const at = inside.indexOf('@');
+  return at < 0 ? [inside, ''] : [inside.slice(0, at), inside.slice(at + 1)];
+}
+
 export const NAT_TIMEOUT = 300_000;
 export const NAT_PORT_START = 50_000;
 
@@ -511,7 +581,8 @@ export class PatTable {
 
   constructor(
     private readonly ctx: NodeContext,
-    private readonly kind: 'pat' | 'cgnat',
+    /** «dslite»: CGNAT im AFTR; `inside` ist dann «innere Adresse@IPv6 des B4». */
+    private readonly kind: 'pat' | 'cgnat' | 'dslite',
   ) {}
 
   entries(): NatEntry[] {
@@ -531,13 +602,18 @@ export class PatTable {
     const now = this.ctx.now;
     let entry = this.#byInside.get(`${flow.protocol}:${packet.src}:${flow.port}`);
     if (!entry || entry.expires <= now || entry.outside !== outside) {
-      entry = { protocol: flow.protocol, inside: packet.src, insidePort: flow.port, outside, outsidePort: this.#nextPort++, forwarded: false, expires: 0, kind: this.kind };
+      entry = { protocol: flow.protocol, inside: packet.src, insidePort: flow.port, outside, outsidePort: this.#nextPort++, forwarded: false, expires: 0, kind: this.kind === 'dslite' ? 'cgnat' : this.kind };
       this.remember(entry);
-      this.ctx.print(this.kind === 'cgnat' ? 'cgnat.new' : 'nat.new', {
-        protocol: flow.protocol.toUpperCase(),
-        inside: `${entry.inside}:${entry.insidePort}`,
-        outside: `${outside}:${entry.outsidePort}`,
-      });
+      if (this.kind === 'dslite') {
+        const [inside, b4] = splitTunnel(entry.inside);
+        this.ctx.print('dslite.new', { protocol: flow.protocol.toUpperCase(), inside: `${inside}:${entry.insidePort}`, b4, outside: `${outside}:${entry.outsidePort}` });
+      } else {
+        this.ctx.print(this.kind === 'cgnat' ? 'cgnat.new' : 'nat.new', {
+          protocol: flow.protocol.toUpperCase(),
+          inside: `${entry.inside}:${entry.insidePort}`,
+          outside: `${outside}:${entry.outsidePort}`,
+        });
+      }
     }
     entry.expires = now + NAT_TIMEOUT;
     return { ...packet, src: outside, payload: withFlowPort(packet.payload, 'src', entry.outsidePort) };
@@ -629,6 +705,7 @@ export class ForwardingNode extends IpNode {
     this.ospf.boot();
     this.rip.boot();
     this.bgp.boot();
+    this.v6.boot();
   }
 
   /**
@@ -887,9 +964,42 @@ export class InternetNode extends ForwardingNode {
   /** Zugangsleitungen, deren Aufbau begonnen hat (Kabel-ID), damit er nicht doppelt startet. */
   #access = new Set<string>();
 
+  /** DS-Lite: CGNAT für getunnelte Kunden (AFTR). */
+  readonly dsLite: PatTable;
+
   constructor(ctx: NodeContext) {
     super(ctx);
     this.cgnat = new PatTable(ctx, 'cgnat');
+    this.dsLite = new PatTable(ctx, 'dslite');
+  }
+
+  /** Öffentliche Adresse für die Übersetzung: CGNAT-Adresse oder erste eigene IPv4-Adresse. */
+  #publicAddress(): string | undefined {
+    const device = this.ctx.device();
+    const first = this.interfaces()[0];
+    return device?.cgnatAddress ?? (first ? formatIp(first.ip) : undefined);
+  }
+
+  /** AFTR: IPv4 aus dem Tunnel auspacken, per CGNAT übersetzen und ins Internet weiterleiten. */
+  protected override onTunnel(packet: Ipv6Packet, inner: Ipv4Packet, _index: number): boolean {
+    const device = this.ctx.device();
+    const address = this.#publicAddress();
+    if (!device?.aftr || !address) return false;
+    const translated = this.dsLite.outbound({ ...inner, src: `${inner.src}@${packet.src}` }, address);
+    this.injectIpv4(translated, '192.0.0.1');
+    return true;
+  }
+
+  /** AFTR: Antwort an die öffentliche Adresse zurück übersetzen und in den Tunnel zum B4 geben. */
+  protected override intercept(_iface: IfaceAddress, packet: Ipv4Packet): boolean {
+    const device = this.ctx.device();
+    if (!device?.aftr || packet.dst !== this.#publicAddress()) return false;
+    const back = this.dsLite.inbound(packet);
+    if (!back) return false;
+    const [inside, b4] = splitTunnel(back.dst);
+    if (!b4 || packet.ttl <= 1) return true;
+    this.v6.tunnel(b4, { ...back, dst: inside, ttl: packet.ttl - 1 });
+    return true;
   }
 
   /** Modem der Gegenseite an diesem Anschluss (mit seiner Technik). */
@@ -974,6 +1084,6 @@ export class InternetNode extends ForwardingNode {
   }
 
   override state(): object {
-    return { ...super.state(), nat: this.cgnat.entries() };
+    return { ...super.state(), nat: [...this.cgnat.entries(), ...this.dsLite.entries()] };
   }
 }

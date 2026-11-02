@@ -40,9 +40,14 @@ import {
   setRip,
   type Result,
   type TopologyError,
+  addStaticRoute6,
+  removeStaticRoute6,
+  setInterfaceDhcp6,
+  setInterfaceIpv6,
 } from '../model/topology';
 import type { BgpConfig, CliConfig, Device, DeviceType, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, Topology } from '../model/types';
 import { formatIp, maskToText, networkOf, parseIp, parseMask } from '../net/ipv4';
+import { formatCidr6, formatIp6, parseCidr6, parseIp6 } from '../net/ipv6';
 import { buildRoutes, decodeIface, logicalInterfaces, type Route } from '../net/routing';
 import type { DeviceState } from '../sim/simulation';
 import { cliIfaceName, ifaceIdOf, parseIfaceName, usesPortNames } from './names';
@@ -122,7 +127,7 @@ export function prompt(topology: Topology, session: CliSession): string {
 
 // --- Befehlstabelle -------------------------------------------------------------
 
-type Param = 'ip' | 'cidr' | 'mask' | 'iface' | 'vlan' | 'num' | 'word' | 'text';
+type Param = 'ip' | 'cidr' | 'mask' | 'iface' | 'vlan' | 'num' | 'word' | 'text' | 'ip6' | 'cidr6';
 
 interface Call {
   args: string[];
@@ -363,6 +368,9 @@ const COMMANDS: Command[] = [
   { modes: EXEC, syntax: 'show version', help: 'Software version', run: ({ device }) => ok(showVersion(device)) },
   { modes: ['enable'], syntax: 'show running-config', help: 'Current operating configuration', run: ({ device }) => ok(runningConfig(device)) },
   { modes: EXEC, types: L3, syntax: 'show ip route', help: 'IP routing table', run: ({ device, env }) => ok(showIpRoute(device, env)) },
+  { modes: EXEC, types: ROUTERS, syntax: 'show ipv6 route', help: 'IPv6 routing table', run: ({ device, env }) => ok(showIpv6Route(device, env)) },
+  { modes: EXEC, types: ROUTERS, syntax: 'show ipv6 neighbors', help: 'IPv6 neighbour cache (Neighbor Discovery)', run: ({ device, env }) => ok(showIpv6Neighbors(device, env)) },
+  { modes: EXEC, types: ROUTERS, syntax: 'show ipv6 interface brief', help: 'IPv6 addresses per interface', run: ({ device, env }) => ok(showIpv6Brief(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip ospf neighbor', help: 'OSPF neighbours', run: ({ device, env }) => ok(showOspfNeighbors(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip ospf database', help: 'OSPF link-state database', run: ({ device, env }) => ok(showOspfDatabase(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip bgp summary', help: 'BGP neighbours', run: ({ device, env }) => ok(showBgpSummary(device, env)) },
@@ -425,6 +433,9 @@ const COMMANDS: Command[] = [
     help: 'Delete a VLAN interface',
     run: ({ args, device, env }) => apply(removeSvi(env.topology, device.id, Number(args[0]))),
   },
+  { modes: ['config'], types: ROUTERS, syntax: 'ipv6 route <cidr6> <word>', help: 'Static IPv6 route: prefix, next hop or interface', run: (call) => addRoute6(call, call.args[0]!, call.args[1]!) },
+  { modes: ['config'], types: ROUTERS, syntax: 'ipv6 route <cidr6> <ip6> <iface>', help: 'Static IPv6 route via a link-local next hop', run: (call) => addRoute6(call, call.args[0]!, call.args[1]!, call.args[2]) },
+  { modes: ['config'], types: ROUTERS, syntax: 'no ipv6 route <cidr6>', help: 'Remove a static IPv6 route', run: (call) => removeRoute6(call, call.args[0]!) },
   { modes: ['config'], types: L3, syntax: 'ip route <cidr> <word>', help: 'Static route: prefix, next hop or interface', run: (call) => addRoute(call, call.args[0]!, call.args[1]!) },
   { modes: ['config'], types: L3, syntax: 'ip route <ip> <mask> <word>', help: 'Static route: network, mask, next hop or interface', run: (call) => addRoute(call, `${call.args[0]}/${call.args[1]}`, call.args[2]!) },
   { modes: ['config'], types: L3, syntax: 'no ip route <cidr> <word>', help: 'Remove a static route', run: (call) => removeRoute(call, call.args[0]!) },
@@ -593,6 +604,10 @@ const COMMANDS: Command[] = [
   },
 
   // --- interface -------------------------------------------------------------
+  { modes: ['if'], types: ROUTERS, syntax: 'ipv6 address <cidr6>', help: 'IPv6 address with prefix, e.g. 2001:db8:1::1/64', run: (call) => forPorts(call, (t, port) => setInterfaceIpv6(t, call.device.id, port, call.args[0]!)) },
+  { modes: ['if'], types: ROUTERS, syntax: 'no ipv6 address', help: 'Remove the IPv6 address', run: (call) => forPorts(call, (t, port) => setInterfaceIpv6(t, call.device.id, port, '')) },
+  { modes: ['if'], types: ROUTERS, syntax: 'ipv6 nd managed-config-flag', help: 'Hand out addresses by DHCPv6 (M flag in router advertisements)', run: (call) => forPorts(call, (t, port) => setInterfaceDhcp6(t, call.device.id, port, true)) },
+  { modes: ['if'], types: ROUTERS, syntax: 'no ipv6 nd managed-config-flag', help: 'Addresses by SLAAC (no M flag)', run: (call) => forPorts(call, (t, port) => setInterfaceDhcp6(t, call.device.id, port, false)) },
   { modes: ['if'], types: L3, syntax: 'ip address <cidr>', help: 'Address with prefix length, e.g. 192.168.1.1/24', run: (call) => addressOn(call, ...splitCidr(call.args[0]!)) },
   { modes: ['if'], types: L3, syntax: 'ip address <ip> <mask>', help: 'Address and netmask', run: (call) => addressOn(call, call.args[0]!, call.args[1]!) },
   { modes: ['if'], types: L3, syntax: 'no ip address', help: 'Remove the IP address', run: (call) => addressOn(call, '', '') },
@@ -782,6 +797,54 @@ function addRoute(call: Call, prefixText: string, via: string): Partial<CliOutpu
   return apply(addStaticRoute(env.topology, device.id, { network, mask: prefix, iface: ifaceIdOf(ref) }));
 }
 
+function addRoute6(call: Call, prefixText: string, via: string, ifaceName?: string): Partial<CliOutput> {
+  const { device, env } = call;
+  const iface = ifaceName ? parseIfaceName(device, ifaceName) : null;
+  if (ifaceName && !iface) return ok([`% Invalid interface: ${ifaceName}`]);
+  if (parseIp6(via) !== null) return apply(addStaticRoute6(env.topology, device.id, { network: prefixText, gateway: via, ...(iface ? { iface: ifaceIdOf(iface) } : {}) }));
+  const ref = parseIfaceName(device, via);
+  if (!ref) return ok([`% Invalid next hop: ${via}`]);
+  return apply(addStaticRoute6(env.topology, device.id, { network: prefixText, iface: ifaceIdOf(ref) }));
+}
+
+function removeRoute6(call: Call, prefixText: string): Partial<CliOutput> {
+  const { device, env } = call;
+  const c = parseCidr6(prefixText);
+  const index = c ? (device.routes6 ?? []).findIndex((r) => r.network === formatCidr6(c.address, c.prefix)) : -1;
+  if (index < 0) return ok(['% No such route']);
+  return apply(removeStaticRoute6(env.topology, device.id, index));
+}
+
+function showIpv6Route(device: Device, env: CliEnv): string[] {
+  const routes = env.state?.ipv6?.routes6;
+  if (!routes) return [env.topology.ipMode === 'dual' || env.topology.ipMode === 'ipv6' ? '% IPv6 routes appear while the simulation runs' : '% IPv6 is off in this project (IP version: IPv4 only)'];
+  const codes: Record<string, string> = { connected: 'C', static: 'S', default: 'S', auto: 'A' };
+  const lines = ['Codes: C - connected, S - static, A - automatic (leyoNET)', ''];
+  for (const r of [...routes].sort((a, b) => (a.network < b.network ? -1 : a.network > b.network ? 1 : a.prefix - b.prefix))) {
+    const net = `${formatIp6(r.network)}/${r.prefix}`;
+    const name = cliIfaceName(device, r.iface);
+    lines.push(r.via === null ? `C>* ${net} is directly connected, ${name}` : `${codes[r.kind] ?? 'S'}>* ${net} [${r.distance ?? 1}/${r.metric ?? 0}] via ${formatIp6(r.via)}, ${name}`);
+  }
+  if (routes.length === 0) lines.push('(no routes)');
+  return lines;
+}
+
+function showIpv6Neighbors(device: Device, env: CliEnv): string[] {
+  const neighbors = env.state?.ipv6?.neighbors;
+  if (!neighbors) return ['% The neighbour cache is only available while the simulation runs'];
+  if (neighbors.length === 0) return ['(no IPv6 neighbours)'];
+  return table(['IPv6 Address', 'Hardware Addr', 'Interface', 'Router'], neighbors.map((n) => [n.ip, n.mac.toLowerCase(), cliIfaceName(device, n.iface), n.router ? 'yes' : '']));
+}
+
+function showIpv6Brief(device: Device, env: CliEnv): string[] {
+  const live = env.state?.ipv6?.addresses;
+  const rows = live
+    ? live.map((a) => [cliIfaceName(device, a.iface), `${a.address}/${a.prefix}`, a.origin])
+    : device.interfaces.filter((i) => i.ipv6).map((i) => [cliIfaceName(device, i.index), i.ipv6!, 'manual']);
+  if (rows.length === 0) return ['(no IPv6 addresses)'];
+  return table(['Interface', 'IPv6-Address', 'Origin'], rows);
+}
+
 function removeRoute(call: Call, prefixText: string): Partial<CliOutput> {
   const { device, env } = call;
   const [network, prefixRaw] = splitCidr(prefixText);
@@ -801,6 +864,10 @@ function paramOk(param: Param, token: string): boolean {
       return parseIp(token) !== null;
     case 'cidr':
       return /^\d+\.\d+\.\d+\.\d+\/\d{1,2}$/.test(token) && parseAddress(token) !== null;
+    case 'ip6':
+      return parseIp6(token) !== null;
+    case 'cidr6':
+      return token.includes('/') && parseCidr6(token) !== null;
     case 'mask':
       return parseMask(token) !== null;
     case 'vlan':
@@ -1233,6 +1300,8 @@ export function runningConfig(device: Device): string[] {
       if (p.serial) lines.push(` encapsulation ${p.encapsulation ?? 'hdlc'}`);
       if (p.nat) lines.push(' ip nat outside');
       if (p.ospfCost) lines.push(` ip ospf cost ${p.ospfCost}`);
+      if (p.ipv6) lines.push(` ipv6 address ${p.ipv6}`);
+      if (p.dhcp6) lines.push(' ipv6 nd managed-config-flag');
     }
     if (p.shutdown) lines.push(' shutdown');
     lines.push('!');
@@ -1255,6 +1324,11 @@ export function runningConfig(device: Device): string[] {
     lines.push(`ip route ${r.network}/${prefix} ${via}`);
   }
   if (device.routes?.length) lines.push('!');
+  for (const r of device.routes6 ?? []) {
+    const via = [r.gateway, r.iface !== undefined ? cliIfaceName(device, r.iface) : undefined].filter(Boolean).join(' ');
+    lines.push(`ipv6 route ${r.network} ${via}`);
+  }
+  if (device.routes6?.length) lines.push('!');
   // Nur 1:1-NAT hat eine Entsprechung in der Befehlszeile; reines SNAT/DNAT wird im Formular eingestellt.
   for (const r of device.staticNat ?? []) lines.push(r.kind ? `! ${r.kind.toUpperCase()} ${r.inside} <-> ${r.outside} (Formular)` : `ip nat inside source static ${r.inside} ${r.outside}`);
   if (device.staticNat?.length) lines.push('!');

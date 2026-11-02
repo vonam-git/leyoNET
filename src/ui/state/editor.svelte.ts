@@ -72,6 +72,17 @@ import {
   setIpRouting,
   setRoutingMode,
   setProjectTitle,
+  setIpMode,
+  setInterfaceIpv6,
+  setInterfaceDhcp6,
+  configureHost6,
+  addStaticRoute6,
+  removeStaticRoute6,
+  setDsLite,
+  setAftr,
+  type IpMode,
+  type Host6Input,
+  type StaticRoute6,
   type RoutingMode,
   setSubinterface,
   setSvi,
@@ -222,6 +233,11 @@ class Editor {
 
   get canRedo() {
     return this.editable && this.#redo.length > 0;
+  }
+
+  /** IP-Version des Projekts: «ipv4» (Standard), «dual» oder «ipv6». */
+  get ipMode(): IpMode {
+    return this.topology.ipMode ?? 'ipv4';
   }
 
   get selectedDevice() {
@@ -911,6 +927,41 @@ class Editor {
 
   removeSvi(id: string, vlan: number) {
     this.#edit(removeSvi(this.topology, id, vlan));
+  }
+
+  // --- IPv6 ---------------------------------------------------------------------
+
+  /** IP-Version des Projekts (nur im Entwurf; die Simulation startet danach neu). */
+  setIpMode(mode: IpMode) {
+    this.#edit(setIpMode(this.topology, mode));
+  }
+
+  setInterfaceIpv6(id: string, index: number, text: string): TopologyError | null {
+    return this.#applyForm(setInterfaceIpv6(this.topology, id, index, text));
+  }
+
+  setInterfaceDhcp6(id: string, index: number, enabled: boolean) {
+    this.#edit(setInterfaceDhcp6(this.topology, id, index, enabled));
+  }
+
+  configureHost6(id: string, input: Host6Input): TopologyError | null {
+    return this.#applyForm(configureHost6(this.topology, id, input));
+  }
+
+  addStaticRoute6(id: string, route: StaticRoute6): TopologyError | null {
+    return this.#applyForm(addStaticRoute6(this.topology, id, route));
+  }
+
+  removeStaticRoute6(id: string, index: number) {
+    this.#edit(removeStaticRoute6(this.topology, id, index));
+  }
+
+  setDsLite(id: string, aftr: string | null): TopologyError | null {
+    return this.#applyForm(setDsLite(this.topology, id, aftr));
+  }
+
+  setAftr(id: string, enabled: boolean) {
+    this.#edit(setAftr(this.topology, id, enabled));
   }
 
   /** Projektname (auch im Entwurf und in der Simulation änderbar, er betrifft das Netz nicht). */

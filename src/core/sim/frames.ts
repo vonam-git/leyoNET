@@ -73,7 +73,24 @@ export interface RipMessage {
   entries: { network: string; mask: string; nextHop: string; metric: number }[];
 }
 
-export type AppMessage = DhcpMessage | DnsMessage | RipMessage;
+/**
+ * DHCPv6 (RFC 9915): Solicit → Advertise → Request → Reply, UDP 546/547.
+ * Client und Server werden über ihre DUID erkannt (hier aus der MAC, DUID-LL).
+ */
+export interface Dhcpv6Message {
+  kind: 'dhcpv6';
+  type: 'solicit' | 'advertise' | 'request' | 'reply';
+  xid: number;
+  clientMac: string;
+  serverMac?: string;
+  /** Vergebene Adresse (IA_NA). */
+  address?: string;
+  /** Gültigkeit in Sekunden. */
+  lifetime?: number;
+  dns?: string;
+}
+
+export type AppMessage = DhcpMessage | DnsMessage | RipMessage | Dhcpv6Message;
 
 export interface UdpDatagram {
   kind: 'udp';
@@ -130,6 +147,52 @@ export interface Ipv4Packet {
   payload: IcmpMessage | UdpDatagram | TcpSegment | OspfPacket;
 }
 
+export type Icmpv6Type =
+  | IcmpType
+  | 'routerSolicitation'
+  | 'routerAdvertisement'
+  | 'neighborSolicitation'
+  | 'neighborAdvertisement';
+
+/**
+ * ICMPv6 (RFC 4443) mit Neighbor Discovery (RFC 4861). Echo und Fehler wie
+ * bei ICMP; dazu Router- und Nachbar-Anfragen/-Ankündigungen, die ARP und
+ * DHCP-Gateway-Angaben ersetzen.
+ */
+export interface Icmpv6Message {
+  kind: 'icmpv6';
+  type: Icmpv6Type;
+  id: number;
+  seq: number;
+  size: number;
+  /** Fehler: «net» = keine Route (Code 0), «host» = Adresse nicht erreichbar (Code 3). */
+  code?: 'net' | 'host';
+  original?: { src: string; dst: string; id: number; seq: number };
+  /** NS/NA: gesuchte bzw. angekündigte Adresse. */
+  target?: string;
+  /** Option «Source/Target Link-Layer Address»: MAC des Absenders bzw. Ziels. */
+  linkAddr?: string;
+  /** NA: R = Router, S = auf Anfrage, O = überschreiben; RA: M = Adressen per DHCPv6, O = weitere Angaben per DHCPv6. */
+  flags?: { router?: boolean; solicited?: boolean; override?: boolean; managed?: boolean; other?: boolean };
+  /** RA: Präfix für SLAAC (Option «Prefix Information»). */
+  prefix?: { network: string; length: number; autonomous: boolean; valid: number; preferred: number };
+  /** RA: Gültigkeit als Standardrouter in Sekunden (0 = kein Standardrouter). */
+  routerLifetime?: number;
+  mtu?: number;
+}
+
+/**
+ * IPv6-Paket (RFC 8200). Nutzlast: ICMPv6, UDP oder – bei DS-Lite – ein
+ * ganzes IPv4-Paket (Next Header 4, RFC 2473).
+ */
+export interface Ipv6Packet {
+  kind: 'ipv6';
+  src: string;
+  dst: string;
+  hopLimit: number;
+  payload: Icmpv6Message | UdpDatagram | Ipv4Packet;
+}
+
 /** Bridge Protocol Data Unit des Spanning Tree (vereinfacht). */
 export interface StpBpdu {
   kind: 'stp';
@@ -182,7 +245,7 @@ export interface EthernetFrame {
   vlan?: number;
   l2?: 'hdlc' | 'ppp';
   access?: AccessTech;
-  payload: ArpPacket | Ipv4Packet | StpBpdu | PppControl | LinkControl;
+  payload: ArpPacket | Ipv4Packet | Ipv6Packet | StpBpdu | PppControl | LinkControl;
 }
 
 export type AccessTech = 'docsis' | 'gpon' | 'adsl' | 'vdsl' | 'lte';
@@ -198,6 +261,8 @@ export const SMTP_PORT = 25;
 export const POP3_PORT = 110;
 export const IMAP_PORT = 143;
 export const RIP_PORT = 520;
+export const DHCP6_CLIENT_PORT = 546;
+export const DHCP6_SERVER_PORT = 547;
 export const BGP_PORT = 179;
 export const OSPF_ALL_ROUTERS = '224.0.0.5';
 export const RIP_MULTICAST = '224.0.0.9';

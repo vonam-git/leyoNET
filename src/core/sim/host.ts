@@ -4,10 +4,12 @@ import type { EthernetFrame } from './frames';
 import type { Device } from '../model/types';
 import { formatIp, parseIp } from '../net/ipv4';
 import { lookupRoute } from '../net/routing';
-import { PingRun, TracerouteRun, type IcmpApp } from './apps';
+import { PingRun, TracerouteRun, icmpView, type IcmpApp, type IcmpHost } from './apps';
+import { formatIp6, parseIp6 } from '../net/ipv6';
+import type { Ip6State } from './ip6';
 import { DhcpClient, DhcpServer, type LeaseRecord } from './dhcp';
 import { DnsResolver, DnsServer, type DnsCacheEntry } from './dns';
-import { DHCP_CLIENT_PORT, DHCP_SERVER_PORT, DNS_PORT, type Ipv4Packet, type TcpSegment, type UdpDatagram } from './frames';
+import { DHCP_CLIENT_PORT, DHCP_SERVER_PORT, DNS_PORT, type Ipv4Packet, type Ipv6Packet, type TcpSegment, type UdpDatagram } from './frames';
 import { HttpClient, HttpServer, type BrowserState } from './http';
 import { IpNode, type ArpEntry } from './ip';
 import { MailClient, MailServer, type MailClientState } from './mail';
@@ -36,6 +38,7 @@ export interface ConnectionInfo {
 
 export interface HostState {
   arp: ArpEntry[];
+  ipv6?: Ip6State;
   address: AddressState;
   dhcpLeases?: LeaseRecord[];
   dnsCache: DnsCacheEntry[];
@@ -110,6 +113,42 @@ export class HostNode extends IpNode {
     this.#trace?.onIcmp(packet);
   }
 
+  /** ICMPv6 für Ping und Traceroute: dieselben Anwendungen, Hop Limit statt TTL. */
+  protected override onIcmp6(packet: Ipv6Packet) {
+    const view = icmpView(packet);
+    if (!view) return;
+    this.#ping?.onIcmp(view);
+    this.#trace?.onIcmp(view);
+  }
+
+  /** Anwendungs-Sicht auf den IPv6-Stack: Ping/Traceroute senden ICMPv6-Echos. */
+  readonly #icmp6: IcmpHost = {
+    ctx: this.ctx,
+    sendIp: (dst, payload, options, onError) => {
+      if (payload.kind !== 'icmp') return;
+      this.v6.send(dst, { ...payload, kind: 'icmpv6' }, options?.ttl !== undefined ? { hopLimit: options.ttl } : {}, onError);
+    },
+  };
+
+  /** Ping/Traceroute zu einer IPv6-Adresse: Was lässt sich ohne Netzverkehr feststellen? */
+  #reachable6(target: bigint): boolean {
+    if (this.v6.isOwn(target)) return true;
+    if (!this.v6.enabled()) {
+      this.ctx.print('ping.noIpv6');
+      return false;
+    }
+    const iface = this.v6.interfaces()[0];
+    if (!iface || !this.ctx.isConnected(iface.index)) {
+      this.ctx.print('ping.noLink');
+      return false;
+    }
+    if (!this.v6.hasRoute(target)) {
+      this.ctx.print(iface.addresses.length < 2 ? 'ping.noAddress6' : 'ping.noRoute', { target: formatIp6(target) });
+      return false;
+    }
+    return true;
+  }
+
   protected override onUdp(packet: Ipv4Packet, datagram: UdpDatagram, index: number, srcMac: string) {
     const msg = datagram.payload;
     if (msg.kind === 'dns') {
@@ -135,8 +174,13 @@ export class HostNode extends IpNode {
   #wlan: WlanSession | null = null;
 
   boot() {
-    if (this.#wirelessPeer() && !this.#wlan) this.wlanConnect(false, () => this.ensureDhcp());
-    else this.ensureDhcp();
+    if (this.#wirelessPeer() && !this.#wlan) this.wlanConnect(false, () => this.#start());
+    else this.#start();
+  }
+
+  #start() {
+    this.ensureDhcp();
+    this.v6.boot();
   }
 
   /** Access Point und dessen Funkplatz, falls das Gerät per WLAN verbunden ist. */
@@ -203,6 +247,7 @@ export class HostNode extends IpNode {
 
   /** Beim Start der Simulation: DHCP-Clients beziehen ihre Adresse. */
   ensureDhcp() {
+    if (!this.ipv4On()) return;
     if (this.ctx.device()?.dhcp && this.dhcpClient.state === 'idle' && !this.dhcpClient.lease) this.dhcpClient.start();
   }
 
@@ -255,6 +300,14 @@ export class HostNode extends IpNode {
   }
 
   ping(target: string) {
+    const v6 = parseIp6(target);
+    if (v6 !== null) {
+      if (!this.#reachable6(v6)) return;
+      this.#ping?.cancel();
+      const run = new PingRun(this.#icmp6, formatIp6(v6), ++this.#icmpId, this.v6.state()?.gateway ?? '');
+      this.#ping = run;
+      return run.start();
+    }
     this.#withTarget(target, 'ping', (ip, name) => {
       this.#ping?.cancel();
       const run = new PingRun(this, ip, ++this.#icmpId, this.effectiveDevice()?.gateway ?? '', name);
@@ -264,6 +317,14 @@ export class HostNode extends IpNode {
   }
 
   traceroute(target: string) {
+    const v6 = parseIp6(target);
+    if (v6 !== null) {
+      if (!this.#reachable6(v6)) return;
+      this.#trace?.cancel();
+      const run = new TracerouteRun(this.#icmp6, formatIp6(v6), ++this.#icmpId);
+      this.#trace = run;
+      return run.start();
+    }
     this.#withTarget(target, 'tracert', (ip, name) => {
       this.#trace?.cancel();
       const run = new TracerouteRun(this, ip, ++this.#icmpId, name);
@@ -304,8 +365,10 @@ export class HostNode extends IpNode {
     const browser = this.browser.state;
     const mail = this.mail.state;
     const device = this.ctx.device();
+    const ipv6 = this.v6.state();
     return {
       arp: this.arpEntries(),
+      ...(ipv6 ? { ipv6 } : {}),
       address: this.address(),
       dnsCache: this.resolver.cacheEntries(),
       connections: this.connections(),

@@ -26,6 +26,10 @@ import {
   type Result,
   type TaskSet,
   type Topology,
+  configureHost6,
+  setCgnatAddress,
+  setInterfaceIpv6,
+  setIpMode,
 } from '../core';
 import { t } from '../i18n';
 
@@ -904,6 +908,62 @@ export const CATALOG: CatalogEntry[] = [
           goal('snatMail', 2, { type: 'seenAs', from: 'PC', to: 'Partner', address: '203.0.113.2' }),
           goal('snatMail', 3, { type: 'noPing', from: 'Partner', to: '203.0.113.5' }),
         ]),
+      };
+    },
+  },
+  {
+    id: 'ipv6-router',
+    stars: 3,
+    features: ['net.ipv6'],
+    level: 4,
+    build() {
+      const s = new Start()
+        .add('pc', 'PC A', -360, 0)
+        .add('router', 'Router', 0, 0)
+        .add('pc', 'PC B', 360, 0)
+        .link('PC A', 'Router')
+        .link('Router', 'PC B')
+        .apply((t, id) => {
+          let next = unwrap(setIpMode(t, 'ipv6'));
+          next = unwrap(configureHost6(next, id('PC A'), { auto: true }));
+          return unwrap(configureHost6(next, id('PC B'), { auto: true }));
+        });
+      return {
+        topology: s.topology,
+        tasks: task('ipv6Router', 3, [
+          goal('ipv6Router', 1, { type: 'ping', from: 'PC A', to: 'PC B' }),
+          goal('ipv6Router', 2, { type: 'ping', from: 'PC B', to: 'PC A' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'ds-lite',
+    stars: 4,
+    features: ['net.ipv6', 'net.dsLite', 'device.cpe', 'device.internet', 'service.web'],
+    level: 4,
+    build() {
+      const s = new Start()
+        .add('cpe', 'Internet-Box', -120, 0)
+        .add('internet', 'Provider', 200, 0)
+        .add('notebook', 'Notebook', -420, 0)
+        .add('server', 'Webserver', 500, 0)
+        .link('Internet-Box', 'Provider')
+        .link('Notebook', 'Internet-Box')
+        .link('Provider', 'Webserver')
+        .host('Webserver', '198.51.100.80', '24', '198.51.100.1')
+        .web('Webserver', '<h1>IPv4-Webseite</h1>')
+        .apply((t, id) => {
+          let next = unwrap(setIpMode(t, 'dual'));
+          next = unwrap(configureHost(next, id('Notebook'), { ip: '', mask: '', dhcp: true }));
+          next = unwrap(setInterfaceIpv6(next, id('Internet-Box'), 0, '2001:db8:ffff::2/64'));
+          next = unwrap(setInterfaceIpv6(next, id('Provider'), 0, '2001:db8:ffff::1/64'));
+          next = unwrap(setInterfaceAddress(next, id('Provider'), 1, '198.51.100.1', '24'));
+          return unwrap(setCgnatAddress(next, id('Provider'), '203.0.113.10'));
+        });
+      return {
+        topology: s.topology,
+        tasks: task('dsLite', 4, [goal('dsLite', 1, { type: 'http', from: 'Notebook', url: 'http://198.51.100.80/' })]),
       };
     },
   },

@@ -15,17 +15,24 @@ Der Simulator sendet Pakete, die den Standards folgen. Jeder Rahmen lässt sich 
 | 2 | PPPoE | RFC 2516 | Discovery (PADI/PADO/PADR/PADS) und Session; Anmeldung mit PAP |
 | 3 | IPv4 | RFC 791 | Keine Fragmentierung (MSS 1460 verhindert sie), keine Optionen |
 | 3 | ICMP | RFC 792 | Echo, Destination Unreachable, Time Exceeded |
+| 3 | IPv6 | RFC 8200, RFC 4291, RFC 5952 | Keine Erweiterungs-Header, keine Fragmentierung, keine Flow Labels; Link-Local per EUI-64 (RFC 4291), über Ethernet mit Multicast-MAC 33:33:… (RFC 2464) |
+| 3 | ICMPv6, Neighbor Discovery | RFC 4443, RFC 4861 | Echo, Destination Unreachable, Time Exceeded; Neighbor und Router Solicitation/Advertisement statt ARP; kein MLD (Multicast-Gruppen ohne Anmeldung), kein Redirect; Router Advertisements alle 30 s |
+| 3 | SLAAC | RFC 4862 | Adresse aus Präfix (/64) und EUI-64; Duplicate Address Detection optimistisch (Adresse sofort nutzbar, Konflikt wird gemeldet); keine Privacy-Adressen |
+| 3 | DS-Lite | RFC 6333, RFC 2473 | IPv4 in IPv6 (Next Header 4) von der Internet-Box (B4) zum AFTR, dort CGNAT; Tunneladressen 192.0.0.1/192.0.0.2 nur intern |
 | 3 | OSPFv2 | RFC 2328 | Router-LSAs und externe LSAs (Redistribution), keine Summary-LSAs zwischen Areas, kein DR/BDR (Nachbarn wie Punkt-zu-Punkt); Hello 2 s statt 10 s |
 | 3 | NAT: PAT, statisches SNAT, DNAT (Portweiterleitung, statisch), 1:1-NAT, CGNAT | RFC 3022, RFC 6598 | Endpunktunabhängige Zuordnung; keine Application Layer Gateways; SNAT und DNAT merken sich Verbindungen für die Antworten |
 | 4 | UDP | RFC 768 | – |
 | 4 | TCP | RFC 9293 | Drei-Wege-Handshake, Sequenznummern in Bytes, MSS 1460, Wiederholung nach 1 s (höchstens dreimal), FIN/RST; feste Fenstergrösse, keine Staukontrolle |
 | 7 | DHCP | RFC 2131, RFC 2132 | Discover/Offer/Request/Ack, Relay (giaddr); Erneuerung nach halber Lease-Dauer |
+| 7 | DHCPv6 | RFC 9915 | Solicit/Advertise/Request/Reply mit IA_NA, DUID-LL aus der MAC; Server im Router (M-Flag im Router Advertisement), Adressen ab ::100; kein Relay, keine Präfix-Delegation |
 | 7 | DNS | RFC 1035 | A- und MX-Einträge, keine Rekursion; Cache nach TTL |
 | 7 | HTTP/1.1 | RFC 9112 | GET, Content-Length in Bytes (UTF-8), Bilder als Binärdaten; kein HTTPS |
 | 7 | SMTP, POP3, IMAP | RFC 5321, RFC 1939, RFC 9051 | Kleiner Befehlsumfang, keine Authentisierung per TLS |
 | 7 | SSH | RFC 4253 | Versionsaustausch im Klartext, danach nur verschlüsselte Bytes |
 | 7 | RIP v2 | RFC 2453 | Update alle 5 s statt 30 s, Timeout 30 s statt 180 s; Split Horizon |
 | 7 | BGP-4 | RFC 4271 | Binär über TCP 179: OPEN, KEEPALIVE, UPDATE, NOTIFICATION; Pfadwahl nach AS-Pfad-Länge; keine Policies |
+
+**IPv6** gibt es für Endgeräte, Router, Internet-Box und Provider; Layer-3-Switches, Subinterfaces und serielle Leitungen sprechen nur IPv4. Dynamisches Routing für IPv6 (OSPFv3, RIPng), DNS-Einträge AAAA sowie TCP-Dienste (Web, Mail, SSH) über IPv6 sind nicht simuliert; Web und Mail laufen über IPv4, bei DS-Lite durch den Tunnel. Beispieladressen stammen aus 2001:db8::/32 (RFC 3849), private aus fd00::/8 (RFC 4193).
 
 **Automatisches Routing** (Häkchen beim Router oder Layer-3-Switch) ist kein Protokoll, sondern eine Abkürzung für Einsteiger: Die Simulation liest den Netzplan und trägt zu jedem Netz den Weg über die wenigsten Router ein (Code «A»). Nachbarn sind Router mit Anschlüssen im selben Netzabschnitt und Subnetz; abgeschaltete Anschlüsse zählen nicht. Führt ein Weg zum Provider oder zu einer Internet-Box, kommt eine Standardroute dazu. Es werden keine Pakete ausgetauscht, darum erscheint nichts in der Paketliste. Statische Routen und OSPF/RIP/BGP ruhen, solange das Häkchen gesetzt ist; ohne Häkchen wählt man «statisch» oder «dynamisch».
 

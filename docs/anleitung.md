@@ -43,6 +43,15 @@ Beim Start der Simulation wird automatisch ein Snapshot angelegt. Weitere entste
 
 Nützlich: **Strg+D** dupliziert die Auswahl, **F2** benennt um, **Entf** löscht, **Strg+Z** macht rückgängig.
 
+## IPv6
+
+Oben in der Werkzeugleiste stellst du die **IP-Version** ein: **IPv4**, **v4 + v6** (beides) oder **IPv6**. Mit IPv6 hat jedes Gerät ein eigenes IPv6-Feld:
+
+- **Endgeräte:** «IPv6 automatisch» (der Router kündigt sein Präfix an, das Gerät bildet seine Adresse selbst = SLAAC, oder holt sie per DHCPv6) oder eine feste Adresse wie `2001:db8:1::10/64` mit Standardgateway.
+- **Router:** je Anschluss eine Adresse mit `/64`, z.B. `2001:db8:1::1/64`. Mit «Adressen per DHCPv6 vergeben» verteilt der Router die Adressen selbst.
+- Statt ARP fragen die Geräte per **Neighbor Discovery** nach der MAC. `ping 2001:db8:2::20`, `tracert`, `ipconfig` und `netsh interface ipv6 show neighbors` funktionieren in der Eingabeaufforderung.
+- **DS-Lite:** Die Internet-Box tunnelt IPv4 durch das IPv6-Netz des Providers; der Provider übersetzt per CGNAT. Siehe Demo «DS-Lite».
+
 ## Router: automatisches Routing
 
 Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routing**. Er findet dann alle Netze im Plan selbst, ohne dass du Routen eintragen musst. Jeder Router auf dem Weg braucht das Häkchen. Ohne Häkchen wählst du **statisch** (Routen von Hand) oder **dynamisch** (OSPF, RIP, BGP), im Fenster **Erweitert … → Routing**.

@@ -2,7 +2,7 @@ import { parseMask } from '../net/ipv4';
 import type { HostNode } from './host';
 
 /** Befehle der simulierten Befehlszeile, angelehnt an Windows ("ipconfig", "tracert"). */
-export const COMMANDS = ['ping', 'tracert', 'nslookup', 'ipconfig', 'arp', 'netstat', 'ssh', 'cls', 'help'] as const;
+export const COMMANDS = ['ping', 'tracert', 'nslookup', 'ipconfig', 'arp', 'netsh', 'netstat', 'ssh', 'cls', 'help'] as const;
 
 export function runCommand(host: HostNode, line: string) {
   const ctx = host.ctx;
@@ -46,6 +46,11 @@ export function runCommand(host: HostNode, line: string) {
     case 'netstat':
       printConnections(host);
       return;
+    case 'netsh':
+      // «netsh interface ipv6 show neighbors»: Nachbartabelle aus Neighbor Discovery (wie «arp -a» bei IPv4).
+      if (/^interface\s+ipv6\s+show\s+neigh/i.test(args.join(' '))) printNeighbors(host);
+      else ctx.print('cmd.usage.netsh');
+      return;
     case 'ssh':
       // Mit Ziel fragt die Oberfläche das Passwort ab und ruft dann Simulation.ssh() auf.
       if (!args[0] || !/@|-l/.test(args.join(' '))) ctx.print('cmd.usage.ssh');
@@ -84,8 +89,21 @@ function nslookup(host: HostNode, name: string) {
 function printIpconfig(host: HostNode) {
   const ctx = host.ctx;
   const device = ctx.device();
-  const address = host.address();
   ctx.print('ipconfig.adapter', { name: device?.name ?? '', mac: device?.interfaces[0]?.mac ?? '' });
+  if (ctx.topology().ipMode !== 'ipv6') printIpv4(host);
+  const v6 = host.v6.state();
+  if (!v6) return;
+  ctx.print(`ipconfig.mode6.${v6.config ?? 'manual'}`);
+  for (const a of v6.addresses) {
+    if (a.origin === 'link-local') ctx.print('ipconfig.linkLocal', { address: a.address });
+    else ctx.print('ipconfig.ipv6', { address: a.address, prefix: a.prefix, origin: a.origin });
+  }
+  ctx.print('ipconfig.gateway6', { gateway: v6.gateway ?? '–' });
+}
+
+function printIpv4(host: HostNode) {
+  const ctx = host.ctx;
+  const address = host.address();
   ctx.print(`ipconfig.mode.${address.mode}`);
   if (!address.ip) {
     ctx.print(address.mode === 'dhcp' ? 'ipconfig.noLease' : 'ipconfig.noAddress');
@@ -125,6 +143,14 @@ function printArp(host: HostNode) {
   }
   ctx.print('arp.header');
   for (const entry of entries) ctx.print('arp.entry', { ip: entry.ip, mac: entry.mac });
+}
+
+function printNeighbors(host: HostNode) {
+  const ctx = host.ctx;
+  const neighbors = host.v6.state()?.neighbors ?? [];
+  if (neighbors.length === 0) return ctx.print('ndp.empty');
+  ctx.print('ndp.header');
+  for (const n of neighbors) ctx.print('ndp.entry', { ip: n.ip, mac: n.mac, router: n.router ? 'Router' : '' });
 }
 
 function printConnections(host: HostNode) {

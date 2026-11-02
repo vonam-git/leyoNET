@@ -50,18 +50,40 @@
     return n === null ? null : addressScope(n);
   };
   type Line = { text: string; port?: string; scope: AddressScope | null; duplicate: boolean };
+  const v4 = $derived(editor.ipMode !== 'ipv6');
+  const v6 = $derived(editor.ipMode !== 'ipv4');
+
+  /** IPv6 eines Endgeräts: feste Adresse, in der Simulation die bezogene; sonst «SLAAC/DHCPv6». */
+  const ip6 = $derived.by(() => {
+    if (!isEndpoint || !v6) return '';
+    if (device.ipv6Auto) {
+      const live = editor.acting ? (simStore.tick, simStore.sim?.getDeviceState(device.id).ipv6) : undefined;
+      const learned = live?.addresses.find((a) => a.origin === 'slaac' || a.origin === 'dhcpv6');
+      return learned ? `${learned.address}/${learned.prefix}` : t('canvas.ipv6Auto');
+    }
+    return device.interfaces[0]?.ipv6 ?? '';
+  });
+
   const lines = $derived.by((): Line[] => {
-    if (isEndpoint) return ip ? [{ text: ip, scope: badges ? scopeOf(ip) : null, duplicate: duplicates.has(device.id, ip.split('/')[0]) }] : [];
+    if (isEndpoint) {
+      const out: Line[] = [];
+      if (v4 && ip) out.push({ text: ip, scope: badges ? scopeOf(ip) : null, duplicate: duplicates.has(device.id, ip.split('/')[0]) });
+      if (ip6) out.push({ text: ip6, scope: null, duplicate: false });
+      return out;
+    }
     if (!badges) return [];
     // Bei Routern dezent den Anschluss davor, z.B. «eth0: 192.168.1.1/24».
-    return device.interfaces
-      .filter((i) => i.ip)
-      .slice(0, 4)
-      .map((i) => {
-        const prefix = i.mask ? parseMask(i.mask) : null;
-        const text = prefix === null ? i.ip! : `${i.ip}/${prefix}`;
-        return { text, port: interfaceLabel(device, i.index), scope: scopeOf(text), duplicate: duplicates.has(device.id, i.ip) };
-      });
+    const out: Line[] = v4
+      ? device.interfaces
+          .filter((i) => i.ip)
+          .map((i) => {
+            const prefix = i.mask ? parseMask(i.mask) : null;
+            const text = prefix === null ? i.ip! : `${i.ip}/${prefix}`;
+            return { text, port: interfaceLabel(device, i.index), scope: scopeOf(text), duplicate: duplicates.has(device.id, i.ip) };
+          })
+      : [];
+    if (v6) for (const i of device.interfaces) if (i.ipv6) out.push({ text: i.ipv6, port: interfaceLabel(device, i.index), scope: null, duplicate: false });
+    return out.slice(0, 6);
   });
   /** Doppelte Adressen: rotes Ausrufezeichen am Gerät, auch wenn die Adressen ausgeblendet sind. */
   const duplicated = $derived(duplicates.of(device.id));

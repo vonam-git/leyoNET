@@ -46,6 +46,7 @@ Dann **`release/leyonet.html`** doppelklicken – fertig, ohne Installation und 
 | v0.4 | WLAN-Roaming, Broadcast-Sturm ohne STP, VLAN-Farben, Adressanzeige privat/öffentlich, IP-Rechner | ✅ |
 | v0.4 | Sniffer nach OSI mit echten Bytes, Hex-Ansicht, Filtersprache, pcapng-Export; Release-Prüfung Datenschutz/Sicherheit/Lizenzen | ✅ |
 | v0.5 | Neuer Name **leyoNET** mit Logo, Lizenz AGPL-3.0, Herkunftsnachweis | ✅ |
+| v0.6 | **IPv6**: IP-Version wählbar (IPv4, Dual Stack, IPv6), Neighbor Discovery, SLAAC, DHCPv6, ICMPv6, IPv6-Routing; **DS-Lite** mit CGNAT; Projektname, Mehrfachauswahl, automatisches Routing | ✅ |
 
 ## Entwicklung
 
@@ -117,6 +118,7 @@ Regeln, die das Projekt technisch absichert:
 - VLANs: Switch-Ports gehören zu einem VLAN (Access) oder übertragen als Trunk alle VLANs mit 802.1Q-Tag; die MAC-Tabelle gilt je VLAN.
 - Spanning Tree (vereinfacht, verkürzte Zeiten): Switches wählen per BPDU eine Root-Bridge und blockieren redundante Ports; nach einem Ausfall wird neu berechnet. Schleifen sind erlaubt; ohne STP erkennt der Simulator den Broadcast-Sturm, warnt beim Verkabeln und zeigt ein Banner mit den betroffenen Geräten. Ports zu Endgeräten leiten sofort weiter (wie PortFast).
 - **Erweiterte Einstellungen**: Rechts nur die Grundeinstellungen, alles Weitere in einem Fenster mit Reitern (Adressen, Anschlüsse, Routing, NAT, DHCP, VLAN & STP, WLAN, Dienste …); mit ◀ ▶ direkt zum nächsten Gerät. Die Routing-Tabelle ist farbig nach Herkunft und direkt bearbeitbar. Eingaben speichern beim Verlassen des Feldes, ohne «Übernehmen».
+- **IPv6** (ab Profil 4): IP-Version des Projekts wählbar (nur IPv4, Dual Stack, nur IPv6). Link-Local-Adressen, Neighbor Discovery statt ARP, SLAAC und DHCPv6 über Router Advertisements, ICMPv6 (Ping, Tracert), statisches und automatisches IPv6-Routing, echte Bytes und pcap. **DS-Lite**: Die Internet-Box tunnelt IPv4 in IPv6 zum AFTR des Providers, der per CGNAT übersetzt.
 - **Automatisches Routing** für Einsteiger: ein Häkchen beim Router, und er kennt alle Netze im Plan (Weg über die wenigsten Router, Standardroute zum Internet). Ohne Häkchen wählt man statisches oder dynamisches Routing (OSPF, RIP, BGP).
 - **Mehrfachauswahl**: Auswahlrahmen, Umschalt+Klick und Strg+A; die Auswahl gemeinsam verschieben, mit Strg+C/Strg+V samt Kabeln kopieren oder duplizieren.
 - **Demo-Netze**: zu jedem Protokoll ein fertig konfiguriertes Netz, per Knopfdruck geöffnet oder vorgeführt (Simulation startet, Ping/Webseite/E-Mail laufen automatisch); viele auch **Schritt für Schritt** mit einem Avatar als Lehrperson, den alle selbst einstellen können. Jede Demo wird bei jedem Release geprüft.

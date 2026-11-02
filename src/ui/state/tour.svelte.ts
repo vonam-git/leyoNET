@@ -116,7 +116,12 @@ class Tour {
     this.highlight = this.#id(step.highlight);
     if (step.window) {
       const id = this.#id(step.window.device);
+      // Immer nur das Fenster des aktuellen Schritts offen halten.
+      dialogs.closeDevice();
       if (id) dialogs.showDevice(id, step.window.tab);
+    } else {
+      // Schritt ohne Fenster: Zeichenfläche freigeben, damit man die Pakete sieht.
+      dialogs.closeDevice();
     }
     const action = step.action;
     if (forward && action) {

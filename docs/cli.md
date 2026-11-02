@@ -46,6 +46,7 @@ Router(config-if)#         Router(config-vlan)#    Router(config-line)#   Router
 | Befehl | Zeigt |
 |---|---|
 | `show running-config` | aktuelle Konfiguration (nur `#`) |
+| `show ipv6 route`, `show ipv6 neighbors`, `show ipv6 interface brief` | IPv6-Routingtabelle (A = automatisch), Nachbartabelle aus Neighbor Discovery, IPv6-Adressen je Anschluss (nur Router) |
 | `show ip route` | Routingtabelle (C = direkt verbunden, S = statisch, O = OSPF, R = RIP, B = BGP, A = automatisches Routing; in Klammern Distanz/Metrik) |
 | `show ip protocols` | aktive Routingprotokolle mit Netzen |
 | `show ip ospf neighbor` | OSPF-Nachbarn und ihr Zustand (Simulation) |

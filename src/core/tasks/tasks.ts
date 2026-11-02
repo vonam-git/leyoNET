@@ -188,10 +188,14 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       if (!from) return missing(check.from);
       // Ziel als Gerätename (dann dessen Adresse), IP-Adresse oder DNS-Name.
       const targetDevice = need(check.to);
-      const target = targetDevice ? targetDevice.interfaces[0]?.ip : check.to;
-      if (targetDevice && !target && !targetDevice.dhcp) return fail(id, 'noAddress', { name: targetDevice.name });
+      // Projekt nur mit IPv6: Zielgerät über seine IPv6-Adresse (fest oder per SLAAC/DHCPv6 bezogen).
+      const v6 = topology.ipMode === 'ipv6';
+      const fixed6 = targetDevice?.interfaces[0]?.ipv6 && !targetDevice.ipv6Auto ? targetDevice.interfaces[0].ipv6.split('/')[0] : undefined;
+      const target = targetDevice ? (v6 ? fixed6 : targetDevice.interfaces[0]?.ip) : check.to;
+      if (targetDevice && !target && !(v6 ? targetDevice.ipv6Auto : targetDevice.dhcp)) return fail(id, 'noAddress', { name: targetDevice.name });
       const sim = bootedSimulation(topology);
-      const address = target ?? sim.getDeviceState(targetDevice!.id).address?.ip;
+      const learned6 = () => sim.getDeviceState(targetDevice!.id).ipv6?.addresses.find((a) => a.origin === 'slaac' || a.origin === 'dhcpv6')?.address;
+      const address = target ?? (v6 ? learned6() : sim.getDeviceState(targetDevice!.id).address?.ip);
       if (!address) return fail(id, 'noAddress', { name: check.to });
       sim.ping(from.id, address);
       sim.runUntil(BOOT_MS + ACTION_MS);

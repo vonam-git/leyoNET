@@ -1,0 +1,188 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "title": "Demo IPv6",
+    "devices": [
+      {
+        "id": "d1",
+        "type": "pc",
+        "name": "PC 1",
+        "position": {
+          "x": 120,
+          "y": 120
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00"
+          }
+        ],
+        "ipv6Auto": true
+      },
+      {
+        "id": "d2",
+        "type": "pc",
+        "name": "PC 2",
+        "position": {
+          "x": 120,
+          "y": 360
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00"
+          }
+        ],
+        "ipv6Auto": true
+      },
+      {
+        "id": "d3",
+        "type": "switch",
+        "name": "Switch",
+        "position": {
+          "x": 330,
+          "y": 240
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:03:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:03:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:03:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:03:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:03:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:03:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:03:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:03:08",
+            "sfpSlot": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:03:09",
+            "sfpSlot": true
+          }
+        ]
+      },
+      {
+        "id": "d4",
+        "type": "router",
+        "name": "Router",
+        "position": {
+          "x": 560,
+          "y": 240
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ipv6": "2001:db8:a::1/64"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:04:01",
+            "ipv6": "2001:db8:b::1/64",
+            "dhcp6": true
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:04:02",
+            "sfpSlot": true
+          }
+        ]
+      },
+      {
+        "id": "d5",
+        "type": "notebook",
+        "name": "Notebook",
+        "position": {
+          "x": 800,
+          "y": 240
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00"
+          }
+        ],
+        "ipv6Auto": true
+      }
+    ],
+    "cables": [
+      {
+        "id": "c6",
+        "a": {
+          "device": "d4",
+          "iface": 0
+        },
+        "b": {
+          "device": "d3",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c7",
+        "a": {
+          "device": "d1",
+          "iface": 0
+        },
+        "b": {
+          "device": "d3",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c8",
+        "a": {
+          "device": "d2",
+          "iface": 0
+        },
+        "b": {
+          "device": "d3",
+          "iface": 2
+        }
+      },
+      {
+        "id": "c9",
+        "a": {
+          "device": "d4",
+          "iface": 1
+        },
+        "b": {
+          "device": "d5",
+          "iface": 0
+        }
+      }
+    ],
+    "nextId": 10,
+    "ipMode": "ipv6"
+  },
+  "configuration": {}
+}
