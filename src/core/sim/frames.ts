@@ -90,7 +90,30 @@ export interface Dhcpv6Message {
   dns?: string;
 }
 
-export type AppMessage = DhcpMessage | DnsMessage | RipMessage | Dhcpv6Message;
+/**
+ * IKEv2 (RFC 7296), UDP 500: zwei Router handeln den IPsec-Tunnel aus.
+ * IKE_SA_INIT legt Verfahren und Schlüsselmaterial fest, IKE_AUTH beweist
+ * den gemeinsamen Schlüssel (hier ein Prüfwert statt echter Kryptografie)
+ * und vereinbart, welche Netze durch den Tunnel dürfen (Traffic Selectors).
+ */
+export interface IkeMessage {
+  kind: 'ike';
+  exchange: 'IKE_SA_INIT' | 'IKE_AUTH';
+  response: boolean;
+  /** SPI des Initiators und des Responders (identifizieren die Aushandlung). */
+  ispi: number;
+  rspi: number;
+  msgId: number;
+  /** IKE_AUTH: Beweis, dass man den Schlüssel kennt (Prüfwert, nie der Schlüssel selbst). */
+  proof?: string;
+  /** Traffic Selectors: eigenes und entferntes Netz. */
+  tsi?: string;
+  tsr?: string;
+  /** Fehler der Gegenseite. */
+  notify?: 'AUTHENTICATION_FAILED' | 'TS_UNACCEPTABLE';
+}
+
+export type AppMessage = DhcpMessage | DnsMessage | RipMessage | Dhcpv6Message | IkeMessage;
 
 export interface UdpDatagram {
   kind: 'udp';
@@ -144,7 +167,21 @@ export interface Ipv4Packet {
   dst: string;
   ttl: number;
   id: number;
-  payload: IcmpMessage | UdpDatagram | TcpSegment | OspfPacket;
+  payload: IcmpMessage | UdpDatagram | TcpSegment | OspfPacket | EspPacket;
+}
+
+/**
+ * ESP (RFC 4303), IP-Protokoll 50: das ganze innere IPv4-Paket verschlüsselt
+ * im Tunnel. `inner` dient der Simulation; auf der Leitung (und im
+ * Mitschnitt) sind nur SPI, Sequenznummer und verwürfelte Bytes zu sehen.
+ */
+export interface EspPacket {
+  kind: 'esp';
+  spi: number;
+  seq: number;
+  inner: Ipv4Packet;
+  /** Aus dem gemeinsamen Schlüssel abgeleitet; bestimmt die (simulierte) Verschlüsselung. */
+  keyHash: number;
 }
 
 export type Icmpv6Type =
@@ -261,6 +298,7 @@ export const SMTP_PORT = 25;
 export const POP3_PORT = 110;
 export const IMAP_PORT = 143;
 export const RIP_PORT = 520;
+export const IKE_PORT = 500;
 export const DHCP6_CLIENT_PORT = 546;
 export const DHCP6_SERVER_PORT = 547;
 export const BGP_PORT = 179;

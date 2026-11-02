@@ -4,6 +4,8 @@ import {
   addDevice,
   addDnsRecord,
   addStaticNat,
+  addVpnTunnel,
+  setFirewall,
   addPortForward,
   setDefaultGateway,
   addStaticRoute,
@@ -160,6 +162,20 @@ const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
   },
   'port-forward': (t) => unwrap(addPortForward(t, byName(t, 'Heimrouter'), { protocol: 'tcp', port: 8080, to: '192.168.1.20', toPort: 80 })),
   'snat-mail': (t) => unwrap(addStaticNat(t, byName(t, 'Firmenrouter'), { inside: '192.168.0.25', outside: '203.0.113.5', kind: 'snat' })),
+  'firewall-dmz': (t) =>
+    unwrap(
+      setFirewall(t, byName(t, 'Firewall'), {
+        defaultAction: 'deny',
+        rules: [
+          { action: 'allow', protocol: 'tcp', src: 'any', dst: '203.0.113.80', port: 80 },
+          { action: 'allow', protocol: 'any', src: '192.168.1.0/24', dst: 'any' },
+        ],
+      }),
+    ),
+  'vpn-sites': (t) => {
+    t = unwrap(addVpnTunnel(t, byName(t, 'Router Zürich'), { name: 'Bern', peer: '203.0.113.1', local: '192.168.1.0/24', remote: '192.168.2.0/24', key: 'Schulnetz' }));
+    return unwrap(addVpnTunnel(t, byName(t, 'Router Bern'), { name: 'Zürich', peer: '198.51.100.1', local: '192.168.2.0/24', remote: '192.168.1.0/24', key: 'Schulnetz' }));
+  },
   'dnat-web': (t) => unwrap(addStaticNat(t, byName(t, 'Firmenrouter'), { inside: '192.168.0.80', outside: '203.0.113.6', kind: 'dnat' })),
   'static-nat-dmz': (t) => unwrap(addStaticNat(t, byName(t, 'Firmenrouter'), { inside: '192.168.0.80', outside: '203.0.113.5' })),
   'bgp-two-as': (t) => {

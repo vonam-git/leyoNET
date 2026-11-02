@@ -1,0 +1,246 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "pc",
+        "name": "PC Zürich",
+        "position": {
+          "x": 100,
+          "y": 260
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "ip": "192.168.1.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.1.1"
+      },
+      {
+        "id": "d2",
+        "type": "server",
+        "name": "Server Bern",
+        "position": {
+          "x": 1020,
+          "y": 260
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "192.168.2.20",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.2.1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Intranet Bern</h1><p>Diese Seite kam verschlüsselt durch den VPN-Tunnel.</p>"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d3",
+        "type": "router",
+        "name": "Router Zürich",
+        "position": {
+          "x": 330,
+          "y": 260
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ip": "192.168.1.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:03:01",
+            "ip": "198.51.100.1",
+            "mask": "255.255.255.252",
+            "nat": true
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:03:02",
+            "sfpSlot": true
+          }
+        ],
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "198.51.100.2"
+          }
+        ],
+        "vpn": [
+          {
+            "name": "Zürich – Bern",
+            "peer": "203.0.113.1",
+            "local": "192.168.1.0/24",
+            "remote": "192.168.2.0/24",
+            "key": "Schulnetz2026"
+          }
+        ]
+      },
+      {
+        "id": "d4",
+        "type": "router",
+        "name": "Router Bern",
+        "position": {
+          "x": 790,
+          "y": 260
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ip": "203.0.113.1",
+            "mask": "255.255.255.252",
+            "nat": true
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:04:01",
+            "ip": "192.168.2.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:04:02",
+            "sfpSlot": true
+          }
+        ],
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "203.0.113.2"
+          }
+        ],
+        "vpn": [
+          {
+            "name": "Bern – Zürich",
+            "peer": "198.51.100.1",
+            "local": "192.168.2.0/24",
+            "remote": "192.168.1.0/24",
+            "key": "Schulnetz2026"
+          }
+        ]
+      },
+      {
+        "id": "d5",
+        "type": "internet",
+        "name": "Internet",
+        "position": {
+          "x": 560,
+          "y": 260
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ip": "198.51.100.2",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:05:01",
+            "ip": "203.0.113.2",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:05:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:05:03"
+          }
+        ]
+      }
+    ],
+    "cables": [
+      {
+        "id": "c6",
+        "a": {
+          "device": "d1",
+          "iface": 0
+        },
+        "b": {
+          "device": "d3",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c7",
+        "a": {
+          "device": "d3",
+          "iface": 1
+        },
+        "b": {
+          "device": "d5",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c8",
+        "a": {
+          "device": "d4",
+          "iface": 0
+        },
+        "b": {
+          "device": "d5",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c9",
+        "a": {
+          "device": "d4",
+          "iface": 1
+        },
+        "b": {
+          "device": "d2",
+          "iface": 0
+        }
+      }
+    ],
+    "nextId": 12,
+    "areas": [
+      {
+        "id": "a10",
+        "title": "Standort Zürich 192.168.1.0/24",
+        "color": "green",
+        "x": 30,
+        "y": 160,
+        "width": 400,
+        "height": 200,
+        "network": "192.168.1.0/24"
+      },
+      {
+        "id": "a11",
+        "title": "Standort Bern 192.168.2.0/24",
+        "color": "purple",
+        "x": 690,
+        "y": 160,
+        "width": 420,
+        "height": 200,
+        "network": "192.168.2.0/24"
+      }
+    ]
+  },
+  "configuration": {}
+}
+

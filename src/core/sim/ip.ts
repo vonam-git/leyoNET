@@ -13,6 +13,7 @@ import {
   type IcmpMessage,
   type Ipv4Packet,
   type Ipv6Packet,
+  type EspPacket,
   type PppControl,
   type OspfPacket,
   type TcpSegment,
@@ -22,7 +23,7 @@ import type { NodeContext, SimNode } from './simulation';
 import { cableAt, deviceSeq, getDevice, otherEnd } from '../model/topology';
 import { isModemWan } from '../model/links';
 import type { ModemKind } from '../model/types';
-import { BGP_PORT, OSPF_ALL_ROUTERS, RIP_MULTICAST, RIP_PORT } from './frames';
+import { BGP_PORT, IKE_PORT, OSPF_ALL_ROUTERS, RIP_MULTICAST, RIP_PORT } from './frames';
 import { ACCESS_PROFILES, nextSteps, stepIndex } from './access';
 import { PingRun, type IcmpApp } from './apps';
 import { SSH_PORT, startSshServer } from './ssh';
@@ -33,6 +34,9 @@ import { Rip } from './rip';
 import { Bgp } from './bgp';
 import type { RoutingHost } from './routing-host';
 import { IPV4_ENABLED, Ip6Stack } from './ip6';
+import { Firewall } from './firewall';
+import { Vpn, type VpnState } from './vpn';
+import { matchesAddress } from '../model/security';
 
 export const ARP_TIMEOUT = 1000;
 export const ARP_ATTEMPTS = 2;
@@ -80,9 +84,12 @@ export class IpNode implements SimNode {
   #ipId = 0;
   /** IPv6-Stack (nur aktiv, wenn das Projekt IPv6 verwendet). */
   readonly v6: Ip6Stack;
+  /** Paketfilter (nur aktiv, wenn das Gerät eine Firewall hat). */
+  readonly firewall: Firewall;
 
   constructor(readonly ctx: NodeContext) {
     const self = this;
+    this.firewall = new Firewall(ctx, () => ctx.device()?.firewall);
     this.v6 = new Ip6Stack(
       {
         ctx,
@@ -141,7 +148,8 @@ export class IpNode implements SimNode {
 
   state(): object {
     const ipv6 = this.v6.state();
-    return { arp: this.arpEntries(), ...(ipv6 ? { ipv6 } : {}) };
+    const firewall = this.firewall.state();
+    return { arp: this.arpEntries(), ...(ipv6 ? { ipv6 } : {}), ...(firewall ? { firewall } : {}) };
   }
 
   /**
@@ -354,7 +362,12 @@ export class IpNode implements SimNode {
     // NAT: Antworten an die Internet-Adresse des Routers gehen an den internen Rechner weiter.
     const translated = this.forwarding && iface ? this.inbound(iface, packet) : null;
     if (translated && iface) this.#forward(iface, translated);
-    else if (this.isOwn(dst) || broadcast) this.#deliver(packet, broadcast, index, srcMac);
+    else if (this.isOwn(dst) || broadcast) {
+      // Endgerät mit Firewall: eingehende Pakete prüfen (Broadcasts und DHCP-Antworten sind immer erlaubt).
+      const dhcpReply = packet.payload.kind === 'udp' && packet.payload.dstPort === DHCP_CLIENT_PORT;
+      if (!this.forwarding && !broadcast && !dhcpReply && !this.firewall.allows(packet, index)) return;
+      this.#deliver(packet, broadcast, index, srcMac);
+    }
     else if (this.forwarding && iface) this.#forward(iface, packet);
   }
 
@@ -362,6 +375,19 @@ export class IpNode implements SimNode {
   protected tunnelOut(_inIface: IfaceAddress, _packet: Ipv4Packet): boolean {
     return false;
   }
+
+  /** VPN: Paket ins entfernte Netz verschlüsselt durch den Tunnel schicken. true = erledigt. */
+  protected vpnRoute(_packet: Ipv4Packet): boolean {
+    return false;
+  }
+
+  /** VPN: eigenes Paket (z.B. Ping-Antwort des Routers) ins entfernte Netz; true = erledigt. */
+  protected vpnSend(_dst: string, _build: (src: string) => Ipv4Packet): boolean {
+    return false;
+  }
+
+  /** ESP-Pakete (IP-Protokoll 50) für Router mit VPN. */
+  protected onEsp(_packet: Ipv4Packet, _esp: EspPacket) {}
 
   /** DS-Lite (AFTR): Antwort abfangen und zurück in den Tunnel geben. true = erledigt. */
   protected intercept(_iface: IfaceAddress, _packet: Ipv4Packet): boolean {
@@ -396,7 +422,10 @@ export class IpNode implements SimNode {
       this.#icmpError(inIface, packet, 'timeExceeded');
       return;
     }
+    // Firewall des Routers: weitergeleitete Pakete prüfen (nach DNAT, vor SNAT).
+    if (!this.firewall.allows(packet, inIface.index)) return;
     if (this.tunnelOut(inIface, { ...packet, ttl: packet.ttl - 1 })) return;
+    if (this.vpnRoute({ ...packet, ttl: packet.ttl - 1 })) return;
     const dst = parseIp(packet.dst)!;
     const route = lookupRoute(this.routes(), dst);
     const out = route && this.interfaces().find((i) => i.index === route.iface);
@@ -441,6 +470,8 @@ export class IpNode implements SimNode {
       this.onUdp(packet, payload, index, srcMac);
     } else if (payload.kind === 'tcp') {
       this.onTcp(packet, payload);
+    } else if (payload.kind === 'esp') {
+      this.onEsp(packet, payload);
     } else if (payload.type === 'echoRequest') {
       if (!broadcast) this.sendIp(packet.src, { ...payload, type: 'echoReply' }, { src: packet.dst });
     } else {
@@ -477,14 +508,14 @@ export class IpNode implements SimNode {
   sendIp(dstText: string, payload: Ipv4Packet['payload'], options: SendOptions = {}, onError?: (e: SendError) => void) {
     const dst = parseIp(dstText);
     if (dst === null) return;
-    const build = (src: string): Ipv4Packet => ({
-      kind: 'ipv4',
-      src: options.src ?? src,
-      dst: dstText,
-      ttl: options.ttl ?? DEFAULT_TTL,
-      id: ++this.#ipId,
-      payload,
-    });
+    const build = (src: string): Ipv4Packet => {
+      const packet: Ipv4Packet = { kind: 'ipv4', src: options.src ?? src, dst: dstText, ttl: options.ttl ?? DEFAULT_TTL, id: ++this.#ipId, payload };
+      // Endgerät mit Firewall: eigene Verbindungen merken, damit die Antworten herein dürfen.
+      if (!this.forwarding) this.firewall.track(packet);
+      return packet;
+    };
+
+    if (this.forwarding && !this.isOwn(dst) && this.vpnSend(dstText, build)) return;
 
     // Eigene Adresse und Loopback verlassen das Gerät nicht.
     if (this.isOwn(dst)) {
@@ -785,10 +816,23 @@ export class RouterNode extends ForwardingNode {
   #pingId = 0x4000;
   readonly ppp: PppLinks;
 
+  /** Site-to-Site-VPN (IPsec). */
+  readonly vpn: Vpn;
+
   constructor(ctx: NodeContext) {
     super(ctx);
     const seq = deviceSeq(ctx.device()?.id ?? 'd0');
     this.nat = new PatTable(ctx, 'pat');
+    this.vpn = new Vpn(
+      {
+        ctx,
+        device: () => ctx.device(),
+        sendIp: (dst, payload, options, onError) => this.sendIp(dst, payload, options, onError),
+        // Fehlermeldungen (z.B. «TTL abgelaufen») tragen die Router-Adresse im eigenen VPN-Netz.
+        inject: (packet, local) => this.injectIpv4(packet, this.interfaces().map((i) => formatIp(i.ip)).find((ip) => matchesAddress(local, ip)) ?? '0.0.0.0'),
+      },
+      seq,
+    );
     startSshServer(this, ctx);
     this.ppp = new PppLinks(
       ctx,
@@ -819,6 +863,27 @@ export class RouterNode extends ForwardingNode {
 
   protected override onPpp(index: number, control: PppControl) {
     if (this.ctx.device()?.interfaces[index]?.encapsulation === 'ppp') this.ppp.receive(index, control);
+  }
+
+  protected override vpnRoute(packet: Ipv4Packet): boolean {
+    return this.vpn.route(packet);
+  }
+
+  /** Eigene Pakete ins entfernte Netz: Absender ist die Router-Adresse im eigenen VPN-Netz. */
+  protected override vpnSend(dst: string, build: (src: string) => Ipv4Packet): boolean {
+    const tunnel = this.ctx.device()?.vpn?.find((t) => matchesAddress(t.remote, dst));
+    if (!tunnel) return false;
+    const own = this.interfaces().find((i) => matchesAddress(tunnel.local, formatIp(i.ip)));
+    if (!own) return false;
+    return this.vpn.route(build(formatIp(own.ip)));
+  }
+
+  protected override onEsp(packet: Ipv4Packet, esp: EspPacket) {
+    this.vpn.onEsp(packet, esp);
+  }
+
+  vpnState(): VpnState[] {
+    return this.vpn.state();
   }
 
   /** «ping» aus der Befehlszeile des Routers. */
@@ -919,7 +984,8 @@ export class RouterNode extends ForwardingNode {
   }
 
   override state(): object {
-    return { ...super.state(), nat: this.natEntries(), ...(this.ppp.status().length ? { ppp: this.ppp.status() } : {}) };
+    const vpn = this.vpn.state();
+    return { ...super.state(), nat: this.natEntries(), ...(this.ppp.status().length ? { ppp: this.ppp.status() } : {}), ...(vpn.length ? { vpn } : {}) };
   }
 
   /**
@@ -930,6 +996,7 @@ export class RouterNode extends ForwardingNode {
   protected override onUdp(packet: Ipv4Packet, datagram: UdpDatagram, index: number, srcMac: string) {
     const msg = datagram.payload;
     if (msg.kind === 'rip') return super.onUdp(packet, datagram, index, srcMac);
+    if (msg.kind === 'ike' && datagram.dstPort === IKE_PORT) return this.vpn.onIke(packet, msg);
     if (msg.kind !== 'dhcp' || datagram.dstPort !== DHCP_SERVER_PORT) return;
     const fromClient = msg.op === 'discover' || msg.op === 'request' || msg.op === 'release';
     if (fromClient) {

@@ -8,6 +8,8 @@ import {
   type DhcpMessage,
   type DnsMessage,
   type Dhcpv6Message,
+  type EspPacket,
+  type IkeMessage,
   type Icmpv6Message,
   type Ipv6Packet,
   type EthernetFrame,
@@ -195,7 +197,7 @@ function readable(data: string): string {
 }
 
 function portName(port: number): string {
-  const names: Record<number, string> = { 53: 'DNS', 67: 'DHCP Server', 68: 'DHCP Client', 520: 'RIP', ...TCP_APPS };
+  const names: Record<number, string> = { 53: 'DNS', 67: 'DHCP Server', 68: 'DHCP Client', 500: 'IKE', 520: 'RIP', 546: 'DHCPv6 Client', 547: 'DHCPv6 Server', ...TCP_APPS };
   return names[port] ? `${port} (${names[port]})` : String(port);
 }
 
@@ -211,7 +213,7 @@ function pseudoHeader6(src: string, dst: string, nextHeader: number, length: num
 function udp(d: UdpDatagram, srcIp: string, dstIp: string, v6 = false): Part {
   const p = new Part();
   const m = d.payload;
-  const inner = m.kind === 'dhcp' ? dhcp(m) : m.kind === 'dns' ? dns(m) : m.kind === 'dhcpv6' ? dhcp6(m) : rip(m);
+  const inner = m.kind === 'dhcp' ? dhcp(m) : m.kind === 'dns' ? dns(m) : m.kind === 'dhcpv6' ? dhcp6(m) : m.kind === 'ike' ? ike(m) : rip(m);
   p.u16('udp.srcPort', d.srcPort, portName(d.srcPort));
   p.u16('udp.dstPort', d.dstPort, portName(d.dstPort));
   p.u16('udp.length', 8 + inner.length);
@@ -454,11 +456,77 @@ function ipv4Header(packet: Ipv4Packet, payloadLength: number, protocol: number,
   return header;
 }
 
+// --- IPsec: IKEv2 und ESP ---------------------------------------------------------
+
+/** Pseudozufällige Bytes aus einem Startwert (LCG); für Schlüsselmaterial und Verwürfelung in der Simulation. */
+function stream(seed: number, length: number): number[] {
+  let x = seed >>> 0 || 1;
+  return Array.from({ length }, () => {
+    x = (Math.imul(x, 1664525) + 1013904223) >>> 0;
+    return x >>> 24;
+  });
+}
+
+/** Generischer IKEv2-Payload-Kopf: nächster Payload, Flags, Länge (RFC 7296, 3.2). */
+function ikePayload(p: Part, key: string, next: number, data: number[], shown: string) {
+  p.field(key, shown, [next, 0, ...u16(4 + data.length), ...data]);
+}
+
+/** IKEv2 (RFC 7296): Kopf mit SPIs, Austauschtyp, Flags; IKE_AUTH ist verschlüsselt (SK-Payload). */
+function ike(m: IkeMessage): Part {
+  const p = new Part();
+  const init = m.exchange === 'IKE_SA_INIT';
+  // I-Flag: Nachricht vom ursprünglichen Initiator; R-Flag: Antwort.
+  const flags = (m.response ? 0x20 : 0x08);
+  const body = new Part();
+  if (init) {
+    ikePayload(body, 'ike.sa', 34, utf8('ENCR_AES_GCM_16(256) PRF_HMAC_SHA2_256 ECP_256'), 'AES-GCM-256, SHA-256, DH-Gruppe 19');
+    ikePayload(body, 'ike.ke', 40, [0, 19, 0, 0, ...stream(m.ispi ^ m.rspi ^ (m.response ? 0x5a : 0xa5), 64)], 'DH-Gruppe 19, 64 Bytes');
+    ikePayload(body, 'ike.nonce', 0, stream((m.response ? m.rspi : m.ispi) * 31, 32), '32 Bytes');
+  } else {
+    const content = `${m.proof ?? ''}|${m.tsi ?? ''}|${m.tsr ?? ''}|${m.notify ?? ''}`;
+    const plain = utf8(content);
+    const secret = plain.map((b, i) => b ^ stream(m.ispi + m.rspi, plain.length)[i]!);
+    ikePayload(body, 'ike.sk', 0, [...stream(m.msgId + 7, 16), ...secret, ...stream(m.rspi, 16)], m.notify ? `verschlüsselt (Notify ${m.notify})` : 'verschlüsselt (IDi/IDr, AUTH, SA, TSi, TSr)');
+  }
+  p.field('ike.ispi', hex(m.ispi, 16), [0, 0, 0, 0, ...u32(m.ispi)]);
+  p.field('ike.rspi', hex(m.rspi, 16), [0, 0, 0, 0, ...u32(m.rspi)]);
+  p.u8('ike.nextPayload', init ? 33 : 46, init ? '33 (SA)' : '46 (Encrypted and Authenticated)');
+  p.u8('ike.version', 0x20, '2.0');
+  p.u8('ike.exchange', init ? 34 : 35, init ? '34 (IKE_SA_INIT)' : '35 (IKE_AUTH)');
+  p.u8('ike.flags', flags, m.response ? '0x20 (Response)' : '0x08 (Initiator)');
+  p.u32('ike.msgId', m.msgId);
+  p.u32('ike.length', 28 + body.length);
+  p.append(body);
+  p.close(7, 'IKEv2', 0, { note: 'note.ike' });
+  return p;
+}
+
+/**
+ * ESP (RFC 4303): SPI, Sequenznummer, verschlüsselte Nutzlast (inneres
+ * IPv4-Paket mit Trailer) und Prüfwert (ICV). Die Verschlüsselung ist nur
+ * angedeutet: Die Bytes werden mit einem Schlüsselstrom verwürfelt.
+ */
+function esp(m: EspPacket): Part {
+  const p = new Part();
+  p.u32('esp.spi', m.spi, hex(m.spi, 8));
+  p.u32('esp.seq', m.seq);
+  const inner = ipv4(m.inner).bytes;
+  // Trailer: Auffüllen auf 4 Bytes, Länge der Auffüllung, Next Header 4 (IPv4, Tunnelmodus).
+  const padLength = (4 - ((inner.length + 2) % 4)) % 4;
+  const plain = [...inner, ...Array.from({ length: padLength }, (_, i) => i + 1), padLength, 4];
+  const key = stream(m.keyHash ^ m.seq, plain.length);
+  p.field('esp.encrypted', `${plain.length} Bytes (verschlüsselt)`, plain.map((b, i) => b ^ key[i]!));
+  p.field('esp.icv', '16 Bytes', stream(m.keyHash + m.seq * 2654435761, 16));
+  p.close(3, 'ESP (IPsec)', 0, { note: 'note.esp' });
+  return p;
+}
+
 function ipv4(packet: Ipv4Packet): Part {
   const inner = packet.payload;
   const payload =
-    inner.kind === 'icmp' ? icmp(inner) : inner.kind === 'udp' ? udp(inner, packet.src, packet.dst) : inner.kind === 'tcp' ? tcp(inner, packet.src, packet.dst) : ospf(inner);
-  const protocol = inner.kind === 'icmp' ? 1 : inner.kind === 'udp' ? 17 : inner.kind === 'tcp' ? 6 : 89;
+    inner.kind === 'icmp' ? icmp(inner) : inner.kind === 'udp' ? udp(inner, packet.src, packet.dst) : inner.kind === 'tcp' ? tcp(inner, packet.src, packet.dst) : inner.kind === 'esp' ? esp(inner) : ospf(inner);
+  const protocol = inner.kind === 'icmp' ? 1 : inner.kind === 'udp' ? 17 : inner.kind === 'tcp' ? 6 : inner.kind === 'esp' ? 50 : 89;
   const df = inner.kind === 'tcp';
   const header = ipv4Header(packet, payload.length, protocol, df);
   const p = new Part();
@@ -468,7 +536,7 @@ function ipv4(packet: Ipv4Packet): Part {
   p.field('ip.id', hex(packet.id & 0xffff, 4), header.slice(4, 6));
   p.field('ip.flags', df ? "0x4000 (Don't Fragment)" : '0x0000', header.slice(6, 8));
   p.field('ip.ttl', packet.ttl, [header[8]!]);
-  p.field('ip.protocol', `${protocol} (${{ 1: 'ICMP', 6: 'TCP', 17: 'UDP', 89: 'OSPF' }[protocol]})`, [header[9]!]);
+  p.field('ip.protocol', `${protocol} (${{ 1: 'ICMP', 6: 'TCP', 17: 'UDP', 50: 'ESP', 89: 'OSPF' }[protocol]})`, [header[9]!]);
   p.field('ip.checksum', hex((header[10]! << 8) | header[11]!, 4), header.slice(10, 12));
   p.field('ip.src', packet.src, header.slice(12, 16));
   p.field('ip.dst', packet.dst, header.slice(16, 20));

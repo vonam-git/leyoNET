@@ -7,6 +7,7 @@ import { lookupRoute } from '../net/routing';
 import { PingRun, TracerouteRun, icmpView, type IcmpApp, type IcmpHost } from './apps';
 import { formatIp6, parseIp6 } from '../net/ipv6';
 import type { Ip6State } from './ip6';
+import type { FirewallState } from './firewall';
 import { DhcpClient, DhcpServer, type LeaseRecord } from './dhcp';
 import { DnsResolver, DnsServer, type DnsCacheEntry } from './dns';
 import { DHCP_CLIENT_PORT, DHCP_SERVER_PORT, DNS_PORT, type Ipv4Packet, type Ipv6Packet, type TcpSegment, type UdpDatagram } from './frames';
@@ -38,6 +39,7 @@ export interface ConnectionInfo {
 
 export interface HostState {
   arp: ArpEntry[];
+  firewall?: FirewallState;
   ipv6?: Ip6State;
   address: AddressState;
   dhcpLeases?: LeaseRecord[];
@@ -366,9 +368,11 @@ export class HostNode extends IpNode {
     const mail = this.mail.state;
     const device = this.ctx.device();
     const ipv6 = this.v6.state();
+    const firewall = this.firewall.state();
     return {
       arp: this.arpEntries(),
       ...(ipv6 ? { ipv6 } : {}),
+      ...(firewall ? { firewall } : {}),
       address: this.address(),
       dnsCache: this.resolver.cacheEntries(),
       connections: this.connections(),

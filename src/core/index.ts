@@ -5,6 +5,7 @@ export * from './model/topology';
 export * from './model/links';
 export * from './model/duplicates';
 export * from './model/fragment';
+export * from './model/security';
 export * from './io/project';
 export * from './net/ipv4';
 export * from './net/ipv6';

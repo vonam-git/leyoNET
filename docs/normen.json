@@ -110,6 +110,14 @@
       "titel": "IP Version 6 Addressing Architecture",
       "verwendung": "Adressarten, Link-Local, EUI-64, Solicited-Node-Multicast"
     },
+    "4301": {
+      "titel": "Security Architecture for the Internet Protocol",
+      "verwendung": "IPsec, Site-to-Site-VPN, Traffic Selectors"
+    },
+    "4303": {
+      "titel": "IP Encapsulating Security Payload (ESP)",
+      "verwendung": "ESP (IP-Protokoll 50) im VPN-Tunnel"
+    },
     "4443": {
       "titel": "Internet Control Message Protocol (ICMPv6) for the Internet Protocol Version 6 (IPv6) Specification",
       "verwendung": "ICMPv6: Echo, Destination Unreachable, Time Exceeded"
@@ -149,6 +157,10 @@
     "6793": {
       "titel": "BGP Support for Four-Octet Autonomous System (AS) Number Space",
       "verwendung": "4-Byte-AS-Nummern"
+    },
+    "7296": {
+      "titel": "Internet Key Exchange Protocol Version 2 (IKEv2)",
+      "verwendung": "Tunnelaufbau des VPN (UDP 500)"
     },
     "8200": {
       "titel": "Internet Protocol, Version 6 (IPv6) Specification",
