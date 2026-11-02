@@ -180,7 +180,7 @@ test('Demo vorführen, Desktop minimieren, Einzelschritt packt aus', async ({ pa
   await page.getByRole('button', { name: /Anhalten/ }).click();
   await desktop.getByRole('textbox').fill('ping 192.168.1.12');
   await desktop.getByRole('textbox').press('Enter');
-  for (let i = 0; i < 2; i++) await page.getByRole('button', { name: /Einzelschritt/ }).click();
+  for (let i = 0; i < 2; i++) await page.getByRole('button', { name: /Einzelschritt/ }).first().click();
   await expect(page.locator('.osi-legend')).toBeVisible();
   await expect(page.locator('.unpack-label')).toContainText('Schicht');
 });
@@ -324,4 +324,19 @@ test('Automatisches Routing: Häkchen am Router, Ping über drei Router', async 
   await input.fill('ping 192.168.30.10');
   await input.press('Enter');
   await expect(page.getByRole('log')).toContainText('Antwort von 192.168.30.10', { timeout: 15_000 });
+});
+
+test('Projektname wird zum Dateinamen; Hilfe lässt sich schliessen', async ({ page }) => {
+  await page.getByLabel('Projektname').first().fill('Übung 02');
+  await page.getByLabel('Projektname').first().press('Enter');
+  await page.keyboard.press('Control+s');
+  const dialog = page.getByRole('dialog', { name: 'Projekt speichern' });
+  await expect(dialog.getByLabel('Projektname')).toHaveValue('Übung 02');
+  const download = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  expect((await download).suggestedFilename()).toBe('Uebung 02.json');
+  await page.keyboard.press('F1');
+  await expect(page.locator('aside.help')).toBeVisible();
+  await page.locator('aside.help').getByRole('button', { name: 'Schliessen' }).click();
+  await expect(page.locator('aside.help')).toHaveCount(0);
 });

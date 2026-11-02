@@ -1,11 +1,11 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { getDevice, itemsInRect, type Device, type DocArea, type Point, type TagColor } from '../../core';
+  import { getDevice, type Device, type DocArea, type Point, type TagColor } from '../../core';
   import { t } from '../../i18n';
   import { presetArea } from '../areaPresets';
   import { SHOP_MIME } from '../dnd';
   import { SHOP } from '../shop';
-  import { protocolOf } from '../packets';
+  import { protocolClass, protocolOf } from '../packets';
   import { layersOf } from '../osiSteps';
   import { DEVICE_SPECS, hasCli } from '../../core';
   import { openCli } from '../state/cli.svelte';
@@ -103,7 +103,7 @@
           id: entry.id,
           x: from.position.x + (to.position.x - from.position.x) * progress,
           y: from.position.y + (to.position.y - from.position.y) * progress,
-          protocol: protocolOf(entry.frame).toLowerCase(),
+          protocol: protocolClass(protocolOf(entry.frame)),
           label: protocolOf(entry.frame),
           layers: osiView ? layersOf(editor.topology, entry).layers : [],
         },
@@ -208,14 +208,6 @@
       }
       if (editor.selection?.kind === 'group' && editor.isSelected('area', area.id)) {
         startGroupDrag(event, editor.selectedDeviceIds, editor.selectedAreaIds);
-        return;
-      }
-      editor.select({ kind: 'area', id: area.id });
-      // Bereich mit seinem Inhalt verschieben (Geräte darin, eingebaute Geräte); Alt: nur den Bereich.
-      if (!event.altKey) {
-        const inside = itemsInRect(editor.topology, area, visibleFloor).devices;
-        const racked = editor.topology.devices.filter((d) => d.rack === area.id).map((d) => d.id);
-        startGroupDrag(event, [...new Set([...inside, ...racked])], [area.id]);
         return;
       }
     }
@@ -383,7 +375,7 @@
 
 <!-- Hover-Details sind eine Ergänzung; dieselben Angaben stehen im Inspektor. -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="canvas" class:acting={editor.acting} bind:clientWidth={width} bind:clientHeight={height} onpointermove={onHoverMove} onpointerleave={() => (hover = null)}>
+<div class="canvas" class:acting={editor.acting} class:stepping={editor.acting && simStore.paused} class:cable-mode={editor.tool === 'cable'} bind:clientWidth={width} bind:clientHeight={height} onpointermove={onHoverMove} onpointerleave={() => (hover = null)}>
   <svg
     bind:this={svg}
     class:panning={panFrom !== null}
@@ -508,8 +500,17 @@
       <span class="muted">{t('unpack.hint')}</span>
     </div>
   {/if}
+  {#if editor.acting && simStore.paused}
+    <div class="step-banner" role="status">
+      <strong>⏸ {t('canvas.stepMode')}</strong>
+      <span>{t('canvas.stepModeHint')}</span>
+      <button type="button" onclick={() => simStore.step()}>⏭ {t('sim.step')} (N)</button>
+      <button type="button" onclick={() => simStore.togglePause()}>▶ {t('sim.resume')}</button>
+    </div>
+  {/if}
   {#if editor.tool === 'cable'}
     <div class="hint cable-hint">
+      <p class="mode-title"><span class="mode-badge">🔌 {t('canvas.cableMode')}</span> <button type="button" class="exit" onclick={() => editor.setTool('select')}>{t('canvas.cableExit')} (Esc)</button></p>
       <p role="status">{source ? t('canvas.cableTarget', { name: source.name }) : t(`canvas.cableStart.${editor.medium}`)}</p>
       <fieldset class="choice">
         <legend>{t('portPicker.mode')}</legend>
@@ -720,6 +721,67 @@
   }
   .osi-legend .muted {
     color: var(--muted);
+  }
+  /* Einzelschritt: oranger Rahmen und Hinweis oben, damit man sieht, dass die Zeit steht. */
+  .canvas.stepping::after,
+  .canvas.cable-mode::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border: 4px solid #f59e0b;
+    border-radius: 2px;
+  }
+  .canvas.cable-mode::after {
+    border-color: var(--accent);
+    border-style: dashed;
+  }
+  .cable-mode :global(.device) {
+    cursor: crosshair;
+  }
+  .cable-mode :global(.device:hover .hit) {
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-dasharray: 6 4;
+  }
+  .step-banner {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 10px;
+    max-width: calc(100% - 32px);
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    color: #78350f;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+  }
+  .step-banner button {
+    font-size: 0.8rem;
+    padding: 2px 10px;
+    color: #78350f;
+    background: #fff;
+    border-color: #f59e0b;
+  }
+  .mode-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mode-badge {
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .exit {
+    font-size: 0.78rem;
+    padding: 1px 8px;
   }
   .cable-hint {
     pointer-events: auto;

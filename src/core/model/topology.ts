@@ -149,6 +149,17 @@ const fail = <T>(code: ErrorCode, params?: TopologyError['params']): Result<T> =
   error: { code, params },
 });
 
+export const MAX_TITLE_LENGTH = 80;
+
+/** Projektname setzen; leer = ohne Namen. */
+export function setProjectTitle(t: Topology, title: string): Result<Topology> {
+  const clean = title.trim().replace(/\s+/g, ' ');
+  if (clean.length > MAX_TITLE_LENGTH) return fail('textTooLong', { max: MAX_TITLE_LENGTH });
+  if ((t.title ?? '') === clean) return ok(t);
+  const { title: _old, ...rest } = t;
+  return ok(clean ? { title: clean, ...rest } : rest);
+}
+
 export function emptyTopology(): Topology {
   return { devices: [], cables: [], nextId: 1 };
 }

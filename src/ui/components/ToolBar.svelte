@@ -36,6 +36,24 @@
     <button class="icon" onclick={() => run('edit.undo')} disabled={!enabled('edit.undo')} title={tip('edit.undo')} aria-label={t('menu.edit.undo')}><Icon name="undo" /></button>
     <button class="icon" onclick={() => run('edit.redo')} disabled={!enabled('edit.redo')} title={tip('edit.redo')} aria-label={t('menu.edit.redo')}><Icon name="redo" /></button>
   </div>
+  <div class="group">
+    <input
+      class="title"
+      value={editor.topology.title ?? ''}
+      maxlength="80"
+      placeholder={t('save.placeholder')}
+      aria-label={t('save.name')}
+      title={t('save.nameHint')}
+      onchange={(e) => editor.setTitle(e.currentTarget.value)}
+      onkeydown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+        if (e.key === 'Escape') {
+          e.currentTarget.value = editor.topology.title ?? '';
+          e.currentTarget.blur();
+        }
+      }}
+    />
+  </div>
   <div class="group" role="radiogroup" aria-label={t('toolbar.tools')}>
     <button class="icon" role="radio" aria-checked={editor.tool === 'select'} onclick={() => editor.setTool('select')} title={tip('edit.select')} aria-label={t('menu.edit.select')}><Icon name="pointer" /></button>
     <button class="icon" role="radio" aria-checked={editor.tool === 'cable'} disabled={!editor.editable} onclick={() => run('edit.cable')} title={tip('edit.cable')} aria-label={t('menu.edit.cable')}>
@@ -105,6 +123,22 @@
 </div>
 
 <style>
+  .title {
+    width: clamp(110px, 14vw, 200px);
+    padding: 3px 8px;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+  }
+  .title:hover,
+  .title:focus {
+    background: var(--surface);
+    border-color: var(--border);
+  }
   .toolbar {
     display: flex;
     align-items: center;

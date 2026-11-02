@@ -81,7 +81,7 @@ const COMMANDS: Command[] = [
   { id: 'edit.select', label: () => t('menu.edit.select'), keys: ['V'], run: () => editor.setTool('select'), checked: () => editor.tool === 'select', icon: 'pointer' },
   { id: 'edit.cable', label: () => t('menu.edit.cable'), keys: ['K'], run: () => editor.setTool(editor.tool === 'cable' ? 'select' : 'cable'), enabled: design, checked: () => editor.tool === 'cable', icon: 'cable' },
   { id: 'edit.area', label: () => t('menu.edit.area'), keys: ['B'], run: () => editor.setTool(editor.tool === 'area' ? 'select' : 'area'), enabled: design, visible: () => ui.has('tool.areas'), checked: () => editor.tool === 'area', icon: 'area' },
-  { id: 'edit.cancel', label: () => t('menu.edit.cancel'), keys: ['Escape'], run: () => editor.cancel() },
+  { id: 'edit.cancel', label: () => t('menu.edit.cancel'), keys: ['Escape'], run: () => (dialogs.help !== null && !editor.cableSource && editor.tool === 'select' ? dialogs.closeHelp() : editor.cancel()) },
 
   // Ansicht
   { id: 'view.zoomIn', label: () => t('menu.view.zoomIn'), keys: ['+', '='], run: () => editor.zoomAt(1.2), icon: 'zoomIn' },

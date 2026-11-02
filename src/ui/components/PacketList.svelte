@@ -2,7 +2,7 @@
   import { tick } from 'svelte';
   import { t } from '../../i18n';
   import { exportPcap } from '../actions';
-  import { parseFilter, protocolOf, toRow } from '../packets';
+  import { parseFilter, protocolClass, protocolOf, toRow } from '../packets';
   import { editor } from '../state/editor.svelte';
   import { simStore } from '../state/sim.svelte';
   import { ui } from '../state/ui.svelte';
@@ -138,7 +138,7 @@
           {/if}
           {#each rows as row (row.id)}
             <tr
-              class="proto-{row.protocol.toLowerCase()}"
+              class="proto-{protocolClass(row.protocol)}"
               class:lost={row.lost}
               class:selected={row.id === selectedId}
               tabindex="0"

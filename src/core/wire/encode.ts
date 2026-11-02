@@ -493,6 +493,52 @@ function wlan80211(frame: EthernetFrame, c: LinkControl, from: string): { part: 
   return { part: p, linkType: LINKTYPE.ieee80211 };
 }
 
+/**
+ * DHCP und TFTP des Kabelmodems (DOCSIS-Provisionierung): Anwendungsdaten in
+ * UDP und IPv4, in einem Ethernet-Rahmen, der als DOCSIS-Datenrahmen läuft.
+ * Adressen wie im Ablauf (access.ts): Modem 10.200.0.17, Provisionierungsserver 10.200.0.1.
+ */
+function docsisProvisioning(frame: EthernetFrame, c: LinkControl): { part: Part; linkType: number | null } {
+  const tftp = c.message.startsWith('TFTP');
+  const fromModem = /DISCOVER|REQUEST|RRQ/.test(c.message);
+  const app = tlvs(c.fields);
+  app.close(7, tftp ? `TFTP ${c.message.slice(5)}` : `DHCP ${c.message.replace(' (CM)', '')} (Kabelmodem)`, 0, { note: 'note.docsis' });
+  const [srcPort, dstPort] = tftp ? (fromModem ? [49152, 69] : [69, 49152]) : fromModem ? [68, 67] : [67, 68];
+  const [src, dst] = tftp
+    ? fromModem ? ['10.200.0.17', '10.200.0.1'] : ['10.200.0.1', '10.200.0.17']
+    : fromModem ? ['0.0.0.0', '255.255.255.255'] : ['10.200.0.1', '255.255.255.255'];
+  const u = new Part();
+  u.u16('udp.srcPort', srcPort, portName(srcPort));
+  u.u16('udp.dstPort', dstPort, portName(dstPort));
+  u.u16('udp.length', 8 + app.length);
+  u.u16('udp.checksum', 0, '0x0000 (none)');
+  u.append(app);
+  u.close(4, 'UDP', 0);
+  const header = ipv4Header({ src, dst, ttl: 64, id: 0 } as Ipv4Packet, u.length, 17);
+  const ip = new Part();
+  ip.field('ip.versionIhl', '4, 20 Bytes', [header[0]!]);
+  ip.field('ip.dscp', '0x00 (Best Effort)', [header[1]!]);
+  ip.field('ip.totalLength', 20 + u.length, header.slice(2, 4));
+  ip.field('ip.id', '0x0000', header.slice(4, 6));
+  ip.field('ip.flags', '0x0000', header.slice(6, 8));
+  ip.field('ip.ttl', 64, [header[8]!]);
+  ip.field('ip.protocol', '17 (UDP)', [header[9]!]);
+  ip.field('ip.checksum', hex((header[10]! << 8) | header[11]!, 4), header.slice(10, 12));
+  ip.field('ip.src', src, header.slice(12, 16));
+  ip.field('ip.dst', dst, header.slice(16, 20));
+  ip.append(u);
+  ip.close(3, 'IPv4', 0);
+  const eth = ethernet(frame, ip, 0x0800);
+  const p = new Part();
+  p.u8('docsis.fc', 0x00, '0x00 (packet PDU)');
+  p.u8('docsis.macParm', 0);
+  p.u16('docsis.len', eth.length);
+  p.u16('docsis.hcs', internetChecksum([0x00, 0, ...u16(eth.length)]));
+  p.append(eth);
+  p.close(2, 'DOCSIS', 0);
+  return { part: p, linkType: LINKTYPE.docsis };
+}
+
 function linkControl(frame: EthernetFrame, c: LinkControl): { part: Part; linkType: number | null } {
   if (c.tech === 'wlan') return wlan80211(frame, c, frame.src);
   if (c.tech === 'pppoe') {
@@ -553,6 +599,8 @@ function linkControl(frame: EthernetFrame, c: LinkControl): { part: Part; linkTy
     p.close(2, 'DOCSIS', 0);
     return { part: p, linkType: LINKTYPE.docsis };
   }
+  // Kabelmodem holt Adresse und Konfiguration per DHCP und TFTP: über IPv4/UDP, nicht auf Schicht 2.
+  if (c.tech === 'docsis' && /^(DHCP|TFTP)/.test(c.message)) return docsisProvisioning(frame, c);
   // GPON-PLOAM/OMCI, DSL-Handshake und LTE-Signalisierung: angezeigt, aber ohne pcap-Format.
   const p = tlvs(c.fields);
   const osi = c.tech === 'dsl' && !c.message.startsWith('G.hs') ? 1 : c.tech === 'lte' && !c.message.startsWith('RRC') ? 3 : 2;

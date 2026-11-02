@@ -14,6 +14,7 @@
   import PrivacyDialog from './PrivacyDialog.svelte';
   import RackDialog from './RackDialog.svelte';
   import ReviewDialog from './ReviewDialog.svelte';
+  import SaveDialog from './SaveDialog.svelte';
   import SessionDialog from './SessionDialog.svelte';
   import ShortcutsDialog from './ShortcutsDialog.svelte';
   import SnapshotDialog from './SnapshotDialog.svelte';
@@ -64,4 +65,6 @@
   <DemoDialog onclose={close} />
 {:else if dialogs.open === 'avatar'}
   <AvatarEditor onclose={close} />
+{:else if dialogs.open === 'save'}
+  <SaveDialog onclose={close} />
 {/if}

@@ -14,7 +14,8 @@ export function roleLabel(type: DeviceType): string {
  * Access Points: Anschluss 0 ist die LAN-Buchse, die übrigen sind Funkplätze.
  * Logische Interfaces: Subinterface «eth0.10», VLAN-Interface «VLAN 10».
  */
-export function interfaceLabel(device: Device, index: number): string {
+/** Name eines Anschlusses; `short`: knapp für die Zeichenfläche (Switch-Port «P1» statt «Port 1»). */
+export function interfaceLabel(device: Device, index: number, short = false): string {
   const ref = decodeIface(index);
   if (ref.kind === 'sub') return t('iface.sub', { index: ref.port, vlan: ref.vlan });
   if (ref.kind === 'svi') return t('iface.svi', { vlan: ref.vlan });
@@ -30,7 +31,7 @@ export function interfaceLabel(device: Device, index: number): string {
     return device.type === 'router' ? t('iface.ethSfp', { index }) : t('iface.sfp', { n });
   }
   return device.type === 'switch' || device.type === 'l3switch' || device.type === 'modem'
-    ? t('iface.port', { n: index + 1 })
+    ? t(short ? 'iface.portShort' : 'iface.port', { n: index + 1 })
     : t('iface.eth', { index });
 }
 
