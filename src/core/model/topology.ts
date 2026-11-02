@@ -7,6 +7,7 @@ import { checkStaticRoute, decodeIface, normalizeRoute } from '../net/routing';
 import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
 import { MIN_SIGNAL, portMedium, signalBetween } from './links';
 import { macFor } from './mac';
+import { MAX_VPN_TUNNELS, checkFirewall, checkVpnTunnel, type FirewallConfig, type VpnTunnel } from './security';
 import { formatCidr6, formatIp6, isLinkLocal6, isLoopback6, isMulticast6, isUnspecified6, networkOf6, parseCidr6, parseIp6 } from '../net/ipv6';
 import type {
   Cable,
@@ -79,6 +80,12 @@ export type ErrorCode =
   | 'switchLoop'
   | 'notARouter'
   | 'invalidIp6'
+  | 'invalidFirewallRule'
+  | 'firewallPortNeedsProtocol'
+  | 'invalidNetwork'
+  | 'tooMany'
+  | 'vpnKeyLength'
+  | 'notFirewallCapable'
   | 'ipv6Link'
   | 'unknownRoute'
   | 'networkHasHostBits'
@@ -1588,7 +1595,7 @@ export function configureHost6(t: Topology, id: string, input: Host6Input): Resu
 export function checkStaticRoute6(device: Device, route: StaticRoute6): Result<StaticRoute6> {
   const net = parseCidr6(route.network);
   if (!net || isMulticast6(net.address)) return { ok: false, error: { code: 'invalidIp6', params: { value: route.network.trim() }, field: 'network' } };
-  if (networkOf6(net.address, net.prefix) !== net.address) return { ok: false, error: { code: 'networkHasHostBits', params: { network: formatCidr6(networkOf6(net.address, net.prefix), net.prefix) }, field: 'network' } };
+  if (networkOf6(net.address, net.prefix) !== net.address) return { ok: false, error: { code: 'networkHasHostBits', params: { value: formatCidr6(net.address, net.prefix), suggestion: formatCidr6(networkOf6(net.address, net.prefix), net.prefix) }, field: 'network' } };
   let gateway: string | undefined;
   if (route.gateway?.trim()) {
     const g = parseIp6(route.gateway);
@@ -1599,7 +1606,7 @@ export function checkStaticRoute6(device: Device, route: StaticRoute6): Result<S
   if (!gateway && route.iface === undefined) return { ok: false, error: { code: 'routeNeedsTarget', field: 'gateway' } };
   if (route.iface !== undefined && !device.interfaces[route.iface]) return fail('unknownInterface');
   const network = formatCidr6(net.address, net.prefix);
-  if ((device.routes6 ?? []).some((r) => r.network === network)) return { ok: false, error: { code: 'duplicateRoute', params: { network }, field: 'network' } };
+  if ((device.routes6 ?? []).some((r) => r.network === network)) return { ok: false, error: { code: 'duplicateRoute', params: { net: network }, field: 'network' } };
   return ok({ network, ...(gateway ? { gateway } : {}), ...(route.iface !== undefined ? { iface: route.iface } : {}) });
 }
 
@@ -1641,6 +1648,45 @@ export function setAftr(t: Topology, id: string, enabled: boolean): Result<Topol
   if (!device) return fail('unknownDevice');
   if (device.type !== 'internet') return fail('notARouter');
   return ok(updateDevice(t, id, (d) => (enabled ? { ...d, aftr: true } : without(d, 'aftr'))));
+}
+
+// --- Firewall und VPN -------------------------------------------------------------
+
+/** Geräte mit Firewall: Router, Internet-Box und Endgeräte (ausser Client-Gruppen). */
+export function canFirewall(type: DeviceType): boolean {
+  return type === 'router' || type === 'cpe' || (DEVICE_SPECS[type].role === 'endpoint' && type !== 'clientgroup');
+}
+
+/** Firewall eines Geräts setzen (ganze Konfiguration); null = keine Firewall. */
+export function setFirewall(t: Topology, id: string, config: FirewallConfig | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canFirewall(device.type)) return fail('notFirewallCapable');
+  if (config === null) return ok(updateDevice(t, id, (d) => without(d, 'firewall')));
+  const checked = checkFirewall(config, device.interfaces.length);
+  if (!checked.ok) return { ok: false, error: checked.error };
+  return ok(updateDevice(t, id, (d) => ({ ...d, firewall: checked.value })));
+}
+
+export function addVpnTunnel(t: Topology, id: string, tunnel: VpnTunnel): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (device.type !== 'router') return fail('notARouter');
+  if ((device.vpn?.length ?? 0) >= MAX_VPN_TUNNELS) return fail('tooMany', { max: MAX_VPN_TUNNELS });
+  const checked = checkVpnTunnel(tunnel, device.vpn ?? []);
+  if (!checked.ok) return { ok: false, error: checked.error };
+  return ok(updateDevice(t, id, (d) => ({ ...d, vpn: [...(d.vpn ?? []), checked.value] })));
+}
+
+export function removeVpnTunnel(t: Topology, id: string, index: number): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device?.vpn?.[index]) return fail('unknownDevice');
+  return ok(
+    updateDevice(t, id, (d) => {
+      const vpn = (d.vpn ?? []).filter((_, i) => i !== index);
+      return vpn.length ? { ...d, vpn } : without(d, 'vpn');
+    }),
+  );
 }
 
 function without<T extends object, K extends keyof T>(value: T, key: K): Omit<T, K> {

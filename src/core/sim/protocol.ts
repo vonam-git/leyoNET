@@ -21,8 +21,9 @@ export function protocolOf(frame: EthernetFrame): string {
   }
   const inner = p.payload;
   if (inner.kind === 'icmp') return 'ICMP';
+  if (inner.kind === 'esp') return 'ESP';
   if (inner.kind === 'ospf') return 'OSPF';
-  if (inner.kind === 'udp') return inner.payload.kind.toUpperCase();
+  if (inner.kind === 'udp') return inner.payload.kind === 'ike' ? 'IKEv2' : inner.payload.kind.toUpperCase();
   // TCP-Segmente mit Nutzdaten zählen zum Anwendungsprotokoll, reine Steuersegmente zu TCP.
   const app = TCP_APPS[inner.dstPort] ?? TCP_APPS[inner.srcPort];
   return inner.data && app ? app : 'TCP';

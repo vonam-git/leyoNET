@@ -57,6 +57,8 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('net.subinterfaces', 'network', 4),
   f('net.staticNat', 'network', 4),
   f('net.cgnat', 'network', 4),
+  f('net.firewall', 'network', 3),
+  f('net.vpn', 'network', 4),
   f('net.ipv6', 'network', 4),
   f('net.dsLite', 'network', 4),
   f('net.cli', 'network', 3),
@@ -132,6 +134,8 @@ export function usedFeatures(t: Topology): string[] {
     if (d.routingMode === 'auto') used.add('routing.auto');
     if (d.ipv6Auto || d.gateway6 || d.routes6?.length) used.add('net.ipv6');
     if (d.dsLite || d.aftr) used.add('net.dsLite');
+    if (d.firewall) used.add('net.firewall');
+    if (d.vpn?.length) used.add('net.vpn');
     if (d.vlanNames?.length) used.add('net.vlan');
     if (d.wlan?.mesh) used.add('net.wlanMesh');
     if (d.cli?.ssh) used.add('net.ssh');

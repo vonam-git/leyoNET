@@ -273,6 +273,12 @@ button[aria-pressed='true'] {
   --proto: var(--proto-stp);
   --dot: var(--dot-stp);
 }
+.proto-esp,
+.proto-ikev2 {
+  --proto: color-mix(in srgb, #7c3aed 16%, var(--surface));
+  --dot: #7c3aed;
+}
+
 /* Leitungsprotokolle: PPP, DOCSIS, GPON, DSL, Mobilfunk, WLAN-Verwaltung. */
 .proto-ppp-lcp,
 .proto-ppp-ipcp,

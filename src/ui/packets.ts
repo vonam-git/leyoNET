@@ -121,7 +121,12 @@ export function infoOf(frame: EthernetFrame): string {
     const continuation = app === 'HTTP' && !/^(GET|POST|HEAD|HTTP\/)/.test(first);
     return `${access}${continuation ? t('packets.tcp.continuation') : first} ${numbers}`;
   }
+  if (inner.kind === 'esp') return access + t('packets.esp', { spi: `0x${inner.spi.toString(16).padStart(8, '0')}`, seq: inner.seq });
   const msg = inner.payload;
+  if (msg.kind === 'ike') {
+    const what = msg.notify ? t(`packets.ike.${msg.notify}`) : t(`packets.ike.${msg.exchange}.${msg.response ? 'response' : 'request'}`);
+    return `${access}IKEv2 ${msg.exchange} · ${what}`;
+  }
   if (msg.kind === 'dns') {
     if (!msg.response) return access + t('packets.dns.query', { type: msg.question.type, name: msg.question.name });
     if (msg.rcode === 'nxdomain') return access + t('packets.dns.nxdomain', { name: msg.question.name });
@@ -183,6 +188,10 @@ const PROTOCOL_WORDS: Record<string, (proto: string, frame: EthernetFrame) => bo
   ndp: (_p, f) => f.payload.kind === 'ipv6' && f.payload.payload.kind === 'icmpv6' && /^(router|neighbor)/.test(f.payload.payload.type),
   dhcpv6: (p) => p === 'DHCPv6',
   dslite: (_p, f) => f.payload.kind === 'ipv6' && f.payload.payload.kind === 'ipv4',
+  esp: (p) => p === 'ESP',
+  ike: (p) => p === 'IKEv2',
+  isakmp: (p) => p === 'IKEv2',
+  vpn: (p) => p === 'ESP' || p === 'IKEv2',
   tcp: (_p, f) => ipv4Of(f)?.payload.kind === 'tcp',
   udp: (_p, f) => ipv4Of(f)?.payload.kind === 'udp' || (f.payload.kind === 'ipv6' && f.payload.payload.kind === 'udp'),
   dhcp: (p) => p === 'DHCP',

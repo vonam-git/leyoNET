@@ -1,7 +1,8 @@
 import { DEVICE_SPECS, canAutoRoute, isDeviceType } from '../model/devices';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
 import { MAC_PATTERN } from '../model/mac';
-import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, checkStaticRoute6, deviceSeq } from '../model/topology';
+import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
+import { checkFirewall, checkVpnTunnel, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
 import { MAX_GROUP_SIZE } from '../model/devices';
 import { checkBgp, checkOspf, checkRip, normalizeBgp, normalizeOspf, normalizeRip } from '../net/dynamic';
 import { logicalInterfaces } from '../net/routing';
@@ -638,6 +639,41 @@ function readDevice(v: unknown, path: string): Device {
   if (o.cgnatAddress !== undefined) {
     if (type !== 'internet') throw new Invalid(`${path}.cgnatAddress`);
     device.cgnatAddress = ip(o.cgnatAddress, `${path}.cgnatAddress`);
+  }
+  if (o.firewall !== undefined) {
+    const p = `${path}.firewall`;
+    const f = obj(o.firewall, p);
+    const config: FirewallConfig = {
+      defaultAction: f.defaultAction === 'deny' ? 'deny' : f.defaultAction === 'allow' ? 'allow' : (() => { throw new Invalid(`${p}.defaultAction`); })(),
+      rules: arr(f.rules, `${p}.rules`).map((raw, i) => {
+        const r = obj(raw, `${p}.rules[${i}]`);
+        return {
+          action: str(r.action, `${p}.rules[${i}].action`) as FirewallConfig['defaultAction'],
+          protocol: str(r.protocol, `${p}.rules[${i}].protocol`) as FirewallRule['protocol'],
+          src: str(r.src, `${p}.rules[${i}].src`),
+          dst: str(r.dst, `${p}.rules[${i}].dst`),
+          ...(r.port !== undefined ? { port: int(r.port, `${p}.rules[${i}].port`) } : {}),
+          ...(r.iface !== undefined ? { iface: int(r.iface, `${p}.rules[${i}].iface`) } : {}),
+        };
+      }),
+      ...(f.stateful === false ? { stateful: false } : {}),
+    };
+    if (!canFirewall(type)) throw new Invalid(p);
+    const checked = checkFirewall(config, interfaces.length);
+    if (!checked.ok) throw new Invalid(`${p}.${checked.error.field ?? 'rules'}`);
+    device.firewall = checked.value;
+  }
+  if (o.vpn !== undefined) {
+    if (type !== 'router') throw new Invalid(`${path}.vpn`);
+    const tunnels: VpnTunnel[] = [];
+    arr(o.vpn, `${path}.vpn`).forEach((raw, i) => {
+      const p = `${path}.vpn[${i}]`;
+      const v = obj(raw, p);
+      const checked = checkVpnTunnel({ name: str(v.name, `${p}.name`), peer: str(v.peer, `${p}.peer`), local: str(v.local, `${p}.local`), remote: str(v.remote, `${p}.remote`), key: str(v.key, `${p}.key`) }, tunnels);
+      if (!checked.ok) throw new Invalid(`${p}.${checked.error.field ?? ''}`);
+      tunnels.push(checked.value);
+    });
+    if (tunnels.length) device.vpn = tunnels;
   }
   if (o.ipv6Auto !== undefined && bool(o.ipv6Auto, `${path}.ipv6Auto`)) device.ipv6Auto = true;
   if (o.gateway6 !== undefined) device.gateway6 = ip6(o.gateway6, `${path}.gateway6`);

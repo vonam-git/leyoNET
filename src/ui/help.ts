@@ -26,6 +26,7 @@ export const HELP_GROUPS: { id: string; topics: string[] }[] = [
   { id: 'switching', topics: ['switching', 'vlan', 'trunk', 'stp', 'routerOnAStick'] },
   { id: 'routing', topics: ['routing', 'autoRouting', 'ospf', 'rip', 'bgp'] },
   { id: 'nat', topics: ['nat', 'staticNat', 'portForward', 'cgnat', 'dsLite'] },
+  { id: 'security', topics: ['firewall', 'vpn'] },
   { id: 'services', topics: ['web', 'mail', 'cli', 'ssh'] },
   { id: 'analysis', topics: ['sniffer', 'osi', 'osiStep', 'filter', 'pcap'] },
   { id: 'documentation', topics: ['areas', 'racks', 'floors', 'snapshots'] },

@@ -32,6 +32,9 @@ export interface StaticRoute6 {
   iface?: number;
 }
 
+import type { FirewallConfig, VpnTunnel } from './security';
+export type { FirewallConfig, FirewallRule, FirewallAction, FirewallProtocol, VpnTunnel } from './security';
+
 export type RoutingMode = 'auto' | 'static' | 'dynamic';
 export const ROUTING_MODES: readonly RoutingMode[] = ['auto', 'static', 'dynamic'];
 
@@ -186,6 +189,10 @@ export interface Device {
   modem?: ModemConfig;
   /** Nur Router: statisches NAT 1:1 (Source-NAT mit Rückweg). */
   staticNat?: StaticNat[];
+  /** Router, Internet-Box, Endgeräte: Paketfilter (Router: weitergeleitete Pakete, Endgerät: eingehende). */
+  firewall?: FirewallConfig;
+  /** Nur Router: IPsec-Tunnel zu anderen Standorten (Site-to-Site-VPN). */
+  vpn?: VpnTunnel[];
   /** Nur Internet (Provider): öffentliche Adresse, hinter der CGNAT-Kunden erscheinen. */
   cgnatAddress?: string;
   /**

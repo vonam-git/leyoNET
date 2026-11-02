@@ -73,6 +73,11 @@ import {
   setRoutingMode,
   setProjectTitle,
   setIpMode,
+  setFirewall,
+  addVpnTunnel,
+  removeVpnTunnel,
+  type FirewallConfig,
+  type VpnTunnel,
   setInterfaceIpv6,
   setInterfaceDhcp6,
   configureHost6,
@@ -927,6 +932,20 @@ class Editor {
 
   removeSvi(id: string, vlan: number) {
     this.#edit(removeSvi(this.topology, id, vlan));
+  }
+
+  // --- Firewall und VPN ----------------------------------------------------------
+
+  setFirewall(id: string, config: FirewallConfig | null): TopologyError | null {
+    return this.#applyForm(setFirewall(this.topology, id, config));
+  }
+
+  addVpnTunnel(id: string, tunnel: VpnTunnel): TopologyError | null {
+    return this.#applyForm(addVpnTunnel(this.topology, id, tunnel));
+  }
+
+  removeVpnTunnel(id: string, index: number) {
+    this.#edit(removeVpnTunnel(this.topology, id, index));
   }
 
   // --- IPv6 ---------------------------------------------------------------------

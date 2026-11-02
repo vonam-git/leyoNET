@@ -163,6 +163,7 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
   }
   const inner = p.payload;
   if (inner.kind === 'ospf') return `${route} OSPF ${inner.type} ${inner.routerId}`;
+  if (inner.kind === 'esp') return `${route} ESP spi=0x${inner.spi.toString(16)} seq=${inner.seq} ${p.src}>${p.dst}`;
   if (inner.kind === 'tcp') {
     const data = inner.data ? ` "${inner.data.split('\r\n')[0]}"` : '';
     return `${route} TCP ${inner.srcPort}>${inner.dstPort} [${inner.flags.join(',')}] seq=${inner.seq} ack=${inner.ack}${data}`;
@@ -175,6 +176,7 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
     }
     if (msg.kind === 'rip') return `${route} RIP ${msg.command} ${msg.entries.map((e) => `${e.network}/${e.metric}`).join(',')}`;
     if (msg.kind === 'dhcpv6') return `${route} DHCPv6 ${msg.type}`;
+    if (msg.kind === 'ike') return `${route} IKEv2 ${msg.exchange}${msg.response ? ' response' : ''}${msg.notify ? ` ${msg.notify}` : ''}`;
     return `${route} DHCP ${msg.op} ${p.src}>${p.dst}`;
   }
   return `${route} ICMP ${inner.type} ${p.src}>${p.dst}`;
