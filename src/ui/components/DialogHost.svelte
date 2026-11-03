@@ -15,6 +15,10 @@
   import RackDialog from './RackDialog.svelte';
   import ReviewDialog from './ReviewDialog.svelte';
   import ExamDialog from './ExamDialog.svelte';
+  import ExamEndDialog from './ExamEndDialog.svelte';
+  import ExamExportDialog from './ExamExportDialog.svelte';
+  import ExamJoinDialog from './ExamJoinDialog.svelte';
+  import ExamStartDialog from './ExamStartDialog.svelte';
   import SaveDialog from './SaveDialog.svelte';
   import SessionDialog from './SessionDialog.svelte';
   import ShortcutsDialog from './ShortcutsDialog.svelte';
@@ -50,6 +54,14 @@
   <ReviewDialog onclose={close} />
 {:else if dialogs.open === 'exam'}
   <ExamDialog onclose={close} />
+{:else if dialogs.open === 'examExport'}
+  <ExamExportDialog onclose={close} />
+{:else if dialogs.open === 'examStart'}
+  <ExamStartDialog onclose={close} />
+{:else if dialogs.open === 'examJoin'}
+  <ExamJoinDialog onclose={close} />
+{:else if dialogs.open === 'examEnd'}
+  <ExamEndDialog onclose={close} />
 {:else if dialogs.open === 'taskEditor'}
   <TaskEditor onclose={close} />
 {:else if dialogs.open === 'features'}

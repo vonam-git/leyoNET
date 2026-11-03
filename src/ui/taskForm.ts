@@ -4,7 +4,7 @@
 import { readTasks, type Check, type TaskSet } from '../core';
 import { t } from '../i18n';
 
-export type FieldKind = 'device' | 'devices' | 'text' | 'number' | 'deviceType' | 'protocol' | 'choice';
+export type FieldKind = 'device' | 'devices' | 'text' | 'number' | 'deviceType' | 'protocol' | 'choice' | 'pairs' | 'values' | 'alternatives';
 
 export interface FieldSpec {
   key: string;
@@ -117,7 +117,25 @@ export const CHECK_FIELDS: Record<Check['type'], FieldSpec[]> = {
     { key: 'color', kind: 'choice', optional: true, label: 'areaColor', options: ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'gray'] },
     { key: 'network', kind: 'text', optional: true },
   ],
+  pings: [{ key: 'pairs', kind: 'pairs' }],
+  areaNote: [
+    { key: 'title', kind: 'text', label: 'areaTitle' },
+    { key: 'values', kind: 'values' },
+  ],
+  answer: [
+    { key: 'kind', kind: 'choice', optional: true, label: 'answerKind', options: ['choice'] },
+    { key: 'options', kind: 'alternatives', optional: true },
+    { key: 'accept', kind: 'alternatives', optional: true },
+  ],
+  manual: [],
 };
+
+/** Feldwert aus der Datei für das Formular: Paare «A > B; C > D», Alternativen «a | b», Listen «a, b». */
+function fieldText(kind: FieldKind | undefined, value: unknown): string {
+  if (kind === 'pairs' && Array.isArray(value)) return value.map((p) => (Array.isArray(p) ? p.join(' > ') : String(p))).join('; ');
+  if (kind === 'alternatives' && Array.isArray(value)) return value.join(' | ');
+  return Array.isArray(value) ? value.join(', ') : String(value);
+}
 
 /** Protokollnamen, wie sie die Paketliste zeigt. */
 export const PROTOCOLS = ['ARP', 'ICMP', 'DHCP', 'DNS', 'TCP', 'HTTP', 'SMTP', 'POP3', 'IMAP', 'SSH', 'STP', 'OSPF', 'RIP', 'BGP', 'PPP', '802.11'];
@@ -130,6 +148,8 @@ export interface GoalDraft {
   fields: Record<string, string>;
   /** Punkte als Text; leer = 1. */
   points: string;
+  /** Teil der Prüfung (Punkteraster), leer = keiner. */
+  section: string;
 }
 
 export interface TaskDraft {
@@ -144,7 +164,7 @@ export interface TaskDraft {
   goals: GoalDraft[];
 }
 
-export type DraftError = { goal?: number; field: string; code: 'required' | 'notANumber' | 'noGoals' };
+export type DraftError = { goal?: number; field: string; code: 'required' | 'notANumber' | 'noGoals' | 'pairs' };
 
 export function toDraft(tasks: TaskSet): TaskDraft {
   return {
@@ -156,9 +176,9 @@ export function toDraft(tasks: TaskSet): TaskDraft {
     goals: tasks.goals.map((goal) => {
       const fields: Record<string, string> = {};
       for (const [key, value] of Object.entries(goal.check)) {
-        if (key !== 'type') fields[key] = Array.isArray(value) ? value.join(', ') : String(value);
+        if (key !== 'type') fields[key] = fieldText(CHECK_FIELDS[goal.check.type].find((f) => f.key === key)?.kind, value);
       }
-      return { id: goal.id, text: goal.text, hint: goal.hint ?? '', type: goal.check.type, fields, points: goal.points !== undefined ? String(goal.points) : '' };
+      return { id: goal.id, text: goal.text, hint: goal.hint ?? '', type: goal.check.type, fields, points: goal.points !== undefined ? String(goal.points) : '', section: goal.section ?? '' };
     }),
   };
 }
@@ -167,7 +187,7 @@ export function emptyGoal(draft: TaskDraft, type: Check['type'] = 'ping'): GoalD
   const ids = new Set(draft.goals.map((g) => g.id));
   let n = draft.goals.length + 1;
   while (ids.has(`ziel-${n}`)) n++;
-  return { id: `ziel-${n}`, text: '', hint: '', type, fields: {}, points: '' };
+  return { id: `ziel-${n}`, text: '', hint: '', type, fields: {}, points: '', section: '' };
 }
 
 /** Vorschlag für den Lernziel-Text aus den Feldern, z.B. «PC 1 erreicht PC 2 per Ping.» */
@@ -193,8 +213,14 @@ export function fromDraft(draft: TaskDraft): { ok: true; tasks: TaskSet } | { ok
       if (spec.kind === 'number') {
         if (!/^\d+$/.test(value)) return { ok: false, error: { goal: i, field: spec.key, code: 'notANumber' } };
         check[spec.key] = Number(value);
-      } else if (spec.kind === 'devices') {
+      } else if (spec.kind === 'devices' || spec.kind === 'values') {
         check[spec.key] = value.split(',').map((s) => s.trim()).filter(Boolean);
+      } else if (spec.kind === 'alternatives') {
+        check[spec.key] = value.split('|').map((s) => s.trim()).filter(Boolean);
+      } else if (spec.kind === 'pairs') {
+        const pairs = value.split(';').map((p) => p.split('>').map((x) => x.trim()));
+        if (pairs.some((p) => p.length !== 2 || !p[0] || !p[1])) return { ok: false, error: { goal: i, field: spec.key, code: 'pairs' } };
+        check[spec.key] = pairs;
       } else {
         check[spec.key] = value;
       }
@@ -207,6 +233,7 @@ export function fromDraft(draft: TaskDraft): { ok: true; tasks: TaskSet } | { ok
       text: goal.text.trim() || suggestedText(goal),
       check,
       ...(goal.hint.trim() ? { hint: goal.hint.trim() } : {}),
+      ...(goal.section.trim() ? { section: goal.section.trim() } : {}),
     });
   }
   const difficulty = Number(draft.difficulty);

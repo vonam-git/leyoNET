@@ -8,3 +8,6 @@ Thumbs.db
 /playwright-report/
 /data/
 normen-bericht.md
+
+# Musterlösungen der Arbeitsblätter nur lokal (npm run arbeitsblaetter), nicht im öffentlichen Repo
+docs/arbeitsblaetter/*_mL.pdf

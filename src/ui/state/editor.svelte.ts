@@ -390,6 +390,16 @@ class Editor {
     this.tasks = tasks;
   }
 
+  /** Antwort auf eine Frage der Aufgabe merken (wird mit dem Projekt gespeichert). */
+  setAnswer(id: string, value: string) {
+    if (!this.tasks) return;
+    const answers = { ...(this.tasks.answers ?? {}) };
+    if (value.trim()) answers[id] = value.slice(0, 2000);
+    else delete answers[id];
+    const { answers: _old, ...rest } = this.tasks;
+    this.tasks = Object.keys(answers).length ? { ...rest, answers } : rest;
+  }
+
   clear() {
     if (this.topology.devices.length === 0 && !this.tasks && !(this.topology.areas?.length)) return;
     if (this.mode !== 'design') this.setMode('design');

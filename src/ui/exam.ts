@@ -6,7 +6,8 @@
  *     Netzwerkdienste 12, total 75; Note = 5 × Punkte / 75 + 1),
  *   - die Musterlösung als fertiges Netz,
  *   - das Aufgabenblatt zum Drucken.
- * Fünf Varianten sind vorbereitet; weitere entstehen per Zufall oder von Hand.
+ * Varianten entstehen per Zufall (mit Startwert, wiederholbar) oder von Hand.
+ * Feste Varianten stehen bewusst nicht im öffentlichen Quellcode.
  */
 import {
   addArea,
@@ -29,6 +30,7 @@ import {
   setRoutingMode,
   setWebServerEnabled,
   saveWebFile,
+  ROUTER_REF,
   type Goal,
   type Result,
   type TagColor,
@@ -64,8 +66,6 @@ export interface ExamSpec {
 
 export const EXAM_POINTS = { site: 21, services: 12, total: 75 } as const;
 export const MAX_NOTEBOOKS = 8;
-
-export const EXAM_PRESETS: readonly ExamSpec[] = [];
 
 // --- Berechnete Werte ------------------------------------------------------------
 
@@ -238,15 +238,22 @@ export function examDescription(spec: ExamSpec): string {
   return lines.join('\n');
 }
 
-/** Aufgabe mit Punkten: je Standort 21, Netzwerkdienste 12. */
+/**
+ * Aufgabe mit Punkten: je Standort 21, Netzwerkdienste 12. Teilpunkte bei
+ * Geräten, Dokumentation und Pings; Gateways mit «@router», damit eine falsch
+ * gewählte Router-Adresse nur einmal Punkte kostet (Folgefehler).
+ */
 export function buildExamTasks(spec: ExamSpec): TaskSet {
   const goals: Goal[] = [];
-  const add = (id: string, points: number, text: string, check: Goal['check']) => goals.push({ id, text, check, points });
+  let section = '';
+  const add = (id: string, points: number, text: string, check: Goal['check']) => goals.push({ id, text, check, points, section });
   const facts = spec.sites.map(siteFacts);
   spec.sites.forEach((site, i) => {
     const f = facts[i]!;
     const next = facts[(i + 1) % 3]!;
+    const prev = facts[(i + 2) % 3]!;
     const p = `s${i + 1}`;
+    section = t('exam.section.site', { name: site.name });
     const notebooks = [...f.dynamicNames, ...site.fixed];
     const firstDynamic = f.dynamicNames[0]!;
     add(`${p}-router`, 1, t('exam.goal.router', { name: f.routerName }), { type: 'device', names: [f.routerName], deviceType: 'router' });
@@ -254,25 +261,33 @@ export function buildExamTasks(spec: ExamSpec): TaskSet {
     add(`${p}-server`, 1, t('exam.goal.server', { name: f.serverName }), { type: 'device', names: [f.serverName], deviceType: 'server' });
     add(`${p}-notebooks`, 3, t('exam.goal.notebooks', { site: site.name, names: notebooks.join(', ') }), { type: 'device', names: notebooks, deviceType: 'notebook' });
     add(`${p}-router-ip`, 2, t('exam.goal.routerIp', { name: f.routerName, address: `${f.router}/${f.prefix}` }), { type: 'address', device: f.routerName, address: `${f.router}/${f.prefix}` });
-    add(`${p}-server-ip`, 2, t('exam.goal.serverIp', { name: f.serverName, address: `${f.server}/${f.prefix}` }), { type: 'address', device: f.serverName, address: `${f.server}/${f.prefix}` });
-    add(`${p}-server-gw`, 1, t('exam.goal.serverGateway', { name: f.serverName, gateway: f.router }), { type: 'gateway', device: f.serverName, gateway: f.router });
-    add(`${p}-dhcp`, 3, t('exam.goal.dhcp', { name: f.serverName, start: site.dhcpStart, end: site.dhcpEnd, gateway: f.router }), {
+    add(`${p}-server-ip`, 1, t('exam.goal.serverIp', { name: f.serverName, address: `${f.server}/${f.prefix}` }), { type: 'address', device: f.serverName, address: `${f.server}/${f.prefix}` });
+    add(`${p}-server-gw`, 1, t('exam.goal.serverGatewayRouter', { name: f.serverName }), { type: 'gateway', device: f.serverName, gateway: ROUTER_REF });
+    add(`${p}-dhcp`, 2, t('exam.goal.dhcpRouter', { name: f.serverName, start: site.dhcpStart, end: site.dhcpEnd }), {
       type: 'dhcpServer',
       device: f.serverName,
       start: site.dhcpStart,
       end: site.dhcpEnd,
-      gateway: f.router,
+      gateway: ROUTER_REF,
     });
-    add(`${p}-lease`, 2, t('exam.goal.lease', { name: firstDynamic }), { type: 'dhcpLease', device: firstDynamic });
+    add(`${p}-lease`, 1, t('exam.goal.lease', { name: firstDynamic }), { type: 'dhcpLease', device: firstDynamic });
     add(`${p}-fixed`, 2, t('exam.goal.fixed', { name: site.fixed[0]!, ip: site.fixed[0]! }), { type: 'dhcpLease', device: site.fixed[0]!, ip: site.fixed[0]! });
-    add(`${p}-area`, 2, t('exam.goal.area', { site: site.name, color: t(`color.${site.color}`), network: f.network }), { type: 'area', title: site.name, color: site.color, network: f.network });
-    add(`${p}-ping`, 1, t('exam.goal.ping', { from: firstDynamic, to: next.serverName, ip: next.server }), { type: 'ping', from: firstDynamic, to: next.server });
+    add(`${p}-area`, 1, t('exam.goal.area', { site: site.name, color: t(`color.${site.color}`), network: f.network }), { type: 'area', title: site.name, color: site.color, network: f.network });
+    add(`${p}-doc`, 3, t('exam.goal.doc', { site: site.name }), { type: 'areaNote', title: site.name, values: [f.network, f.mask, f.first, f.last, f.broadcast, String(f.hosts)] });
+    add(`${p}-ping`, 2, t('exam.goal.pings', { from: firstDynamic, a: next.serverName, b: prev.serverName }), {
+      type: 'pings',
+      pairs: [
+        [firstDynamic, next.server],
+        [firstDynamic, prev.server],
+      ],
+    });
   });
+  section = t('exam.services');
   const s2 = facts[2]!;
   const webPrefix = cidr(spec.intranet.network)!.prefix;
   const webGateway = transferIp(spec.intranet.network, 1);
   add('d-web', 1, t('exam.goal.web', { address: `${spec.intranet.web}/${webPrefix}` }), { type: 'address', device: 'Webserver', address: `${spec.intranet.web}/${webPrefix}` });
-  add('d-web-gw', 1, t('exam.goal.webGateway', { gateway: webGateway }), { type: 'gateway', device: 'Webserver', gateway: webGateway });
+  add('d-web-gw', 1, t('exam.goal.webGatewayRouter'), { type: 'gateway', device: 'Webserver', gateway: ROUTER_REF });
   add('d-intranet', 1, t('exam.goal.intranet', { name: s2.routerName, address: `${webGateway}/${webPrefix}` }), { type: 'address', device: s2.routerName, address: `${webGateway}/${webPrefix}` });
   facts.forEach((f, i) =>
     add(`d-dns-${i + 1}`, 1, t('exam.goal.dnsRecord', { name: f.serverName, domain: spec.intranet.domain, ip: spec.intranet.web }), {
@@ -465,7 +480,7 @@ export function randomExam(seed: number, id = 'Z'): ExamSpec {
     };
     if (!checkExamSpec(spec)) return spec;
   }
-  return { ...EXAM_PRESETS[0]!, id };
+  throw new Error('Keine gültige Variante gefunden');
 }
 
 // --- Aufgabenblatt -------------------------------------------------------------------
@@ -474,6 +489,29 @@ const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').rep
 
 /** Aufgabenblatt als eigenständige HTML-Seite (im Browser öffnen und als PDF drucken). */
 export function examSheetHtml(spec: ExamSpec): string {
+  return examSheetsHtml([spec]);
+}
+
+/** Aufgabenblätter mehrerer Varianten in einer Seite, jede auf einer eigenen Druckseite. */
+export function examSheetsHtml(specs: readonly ExamSpec[]): string {
+  const pages = specs.map((spec) => examPageHtml(spec)).join('\n<div class="break"></div>\n');
+  const title = specs.length === 1 ? buildExamTasks(specs[0]!).title : t('exam.sheet.many', { n: specs.length });
+  return `<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><title>${escape(title)}</title>
+<style>
+body{font:11pt/1.45 system-ui,sans-serif;max-width:46em;margin:2em auto;padding:0 1em;color:#111}
+h1{font-size:16pt;margin:0 0 .2em}p{margin:.15em 0}
+table{border-collapse:collapse;width:100%;margin:.6em 0}td,th{border:1px solid #999;padding:.3em .5em;text-align:left}
+.fields td{height:1.8em}.num{text-align:right;width:7em}.muted{color:#555;font-size:9pt}
+.break{break-after:page;height:2em}
+@media print{body{margin:0}}
+</style></head><body>
+${pages}
+</body></html>
+`;
+}
+
+function examPageHtml(spec: ExamSpec): string {
   const tasks = buildExamTasks(spec);
   const sections = [
     ...spec.sites.map((s) => ({ label: s.name, points: EXAM_POINTS.site })),
@@ -483,16 +521,7 @@ export function examSheetHtml(spec: ExamSpec): string {
     .split('\n')
     .map((l) => (l.trim() ? `<p>${l}</p>` : ''))
     .join('');
-  return `<!doctype html>
-<html lang="de"><head><meta charset="utf-8"><title>${escape(tasks.title)}</title>
-<style>
-body{font:11pt/1.45 system-ui,sans-serif;max-width:46em;margin:2em auto;padding:0 1em;color:#111}
-h1{font-size:16pt;margin:0 0 .2em}p{margin:.15em 0}
-table{border-collapse:collapse;width:100%;margin:.6em 0}td,th{border:1px solid #999;padding:.3em .5em;text-align:left}
-.fields td{height:1.8em}.num{text-align:right;width:7em}.muted{color:#555;font-size:9pt}
-@media print{body{margin:0}}
-</style></head><body>
-<h1>${escape(tasks.title)}</h1>
+  return `<h1>${escape(tasks.title)}</h1>
 <table class="fields"><tr><th>${escape(t('exam.sheet.name'))}</th><td></td><th>${escape(t('exam.sheet.class'))}</th><td></td><th>${escape(t('exam.sheet.date'))}</th><td></td></tr></table>
 <table><tr><th>${escape(t('exam.sheet.duration'))}</th><td>80 min</td></tr>
 <tr><th>${escape(t('exam.sheet.points'))}</th><td>${EXAM_POINTS.total}</td></tr>
@@ -503,9 +532,7 @@ ${description}
 <table><tr><th>${escape(t('exam.sheet.part'))}</th><th class="num">${escape(t('exam.sheet.possible'))}</th><th class="num">${escape(t('exam.sheet.reached'))}</th></tr>
 ${sections.map((s) => `<tr><td>${escape(s.label)}</td><td class="num">${s.points}</td><td></td></tr>`).join('')}
 <tr><th>Total</th><th class="num">${EXAM_POINTS.total}</th><td></td></tr></table>
-<p class="muted">${escape(t('exam.sheet.footer'))}</p>
-</body></html>
-`;
+<p class="muted">${escape(t('exam.sheet.footer'))}</p>`;
 }
 
 /** Hilfsfunktion für den Dialog: Feste Adressen aus Text («10.0.0.5, 10.0.0.6»). */

@@ -18,6 +18,8 @@ export * from './net/mail';
 export * from './sim/protocol';
 export * from './tasks/tasks';
 export * from './tasks/review';
+export * from './tasks/exam';
+export * from './tasks/faults';
 export type { MailClientState, ReceivedMail, MailStep } from './sim/mail';
 export * from './net/dhcp';
 export * from './net/dns';

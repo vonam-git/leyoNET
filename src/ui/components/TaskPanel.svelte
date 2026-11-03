@@ -5,6 +5,7 @@
   import { simStore } from '../state/sim.svelte';
   import { dialogs } from '../state/dialogs.svelte';
   import { ui } from '../state/ui.svelte';
+  import { examMode } from '../state/exam.svelte';
   import Stars from './Stars.svelte';
 
   /** Aufgabe mit Lernzielen; "Prüfen" wertet das aktuelle Netz automatisch aus. */
@@ -36,26 +37,39 @@
   }
 
   const resultOf = (id: string) => results?.find((r) => r.id === id);
+  /** Prüfungsdatei: Punkte je Teil statt Prüfbausteinen. */
+  const raster = $derived(tasks?.exam?.raster ?? null);
+  const rasterTotal = $derived(raster?.reduce((s, r) => s + r.points, 0) ?? 0);
+  const locked = $derived(!!examMode.active);
 </script>
 
 <section class="tasks" aria-labelledby="tasks-title">
   <div class="head">
     <h2 id="tasks-title">{t('tasks.title')}</h2>
-    {#if ui.has('tool.taskEditor')}
+    {#if ui.has('tool.taskEditor') && !locked}
     <button class="small" onclick={() => dialogs.show('taskEditor')} disabled={!editor.editable} title={t('tasks.editHint')}>
       {tasks ? t('tasks.edit') : t('tasks.create')}
     </button>
     {/if}
   </div>
 
-  <button class="catalog" onclick={() => dialogs.show('catalog')} title={t('catalog.openHint')} disabled={editor.acting}>★ {t('catalog.open')}</button>
+  {#if !locked}<button class="catalog" onclick={() => dialogs.show('catalog')} title={t('catalog.openHint')} disabled={editor.acting}>★ {t('catalog.open')}</button>{/if}
 
   {#if !tasks}
     <p class="muted">{t('tasks.none')}</p>
   {:else}
     {#if tasks.difficulty}<Stars n={tasks.difficulty} />{/if}
     <h3>{tasks.title}</h3>
-    {#if withPoints}<p class="muted">{t('tasks.maxPoints', { max: maxPoints })}{tasks.grading ? ` · ${t('tasks.gradeFormula')}` : ''}</p>{/if}
+    {#if raster}
+      <table class="raster">
+        <caption>{t('tasks.raster')}</caption>
+        <tbody>
+          {#each raster as row (row.label)}<tr><td>{row.label}</td><td class="num">{row.points}</td></tr>{/each}
+          <tr class="sum"><td>{t('exam.rasterTotal')}</td><td class="num">{rasterTotal}</td></tr>
+        </tbody>
+      </table>
+      {#if tasks.grading}<p class="muted">{t('tasks.gradeFormula')}</p>{/if}
+    {:else if withPoints}<p class="muted">{t('tasks.maxPoints', { max: maxPoints })}{tasks.grading ? ` · ${t('tasks.gradeFormula')}` : ''}</p>{/if}
     {#if tasks.description}
       <p class="description">{tasks.description}</p>
     {/if}
@@ -67,6 +81,17 @@
           <span>
             {goal.text}
             {#if withPoints}<span class="pts">({t('tasks.points', { n: pointsOf(goal) })})</span>{/if}
+            {#if goal.check.type === 'answer'}
+              {#if goal.check.kind === 'choice' && goal.check.options}
+                <span class="answer" role="radiogroup" aria-label={goal.text}>
+                  {#each goal.check.options as option (option)}
+                    <label><input type="radio" name="answer-{goal.id}" checked={tasks.answers?.[goal.id] === option} onchange={() => editor.setAnswer(goal.id, option)} /> {option}</label>
+                  {/each}
+                </span>
+              {:else}
+                <input class="answer" value={tasks.answers?.[goal.id] ?? ''} onchange={(e) => editor.setAnswer(goal.id, e.currentTarget.value)} aria-label={goal.text} placeholder={t('tasks.answerPlaceholder')} />
+              {/if}
+            {/if}
             {#if result}
               <span class="visually-hidden">{t(result.passed ? 'tasks.passed' : 'tasks.failed')}</span>
             {/if}
@@ -94,7 +119,7 @@
       </p>
     {/if}
   {/if}
-  {#if ui.has('tool.taskEditor')}<button class="small review" onclick={() => dialogs.show('review')} title={t('review.openHint')}>{t('review.open')}</button>{/if}
+  {#if ui.has('tool.taskEditor') && !locked}<button class="small review" onclick={() => dialogs.show('review')} title={t('review.openHint')}>{t('review.open')}</button>{/if}
 </section>
 
 <style>
@@ -156,6 +181,44 @@
     display: block;
     margin-top: 2px;
     color: var(--muted);
+  }
+  .raster {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    margin: 6px 0;
+  }
+  .raster caption {
+    text-align: left;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+  .raster td {
+    padding: 2px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .raster .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .raster .sum td {
+    font-weight: 600;
+  }
+  .answer {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 4px;
+    width: 100%;
+    font-size: 0.82rem;
+  }
+  .answer label {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .answer input[type='radio'] {
+    width: auto;
   }
   .pts {
     color: var(--muted);

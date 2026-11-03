@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { emptyTopology, serializeProject, type TagColor } from '../../core';
+  import { emptyTopology, randomCode, randomExamId, type TagColor } from '../../core';
   import { t } from '../../i18n';
-  import { EXAM_PRESETS, EXAM_POINTS, buildExamSolution, buildExamTasks, checkExamSpec, examSheetHtml, parseFixed, randomExam, siteFacts, type ExamSpec } from '../exam';
+  import { downloadKeyFile, downloadLearnerFile, prepareExam, type BuiltExam } from '../examFiles';
+  import { EXAM_POINTS, buildExamSolution, buildExamTasks, checkExamSpec, examSheetsHtml, parseFixed, randomExam, siteFacts, type ExamSpec } from '../exam';
   import { usedFeatures } from '../features';
   import { downloadText } from '../persist/files';
   import { editor } from '../state/editor.svelte';
@@ -10,9 +11,9 @@
 
   /**
    * Für Lehrpersonen: Prüfung «Firmennetz mit drei Standorten» erstellen.
-   * Eine der fünf Varianten wählen oder würfeln, Werte anpassen, dann die
-   * Prüfungsdatei (für die Lernenden), die Musterlösung und das Aufgabenblatt
-   * speichern. «Laden» öffnet die Prüfung zum Weiterbearbeiten im Aufgabeneditor.
+   * Eine Variante würfeln (Startwert) und von Hand anpassen, oder für jeden
+   * Platz eine eigene Variante würfeln. «Erstellen» erzeugt die Prüfungsdatei
+   * (ohne Prüfbausteine, mit Platzwahl) und den Schlüssel für die Auswertung.
    */
   let { onclose }: { onclose: () => void } = $props();
 
@@ -29,45 +30,71 @@
     intranet: { ...d.intranet, domain: d.intranet.domain.trim().toLowerCase() },
   });
 
-  let preset = $state('A');
-  let draft = $state<Draft>(toDraft(EXAM_PRESETS[0]!));
-  const spec = $derived(fromDraft($state.snapshot(draft) as Draft));
-  const issue = $derived(checkExamSpec(spec));
+  const newSeed = () => Math.floor(Math.random() * 1e6);
+  const firstSeed = newSeed();
+  let seed = $state(firstSeed);
+  let seats = $state(1);
+  let minutes = $state('80');
+  let code = $state(randomCode());
+  let draft = $state<Draft>(toDraft(randomExam(firstSeed, '1')));
+  let seat = $state('01');
+  let built = $state<BuiltExam | null>(null);
+  let busy = $state(false);
+
+  const seatId = (i: number) => String(i + 1).padStart(2, '0');
+  /** Eine Variante (von Hand anpassbar) oder je Platz eine gewürfelte. */
+  const specs = $derived.by((): ExamSpec[] => {
+    if (seats <= 1) return [fromDraft($state.snapshot(draft) as Draft)];
+    return Array.from({ length: Math.min(seats, 40) }, (_, i) => randomExam(seed + i * 104_729, seatId(i)));
+  });
+  const spec = $derived(specs[0]!);
+  const issue = $derived(seats <= 1 ? checkExamSpec(spec) : null);
   const issueText = $derived(issue ? t(`exam.issue.${issue.code}`, issue.params ?? {}) : null);
   const facts = $derived(issue ? null : spec.sites.map(siteFacts));
+  const title = $derived(seats <= 1 ? buildExamTasks(spec).title : t('exam.manyTitle', { n: specs.length }));
 
-  function choose(id: string) {
-    preset = id;
-    const found = EXAM_PRESETS.find((p) => p.id === id);
-    if (found) draft = toDraft(found);
-  }
+  $effect(() => {
+    void [specs, minutes, code];
+    built = null;
+  });
 
   function shuffle() {
-    preset = '';
-    draft = toDraft(randomExam(Math.floor(Math.random() * 1e9), 'Z'));
+    seed = newSeed();
+    draft = toDraft(randomExam(seed, '1'));
   }
 
-  const base = () => `M117_LB3_${spec.id.replace(/[^\w-]+/g, '')}`;
+  async function create() {
+    if (issue) return;
+    busy = true;
+    try {
+      const m = Number(minutes);
+      built = await prepareExam({
+        id: randomExamId(),
+        title: seats <= 1 ? title : `M117_LB3 ${t('exam.manyTitle', { n: specs.length })}`,
+        description: t('exam.chooseSeatText'),
+        ...(Number.isInteger(m) && m > 0 ? { minutes: m } : {}),
+        code: code.trim().toUpperCase() || randomCode(),
+        variants: specs.map((s, i) => ({ id: seats <= 1 ? '1' : seatId(i), tasks: buildExamTasks(s), topology: emptyTopology() })),
+      });
+    } finally {
+      busy = false;
+    }
+  }
 
-  function saveExam() {
+  function saveSheets() {
     if (issue) return;
-    downloadText(`${base()}.json`, serializeProject(emptyTopology(), buildExamTasks(spec)) + '\n');
+    downloadText(`M117_LB3_Aufgabenblaetter_${seed}.html`, examSheetsHtml(specs), 'text/html');
   }
-  function saveSolution() {
-    if (issue) return;
-    downloadText(`${base()}_mL.json`, serializeProject(buildExamSolution(spec), buildExamTasks(spec)) + '\n');
-  }
-  function saveSheet() {
-    if (issue) return;
-    downloadText(`${base()}.html`, examSheetHtml(spec), 'text/html');
-  }
+
+  /** Musterlösung (für die Lehrperson) bzw. die Aufgabe zum Bearbeiten im Aufgabeneditor laden. */
   function open(withSolution: boolean) {
     if (issue) return;
-    const solution = buildExamSolution(spec);
+    const chosen = seats <= 1 ? spec : (specs.find((s) => s.id === seat) ?? spec);
+    const solution = buildExamSolution(chosen);
     editor.setMode('design');
-    editor.replace(withSolution ? solution : emptyTopology(), { undoable: true, tasks: buildExamTasks(spec), snapshots: [] });
+    editor.replace(withSolution ? solution : emptyTopology(), { undoable: true, tasks: buildExamTasks(chosen), snapshots: [] });
     ui.ensure(usedFeatures(solution));
-    editor.notify(t('exam.opened', { title: buildExamTasks(spec).title }));
+    editor.notify(t('exam.opened', { title: buildExamTasks(chosen).title }));
     onclose();
   }
   const invalid = (field: string) => issue?.field === field;
@@ -77,18 +104,25 @@
   <p class="muted">{t('exam.dialogIntro', { total: EXAM_POINTS.total, site: EXAM_POINTS.site, services: EXAM_POINTS.services })}</p>
 
   <div class="row">
-    <label>
-      {t('exam.variant')}
-      <select value={preset} onchange={(e) => choose(e.currentTarget.value)}>
-        {#each EXAM_PRESETS as p (p.id)}<option value={p.id}>{p.id} – {p.company}</option>{/each}
-        {#if !preset}<option value="">{t('exam.custom')}</option>{/if}
-      </select>
-    </label>
+    <label class="short">{t('exam.seats')}<input type="number" min="1" max="40" bind:value={seats} /></label>
+    <label class="short">{t('exam.seed')}<input type="number" bind:value={seed} onchange={() => (draft = toDraft(randomExam(seed, '1')))} /></label>
     <button onclick={shuffle}>🎲 {t('exam.shuffle')}</button>
-    <label class="short">{t('exam.id')}<input bind:value={draft.id} maxlength="12" /></label>
-    <label class="grow">{t('exam.company')}<input bind:value={draft.company} aria-invalid={invalid('company')} /></label>
+    <label class="short">{t('exam.export.minutes')}<input bind:value={minutes} inputmode="numeric" /></label>
+    <label class="short">{t('exam.export.code')}<input class="mono" bind:value={code} spellcheck="false" autocomplete="off" /></label>
+    {#if seats <= 1}<label class="grow">{t('exam.company')}<input bind:value={draft.company} aria-invalid={invalid('company')} /></label>{/if}
   </div>
 
+  {#if seats > 1}
+    <p class="muted">{t('exam.seatsIntro', { n: specs.length })}</p>
+    <table class="list">
+      <thead><tr><th scope="col">{t('exam.seatWord')}</th><th scope="col">{t('exam.company')}</th>{#each [0, 1, 2] as i (i)}<th scope="col">{t(i === 0 ? 'exam.seatShort' : 'exam.branchShort', { n: i })}</th>{/each}</tr></thead>
+      <tbody>
+        {#each specs as s (s.id)}
+          <tr><td>{s.id}</td><td>{s.company}</td>{#each s.sites as site (site.name)}<td class="mono">{site.name} {site.network}</td>{/each}</tr>
+        {/each}
+      </tbody>
+    </table>
+  {:else}
   <table>
     <thead>
       <tr>
@@ -146,15 +180,29 @@
     </label>
   </div>
 
+  {/if}
+
   {#if issueText}<p class="error" role="alert">{issueText}</p>{:else}<p class="ok" role="status">✓ {t('exam.valid')}</p>{/if}
+  {#if built}
+    <div class="done" role="status">
+      <p>{t('exam.export.ready', { variants: built.key.variants.length, code: built.key.code })}</p>
+      <p class="muted">{t('exam.export.keyWarning')}</p>
+      <div class="buttons">
+        <button class="primary" onclick={() => built && downloadLearnerFile(built)}>{t('exam.export.saveLearner')}</button>
+        <button onclick={() => built && downloadKeyFile(built)}>{t('exam.export.saveKey')}</button>
+      </div>
+    </div>
+  {/if}
   <p class="muted">{t('exam.howto')}</p>
 
   {#snippet actions()}
-    <button onclick={saveSheet} disabled={!!issue}>{t('exam.saveSheet')}</button>
-    <button onclick={saveSolution} disabled={!!issue}>{t('exam.saveSolution')}</button>
+    {#if seats > 1}
+      <select bind:value={seat} aria-label={t('exam.seatWord')}>{#each specs as s (s.id)}<option value={s.id}>{t('exam.mode.seat', { seat: s.id })}</option>{/each}</select>
+    {/if}
     <button onclick={() => open(true)} disabled={!!issue}>{t('exam.openSolution')}</button>
-    <button onclick={() => open(false)} disabled={!!issue}>{t('exam.open')}</button>
-    <button class="primary" onclick={saveExam} disabled={!!issue}>{t('exam.saveExam')}</button>
+    {#if seats <= 1}<button onclick={() => open(false)} disabled={!!issue}>{t('exam.open')}</button>{/if}
+    <button onclick={saveSheets} disabled={!!issue}>{t('exam.saveSheet')}</button>
+    <button class="primary" onclick={create} disabled={!!issue || busy}>{t('exam.export.create')}</button>
   {/snippet}
 </Modal>
 
@@ -176,7 +224,25 @@
     flex: 1;
   }
   .short input {
-    width: 5em;
+    width: 6em;
+  }
+  .list td {
+    font-size: 0.78rem;
+  }
+  .done {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 8px 0;
+    background: color-mix(in srgb, #16a34a 8%, var(--surface));
+  }
+  .done p {
+    margin: 4px 0;
+  }
+  .buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   input,
   select {

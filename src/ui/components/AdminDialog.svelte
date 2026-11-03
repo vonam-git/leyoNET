@@ -6,6 +6,7 @@
   import { FEATURES, FEATURE_GROUPS, PROFILE_LEVELS } from '../features';
   import { featureName } from '../labels';
   import { normalizePolicy, ui } from '../state/ui.svelte';
+  import AdminExams from './AdminExams.svelte';
   import Modal from './Modal.svelte';
 
   /**
@@ -73,7 +74,7 @@
     checks: CheckResult[];
   }
 
-  let tab = $state<'settings' | 'classes' | 'feedback' | 'checks'>('classes');
+  let tab = $state<'settings' | 'classes' | 'exams' | 'feedback' | 'checks'>('classes');
   let checks = $state<ChecksReport | null>(null);
   let checksMissing = $state(false);
   let overview = $state<Overview | null>(null);
@@ -113,6 +114,8 @@
       message = { kind: 'error', text: t(`admin.error.${['wrongPassword', 'adminDisabled', 'rateLimited'].includes(code) ? code : 'other'}`) };
     }
   }
+
+  let examsVersion = $state(0);
 
   async function refresh() {
     overview = await call<Overview>('GET', 'overview');
@@ -240,6 +243,7 @@
     <div class="head">
       <div class="tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'classes'} onclick={() => (tab = 'classes')}>{t('admin.tab.classes')} ({overview.classes.length})</button>
+        <button role="tab" aria-selected={tab === 'exams'} onclick={() => (tab = 'exams')}>{t('admin.tab.exams')}</button>
         <button role="tab" aria-selected={tab === 'feedback'} onclick={() => (tab = 'feedback')}>
           {t('admin.tab.feedback')} ({overview.feedbackOpen}/{overview.feedbackTotal})
         </button>
@@ -252,7 +256,7 @@
           {/if}
         </button>
       </div>
-      <button class="ghost" onclick={() => refresh()}>{t('admin.refresh')}</button>
+      <button class="ghost" onclick={() => (examsVersion++, refresh())}>{t('admin.refresh')}</button>
       <button class="ghost" onclick={logout}>{t('admin.logout')}</button>
     </div>
 
@@ -326,6 +330,8 @@
           </ul>
         {/each}
       {/if}
+    {:else if tab === 'exams'}
+      <AdminExams {call} version={examsVersion} notify={(kind, text) => (message = { kind, text })} />
     {:else if tab === 'classes'}
       <form class="row" onsubmit={createClass}>
         <input bind:value={label} maxlength="40" placeholder={t('admin.classLabelPlaceholder')} aria-label={t('admin.classLabel')} required />

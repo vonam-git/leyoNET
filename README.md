@@ -10,7 +10,7 @@ leyoNET ist ein Simulator für Rechnernetze im Informatik-Unterricht, vom ersten
 
 Die ursprüngliche Anforderungsbeschreibung steht in [docs/konzept.md](docs/konzept.md).
 
-**Dokumentation:** [Anleitung für Lernende](docs/anleitung.md) · [Hinweise für Lehrpersonen](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Normen und automatische Prüfungen](docs/normen.md) · [Richtpreise](docs/preise.md) · [Befehlszeile](docs/cli.md) · [Datenschutz](docs/datenschutz.md) · [Installation](docs/installation.md) · [Webversion auf Plesk](docs/plesk.md) · [Desktop](docs/desktop.md)
+**Dokumentation:** [Anleitung für Lernende](docs/anleitung.md) · [Hinweise für Lehrpersonen](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Prüfungen](docs/pruefungen.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Normen und automatische Prüfungen](docs/normen.md) · [Richtpreise](docs/preise.md) · [Befehlszeile](docs/cli.md) · [Datenschutz](docs/datenschutz.md) · [Installation](docs/installation.md) · [Webversion auf Plesk](docs/plesk.md) · [Desktop](docs/desktop.md)
 
 ## Sofort loslegen
 
@@ -18,7 +18,7 @@ Die ursprüngliche Anforderungsbeschreibung steht in [docs/konzept.md](docs/konz
 git clone https://github.com/vonam-git/leyoNET.git
 ```
 
-Dann **`release/leyonet.html`** doppelklicken – fertig, ohne Installation und ohne Internet. Alle Wege (Datei verteilen, Schulserver mit Docker, selbst bauen) beschreibt [docs/installation.md](docs/installation.md), dazu die [Webversion mit Node.js auf Plesk](docs/plesk.md) (Sessions mit Code, Klassen, Rückmeldungen, Admin-Konsole) und die [Desktop-Version für Windows, macOS und Linux](docs/desktop.md).
+Dann **`release/leyonet.html`** doppelklicken – fertig, ohne Installation und ohne Internet. Alle Wege (Datei verteilen, Schulserver mit Docker, selbst bauen) beschreibt [docs/installation.md](docs/installation.md), dazu die [Webversion mit Node.js auf Plesk](docs/plesk.md) (Sessions mit Code, Klassen, Prüfungen, Rückmeldungen, Admin-Konsole) und die [Desktop-Version für Windows, macOS und Linux](docs/desktop.md).
 
 ## Stand
 
@@ -48,7 +48,9 @@ Dann **`release/leyonet.html`** doppelklicken – fertig, ohne Installation und 
 | v0.5 | Neuer Name **leyoNET** mit Logo, Lizenz AGPL-3.0, Herkunftsnachweis | ✅ |
 | v0.6 | **IPv6**: IP-Version wählbar (IPv4, Dual Stack, IPv6), Neighbor Discovery, SLAAC, DHCPv6, ICMPv6, IPv6-Routing; **DS-Lite** mit CGNAT; Projektname, Mehrfachauswahl, automatisches Routing | ✅ |
 | v0.7 | **Firewall** (zustandsbehafteter Paketfilter auf Routern und Endgeräten) und **Site-to-Site-VPN** mit IPsec (IKEv2, ESP); Demos und Übungen dazu | ✅ |
-| v0.8 | **Prüfungen** mit Punkten und Note, Prüfungsgenerator (5 Varianten, würfeln, Musterlösung); Übungen zum Modul 117 mit ausfüllbaren Arbeitsblättern (PDF); DHCP mit festen Zuweisungen | ✅ |
+| v0.8 | **Prüfungen** mit Punkten und Note, Prüfungsgenerator; Übungen zum Modul 117 mit ausfüllbaren Arbeitsblättern (PDF); DHCP mit festen Zuweisungen | ✅ |
+| v0.10 | **Prüfungen in der Webversion**: Platz-Codes und Platzkarten, Start/Ende durch die Lehrperson, Speichern alle 20 s, automatische Abgabe, Nachteilsausgleich je Platz, automatische Auswertung, Abgaben als Datei, Namensliste nur im Browser | ✅ |
+| v0.9 | **Prüfungsdatei ohne Lösungen** mit Schlüssel, Prüfungsmodus mit Code, eigene Variante je Platz, **Fehlersuche-Prüfungen**, Ziele aus einer Musterlösung, Fragen, Teilpunkte und Folgefehler, Dokumentation prüfen, Nachkorrektur, Berichte, Hinweis auf ähnliche Abgaben | ✅ |
 
 ## Entwicklung
 
@@ -86,7 +88,7 @@ src/
   core/   Simulationskern und Dateiformat: reines TypeScript, ohne DOM
   ui/     Svelte-Oberfläche (Editor, Palette, Inspektor)
   i18n/   Sprachdateien (de.json, en.json; ein Test prüft gleiche Schlüssel)
-server/   Node.js-Server der Webversion (ohne Abhängigkeiten): Sessions, Klassen, Rückmeldungen, Admin
+server/   Node.js-Server der Webversion (ohne Abhängigkeiten): Sessions, Klassen, Prüfungen, Rückmeldungen, Admin
 docs/     Anleitung, Lehrpersonen, Funktionsprofile, Protokolle, Normen, Aufgaben, Befehlszeile, Datenschutz, Installation, Plesk, Desktop
 scripts/  Release, Lizenzhinweise, Release-Prüfung (Datenschutz, Sicherheit, Lizenzen)
 ```
@@ -124,7 +126,7 @@ Regeln, die das Projekt technisch absichert:
 - **Automatisches Routing** für Einsteiger: ein Häkchen beim Router, und er kennt alle Netze im Plan (Weg über die wenigsten Router, Standardroute zum Internet). Ohne Häkchen wählt man statisches oder dynamisches Routing (OSPF, RIP, BGP).
 - **Mehrfachauswahl**: Auswahlrahmen, Umschalt+Klick und Strg+A; die Auswahl gemeinsam verschieben, mit Strg+C/Strg+V samt Kabeln kopieren oder duplizieren.
 - **Demo-Netze**: zu jedem Protokoll ein fertig konfiguriertes Netz, per Knopfdruck geöffnet oder vorgeführt (Simulation startet, Ping/Webseite/E-Mail laufen automatisch); viele auch **Schritt für Schritt** mit einem Avatar als Lehrperson, den alle selbst einstellen können. Jede Demo wird bei jedem Release geprüft.
-- **Prüfungen** mit Punkten und Note (Schweizer Skala): **Werkzeuge → Prüfung erstellen** erzeugt die praktische Prüfung «Firmennetz mit drei Standorten» in fünf Varianten oder gewürfelt, mit Musterlösung und Aufgabenblatt; «Abgaben auswerten» prüft alle Dateien einer Klasse und speichert die Noten als CSV. Neue Prüfbausteine für Gerätenamen, Adressen, DHCP-/DNS-Konfiguration und Bereiche; DHCP-Server mit festen Zuweisungen nach MAC-Adresse.
+- **Prüfungen** mit Punkten und Note (Schweizer Skala): Die Lernenden erhalten eine Prüfungsdatei ohne Prüfbausteine und Lösungen, die Lehrperson einen Schlüssel. Generator «Firmennetz mit drei Standorten» (eine Variante je Platz möglich), jede Aufgabe als Prüfung (auch Fehlersuche mit zufälligen Fehlern je Platz), Ziele aus einer Musterlösung vorschlagen, Fragen, Teilpunkte und Folgefehler. Prüfungsmodus mit Code der Lehrperson. In der Webversion über den Server: Platz-Codes, automatische Abgabe, Nachteilsausgleich je Platz, automatische Auswertung. «Abgaben auswerten» mit Schlüssel, Nachkorrektur, Berichten und Hinweis auf ähnliche Abgaben. Siehe [docs/pruefungen.md](docs/pruefungen.md). Neue Prüfbausteine für Gerätenamen, Adressen, DHCP-/DNS-Konfiguration und Bereiche; DHCP-Server mit festen Zuweisungen nach MAC-Adresse.
 - **Firewall** (ab Profil 3): Regeln von oben nach unten (Erlauben/Verbieten nach Protokoll, Port, Quelle, Ziel, Eingang) mit Standardregel, zustandsbehaftet oder zustandslos; Router filtern weitergeleitete Pakete, Endgeräte eingehende. Trefferzähler und Konsolenmeldungen zeigen, was blockiert wurde.
 - **VPN** (ab Profil 4): Site-to-Site-Tunnel mit IPsec zwischen zwei Routern. IKEv2 handelt den Tunnel aus (gemeinsamer Schlüssel, Netze), danach laufen die Pakete in ESP verpackt durchs Internet; echte Köpfe im Mitschnitt, Verschlüsselung nur simuliert.
 - **SNAT und DNAT** getrennt: PAT, statisches SNAT, Portweiterleitung, statisches DNAT und 1:1-NAT; die NAT-Tabelle zeigt die Art jedes Eintrags.

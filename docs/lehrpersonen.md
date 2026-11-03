@@ -96,7 +96,7 @@ Im Aufgaben-Katalog gibt es die Reihe **«Modul 117»** (Filter oben im Katalog)
 
 Zu jeder Übung gibt es ein **ausfüllbares Arbeitsblatt** (PDF) mit den Fragen, die sich nicht automatisch prüfen lassen (Netz-ID, Beobachtungen, Begründungen), dazu eine Version mit Musterlösung: [docs/arbeitsblaetter](arbeitsblaetter/README.md). Die Lernenden geben das ausgefüllte PDF und ihre Projektdateien über die Plattform der Klasse ab (z.B. Teams oder Moodle); ausgewertet wird mit **«Abgaben auswerten …»**.
 
-Die praktische Prüfung (LB3) erstellt **Werkzeuge → Prüfung erstellen …**: fünf vorbereitete Varianten oder eine gewürfelte, mit Prüfungsdatei, Musterlösung und Aufgabenblatt; 75 Punkte, Note = 5 × Punkte / 75 + 1. Für Prüfungen ist «Prüfen» für die Lernenden ausgeblendet. Details: [aufgaben.md](aufgaben.md#prüfungen). Die fünf Varianten stehen im öffentlichen Quellcode; für die echte Prüfung eine Variante würfeln oder anpassen.
+Die praktische Prüfung (LB3) erstellt **Werkzeuge → Prüfung erstellen …**: eine gewürfelte Variante oder eine eigene je Platz, 75 Punkte, Note = 5 × Punkte / 75 + 1. Die Lernenden erhalten eine Prüfungsdatei ohne Prüfbausteine und Lösungen; du behältst den Schlüssel und wertest damit aus, mit Nachkorrektur und Berichten. Jede andere Aufgabe wird mit **Werkzeuge → Als Prüfung speichern …** zur Prüfung, auch als Fehlersuche mit zufälligen Fehlern je Platz. In der **Webversion** lädst du Prüfungsdatei und Schlüssel in der Admin-Konsole hoch, verteilst Platzkarten mit Platz-Codes, gibst je Platz Nachteilsausgleich und lässt am Ende automatisch auswerten; gespeichert wird alle 20 Sekunden, abgegeben automatisch. Ablauf, Prüfungsmodus, «wer ist wer» und Grenzen: [pruefungen.md](pruefungen.md).
 
 ## Eigene Aufgaben
 
