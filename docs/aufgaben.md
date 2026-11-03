@@ -5,7 +5,7 @@ Eine **Aufgabendatei** ist eine normale Projektdatei (`.json`) mit einem zusätz
 ## So entsteht eine Aufgabe
 
 1. Startnetz aufbauen, z.B. zwei PCs und einen Router, noch ohne Kabel und Adressen.
-2. **Werkzeuge → Aufgabe erstellen …** wählen. Es öffnet sich ein Formular mit einer Vorlage: Pro Lernziel einen Prüfbaustein aus der Liste wählen und seine Felder ausfüllen (Gerätenamen werden vorgeschlagen). Ohne eigenen Lernziel-Text übernimmt der Simulator einen Vorschlag. Wer lieber direkt schreibt, wechselt oben rechts auf **JSON**.
+2. **Werkzeuge → Aufgabe erstellen …** wählen. Tipp: Lösung zuerst bauen und «Ziele aus diesem Netz vorschlagen» klicken; leyoNET schlägt Ziele mit Punkten vor. Es öffnet sich ein Formular mit einer Vorlage: Pro Lernziel einen Prüfbaustein aus der Liste wählen und seine Felder ausfüllen (Gerätenamen werden vorgeschlagen). Ohne eigenen Lernziel-Text übernimmt der Simulator einen Vorschlag. Wer lieber direkt schreibt, wechselt oben rechts auf **JSON**.
 3. Titel, Beschreibung und Lernziele anpassen (Bausteine siehe unten), mit **Übernehmen** bestätigen.
 4. Mit **Speichern** (Strg+S) als Datei herunterladen und an die Klasse verteilen, z.B. über den Schul-Share.
 5. Optional eine **Lösungsdatei** erstellen: dieselbe Aufgabe mit fertig gebautem Netz. Damit lässt sich prüfen, dass alle Ziele erreichbar sind.
@@ -38,6 +38,7 @@ Ein vollständiges Beispiel liegt in [aufgaben/zwei-subnetze.json](aufgaben/zwei
 | `check` | Prüfbaustein (siehe unten). |
 | `hint` | Optionaler Tipp, der erscheint, solange das Ziel nicht erfüllt ist. |
 | `points` | Punkte für das Ziel (ganze Zahl, höchstens 100); fehlt = 1. |
+| `section` | Teil der Prüfung für das Punkteraster, z.B. «Standort Bern». |
 
 Auf oberster Ebene gibt es zusätzlich `difficulty` (1–5 Sterne), `grading: true` (Note nach Schweizer Skala: 5 × Punkte / Maximum + 1, auf Zehntel gerundet) und `noSelfCheck: true` (der Knopf «Prüfen» ist für Lernende ausgeblendet, z.B. an Prüfungen). Im Aufgabeneditor sind das die Felder «Schwierigkeit», «Note berechnen» und «Lernende prüfen nicht selbst».
 
@@ -52,7 +53,7 @@ Statische Prüfungen schauen nur auf das gebaute Netz. **Dynamische** Prüfungen
 | `inNetwork` | `device`, `network` (z.B. `"192.168.1.0/24"`) | das Gerät eine statische Adresse in diesem Netz hat |
 | `sameNetwork` | `devices` (Liste) | alle Geräte im selben Netz liegen |
 | `differentNetworks` | `devices` (Liste) | alle Geräte in verschiedenen Netzen liegen |
-| `gateway` | `device`, `gateway`? | ein Standardgateway eingetragen ist (optional: genau dieses) |
+| `gateway` | `device`, `gateway`? | ein Standardgateway eingetragen ist (optional: genau dieses; `@router` = ein Router im eigenen Netz, damit Folgefehler nur einmal zählen) |
 | `ping` ⚡ | `from`, `to` (Gerätename, IP oder DNS-Name) | mindestens eine Echo-Antwort ankommt |
 | `http` ⚡ | `from`, `url`, `status`? (Standard 200) | der Webbrowser die Seite mit diesem Status erhält |
 | `dhcpLease` ⚡ | `device`, `ip`?, `dns`? | das Gerät per DHCP eine Adresse erhält (optional genau diese, z.B. bei einer festen Zuweisung, und optional mit diesem DNS-Server) |
@@ -73,23 +74,17 @@ Statische Prüfungen schauen nur auf das gebaute Netz. **Dynamische** Prüfungen
 | `dhcpServer` | `device`, `start`, `end`, `gateway`?, `dns`? | der DHCP-Server mit diesem Bereich (und optional diesen Optionen) eingerichtet ist |
 | `dnsRecord` | `device`, `name`, `value` | der DNS-Server einen A-Eintrag Name → Adresse hat |
 | `area` | `title`, `color`?, `network`? | ein Bereich auf der Zeichenfläche existiert, dessen Titel den Text enthält (optional mit Farbe und Netz) |
+| `pings` ⚡ | `pairs` (Liste von Paaren `["PC 1", "PC 2"]`) | alle Pings ankommen; Teilpunkte je erfolgreichem Paar |
+| `areaNote` | `title`, `values` (Liste) | die Notiz eines Bereichs (Titel enthält den Text) alle Werte enthält, z.B. Netz, Maske, Broadcast; Teilpunkte je Wert |
+| `answer` | `kind`? (`"choice"`), `options`? (Auswahl), `accept`? (richtige Antworten) | die Antwort der Lernenden (`tasks.answers`) einer der richtigen entspricht; ohne `accept` (Prüfungsdatei) wertet erst der Schlüssel aus |
+| `manual` | – | nie automatisch: Die Lehrperson vergibt die Punkte bei der Nachkorrektur |
 | `packetSeen` | `protocol` (z.B. `"DNS"`, `"ICMP"`, `"HTTP"`), `from`?, `to`? | in der Simulation bereits ein solches Paket gesendet wurde |
 
 `packetSeen` ist die einzige Prüfung, die auf das Handeln der Lernenden schaut. Beispiel: «Du hast selbst eine DNS-Anfrage ausgelöst» → `{ "type": "packetSeen", "protocol": "DNS" }`.
 
 ## Prüfungen
 
-**Werkzeuge → Prüfung erstellen …** baut die praktische Prüfung «Firmennetz mit drei Standorten» (Hauptsitz und zwei Filialen mit DHCP/DNS-Server, Transportnetzen und Intranet mit Webserver):
-
-- Fünf Varianten (A–E) mit unterschiedlichen Firmen, Netzen und Präfixen sind vorbereitet. «Neue Variante würfeln» erzeugt eine weitere, alle Werte lassen sich von Hand anpassen. Der Dialog prüft die Vorgabe (Netze überlappen nicht, DHCP-Bereich und feste Adressen liegen im Netz usw.) und rechnet die Netzinfos aus.
-- **Prüfungsdatei speichern**: leeres Netz mit der Aufgabe (75 Punkte: je Standort 21, Netzwerkdienste 12; Note; «Prüfen» ausgeblendet). Diese Datei bekommen die Lernenden.
-- **Musterlösung speichern/öffnen**: das fertige Netz, das alle Punkte erreicht.
-- **Aufgabenblatt (HTML)**: im Browser öffnen und als PDF drucken.
-- **Prüfung laden**: öffnet die Aufgabe im Aufgabenbereich; dort lässt sie sich mit «Bearbeiten» im Aufgabeneditor weiter ändern (Ziele, Punkte, Texte).
-
-Ausgewertet wird mit **Abgaben auswerten …**: alle abgegebenen `.json`-Dateien auf einmal wählen, die Tabelle zeigt Punkte und Note je Datei, «Als CSV speichern» erzeugt die Notenliste.
-
-> Die fünf vorbereiteten Varianten stehen im öffentlichen Quellcode. Für eine echte Prüfung eine Variante würfeln oder die Werte anpassen.
+Prüfungsdatei ohne Prüfbausteine, Schlüssel für die Lehrperson, Platzwahl, Fehlersuche, Prüfungsmodus, Nachkorrektur und Berichte: siehe [pruefungen.md](pruefungen.md).
 
 ## Sicherheit
 

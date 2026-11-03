@@ -7,6 +7,7 @@ import { dialogs } from './state/dialogs.svelte';
 import { editor } from './state/editor.svelte';
 import { simStore } from './state/sim.svelte';
 import { ui } from './state/ui.svelte';
+import { examMode } from './state/exam.svelte';
 
 /** Datei wählen lassen und als Text lesen (ohne Server, auch per file://). */
 export function pickFile(accept: string): Promise<{ name: string; text: string } | null> {
@@ -60,11 +61,23 @@ export async function openProject() {
     editor.notify(errorText(parsed.error), 'error');
     return;
   }
+  // Während einer Prüfung: nur dieselbe Prüfung (z.B. die eigene Zwischenspeicherung) öffnen.
+  if (!examMode.allows(parsed.tasks)) {
+    editor.notify(t('exam.mode.otherFile'), 'error');
+    return;
+  }
   if (editor.acting) editor.setMode('design');
+  // Prüfungsdatei mit mehreren Varianten: zuerst den Platz wählen.
+  if (parsed.tasks?.exam?.variants) {
+    dialogs.examStart = { topology: parsed.topology, tasks: parsed.tasks, snapshots: parsed.snapshots ?? [] };
+    dialogs.show('examStart');
+    return;
+  }
   // Ohne gespeicherten Namen: Dateiname als Projektname (ausser dem automatischen «netzwerk-Datum»).
   const fromFile = file.name.replace(/\.json$/i, '');
   const topology = parsed.topology.title || /^netzwerk-\d{4}-\d{2}-\d{2}/.test(fromFile) ? parsed.topology : { title: fromFile.slice(0, 80), ...parsed.topology };
   editor.replace(topology, { undoable: true, tasks: parsed.tasks ?? null, snapshots: parsed.snapshots ?? [] });
+  if (parsed.tasks?.exam) examMode.enter(parsed.tasks);
   ensureProjectFeatures(t(parsed.tasks ? 'status.loadedTask' : 'status.loaded', { file: file.name, title: parsed.tasks?.title ?? '' }));
 }
 

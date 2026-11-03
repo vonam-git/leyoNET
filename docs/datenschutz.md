@@ -19,9 +19,10 @@ Das Konzept folgt dem Schweizer Datenschutzgesetz (revDSG, in Kraft seit 1.9.202
 |---|---|---|
 | Aktuelles Projekt (Autosave) inkl. Snapshots | IndexedDB im Browserprofil bzw. im App-Datenordner | bis «Neues Netz» oder Löschen der Browserdaten |
 | Sprache, Darstellung (hell/dunkel), Funktionsprofil bzw. Funktionsauswahl, Währung, Adressanzeige und Schnittstellennamen an Kabeln ein/aus, ein- und ausgefahrene Bereiche, Anschlusswahl beim Verbinden, Aussehen des Avatars (nur Frisur, Farben usw., kein Name, kein Bild) | `localStorage` | bis Löschen der Browserdaten |
+| Laufende Prüfung (Kennung, Titel, Platznummer, Beginn, Prüfwert des Codes), damit der Prüfungsmodus ein Neuladen übersteht | `localStorage` | bis die Lehrperson die Prüfung beendet |
 | Gespeicherte Projekte und Funktionsdateien | `.json`-Dateien, die die Person selbst ablegt | liegt in ihrer Hand |
 
-Projektdateien enthalten Geräte, Kabel, Adressen und Konfiguration, auch Webseiten und Bilder, die auf einem simulierten Webserver liegen. Bilder werden beim Hochladen auf höchstens 480 Pixel verkleinert und neu kodiert, dabei gehen Metadaten wie Ort und Kamera verloren (EXIF). Trotzdem gilt: **keine Fotos von Personen hochladen.** Gerätenamen sind frei wählbar; sie sollten neutral sein («PC 1», nicht «PC Anna»). Der gemeinsame Schlüssel eines simulierten VPN-Tunnels steht im Klartext in der Projektdatei; er schützt nichts Reales und darf **kein echtes Passwort** sein.
+Projektdateien enthalten Geräte, Kabel, Adressen und Konfiguration, auch Webseiten und Bilder, die auf einem simulierten Webserver liegen. Bilder werden beim Hochladen auf höchstens 480 Pixel verkleinert und neu kodiert, dabei gehen Metadaten wie Ort und Kamera verloren (EXIF). Trotzdem gilt: **keine Fotos von Personen hochladen.** Gerätenamen sind frei wählbar; sie sollten neutral sein («PC 1», nicht «PC Anna»). Der gemeinsame Schlüssel eines simulierten VPN-Tunnels steht im Klartext in der Projektdatei; er schützt nichts Reales und darf **kein echtes Passwort** sein. Bei Prüfungen erstellt die Lehrperson zusätzlich einen Prüfungsschlüssel und allenfalls eine Korrekturdatei (Punkte und Bemerkungen je Abgabe, mit den Dateinamen der Abgaben). Beide entstehen und bleiben auf ihrem Gerät; leyoNET lädt nichts hoch.
 
 Es wird nichts übertragen. Die Admin-Konsole, Sessions und Rückmeldungen sind hier ausgegraut.
 

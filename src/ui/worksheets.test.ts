@@ -46,12 +46,11 @@ describe('Arbeitsblätter (PDF) zu den Katalog-Übungen', () => {
     }
   });
 
-  it.each(sheets.map((s) => s.file))('%s: eingecheckte PDFs passen zum Inhalt (npm run arbeitsblaetter)', async (file) => {
+  it.each(sheets.map((s) => s.file))('%s: eingechecktes PDF passt zum Inhalt (npm run arbeitsblaetter), Musterlösung lässt sich erzeugen', async (file) => {
     const sheet = sheets.find((s) => s.file === file)!;
-    for (const solution of [false, true]) {
-      const bytes = await buildSheet(sheet, { solution });
-      const onDisk = readFileSync(join(OUT_DIR, `${file}${solution ? '_mL' : ''}.pdf`));
-      expect(Buffer.from(bytes).equals(onDisk)).toBe(true);
-    }
+    const onDisk = readFileSync(join(OUT_DIR, `${file}.pdf`));
+    expect(Buffer.from(await buildSheet(sheet)).equals(onDisk)).toBe(true);
+    // Die Musterlösung liegt bewusst nicht im öffentlichen Repo.
+    expect((await buildSheet(sheet, { solution: true })).length).toBeGreaterThan(10_000);
   });
 });

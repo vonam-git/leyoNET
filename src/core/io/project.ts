@@ -109,9 +109,14 @@ export function parseProject(text: string): ParseResult {
     topology = readTopology(current.topology);
     if (current.snapshots !== undefined) snapshots = readSnapshots(current.snapshots);
     if (current.tasks !== undefined) {
-      tasks = readTasks(current.tasks, (path) => {
-        throw new Invalid(path);
-      });
+      tasks = readTasks(
+        current.tasks,
+        (path) => {
+          throw new Invalid(path);
+        },
+        // Startnetze der Prüfungsvarianten: dieselbe Prüfung wie die Haupttopologie.
+        (raw) => readTopology(raw),
+      );
     }
   } catch (e) {
     if (e instanceof Invalid) return failure('invalidStructure', { path: e.path });

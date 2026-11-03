@@ -482,7 +482,7 @@ export const SHEETS = [
               'Transportnetze: R_Sarnen – R_Sempach **10.10.10.0/30**, R_Sarnen – R_Luzern **10.10.10.4/30**, R_Luzern – R_Sempach **10.10.10.8/30** (zuerst genannter Router .1). Routing: «Automatisches Routing».',
               'Intranet **192.168.0.0/24** am R_Luzern (zusätzlicher Anschluss 192.168.0.1), Webserver «Webserver» 192.168.0.10.',
               'Auf allen DHCP-Servern läuft auch DNS mit dem A-Eintrag **intranet.holzer.example** » 192.168.0.10; der DHCP-Server gibt den DNS-Server mit.',
-              'Bereiche mit Netz: Sarnen **blau**, Sempach **rot**, Luzern **grün**, Intranet **orange**. Router-Schnittstellen im CIDR-Format einblenden (Ansicht).',
+              'Bereiche mit Netz: Sarnen **blau**, Sempach **rot**, Luzern **grün**, Intranet **orange**. In die **Notiz** jedes Standorts gehören Netzadresse, Maske, kleinster und grösster Host, Broadcast und Anzahl Hosts (wird mitbewertet). Router-Schnittstellen im CIDR-Format einblenden (Ansicht).',
               'Tipp: Luzern braucht einen Switch mit mehr als 8 Anschlüssen.',
             ],
           },

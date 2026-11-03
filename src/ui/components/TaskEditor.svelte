@@ -4,6 +4,7 @@
   import { typeLabel } from '../labels';
   import { editor } from '../state/editor.svelte';
   import { CHECK_FIELDS, PROTOCOLS, emptyGoal, fromDraft, suggestedText, toDraft, type DraftError, type TaskDraft } from '../taskForm';
+  import { suggestGoals } from '../suggest';
 
   /**
    * Für Lehrpersonen: Aufgabe im Formular oder als JSON bearbeiten. Mit
@@ -39,7 +40,7 @@
     if (e.goal === undefined) return t('taskForm.required', { field: t(`taskForm.${e.field}`) });
     const spec = CHECK_FIELDS[draft.goals[e.goal]!.type].find((f) => f.key === e.field);
     const field = t(`taskForm.field.${spec ? (spec.label ?? spec.key) : e.field}`);
-    return t(e.code === 'required' ? 'taskForm.requiredIn' : 'taskForm.notANumber', { n: e.goal + 1, field });
+    return t(e.code === 'required' ? 'taskForm.requiredIn' : e.code === 'pairs' ? 'taskForm.badPairs' : 'taskForm.notANumber', { n: e.goal + 1, field });
   }
 
   /** Aufgabe aus der aktiven Ansicht lesen; null bei Fehler (dann ist `error` gesetzt). */
@@ -97,6 +98,13 @@
   function close() {
     dialog.close();
     onclose();
+  }
+
+  /** Lernziele aus dem aktuellen Netz vorschlagen (Prüfung aus einer fertigen Lösung). */
+  function suggest() {
+    const added = suggestGoals(editor.topology, draft.goals.map((g) => g.id));
+    draft.goals.push(...added);
+    editor.notify(t('taskForm.suggested', { n: added.length }));
   }
 
   function addGoal() {
@@ -222,12 +230,19 @@
                   {t('taskForm.field.points')}
                   <input bind:value={goal.points} placeholder="1" inputmode="numeric" />
                 </label>
+                <label class="field section">
+                  {t('taskForm.field.section')}
+                  <input bind:value={goal.section} placeholder={t('taskForm.sectionPlaceholder')} />
+                </label>
               </div>
             </fieldset>
           </li>
         {/each}
       </ol>
-      <button onclick={addGoal}>{t('taskForm.addGoal')}</button>
+      <div class="add-row">
+        <button onclick={addGoal}>{t('taskForm.addGoal')}</button>
+        <button onclick={suggest} disabled={editor.topology.devices.length === 0} title={t('taskForm.suggestHint')}>✨ {t('taskForm.suggest')}</button>
+      </div>
     {:else}
       <p class="muted">{t('tasks.editorHelp')}</p>
       <textarea class="json" bind:value={text} spellcheck="false" aria-label={t('tasks.editorTitle')}></textarea>
@@ -340,8 +355,13 @@
   }
   .hint-row {
     display: grid;
-    grid-template-columns: 1fr 6em;
+    grid-template-columns: 1fr 6em 12em;
     gap: 8px;
+  }
+  .add-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   .description {
     min-height: 3.5em;

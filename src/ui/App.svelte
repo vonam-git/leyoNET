@@ -19,6 +19,8 @@
   import SimControls from './components/SimControls.svelte';
   import StormBanner from './components/StormBanner.svelte';
   import TaskPanel from './components/TaskPanel.svelte';
+  import ExamBanner from './components/ExamBanner.svelte';
+  import { examMode } from './state/exam.svelte';
   import Toast from './components/Toast.svelte';
   import ToolBar from './components/ToolBar.svelte';
   import { loadAutosave, saveAutosave } from './persist/storage';
@@ -98,6 +100,7 @@
     const parsed = text ? parseProject(text) : null;
     if (parsed?.ok && (parsed.topology.devices.length > 0 || parsed.tasks || parsed.snapshots)) {
       editor.replace(parsed.topology, { undoable: false, tasks: parsed.tasks ?? null, snapshots: parsed.snapshots ?? [] });
+      if (parsed.tasks?.exam) examMode.enter(parsed.tasks);
       editor.notify(t('status.restored'));
       ensureProjectFeatures();
     }
@@ -170,6 +173,7 @@
       <ShopFlyout />
     </div>
     <main>
+      <ExamBanner />
       {#if editor.acting}
         <SimControls />
         <StormBanner />

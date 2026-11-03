@@ -12,6 +12,7 @@ import { MEDIA, type Device, type DeviceType, type Medium, type TagColor, type T
 import { formatIp, networkOf, parseIp, parseMask } from '../net/ipv4';
 import { protocolOf } from '../sim/protocol';
 import { Simulation, type PacketLogEntry } from '../sim/simulation';
+import { readExamInfo, type ExamInfo } from './exam';
 
 export type Check =
   | { type: 'deviceCount'; deviceType?: DeviceType; min?: number; max?: number }
@@ -57,7 +58,15 @@ export type Check =
   /** DNS-Server hat einen A-Eintrag (Name → Adresse). */
   | { type: 'dnsRecord'; device: string; name: string; value: string }
   /** Bereich auf der Zeichenfläche: Titel enthält den Text, optional Farbe und Netz. */
-  | { type: 'area'; title: string; color?: TagColor; network?: string };
+  | { type: 'area'; title: string; color?: TagColor; network?: string }
+  /** Mehrere Pings auf einmal; Teilpunkte je erfolgreichem Paar. */
+  | { type: 'pings'; pairs: [string, string][] }
+  /** Notiz eines Bereichs enthält diese Werte (z.B. Netz, Maske, Broadcast); Teilpunkte je Wert. */
+  | { type: 'areaNote'; title: string; values: string[] }
+  /** Frage an die Lernenden; die Antwort steht in der Datei (`answers`). Ohne `accept` (Prüfungsdatei) nicht auswertbar. */
+  | { type: 'answer'; kind?: 'choice'; options?: string[]; accept?: string[] }
+  /** Bewertet die Lehrperson von Hand (Nachkorrektur). */
+  | { type: 'manual' };
 
 const TAG_COLOR_NAMES: readonly TagColor[] = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'gray'];
 
@@ -89,6 +98,10 @@ export const CHECK_TYPES = [
   'dhcpServer',
   'dnsRecord',
   'area',
+  'pings',
+  'areaNote',
+  'answer',
+  'manual',
 ] as const satisfies readonly Check['type'][];
 
 export interface Goal {
@@ -100,6 +113,8 @@ export interface Goal {
   hint?: string;
   /** Punkte für dieses Ziel (Prüfungen); fehlt = 1. */
   points?: number;
+  /** Teil der Prüfung für das Punkteraster, z.B. «Standort Bern». */
+  section?: string;
 }
 
 export interface TaskSet {
@@ -112,6 +127,10 @@ export interface TaskSet {
   /** Prüfung: «Prüfen» ist für Lernende ausgeblendet; ausgewertet wird mit «Abgaben auswerten». */
   noSelfCheck?: boolean;
   goals: Goal[];
+  /** Prüfung: Kennung, gewählte Variante bzw. Varianten zur Auswahl, Sperre (src/core/tasks/exam.ts). */
+  exam?: ExamInfo;
+  /** Antworten der Lernenden auf Fragen (Ziel-ID → Antwort). */
+  answers?: Record<string, string>;
 }
 
 export const MAX_GOAL_POINTS = 100;
@@ -125,17 +144,29 @@ export function swissGrade(points: number, max: number): number {
   return Math.round((5 * Math.min(points, max) / max + 1) * 10) / 10;
 }
 
-/** Erreichte und mögliche Punkte; Ziele in `skip` zählen nicht. */
-export function scoreOf(tasks: TaskSet, results: readonly { id: string; passed: boolean; skipped?: boolean }[]): { points: number; max: number } {
+/** Erreichte Punkte eines Ziels: voll, anteilig (auf halbe Punkte gerundet) oder keine. */
+export function earnedPoints(goal: Goal, result: { passed: boolean; fraction?: number }): number {
+  if (result.passed) return pointsOf(goal);
+  if (!result.fraction) return 0;
+  return Math.round(pointsOf(goal) * result.fraction * 2) / 2;
+}
+
+/** Erreichte und mögliche Punkte; übersprungene Ziele zählen nicht. `override`: Punkte der Nachkorrektur je Ziel. */
+export function scoreOf(
+  tasks: TaskSet,
+  results: readonly { id: string; passed: boolean; fraction?: number; skipped?: boolean }[],
+  override: Record<string, number | undefined> = {},
+): { points: number; max: number } {
   let points = 0;
   let max = 0;
   for (const goal of tasks.goals) {
     const r = results.find((x) => x.id === goal.id);
     if (!r || r.skipped) continue;
     max += pointsOf(goal);
-    if (r.passed) points += pointsOf(goal);
+    const own = override[goal.id];
+    points += own !== undefined ? Math.min(Math.max(own, 0), pointsOf(goal)) : earnedPoints(goal, r);
   }
-  return { points, max };
+  return { points: Math.round(points * 2) / 2, max };
 }
 
 export interface GoalResult {
@@ -143,6 +174,10 @@ export interface GoalResult {
   passed: boolean;
   /** Warum nicht erfüllt; die Oberfläche übersetzt den Code. */
   reason?: { code: string; params?: Record<string, string | number> };
+  /** Teilweise erfüllt (0–1), z.B. 3 von 4 Pings; gibt anteilige Punkte. */
+  fraction?: number;
+  /** Bewertet die Lehrperson (Baustein «manual»). */
+  manual?: boolean;
 }
 
 /** Wie lange eine Prüf-Simulation laufen darf (virtuelle Zeit): DHCP-Bezug, dann die Aktion. */
@@ -181,6 +216,66 @@ function parseCidr(text: string): { ip: number; prefix: number } | null {
 
 const sameIp = (a: string | undefined, b: string) => a !== undefined && parseIp(a) !== null && parseIp(a) === parseIp(b);
 
+/** «@router» in einem Gateway-Feld: die Adresse eines Routers im selben Netz (Folgefehler zählen nur einmal). */
+export const ROUTER_REF = '@router';
+const ROUTING_TYPES = new Set(['router', 'l3switch', 'cpe', 'internet']);
+
+/** Adressen von Routern im Netz der Adresse `ip`/`prefix`. */
+function routerAddresses(topology: Topology, ip: number, prefix: number): string[] {
+  const out: string[] = [];
+  for (const d of topology.devices) {
+    if (!ROUTING_TYPES.has(d.type)) continue;
+    for (const iface of d.interfaces) {
+      const own = iface.ip ? parseIp(iface.ip) : null;
+      if (own !== null && networkOf(own, prefix) === networkOf(ip, prefix)) out.push(iface.ip!);
+    }
+    for (const sub of [...(d.subinterfaces ?? []), ...(d.svis ?? [])]) {
+      const own = sub.ip ? parseIp(sub.ip) : null;
+      if (own !== null && networkOf(own, prefix) === networkOf(ip, prefix)) out.push(sub.ip!);
+    }
+  }
+  return out;
+}
+
+/** Erwartetes Gateway prüfen: feste Adresse oder «@router» (ein Router im Netz von `device`). */
+function gatewayMatches(topology: Topology, device: Device, actual: string | undefined, expected: string): boolean {
+  if (expected.trim().toLowerCase() !== ROUTER_REF) return sameIp(actual, expected);
+  const ip = device.interfaces[0]?.ip ? parseIp(device.interfaces[0].ip) : null;
+  const prefix = device.interfaces[0]?.mask ? parseMask(device.interfaces[0].mask) : null;
+  if (ip === null || prefix === null || !actual) return false;
+  return routerAddresses(topology, ip, prefix).some((r) => sameIp(actual, r));
+}
+
+/** Text vergleichbar machen: Kleinschreibung, Leerzeichen, Tausendertrennzeichen, «/24» ohne Abstand. */
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/(\d)['’](?=\d)/g, '$1')
+    .replace(/\s*\/\s*/g, '/')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Kommt der Wert als eigenes Wort im Text vor? «10.0.0.1» passt nicht auf «10.0.0.10». */
+function containsValue(text: string, value: string): boolean {
+  const v = normalizeText(value);
+  if (!v) return true;
+  const escaped = v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^0-9a-z.])${escaped}(?![0-9a-z]|\\.[0-9])`).test(text);
+}
+
+/** Antwort mit einer akzeptierten Lösung vergleichen (Gross/klein, Leerzeichen, Adressen und Zahlen tolerant). */
+export function answerMatches(answer: string, accepted: string): boolean {
+  const a = normalizeText(answer).replace(/\.$/, '');
+  const b = normalizeText(accepted).replace(/\.$/, '');
+  if (a === b) return true;
+  const ipA = parseCidr(a.includes('/') ? a : `${a}/32`);
+  const ipB = parseCidr(b.includes('/') ? b : `${b}/32`);
+  if (ipA && ipB) return ipA.ip === ipB.ip && ipA.prefix === ipB.prefix;
+  const num = (x: string) => (/^-?\d+([.,]\d+)?$/.test(x) ? Number(x.replace(',', '.')) : NaN);
+  return !Number.isNaN(num(a)) && num(a) === num(b);
+}
+
 /** Boot-Simulation je Topologie: Prüfungen, die nur lesen (DHCP), teilen sie sich. */
 const bootCache = new WeakMap<Topology, Simulation>();
 function readOnlyBoot(topology: Topology): Simulation {
@@ -198,7 +293,7 @@ function bootedSimulation(topology: Topology): Simulation {
   return sim;
 }
 
-export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly PacketLogEntry[] = []): GoalResult {
+export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly PacketLogEntry[] = [], answers: Record<string, string> = {}): GoalResult {
   const { id, check } = goal;
   const need = (name: string) => byName(topology, name);
   const missing = (name: string) => fail(id, 'deviceMissing', { name });
@@ -247,7 +342,7 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       const device = need(check.device);
       if (!device) return missing(check.device);
       if (!device.gateway) return fail(id, 'noGateway', { name: device.name });
-      if (check.gateway && device.gateway !== check.gateway) {
+      if (check.gateway && !gatewayMatches(topology, device, device.gateway, check.gateway)) {
         return fail(id, 'wrongGateway', { name: device.name, actual: device.gateway, expected: check.gateway });
       }
       return { id, passed: true };
@@ -429,12 +524,17 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       return vlanColor(topology, check.vlan) ? { id, passed: true } : fail(id, 'vlanUndocumented', { vlan: check.vlan });
     }
     case 'device': {
+      // Teilpunkte: Anteil der vorhandenen Geräte mit richtigem Typ.
+      let ok = 0;
+      let first: GoalResult | null = null;
       for (const name of check.names) {
         const device = need(name);
-        if (!device) return missing(name);
-        if (check.deviceType && device.type !== check.deviceType) return fail(id, 'wrongDeviceType', { name: device.name, expected: check.deviceType });
+        if (!device) first ??= missing(name);
+        else if (check.deviceType && device.type !== check.deviceType) first ??= fail(id, 'wrongDeviceType', { name: device.name, expected: check.deviceType });
+        else ok++;
       }
-      return { id, passed: true };
+      if (!first) return { id, passed: true };
+      return ok > 0 ? { ...first, fraction: ok / check.names.length } : first;
     }
     case 'address': {
       const device = need(check.device);
@@ -455,7 +555,7 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       if (!s) return fail(id, 'noDhcpServer', { name: device.name });
       const range = `${check.start} – ${check.end}`;
       if (!sameIp(s.start, check.start) || !sameIp(s.end, check.end)) return fail(id, 'wrongDhcpRange', { name: device.name, actual: `${s.start} – ${s.end}`, expected: range });
-      if (check.gateway && !sameIp(s.gateway, check.gateway)) return fail(id, 'wrongDhcpOption', { name: device.name, option: 'Gateway', expected: check.gateway });
+      if (check.gateway && !gatewayMatches(topology, device, s.gateway, check.gateway)) return fail(id, 'wrongDhcpOption', { name: device.name, option: 'Gateway', expected: check.gateway });
       if (check.dns && !sameIp(s.dns, check.dns)) return fail(id, 'wrongDhcpOption', { name: device.name, option: 'DNS', expected: check.dns });
       return { id, passed: true };
     }
@@ -480,17 +580,52 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       });
       return fits ? { id, passed: true } : fail(id, 'areaIncomplete', { title: check.title, color: check.color ?? '–', network: check.network ?? '–' });
     }
+    case 'pings': {
+      const results = check.pairs.map(([from, to], i) => evaluateGoal(topology, { id: `${id}.${i}`, text: '', check: { type: 'ping', from, to } }));
+      const ok = results.filter((r) => r.passed).length;
+      if (ok === results.length) return { id, passed: true };
+      const firstFail = results.find((r) => !r.passed)!;
+      const reason = { code: 'pingsPartial', params: { ok, total: results.length, first: firstFail.reason ? `${check.pairs[results.indexOf(firstFail)]!.join(' → ')}` : '' } };
+      return { id, passed: false, reason, ...(ok > 0 ? { fraction: ok / results.length } : {}) };
+    }
+    case 'areaNote': {
+      const wanted = check.title.trim().toLowerCase();
+      const areas = (topology.areas ?? []).filter((a) => a.kind !== 'rack' && a.title.toLowerCase().includes(wanted));
+      if (areas.length === 0) return fail(id, 'areaMissing', { title: check.title });
+      // Bester Bereich zählt (falls mehrere passen).
+      let best = 0;
+      let missingValues: string[] = check.values;
+      for (const area of areas) {
+        const text = normalizeText(area.note ?? '');
+        const absent = check.values.filter((v) => !containsValue(text, v));
+        if (check.values.length - absent.length > best || absent.length < missingValues.length) {
+          best = check.values.length - absent.length;
+          missingValues = absent;
+        }
+      }
+      if (missingValues.length === 0) return { id, passed: true };
+      const r = fail(id, 'noteIncomplete', { title: check.title, missing: missingValues.join(', ') });
+      return best > 0 ? { ...r, fraction: best / check.values.length } : r;
+    }
+    case 'answer': {
+      const given = answers[id];
+      if (!check.accept?.length) return fail(id, 'answerUnchecked');
+      if (!given?.trim()) return fail(id, 'answerMissing');
+      return check.accept.some((a) => answerMatches(given, a)) ? { id, passed: true } : fail(id, 'answerWrong', { answer: given.trim() });
+    }
+    case 'manual':
+      return { id, passed: false, manual: true, reason: { code: 'manual' } };
   }
 }
 
 export function evaluateTasks(topology: Topology, tasks: TaskSet, liveLog: readonly PacketLogEntry[] = []): GoalResult[] {
-  return tasks.goals.map((goal) => evaluateGoal(topology, goal, liveLog));
+  return tasks.goals.map((goal) => evaluateGoal(topology, goal, liveLog, tasks.answers));
 }
 
 // --- Einlesen -----------------------------------------------------------------
 
 /** Liest den `tasks`-Block einer Datei; wirft bei Fehlern den betroffenen Pfad. */
-export function readTasks(value: unknown, invalid: (path: string) => never): TaskSet {
+export function readTasks(value: unknown, invalid: (path: string) => never, readTopology?: (raw: unknown, path: string) => Topology): TaskSet {
   const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
   const str = (v: unknown, path: string) => (typeof v === 'string' ? v : invalid(path));
   const optStr = (v: unknown, path: string) => (v === undefined ? undefined : str(v, path));
@@ -502,17 +637,12 @@ export function readTasks(value: unknown, invalid: (path: string) => never): Tas
   if (!isObject(value)) invalid('tasks');
   const t = value as Record<string, unknown>;
   const goals = Array.isArray(t.goals) ? t.goals : invalid('tasks.goals');
+  const answers = t.answers === undefined ? undefined : isObject(t.answers) ? t.answers : invalid('tasks.answers');
+  if (answers && Object.keys(answers).length > 500) invalid('tasks.answers');
+  const readGoals = (list: unknown[], base: string): Goal[] => {
   const ids = new Set<string>();
-  return {
-    title: str(t.title, 'tasks.title'),
-    ...(t.description !== undefined ? { description: str(t.description, 'tasks.description') } : {}),
-    ...(t.difficulty !== undefined
-      ? { difficulty: typeof t.difficulty === 'number' && Number.isInteger(t.difficulty) && t.difficulty >= 1 && t.difficulty <= 5 ? t.difficulty : invalid('tasks.difficulty') }
-      : {}),
-    ...(t.grading !== undefined ? (typeof t.grading === 'boolean' ? (t.grading ? { grading: true } : {}) : invalid('tasks.grading')) : {}),
-    ...(t.noSelfCheck !== undefined ? (typeof t.noSelfCheck === 'boolean' ? (t.noSelfCheck ? { noSelfCheck: true } : {}) : invalid('tasks.noSelfCheck')) : {}),
-    goals: goals.map((raw, i): Goal => {
-      const p = `tasks.goals[${i}]`;
+  return list.map((raw, i): Goal => {
+      const p = `${base}[${i}]`;
       if (!isObject(raw)) invalid(p);
       const g = raw as Record<string, unknown>;
       const id = str(g.id, `${p}.id`);
@@ -636,13 +766,56 @@ export function readTasks(value: unknown, invalid: (path: string) => never): Tas
           check = { type, title: str(c.title, `${cp}.title`), ...(c.color ? { color: c.color as TagColor } : {}), ...(network ? { network } : {}) };
           break;
         }
+        case 'pings': {
+          const pairs = Array.isArray(c.pairs) && c.pairs.length > 0 && c.pairs.length <= 60 ? c.pairs : invalid(`${cp}.pairs`);
+          check = {
+            type,
+            pairs: pairs.map((pair, k): [string, string] =>
+              Array.isArray(pair) && pair.length === 2 ? [str(pair[0], `${cp}.pairs[${k}]`), str(pair[1], `${cp}.pairs[${k}]`)] : invalid(`${cp}.pairs[${k}]`),
+            ),
+          };
+          break;
+        }
+        case 'areaNote':
+          check = { type, title: str(c.title, `${cp}.title`), values: names(c.values, `${cp}.values`) };
+          break;
+        case 'answer': {
+          if (c.kind !== undefined && c.kind !== 'choice') invalid(`${cp}.kind`);
+          const options = c.options === undefined ? undefined : names(c.options, `${cp}.options`);
+          const accept = c.accept === undefined ? undefined : names(c.accept, `${cp}.accept`);
+          check = { type, ...(c.kind ? { kind: 'choice' as const } : {}), ...(options ? { options } : {}), ...(accept ? { accept } : {}) };
+          break;
+        }
+        case 'manual':
+          check = { type };
+          break;
         default:
           return invalid(`${cp}.type`);
       }
       const hint = optStr(g.hint, `${p}.hint`);
       const points = optNum(g.points, `${p}.points`);
       if (points !== undefined && points > MAX_GOAL_POINTS) invalid(`${p}.points`);
-      return { id, text: str(g.text, `${p}.text`), check, ...(hint ? { hint } : {}), ...(points !== undefined ? { points } : {}) };
-    }),
+      const section = optStr(g.section, `${p}.section`);
+      if (section !== undefined && section.length > 80) invalid(`${p}.section`);
+      return { id, text: str(g.text, `${p}.text`), check, ...(hint ? { hint } : {}), ...(points !== undefined ? { points } : {}), ...(section ? { section } : {}) };
+    });
+  };
+  return {
+    title: str(t.title, 'tasks.title'),
+    ...(t.description !== undefined ? { description: str(t.description, 'tasks.description') } : {}),
+    ...(t.difficulty !== undefined
+      ? { difficulty: typeof t.difficulty === 'number' && Number.isInteger(t.difficulty) && t.difficulty >= 1 && t.difficulty <= 5 ? t.difficulty : invalid('tasks.difficulty') }
+      : {}),
+    ...(t.grading !== undefined ? (typeof t.grading === 'boolean' ? (t.grading ? { grading: true } : {}) : invalid('tasks.grading')) : {}),
+    ...(t.noSelfCheck !== undefined ? (typeof t.noSelfCheck === 'boolean' ? (t.noSelfCheck ? { noSelfCheck: true } : {}) : invalid('tasks.noSelfCheck')) : {}),
+    goals: readGoals(goals, 'tasks.goals'),
+    ...(t.exam !== undefined ? { exam: readExamInfo(t.exam, invalid, readGoals, readTopology) } : {}),
+    ...(answers
+      ? {
+          answers: Object.fromEntries(
+            Object.entries(answers).map(([k, v]) => [k, typeof v === 'string' && v.length <= 2000 ? v : invalid(`tasks.answers.${k}`)]),
+          ),
+        }
+      : {}),
   };
 }

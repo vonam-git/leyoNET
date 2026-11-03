@@ -415,7 +415,7 @@ test('VPN: Tunnel steht, Ping durch den Tunnel, ESP in der Paketliste', async ({
   await expect(page.locator('.packets')).toContainText('ESP (verschlüsselt)');
 });
 
-test('Modul 117: Übung aus der Reihe starten, Prüfung erstellen und laden', async ({ page }) => {
+test('Modul 117: Übung aus der Reihe starten', async ({ page }) => {
   await page.getByRole('button', { name: /Aufgaben-Katalog/ }).click();
   const catalog = page.getByRole('dialog');
   await catalog.getByRole('radio', { name: /Modul 117/ }).check();
@@ -423,12 +423,60 @@ test('Modul 117: Übung aus der Reihe starten, Prüfung erstellen und laden', as
   await expect(catalog).toContainText('Arbeitsblatt: M06C_M117_UE03_Router01.pdf');
   await catalog.locator('li').filter({ hasText: 'Auftrag 1: Ein Netz mit zwei Switches' }).getByRole('button', { name: 'Starten' }).click();
   await expect(page.locator('.tasks')).toContainText('PC01 erreicht PC06');
+});
+
+test('Prüfung: erstellen mit Plätzen, Platz wählen, gesperrt, abgeben, beenden, mit Schlüssel auswerten', async ({ page }) => {
+  // Lehrperson: drei Plätze, Prüfungsdatei und Schlüssel.
   await menu(page, 'Werkzeuge', 'Prüfung erstellen …');
   const exam = page.getByRole('dialog', { name: /Prüfung erstellen/ });
-  await exam.getByRole('combobox').first().selectOption('C');
-  await expect(exam).toContainText('Vorgabe in Ordnung');
-  await exam.getByRole('button', { name: 'Prüfung laden' }).click();
-  await expect(page.locator('.tasks')).toContainText('Seeland Logistik');
-  await expect(page.locator('.tasks')).toContainText('Maximal 75 Punkte');
+  await exam.getByLabel('Plätze').fill('3');
+  await expect(exam.locator('table.list tbody tr')).toHaveCount(3);
+  const code = await exam.getByLabel('Code zum Beenden').inputValue();
+  await exam.getByRole('button', { name: 'Erstellen' }).click();
+  await expect(exam).toContainText(`Code zum Beenden des Prüfungsmodus: ${code}`);
+  const learnerDl = page.waitForEvent('download');
+  await exam.getByRole('button', { name: /Prüfungsdatei speichern/ }).click();
+  const learner = await (await learnerDl).path();
+  const keyDl = page.waitForEvent('download');
+  await exam.getByRole('button', { name: /Schlüssel speichern/ }).click();
+  const key = await (await keyDl).path();
+  await exam.getByRole('button', { name: 'Schliessen' }).click();
+  // Lernende: Datei öffnen, Platz wählen.
+  const chooser = page.waitForEvent('filechooser');
+  await menu(page, 'Datei', /^Öffnen/);
+  await (await chooser).setFiles(learner);
+  const start = page.getByRole('dialog', { name: /Varianten/ });
+  await start.getByLabel('Dein Platz').selectOption('02');
+  await start.getByRole('button', { name: 'Prüfung beginnen' }).click();
+  await expect(page.locator('.exam-banner')).toContainText('Platz 02');
+  await expect(page.locator('.tasks')).toContainText('Punkteraster');
+  await expect(page.locator('.tasks')).not.toContainText('Aufgaben-Katalog');
   await expect(page.locator('.tasks').getByRole('button', { name: 'Prüfen' })).toHaveCount(0);
+  await page.getByRole('menubar').getByRole('menuitem', { name: 'Werkzeuge', exact: true }).click();
+  await expect(page.getByRole('menu')).not.toContainText('Prüfung erstellen');
+  await page.keyboard.press('Escape');
+  // Abgeben = speichern.
+  await page.keyboard.press('Control+s');
+  const saveDl = page.waitForEvent('download');
+  await page.getByRole('dialog', { name: 'Projekt speichern' }).locator('.primary').click();
+  const submission = await (await saveDl).path();
+  // Beenden nur mit Code.
+  await page.locator('.exam-banner').getByRole('button', { name: 'Prüfung beenden' }).click();
+  const end = page.getByRole('dialog', { name: 'Prüfung beenden' });
+  await end.getByLabel('Code der Lehrperson').fill('FALSCH');
+  await end.locator('.primary').click();
+  await expect(end).toContainText('Der Code stimmt nicht');
+  await end.getByLabel('Code der Lehrperson').fill(code.toLowerCase());
+  await end.locator('.primary').click();
+  await expect(page.locator('.exam-banner')).toHaveCount(0);
+  // Auswertung mit Schlüssel.
+  await menu(page, 'Werkzeuge', 'Aufgabe prüfen …');
+  const review = page.getByRole('dialog', { name: /Abgaben auswerten/ });
+  const keyChooser = page.waitForEvent('filechooser');
+  await review.getByRole('button', { name: /Prüfungsschlüssel laden/ }).click();
+  await (await keyChooser).setFiles(key);
+  await review.locator('input[type="file"]').setInputFiles([submission]);
+  await expect(review.locator('tbody tr')).toHaveCount(1);
+  await expect(review.locator('tbody tr td').first()).toHaveText('02');
+  await expect(review.locator('tbody tr')).toContainText('1.0');
 });

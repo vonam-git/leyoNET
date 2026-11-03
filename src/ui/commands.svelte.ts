@@ -11,6 +11,7 @@ import { shop } from './state/shop.svelte';
 import { simStore, type Speed } from './state/sim.svelte';
 import { tour } from './state/tour.svelte';
 import { ui, type Theme } from './state/ui.svelte';
+import { EXAM_BLOCKED_COMMANDS, examMode } from './state/exam.svelte';
 
 /**
  * Alle Befehle an einer Stelle: Menüleiste, Befehlssuche (Strg+K) und
@@ -133,6 +134,7 @@ const COMMANDS: Command[] = [
   { id: 'tool.catalog', label: () => t('catalog.open'), run: () => dialogs.show('catalog'), icon: 'star' },
   { id: 'tool.taskEditor', label: () => t('menu.tool.taskEditor'), run: () => dialogs.show('taskEditor'), visible: () => ui.has('tool.taskEditor'), enabled: design },
   { id: 'tool.exam', label: () => t('menu.tool.exam'), run: () => dialogs.show('exam'), visible: () => ui.has('tool.taskEditor'), enabled: design },
+  { id: 'tool.examExport', label: () => t('menu.tool.examExport'), run: () => dialogs.show('examExport'), visible: () => ui.has('tool.taskEditor'), enabled: () => design() && !!editor.tasks?.goals.length },
   { id: 'tool.review', label: () => t('menu.tool.review'), run: () => dialogs.show('review'), visible: () => ui.has('tool.taskEditor') },
   { id: 'tool.features', label: () => t('menu.tool.features'), run: () => dialogs.show('features'), icon: 'layers' },
   { id: 'tool.loadFeatures', label: () => t('menu.tool.loadFeatures'), run: () => void loadFeatureFile(), enabled: () => !ui.locked },
@@ -147,6 +149,13 @@ const COMMANDS: Command[] = [
   { id: 'help.feedback', label: () => t('feedback.open'), run: () => dialogs.show('feedback'), visible: () => ui.online },
   { id: 'help.about', label: () => t('toolbar.about'), run: () => dialogs.show('about') },
 ];
+
+// Während einer Prüfung ausgeblendet (Katalog, Editor, Generator, Auswertung …).
+for (const c of COMMANDS) {
+  if (!EXAM_BLOCKED_COMMANDS.has(c.id)) continue;
+  const visible = c.visible;
+  c.visible = () => !examMode.active && (visible?.() ?? true);
+}
 
 const byId = new Map(COMMANDS.map((c) => [c.id, c]));
 
@@ -301,6 +310,7 @@ export const MENUS: Menu[] = [
       { command: 'tool.catalog' },
       { command: 'tool.taskEditor' },
       { command: 'tool.exam' },
+      { command: 'tool.examExport' },
       { command: 'tool.review' },
       { separator: true },
       { command: 'tool.features' },

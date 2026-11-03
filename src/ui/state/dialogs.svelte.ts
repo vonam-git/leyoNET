@@ -2,6 +2,9 @@
  * Welche Dialoge und Seitenbereiche offen sind. Als gemeinsamer Zustand, damit
  * Menüs, Tastenkürzel und die Befehlssuche sie gleichermassen öffnen können.
  */
+import type { Snapshot, TaskSet, Topology } from '../../core';
+import { examMode } from './exam.svelte';
+
 export type DialogName =
   | 'about'
   | 'snapshots'
@@ -22,7 +25,10 @@ export type DialogName =
   | 'costs'
   | 'demos'
   | 'avatar'
-  | 'save';
+  | 'save'
+  | 'examStart'
+  | 'examEnd'
+  | 'examExport';
 
 /** Werte, die der IP-Rechner übernehmen kann (z.B. in das Formular eines Rechners). */
 export interface IpCalcTarget {
@@ -44,8 +50,16 @@ export interface DeviceWindowState {
   z: number;
 }
 
+/** Geöffnete Prüfungsdatei mit mehreren Varianten: Platz wählen. */
+export interface PendingExam {
+  topology: Topology;
+  tasks: TaskSet;
+  snapshots: Snapshot[];
+}
+
 class Dialogs {
   open = $state<DialogName | null>(null);
+  examStart = $state.raw<PendingExam | null>(null);
   ipcalc = $state.raw<IpCalcTarget>({});
   /** Hilfe-Seitenleiste mit dem gewählten Thema. */
   help = $state<string | null>(null);
@@ -91,6 +105,8 @@ class Dialogs {
   }
 
   show(name: DialogName) {
+    // Während einer Prüfung bleiben Katalog, Editor, Generator und Auswertung zu.
+    if (examMode.blocksDialog(name)) return;
     this.open = name;
   }
 
