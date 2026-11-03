@@ -119,5 +119,6 @@ add_header Content-Security-Policy "default-src 'none'; script-src 'unsafe-inlin
 
 - Alle Daten liegen als JSON-Dateien in `DATA_DIR` (`sessions/`, `classes/`, `feedback/`, `settings.json`). Abgelaufene Einträge löscht der Server selbständig (beim Start und danach regelmässig).
 - Während einer Prüfung speichern alle Plätze alle 20 Sekunden. Ganze Klassen hinter einer Schuladresse (NAT) sind eingeplant (bis 600 Speicherungen pro Minute und Adresse).
+- Angriffe und Schutzmassnahmen der Webversion: [sicherheit.md](sicherheit.md). Ein langes, zufälliges `ADMIN_PASSWORD` (mindestens 12 Zeichen) und HTTPS sind Pflicht.
 - Eine Sicherung ist nicht nötig und aus Datenschutzsicht auch nicht erwünscht: Sessions sind kurzlebige Arbeitsstände. Wer `DATA_DIR` trotzdem sichert, muss die Sicherungen ebenso kurz aufbewahren.
 - Alles sofort löschen: App stoppen, Ordner `DATA_DIR` leeren, App starten.

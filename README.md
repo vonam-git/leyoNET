@@ -10,7 +10,7 @@ leyoNET ist ein Simulator für Rechnernetze im Informatik-Unterricht, vom ersten
 
 Die ursprüngliche Anforderungsbeschreibung steht in [docs/konzept.md](docs/konzept.md).
 
-**Dokumentation:** [Anleitung für Lernende](docs/anleitung.md) · [Hinweise für Lehrpersonen](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Prüfungen](docs/pruefungen.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Normen und automatische Prüfungen](docs/normen.md) · [Richtpreise](docs/preise.md) · [Befehlszeile](docs/cli.md) · [Datenschutz](docs/datenschutz.md) · [Installation](docs/installation.md) · [Webversion auf Plesk](docs/plesk.md) · [Desktop](docs/desktop.md)
+**Dokumentation:** [Anleitung für Lernende](docs/anleitung.md) · [Hinweise für Lehrpersonen](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Prüfungen](docs/pruefungen.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Normen und automatische Prüfungen](docs/normen.md) · [Richtpreise](docs/preise.md) · [Befehlszeile](docs/cli.md) · [Datenschutz](docs/datenschutz.md) · [IT-Sicherheit](docs/sicherheit.md) · [Installation](docs/installation.md) · [Webversion auf Plesk](docs/plesk.md) · [Desktop](docs/desktop.md)
 
 ## Sofort loslegen
 

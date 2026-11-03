@@ -1,6 +1,6 @@
 {
-  "version": "0.10.1",
-  "date": "2026-11-03T12:24:26.281Z",
+  "version": "0.10.2",
+  "date": "2026-11-03T13:12:27.654Z",
   "checks": [
     {
       "id": "privacy.noExternal",

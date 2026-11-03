@@ -21,10 +21,19 @@
     ),
   );
 
+  // Nur bei neuen Zeilen nach unten scrollen, und nur wenn man schon unten war:
+  // Wer hochscrollt, um ältere Ausgaben zu lesen, wird nicht zurückgerissen.
+  let shown = 0;
+  let atBottom = true;
   $effect(() => {
-    void lines.length;
-    tick().then(() => output?.scrollTo({ top: output.scrollHeight }));
+    const count = lines.length;
+    if (count === shown) return;
+    shown = count;
+    if (atBottom) tick().then(() => output?.scrollTo({ top: output.scrollHeight }));
   });
+  function onscroll() {
+    if (output) atBottom = output.scrollTop + output.clientHeight >= output.scrollHeight - 24;
+  }
 
   $effect(() => {
     input?.focus();
@@ -60,6 +69,8 @@
   }
 
   function submit(event: SubmitEvent) {
+    // Eigener Befehl: wieder der neuesten Ausgabe folgen.
+    atBottom = true;
     event.preventDefault();
     const command = line;
     line = '';
@@ -105,7 +116,7 @@
   {/key}
 {:else}
 <div class="terminal">
-  <div class="output" bind:this={output} role="log" aria-live="polite" aria-label={t('desktop.terminal')}>
+  <div class="output" bind:this={output} {onscroll} role="log" aria-live="polite" aria-label={t('desktop.terminal')}>
     {#if lines.length === 0}
       <p class="hint">{t('terminal.welcome')}</p>
     {/if}

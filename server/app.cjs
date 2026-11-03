@@ -280,7 +280,23 @@ function clientIp(req) {
 function limited(req, kind, perMinute) {
   const ip = clientIp(req);
   const key = crypto.createHash('sha256').update(SALT).update(ip).update(kind).digest('base64url').slice(0, 16);
+  return count(key, perMinute);
+}
+
+/** Höchstens so viele Anfragen dieser Art pro Minute insgesamt (falls Adressen gefälscht werden können). */
+function limitedGlobal(kind, perMinute) {
+  return count(`*${kind}`, perMinute);
+}
+
+const MAX_BUCKETS = 50_000;
+
+function count(key, perMinute) {
   const now = Date.now();
+  // Viele verschiedene Adressen auf einmal: Speicher nicht volllaufen lassen.
+  if (!buckets.has(key) && buckets.size >= MAX_BUCKETS) {
+    for (const [k, b] of buckets) if (now - b.start > 60_000) buckets.delete(k);
+    if (buckets.size >= MAX_BUCKETS) return true;
+  }
   const bucket = buckets.get(key) || { start: now, count: 0 };
   if (now - bucket.start > 60_000) {
     bucket.start = now;
@@ -372,6 +388,10 @@ const SECURITY_HEADERS = {
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Cache-Control': 'no-store',
+  'X-Frame-Options': 'DENY',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+  // Wirkt nur über HTTPS (Plesk mit Let's Encrypt); über HTTP ignorieren Browser den Kopf.
+  'Strict-Transport-Security': 'max-age=15552000',
 };
 
 function send(res, status, body, headers = {}) {
@@ -409,11 +429,15 @@ function readBody(req, max = MAX_BODY) {
     req.on('end', () => {
       if (done) return;
       if (size === 0) return resolve({});
+      let value;
       try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+        value = JSON.parse(Buffer.concat(chunks).toString('utf8'));
       } catch {
-        reject(Object.assign(new Error('invalidJson'), { status: 400 }));
+        return reject(Object.assign(new Error('invalidJson'), { status: 400 }));
       }
+      // Nur Objekte: «null», Zahlen oder Listen würden später zu Serverfehlern führen.
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return reject(Object.assign(new Error('invalidJson'), { status: 400 }));
+      resolve(value);
     });
     req.on('error', reject);
   });
@@ -593,7 +617,7 @@ async function api(req, res, url) {
     // Ganze Klassen hinter einer Schul-Adresse (NAT) speichern laufend: grosszügige Grenze.
     if (limited(req, 'sessions', 600)) return fail(res, 429, 'rateLimited');
     // Neue Sessions legen Dateien an: eigene, engere Grenze.
-    if (parts.length === 1 && method === 'POST' && limited(req, 'newSession', NEW_SESSIONS_PER_MINUTE)) return fail(res, 429, 'rateLimited');
+    if (parts.length === 1 && method === 'POST' && (limited(req, 'newSession', NEW_SESSIONS_PER_MINUTE) || limitedGlobal('newSession', 1200))) return fail(res, 429, 'rateLimited');
     const s = settings();
     const ttl = s.sessionHours * 3_600_000;
 
@@ -688,7 +712,7 @@ async function api(req, res, url) {
 
   // --- Rückmeldungen ---
   if (parts[0] === 'feedback' && parts.length === 1 && method === 'POST') {
-    if (limited(req, 'feedback', 5)) return fail(res, 429, 'rateLimited');
+    if (limited(req, 'feedback', 5) || limitedGlobal('feedback', 60)) return fail(res, 429, 'rateLimited');
     const s = settings();
     if (!s.feedbackEnabled) return fail(res, 403, 'feedbackDisabled');
     const body = await readBody(req);
@@ -734,11 +758,13 @@ function list(dir) {
 
 async function admin(req, res, parts, method) {
   if (parts[0] === 'login' && method === 'POST') {
-    if (limited(req, 'login', 10)) return fail(res, 429, 'rateLimited');
+    // Auch insgesamt begrenzt: Raten des Passworts bleibt aussichtslos, selbst mit vielen Adressen.
+    if (limited(req, 'login', 10) || limitedGlobal('login', 30)) return fail(res, 429, 'rateLimited');
     if (!ADMIN_PASSWORD) return fail(res, 403, 'adminDisabled');
     const body = await readBody(req);
     if (!checkPassword(body.password || '')) return fail(res, 401, 'wrongPassword');
     const token = crypto.randomBytes(32).toString('base64url');
+    for (const [t, expires] of tokens) if (expires < Date.now()) tokens.delete(t);
     tokens.set(token, Date.now() + ADMIN_TOKEN_HOURS * 3_600_000);
     return json(res, 200, { token });
   }
@@ -1011,6 +1037,11 @@ function createServer() {
       return fail(res, status, error && error.status ? error.message : 'serverError');
     }
   });
+  // Langsame oder hängende Verbindungen nicht ewig offen halten (Slowloris).
+  server.headersTimeout = 20_000;
+  server.requestTimeout = 120_000;
+  server.keepAliveTimeout = 5_000;
+  server.maxHeadersCount = 60;
   server.ready = ready;
   return server;
 }

@@ -1139,6 +1139,9 @@
 
   "packets.title": "Paketliste",
   "packets.count": "{n} Rahmen",
+  "packets.once": "Jedes Paket nur einmal",
+  "packets.onceHint": "Pakete, die ein Switch unverändert weiterleitet, nur beim ersten Abschnitt zeigen. Ausschalten, um den Weg über jeden Switch zu sehen. Ein Router baut einen neuen Rahmen, darum erscheint das Paket nach jedem Router wieder.",
+  "packets.hiddenForwards": "{n} Weiterleitungen ausgeblendet",
   "packets.no": "Nr.",
   "packets.time": "Zeit (s)",
   "packets.route": "Von → Nach",
@@ -2875,7 +2878,7 @@
   "help.ssh.title": "SSH",
   "help.ssh.body": "Mit SSH (TCP 22) meldet man sich von einem PC aus an einem Router oder Switch an und konfiguriert ihn aus der Ferne. Nach dem Schlüsselaustausch ist alles verschlüsselt; im Mitschnitt sind nur noch unlesbare Bytes zu sehen.",
   "help.sniffer.title": "Paketliste",
-  "help.sniffer.body": "Die Paketliste zeigt jeden Rahmen, der über ein Kabel geht: Zeit, Weg, Protokoll, Absender, Empfänger und eine Kurzbeschreibung. Ein Klick öffnet die Details nach dem [[osi]]-Modell. Mit dem [[filter]] blendest du aus, was dich nicht interessiert. Mit [[pcap]] geht der Mitschnitt in Wireshark.",
+  "help.sniffer.body": "Die Paketliste zeigt jeden Rahmen, der über ein Kabel geht: Zeit, Weg, Protokoll, Absender, Empfänger und eine Kurzbeschreibung. Ein Klick öffnet die Details nach dem [[osi]]-Modell. Mit dem [[filter]] blendest du aus, was dich nicht interessiert. Mit [[pcap]] geht der Mitschnitt in Wireshark. **Jedes Paket nur einmal** blendet die unveränderten Weiterleitungen durch Switches aus; ausgeschaltet sieht man jeden Abschnitt.",
   "help.osi.title": "OSI-Modell",
   "help.osi.body": "Jeder Rahmen wird mit echten Bytes kodiert und nach Schichten zerlegt, oben die Anwendung (7), unten die Leitung (1). Jede Schicht verpackt die darüber: HTTP steckt in TCP, TCP in IP, IP in Ethernet.\n\n- Leere Schichten erscheinen grau (z.B. hat ARP keine Schicht 3 oder 4)\n- Feld anklicken markiert die Bytes in der Hex-Ansicht\n- Prüfsummen sind echt berechnet",
   "help.filter.title": "Anzeigefilter",

@@ -110,3 +110,20 @@ test('Prüfungsplätze funktionieren auch bei vollem Speicher', async () => {
   const save = await call('PUT', `/api/sessions/${join.data.session}`, { project: learner }, { 'X-Forwarded-For': '192.0.2.20' });
   assert.equal(save.status, 200);
 });
+
+test('nur JSON-Objekte; Sicherheits-Köpfe gesetzt', async () => {
+  for (const body of ['null', '42', '[1,2]', '"x"']) {
+    const res = await fetch(`${base}/api/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '192.0.2.30' }, body });
+    assert.equal(res.status, 400, body);
+  }
+  const res = await fetch(`${base}/`);
+  assert.equal(res.headers.get('x-frame-options'), 'DENY');
+  assert.match(res.headers.get('strict-transport-security') || '', /max-age=/);
+  assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+});
+
+test('Anmeldung: auch insgesamt begrenzt (viele gefälschte Adressen helfen nicht)', async () => {
+  let last;
+  for (let i = 0; i < 31; i++) last = await call('POST', '/api/admin/login', { password: 'falsch' }, { 'X-Forwarded-For': `198.51.100.${i}` });
+  assert.equal(last.status, 429);
+});
