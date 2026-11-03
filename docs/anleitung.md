@@ -100,6 +100,8 @@ Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routi
 | Internet-Box (CPE) | Wie zu Hause: Modem, Router mit NAT, DHCP-Server und vier LAN-Buchsen in einem Gerät. Ab Werk LAN 192.168.1.1/24; einzutragen sind nur WAN-Adresse und Gateway des Providers. |
 | Internet | Provider mit öffentlichen Adressen und Webseiten. |
 
+**Eingaben speichern:** Formulare speichern von selbst, sobald du ein Feld verlässt: mit Tab, Enter oder einem Klick daneben, auch direkt auf ein anderes Gerät. Trägst du nur eine IP-Adresse ohne Maske ein, setzt leyoNET die übliche Maske der Adressklasse ein (10.x.x.x → /8, 172.16–31.x.x → /16, 192.168.x.x → /24). Prüfe sie und ändere sie, wenn dein Netz anders aufgeteilt ist.
+
 ## Adressen sichtbar machen
 
 **A** (oder **Ansicht → IP-Adressen anzeigen**) blendet an jedem Gerät die Adresse ein, farbig nach Art:
@@ -138,7 +140,7 @@ In der Simulation zeigt die Paketliste unten jeden Rahmen. Ein Klick öffnet die
 
 ## Aufgaben
 
-**Werkzeuge → Aufgaben-Katalog** enthält Übungen von ★ (Einstieg) bis ★★★★★ (Studium). Eine Aufgabe lädt ein Startnetz und zeigt unten ihre Lernziele. **Prüfen** sagt, was schon erfüllt ist und was fehlt. Viele Ziele haben einen Tipp.
+**Werkzeuge → Aufgaben-Katalog** enthält Übungen von ★ (Einstieg) bis ★★★★★ (Studium). Eine Aufgabe lädt ein Startnetz und zeigt unten ihre Lernziele. **Prüfen** sagt, was schon erfüllt ist und was fehlt. Viele Ziele haben einen Tipp. Sind alle Ziele erfüllt, steht die Übung im Katalog mit **✓ erledigt** (nur in diesem Browser; «Fortschritt zurücksetzen» löscht die Markierungen).
 
 ## Demo-Netze
 

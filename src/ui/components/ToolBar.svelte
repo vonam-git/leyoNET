@@ -109,7 +109,8 @@
     {ui.profile === 'custom' ? t('profile.custom') : t(`profile.short.${ui.profile}`)}
   </button>
   {#if ui.online}
-    <button class="chip session" onclick={() => dialogs.show('session')} title={t('session.buttonHint')}>
+    <button class="chip session" class:problem={!!session.problem} onclick={() => dialogs.show('session')} title={session.problem ? t(`session.problem.${session.problem}`) : t('session.buttonHint')}>
+      {#if session.problem}⚠{/if}
       {session.code ? t('session.button', { code: session.code }) : t('session.buttonNone')}
     </button>
   {/if}
@@ -130,6 +131,10 @@
 </div>
 
 <style>
+  .chip.problem {
+    color: var(--danger);
+    border-color: var(--danger);
+  }
   .title {
     width: clamp(110px, 14vw, 200px);
     padding: 3px 8px;

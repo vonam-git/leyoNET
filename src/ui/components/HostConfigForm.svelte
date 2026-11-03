@@ -58,8 +58,24 @@
     });
   }
 
+  /**
+   * Adresse ohne Maske: beim Verlassen des Formulars die übliche Maske der Adressklasse
+   * vorschlagen (10.x → /8, 172.16–31.x → /16, 192.168.x → /24, sonst nach Klasse A/B/C),
+   * damit die Adresse gleich gespeichert wird. Die Maske steht im Feld und lässt sich ändern.
+   */
+  function suggestMask() {
+    if (draft.mask.trim()) return;
+    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(draft.ip.trim());
+    if (!m || m.slice(1).some((x) => Number(x) > 255)) return;
+    const first = Number(m[1]);
+    const prefix = first >= 1 && first <= 126 ? 8 : first >= 128 && first <= 191 ? 16 : first >= 192 && first <= 223 ? 24 : null;
+    if (prefix) draft.mask = String(prefix);
+  }
+
   /** Speichert automatisch (siehe autosave.ts); leise, solange man im Formular bleibt. */
   function save(quiet: boolean): boolean {
+    // Erst beim Verlassen des Formulars, damit die Maske beim Weitertippen nicht im Weg ist.
+    if (!quiet && !dhcp) suggestMask();
     if (!dirty) return true;
     const failure = editor.configureHost(device.id, { ...draft, dhcp });
     if (failure) {

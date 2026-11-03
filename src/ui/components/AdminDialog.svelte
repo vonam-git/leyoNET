@@ -39,6 +39,7 @@
     classes: ClassInfo[];
     feedbackOpen: number;
     feedbackTotal: number;
+    storage?: { bytes: number; maxBytes: number; sessions: number; maxSessions: number };
   }
   interface Feedback {
     id: string;
@@ -312,6 +313,14 @@
         <span class="muted">{t('admin.sessionCount', { n: overview.sessions })}</span>
         <button class="danger" onclick={purgeSessions} disabled={overview.sessions === 0}>{t('admin.purge')}</button>
       </div>
+      {#if overview.storage}
+        {@const st = overview.storage}
+        {@const full = st.bytes / st.maxBytes > 0.8 || st.sessions / st.maxSessions > 0.8}
+        <p class="muted" class:error={full}>
+          {t('admin.storage', { mb: (st.bytes / 1048576).toFixed(1), max: Math.round(st.maxBytes / 1048576), n: st.sessions, maxN: st.maxSessions })}
+          {#if full}{t('admin.storageFull')}{/if}
+        </p>
+      {/if}
     {:else if tab === 'checks'}
       <p class="muted">{t('admin.checksHint')}</p>
       {#if checksMissing || !checks}
@@ -421,6 +430,9 @@
 </Modal>
 
 <style>
+  p.muted.error {
+    color: var(--danger);
+  }
   .pill {
     display: inline-block;
     margin-left: 4px;

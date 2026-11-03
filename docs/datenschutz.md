@@ -19,6 +19,7 @@ Das Konzept folgt dem Schweizer Datenschutzgesetz (revDSG, in Kraft seit 1.9.202
 |---|---|---|
 | Aktuelles Projekt (Autosave) inkl. Snapshots | IndexedDB im Browserprofil bzw. im App-Datenordner | bis «Neues Netz» oder Löschen der Browserdaten |
 | Sprache, Darstellung (hell/dunkel), Funktionsprofil bzw. Funktionsauswahl, Währung, Adressanzeige und Schnittstellennamen an Kabeln ein/aus, ein- und ausgefahrene Bereiche, Anschlusswahl beim Verbinden, Aussehen des Avatars (nur Frisur, Farben usw., kein Name, kein Bild) | `localStorage` | bis Löschen der Browserdaten |
+| Erledigte Übungen aus dem Aufgaben-Katalog (Kennung der Übung und Datum, an dem alle Ziele erfüllt waren) | `localStorage` | bis «Fortschritt zurücksetzen» oder Löschen der Browserdaten |
 | Laufende Prüfung (Kennung, Titel, Platznummer, Beginn, Prüfwert des Codes; in der Webversion zusätzlich Platz-Code und Ende), damit der Prüfungsmodus ein Neuladen übersteht | `localStorage` | bis die Lehrperson die Prüfung beendet bzw. nach der Abgabe |
 | Gespeicherte Projekte und Funktionsdateien | `.json`-Dateien, die die Person selbst ablegt | liegt in ihrer Hand |
 
@@ -34,6 +35,11 @@ Es wird nichts übertragen. Die Admin-Konsole, Sessions und Rückmeldungen sind 
 - Schlüssel: ein **Zufallscode** (z.B. `DHGT-V8SS`, rund 40 Bit Zufall aus `crypto.randomInt`). Wer den Code kennt, kann die Session öffnen; der Code ist keiner Person zugeordnet.
 - Löschung: automatisch nach der eingestellten Zeit ohne Änderung (Standard **24 Stunden**, Admin wählbar 1 Stunde bis 30 Tage) oder sofort mit **Session löschen**.
 - Im Browser wird nur der Code in `localStorage` gemerkt, damit die Session nach einem Neuladen weiterläuft. Eine neue Session beginnt immer leer.
+
+### Schutz vor Überlastung
+
+- Projekte sind auf **1 MB** begrenzt. Insgesamt nimmt der Server höchstens **5000 Sessions** und **1 GB** für Sessions und Rückmeldungen an (in Plesk mit `MAX_SESSIONS` und `MAX_STORAGE_MB` anpassbar). Darüber antwortet er mit «Speicher voll»; Prüfungsplätze und die Admin-Konsole sind ausgenommen.
+- Neue Sessions sind auf 60 pro Minute und Adresse begrenzt, Rückmeldungen auf 5. Für diese Grenze nimmt der Server hinter dem Proxy von Plesk die Adresse aus dem Weiterleitungs-Kopf des Proxys. Sie wird wie bisher nur gesalzen gehasht im Arbeitsspeicher gezählt und nie gespeichert oder protokolliert.
 
 ### Klassen-Sessions
 
