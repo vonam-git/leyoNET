@@ -19,16 +19,29 @@ export interface ActiveExam {
   minutes?: number;
   /** Beginn (ms seit 1970). */
   started: number;
+  /** Prüfung über den Server (Webversion): Platz-Code, Ende des Platzes, Zustand. */
+  server?: { seatCode: string; until: number | null; offset: number; state: SeatStatus['state'] };
+}
+
+/** Zustand eines Prüfungsplatzes laut Server. */
+export interface SeatStatus {
+  state: 'waiting' | 'open' | 'closed';
+  until: number | null;
+  /** Server-Zeit, um die Uhr abzugleichen. */
+  now: number;
+  title: string;
+  seat: string;
 }
 
 const KEY = 'netzwerk-simulator.exam';
 
 /** Gesperrte Dialoge und Befehle während einer Prüfung. */
-export const EXAM_BLOCKED_DIALOGS = new Set(['catalog', 'demos', 'taskEditor', 'exam', 'examExport', 'review', 'features', 'admin', 'session']);
+export const EXAM_BLOCKED_DIALOGS = new Set(['examJoin', 'catalog', 'demos', 'taskEditor', 'exam', 'examExport', 'review', 'features', 'admin', 'session']);
 export const EXAM_BLOCKED_COMMANDS = new Set([
   'file.new',
   'file.demos',
   'file.session',
+  'file.examJoin',
   'tool.catalog',
   'tool.taskEditor',
   'tool.exam',
@@ -84,6 +97,32 @@ class ExamMode {
     });
   }
 
+  /** Prüfung über den Server beginnen bzw. fortsetzen. */
+  enterServer(tasks: TaskSet, seatCode: string, status: SeatStatus) {
+    const exam = tasks.exam;
+    if (!exam) return;
+    this.#store({
+      id: exam.id,
+      title: tasks.title,
+      variant: status.seat,
+      ...(exam.unlock ? { unlock: exam.unlock } : {}),
+      started: this.active?.id === exam.id ? this.active.started : Date.now(),
+      server: { seatCode, until: status.until, offset: status.now - Date.now(), state: status.state },
+    });
+  }
+
+  /** Neuer Stand vom Server: Verlängerung (Nachteilsausgleich), Ende. */
+  updateServer(status: SeatStatus) {
+    const a = this.active;
+    if (!a?.server) return;
+    this.#store({ ...a, server: { ...a.server, until: status.until, offset: status.now - Date.now(), state: status.state } });
+  }
+
+  /** Nach der Abgabe (Server meldet «abgegeben») ohne Code verlassen. */
+  leaveClosed() {
+    if (this.active?.server?.state === 'closed') this.#store(null);
+  }
+
   /** Darf diese Datei während der Prüfung geöffnet werden? Nur dieselbe Prüfung. */
   allows(tasks: TaskSet | undefined): boolean {
     return !this.active || tasks?.exam?.id === this.active.id;
@@ -107,7 +146,8 @@ class ExamMode {
     const a = this.active;
     if (!a) return { text: '', over: false };
     const elapsed = Math.max(0, Math.floor((this.now - a.started) / 1000));
-    const left = a.minutes ? a.minutes * 60 - elapsed : null;
+    const serverLeft = a.server?.until ? Math.floor((a.server.until - (this.now + a.server.offset)) / 1000) : null;
+    const left = serverLeft ?? (a.minutes ? a.minutes * 60 - elapsed : null);
     const s = Math.abs(left ?? elapsed);
     const text = `${left !== null && left < 0 ? '+' : ''}${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     return { text, over: left !== null && left < 0 };

@@ -5,7 +5,7 @@ import { parseProject } from '../io/project';
 import { serializeProject } from '../io/project';
 import { buildExam, parseExamKey, serializeExamKey } from './exam';
 import { readTasks } from './tasks';
-import { correctedScore, parseCorrections, reviewCsv, reviewSubmission, serializeCorrections, similarPairs } from './review';
+import { correctedScore, parseBundle, parseNameList, serializeBundle, parseCorrections, reviewCsv, reviewSubmission, serializeCorrections, similarPairs } from './review';
 
 const file = (name: string) => readFileSync(join(__dirname, '../../../docs/aufgaben', name), 'utf8');
 const start = file('zwei-subnetze.json');
@@ -64,5 +64,25 @@ describe('Abgaben auswerten', () => {
     // Korrekturdatei hin und zurück.
     const corrections = { 'anna.json': { points: { lp: 2 }, notes: { lp: 'sauber' }, comment: 'Gut gemacht' } };
     expect(parseCorrections(serializeCorrections('P-R', corrections))).toEqual(corrections);
+  });
+});
+
+describe('Abgaben einer Server-Prüfung', () => {
+  it('Sammeldatei hin und zurück, je Platz eine Abgabe, Schlüssel dabei', () => {
+    const key = JSON.stringify({ meta: { format: 'netzwerk-simulator-pruefungsschluessel' }, key: { id: 'x' } });
+    const text = serializeBundle({ title: 'T', key, submissions: [{ seat: '01', updated: 1, project: JSON.parse(solution) }, { seat: '02', updated: 2, project: JSON.parse(start) }] });
+    const b = parseBundle(text, 'Platz')!;
+    expect(b.title).toBe('T');
+    expect(JSON.parse(b.key!)).toEqual(JSON.parse(key));
+    expect(b.files.map((f) => f.name)).toEqual(['Platz 01', 'Platz 02']);
+    expect(reviewSubmission(b.files[0]!.name, b.files[0]!.text, tasks)).toMatchObject({ ok: true, passed: 8 });
+    expect(parseBundle('{"meta":{"format":"anders"}}', 'Platz')).toBeNull();
+  });
+
+  it('Namensliste: verschiedene Schreibweisen', () => {
+    const names = parseNameList('07 Anna Muster\n08; Ben Beispiel\nPlatz 09: Cleo\n\n');
+    expect(names.get('07')).toBe('Anna Muster');
+    expect(names.get('08')).toBe('Ben Beispiel');
+    expect(names.get('09')).toBe('Cleo');
   });
 });

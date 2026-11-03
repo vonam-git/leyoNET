@@ -7,6 +7,8 @@
  *   - Sessions: technische Projektstände unter einem Zufallscode, die nach
  *     einer einstellbaren Zeit automatisch gelöscht werden,
  *   - Klassen-Sessions: Lehrpersonen sehen die Sessions ihrer Klasse,
+ *   - Prüfungen: Plätze mit eigenem Code, laufendes Speichern, Ende und
+ *     Nachteilsausgleich je Platz, Abgaben für die automatische Auswertung,
  *   - Rückmeldungen (Probleme, Ideen) an den Admin,
  *   - das Admin-Dashboard (Einstellungen, Klassen, Rückmeldungen).
  *
@@ -30,6 +32,8 @@ const RELEASE_FILE = path.join(ROOT, 'release', 'leyonet.html');
 const NOTICES_FILE = path.join(ROOT, 'release', 'THIRD_PARTY_NOTICES.md');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const MAX_BODY = 2 * 1024 * 1024;
+/** Prüfungsdatei samt Schlüssel (bis 60 Varianten). */
+const MAX_EXAM_BODY = 12 * 1024 * 1024;
 const MAX_FEEDBACK_TEXT = 2000;
 const ADMIN_TOKEN_HOURS = 8;
 
@@ -55,7 +59,14 @@ const dirs = {
   sessions: path.join(DATA_DIR, 'sessions'),
   feedback: path.join(DATA_DIR, 'feedback'),
   classes: path.join(DATA_DIR, 'classes'),
+  exams: path.join(DATA_DIR, 'exams'),
 };
+
+/** Prüfungen: Aufbewahrung der Abgaben, Gnadenfrist fürs letzte Speichern, Grenzen. */
+const EXAM_DAYS = 60;
+const EXAM_GRACE_MS = 30_000;
+const MAX_EXAM_SEATS = 60;
+const MAX_EXAM_MINUTES = 600;
 
 function ensureDirs() {
   for (const dir of Object.values(dirs)) fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -200,7 +211,7 @@ function isAdmin(req) {
 
 function cleanup() {
   const now = Date.now();
-  for (const dir of [dirs.sessions, dirs.feedback, dirs.classes]) {
+  for (const dir of [dirs.sessions, dirs.feedback, dirs.classes, dirs.exams]) {
     let names = [];
     try {
       names = fs.readdirSync(dir);
@@ -256,13 +267,13 @@ function fail(res, status, code) {
   json(res, status, { error: code });
 }
 
-function readBody(req) {
+function readBody(req, max = MAX_BODY) {
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks = [];
     req.on('data', (chunk) => {
       size += chunk.length;
-      if (size > MAX_BODY) {
+      if (size > max) {
         reject(Object.assign(new Error('tooLarge'), { status: 413 }));
         req.destroy();
         return;
@@ -336,6 +347,92 @@ function html() {
   return bundle().html;
 }
 
+// --- Prüfungen ----------------------------------------------------------------------
+
+/**
+ * Der Prüfungsschlüssel (Lösungen) liegt verschlüsselt auf dem Server
+ * (AES-256-GCM, Schlüssel aus ADMIN_PASSWORD abgeleitet). Wer nur den
+ * Datenordner hat, kann ihn nicht lesen; ausgeliefert wird er nur an den Admin.
+ */
+function encryptKey(value) {
+  const salt = crypto.randomBytes(16);
+  const iv = crypto.randomBytes(12);
+  const key = crypto.scryptSync(ADMIN_PASSWORD, salt, 32);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const data = Buffer.concat([cipher.update(JSON.stringify(value), 'utf8'), cipher.final()]);
+  return { salt: salt.toString('base64'), iv: iv.toString('base64'), tag: cipher.getAuthTag().toString('base64'), data: data.toString('base64') };
+}
+
+function decryptKey(box) {
+  try {
+    const key = crypto.scryptSync(ADMIN_PASSWORD, Buffer.from(box.salt, 'base64'), 32);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(box.iv, 'base64'));
+    decipher.setAuthTag(Buffer.from(box.tag, 'base64'));
+    return JSON.parse(Buffer.concat([decipher.update(Buffer.from(box.data, 'base64')), decipher.final()]).toString('utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function loadExam(id) {
+  if (!/^[0-9a-f]{16}$/.test(id || '')) return null;
+  const item = readJson(path.join(dirs.exams, `${id}.json`));
+  return item && item.expires > Date.now() ? item : null;
+}
+
+function saveExam(exam) {
+  writeJson(path.join(dirs.exams, `${exam.id}.json`), exam);
+}
+
+/** Prüfung und Platz zu einem Platz-Code. */
+function findSeat(seatCode) {
+  for (const exam of list(dirs.exams)) {
+    const seat = exam.seats.find((s) => s.code === seatCode);
+    if (seat) return { exam, seat };
+  }
+  return null;
+}
+
+/** Zustand eines Platzes: wartet (nicht gestartet), offen (Zeit läuft) oder abgegeben. */
+function seatState(exam, seat, now = Date.now()) {
+  if (!exam.started) return 'waiting';
+  return now <= seat.until ? 'open' : 'closed';
+}
+
+function examState(exam, now = Date.now()) {
+  if (!exam.started) return 'ready';
+  return exam.seats.some((s) => now <= s.until) ? 'running' : 'ended';
+}
+
+function seatStatus(exam, seat) {
+  const now = Date.now();
+  return { state: seatState(exam, seat, now), until: seat.until || null, now, title: exam.title, seat: seat.id };
+}
+
+/** Übersicht für den Admin (ohne Schlüssel und ohne Projekte). */
+function examSummary(exam, withSeats = false) {
+  const now = Date.now();
+  const sessions = withSeats ? new Map(list(dirs.sessions).filter((x) => x.exam && x.exam.id === exam.id).map((x) => [x.exam.seat, x])) : null;
+  return {
+    id: exam.id,
+    label: exam.label,
+    title: exam.title,
+    minutes: exam.minutes,
+    state: examState(exam, now),
+    started: exam.started || null,
+    created: exam.created,
+    expires: exam.expires,
+    hasKey: !!exam.key,
+    seats: withSeats
+      ? exam.seats.map((s) => {
+          const session = sessions.get(s.id);
+          return { id: s.id, code: s.code, extra: s.extra || 0, until: s.until || null, state: seatState(exam, s, now), joined: !!session, saved: session ? session.updated : null };
+        })
+      : exam.seats.length,
+    joined: withSeats ? undefined : list(dirs.sessions).filter((x) => x.exam && x.exam.id === exam.id).length,
+  };
+}
+
 // --- API ---------------------------------------------------------------------------
 
 function publicConfig() {
@@ -366,7 +463,8 @@ async function api(req, res, url) {
 
   // --- Sessions ---
   if (parts[0] === 'sessions') {
-    if (limited(req, 'sessions', 120)) return fail(res, 429, 'rateLimited');
+    // Ganze Klassen hinter einer Schul-Adresse (NAT) speichern laufend: grosszügige Grenze.
+    if (limited(req, 'sessions', 600)) return fail(res, 429, 'rateLimited');
     const s = settings();
     const ttl = s.sessionHours * 3_600_000;
 
@@ -396,16 +494,52 @@ async function api(req, res, url) {
       const body = await readBody(req);
       if (!validProject(body.project)) return fail(res, 400, 'invalidProject');
       const now = Date.now();
+      // Prüfungs-Session: nur speichern, solange die Zeit des Platzes läuft (plus kurze Gnadenfrist).
+      if (item.exam) {
+        const exam = loadExam(item.exam.id);
+        const seat = exam && exam.seats.find((s) => s.id === item.exam.seat);
+        if (!exam || !seat) return fail(res, 404, 'unknownSession');
+        if (!exam.started || now > seat.until + EXAM_GRACE_MS) return json(res, 423, { error: 'examClosed', exam: seatStatus(exam, seat) });
+        writeJson(fileFor(dirs.sessions, code), { ...item, project: body.project, updated: now });
+        return json(res, 200, { code, expires: item.expires, exam: seatStatus(exam, seat) });
+      }
       // Die Frist läuft ab der letzten Änderung (Arbeit geht nicht mitten in der Lektion verloren).
       const next = { ...item, project: body.project, updated: now, expires: now + ttl };
       writeJson(fileFor(dirs.sessions, code), next);
       return json(res, 200, { code, expires: next.expires });
     }
     if (method === 'DELETE') {
+      // Abgaben einer Prüfung löscht nur der Admin.
+      if (item.exam) return fail(res, 403, 'examSession');
       remove(fileFor(dirs.sessions, code));
       return json(res, 200, { deleted: true });
     }
     return fail(res, 405, 'methodNotAllowed');
+  }
+
+  // --- Prüfung beitreten (mit Platz-Code) ---
+  if (parts[0] === 'exams' && parts[1] === 'join' && method === 'POST') {
+    if (limited(req, 'examJoin', 600)) return fail(res, 429, 'rateLimited');
+    const body = await readBody(req);
+    const seatCode = normalizeCode(body.seatCode);
+    const found = seatCode && findSeat(seatCode);
+    if (!found) return fail(res, 404, 'unknownSeat');
+    const { exam, seat } = found;
+    const status = seatStatus(exam, seat);
+    if (status.state === 'waiting') return json(res, 200, { exam: status });
+    // Weiterarbeiten: vorhandene Session des Platzes; sonst neue mit der Prüfungsdatei.
+    let session = list(dirs.sessions).find((x) => x.exam && x.exam.id === exam.id && x.exam.seat === seat.id);
+    let fresh = false;
+    if (!session) {
+      if (status.state === 'closed') return json(res, 200, { exam: status });
+      let code = newCode();
+      while (fs.existsSync(fileFor(dirs.sessions, code))) code = newCode();
+      const now = Date.now();
+      session = { code, created: now, updated: now, expires: exam.expires, classCode: null, exam: { id: exam.id, seat: seat.id }, project: exam.learner };
+      writeJson(fileFor(dirs.sessions, code), session);
+      fresh = true;
+    }
+    return json(res, 200, { exam: status, session: session.code, fresh, variant: seat.variant || null, project: session.project });
   }
 
   // --- Klassen beitreten ---
@@ -540,6 +674,8 @@ async function admin(req, res, parts, method) {
     }
   }
 
+  if (parts[0] === 'exams') return adminExams(req, res, parts.slice(1), method);
+
   if (parts[0] === 'classes') {
     if (parts.length === 1 && method === 'POST') {
       const body = await readBody(req);
@@ -573,7 +709,8 @@ async function admin(req, res, parts, method) {
 
   if (parts[0] === 'sessions') {
     if (parts.length === 1 && method === 'DELETE') {
-      for (const s of list(dirs.sessions)) remove(fileFor(dirs.sessions, s.code));
+      // Abgaben von Prüfungen bleiben (sie werden mit der Prüfung gelöscht).
+      for (const s of list(dirs.sessions)) if (!s.exam) remove(fileFor(dirs.sessions, s.code));
       return json(res, 200, { ok: true });
     }
     const code = normalizeCode(parts[1]);
@@ -586,6 +723,97 @@ async function admin(req, res, parts, method) {
     }
   }
 
+  return fail(res, 404, 'notFound');
+}
+
+async function adminExams(req, res, parts, method) {
+  if (parts.length === 0 && method === 'GET') {
+    return json(res, 200, list(dirs.exams).sort((a, b) => b.created - a.created).map((e) => examSummary(e)));
+  }
+  if (parts.length === 0 && method === 'POST') {
+    const body = await readBody(req, MAX_EXAM_BODY);
+    const learner = body.learner;
+    const info = learner && learner.tasks && learner.tasks.exam;
+    if (!validProject(learner) || !info || typeof info.id !== 'string') return fail(res, 400, 'notAnExam');
+    const label = typeof body.label === 'string' ? body.label.trim().slice(0, 60) : '';
+    if (!label) return fail(res, 400, 'labelRequired');
+    // Plätze: je Variante einer, bei nur einer Variante so viele wie gewünscht.
+    const variants = Array.isArray(info.variants) ? info.variants.map((v) => String(v.id)) : null;
+    const count = variants ? variants.length : Number.isInteger(body.seats) && body.seats >= 1 && body.seats <= MAX_EXAM_SEATS ? body.seats : 0;
+    if (!count || count > MAX_EXAM_SEATS) return fail(res, 400, 'badSeats');
+    let key = null;
+    if (body.key !== undefined && body.key !== null) {
+      if (!body.key.meta || body.key.meta.format !== 'netzwerk-simulator-pruefungsschluessel' || !body.key.key || body.key.key.id !== info.id) return fail(res, 400, 'keyMismatch');
+      key = encryptKey(body.key);
+    }
+    const minutes = Number.isInteger(body.minutes) && body.minutes > 0 && body.minutes <= MAX_EXAM_MINUTES ? body.minutes : Number.isInteger(info.minutes) ? info.minutes : 60;
+    const used = new Set(list(dirs.exams).flatMap((e) => e.seats.map((s) => s.code)));
+    const seats = Array.from({ length: count }, (_, i) => {
+      let code = newCode();
+      while (used.has(code)) code = newCode();
+      used.add(code);
+      return { id: variants ? variants[i] : String(i + 1).padStart(2, '0'), variant: variants ? variants[i] : null, code, extra: 0, until: 0 };
+    });
+    const now = Date.now();
+    const exam = {
+      id: crypto.randomBytes(8).toString('hex'),
+      examId: info.id,
+      label,
+      title: typeof learner.tasks.title === 'string' ? learner.tasks.title.slice(0, 160) : label,
+      minutes,
+      created: now,
+      started: 0,
+      expires: now + EXAM_DAYS * 86_400_000,
+      learner,
+      key,
+      seats,
+    };
+    saveExam(exam);
+    return json(res, 201, examSummary(exam, true));
+  }
+  const exam = loadExam(parts[0]);
+  if (!exam) return fail(res, 404, 'unknownExam');
+  const now = Date.now();
+  if (parts.length === 1 && method === 'GET') return json(res, 200, examSummary(exam, true));
+  if (parts.length === 1 && method === 'DELETE') {
+    for (const s of list(dirs.sessions)) if (s.exam && s.exam.id === exam.id) remove(fileFor(dirs.sessions, s.code));
+    remove(path.join(dirs.exams, `${exam.id}.json`));
+    return json(res, 200, { ok: true });
+  }
+  if (parts[1] === 'start' && method === 'POST') {
+    if (exam.started) return fail(res, 409, 'alreadyStarted');
+    exam.started = now;
+    for (const s of exam.seats) s.until = now + (exam.minutes + (s.extra || 0)) * 60_000;
+    saveExam(exam);
+    return json(res, 200, examSummary(exam, true));
+  }
+  if (parts[1] === 'end' && method === 'POST') {
+    if (!exam.started) return fail(res, 409, 'notStarted');
+    for (const s of exam.seats) s.until = Math.min(s.until, now);
+    saveExam(exam);
+    return json(res, 200, examSummary(exam, true));
+  }
+  // Nachteilsausgleich: Minuten für einen Platz dazugeben (vor dem Start oder später; ein abgegebener Platz öffnet wieder).
+  if (parts[1] === 'seats' && parts[3] === 'extra' && method === 'POST') {
+    const seat = exam.seats.find((s) => s.id === parts[2]);
+    if (!seat) return fail(res, 404, 'unknownSeat');
+    const body = await readBody(req);
+    const minutes = Number.isInteger(body.minutes) && Math.abs(body.minutes) <= MAX_EXAM_MINUTES && body.minutes !== 0 ? body.minutes : null;
+    if (minutes === null) return fail(res, 400, 'badMinutes');
+    seat.extra = Math.max(0, (seat.extra || 0) + minutes);
+    if (exam.started) seat.until = minutes > 0 ? Math.max(seat.until, now) + minutes * 60_000 : Math.max(exam.started, seat.until + minutes * 60_000);
+    saveExam(exam);
+    return json(res, 200, examSummary(exam, true));
+  }
+  // Abgaben für die Auswertung, mit entschlüsseltem Schlüssel.
+  if (parts[1] === 'submissions' && method === 'GET') {
+    const key = exam.key ? decryptKey(exam.key) : null;
+    const submissions = list(dirs.sessions)
+      .filter((s) => s.exam && s.exam.id === exam.id)
+      .sort((a, b) => a.exam.seat.localeCompare(b.exam.seat))
+      .map((s) => ({ seat: s.exam.seat, code: exam.seats.find((x) => x.id === s.exam.seat)?.code || '', updated: s.updated, project: s.project }));
+    return json(res, 200, { id: exam.id, examId: exam.examId, title: exam.title, label: exam.label, key, keyError: exam.key && !key ? 'unreadable' : null, submissions });
+  }
   return fail(res, 404, 'notFound');
 }
 

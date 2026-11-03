@@ -42,12 +42,13 @@ Danach unter der Adresse der Subdomain den Simulator öffnen. Oben rechts ersche
 ## Admin-Konsole
 
 - **Klassen**: Klassen-Sessions eröffnen (nur eine Bezeichnung wie «INF22a», keine Namen), den Klassencode verteilen, die Arbeiten der Klasse öffnen und die Klasse schliessen.
+- **Prüfungen**: Prüfungsdatei und Schlüssel hochladen, Platzkarten mit Platz-Codes drucken, starten, Nachteilsausgleich je Platz, beenden, automatisch auswerten, Abgaben herunterladen (siehe [pruefungen.md](pruefungen.md#prüfung-in-der-webversion-server)). Gespeichert wird unter `DATA_DIR/exams`, gelöscht nach 60 Tagen. Der Schlüssel ist mit dem Admin-Passwort verschlüsselt: **Admin-Passwort nicht während laufender Prüfungen ändern.**
 - **Rückmeldungen**: Probleme und Ideen der Lernenden, mit Status *neu / in Arbeit / erledigt*.
 - **Einstellungen**:
   - erlaubte Modi (Entwurf, Simulation)
   - **Standardprofil** und **höchstes Profil** (1 = 1. Lehrjahr … 5 = Studium) sowie einzelne **gesperrte Funktionen** (siehe [funktionsprofile.md](funktionsprofile.md))
   - Aufbewahrung von Sessions, Klassen und Rückmeldungen, Rückmeldungen ein/aus
-- **Prüfungen**: Ergebnis der Release-Prüfung (Datenschutz, Sicherheit, Lizenzen) der ausgelieferten Version aus `release/checks.json` (siehe [datenschutz.md](datenschutz.md#prüfung-bei-jedem-release)).
+- **Systemprüfung**: Ergebnis der Release-Prüfung (Datenschutz, Sicherheit, Lizenzen) der ausgelieferten Version aus `release/checks.json` (siehe [datenschutz.md](datenschutz.md#prüfung-bei-jedem-release)).
 
 Ältere Einstellungen (Aktions- und Dokumentationsmodus, Pro-Version) werden beim ersten Start automatisch übernommen: «Pro aus» wird zu höchstem Profil 3.
 
@@ -114,5 +115,6 @@ add_header Content-Security-Policy "default-src 'none'; script-src 'unsafe-inlin
 ## Sicherung und Löschung
 
 - Alle Daten liegen als JSON-Dateien in `DATA_DIR` (`sessions/`, `classes/`, `feedback/`, `settings.json`). Abgelaufene Einträge löscht der Server selbständig (beim Start und danach regelmässig).
+- Während einer Prüfung speichern alle Plätze alle 20 Sekunden. Ganze Klassen hinter einer Schuladresse (NAT) sind eingeplant (bis 600 Speicherungen pro Minute und Adresse).
 - Eine Sicherung ist nicht nötig und aus Datenschutzsicht auch nicht erwünscht: Sessions sind kurzlebige Arbeitsstände. Wer `DATA_DIR` trotzdem sichert, muss die Sicherungen ebenso kurz aufbewahren.
 - Alles sofort löschen: App stoppen, Ordner `DATA_DIR` leeren, App starten.

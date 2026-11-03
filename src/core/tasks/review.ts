@@ -189,3 +189,46 @@ export function parseCorrections(text: string): Corrections | null {
     return null;
   }
 }
+
+/** Abgaben einer Server-Prüfung als eine Datei (Webversion → Download für die Lehrperson). */
+export const BUNDLE_FORMAT = 'netzwerk-simulator-abgaben';
+
+export interface SubmissionBundle {
+  title: string;
+  label?: string;
+  /** Prüfungsschlüssel als Text (Datei der Lehrperson), falls hinterlegt. */
+  key: string | null;
+  submissions: { seat: string; updated: number; project: unknown }[];
+}
+
+export function serializeBundle(bundle: SubmissionBundle): string {
+  const { key, ...rest } = bundle;
+  return JSON.stringify({ meta: { format: BUNDLE_FORMAT, version: 1 }, ...rest, key: key ? JSON.parse(key) : null }, null, 1) + '\n';
+}
+
+/** Liest eine Abgabe-Sammlung; liefert je Platz eine «Datei» (Name = Präfix + Platz). */
+export function parseBundle(text: string, prefix: string): { title: string; key: string | null; files: { name: string; text: string }[] } | null {
+  try {
+    const data = JSON.parse(text) as { meta?: { format?: string }; title?: unknown; key?: unknown; submissions?: unknown };
+    if (data.meta?.format !== BUNDLE_FORMAT || !Array.isArray(data.submissions)) return null;
+    const files = (data.submissions as { seat?: unknown; project?: unknown }[])
+      .filter((s) => typeof s.seat === 'string' && s.project && typeof s.project === 'object')
+      .map((s) => ({ name: `${prefix} ${s.seat as string}`, text: JSON.stringify(s.project) }));
+    return { title: typeof data.title === 'string' ? data.title : '', key: data.key && typeof data.key === 'object' ? JSON.stringify(data.key) : null, files };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Namensliste der Lehrperson (nur im Browser): Zeilen wie «07 Anna Muster»,
+ * «07; Anna Muster» oder «Platz 07: Anna Muster». Schlüssel = Platz.
+ */
+export function parseNameList(text: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^\s*(?:\p{L}+\s+)?([A-Za-z0-9-]{1,12})\s*[:;,=\t ]\s*(.+?)\s*$/u.exec(line);
+    if (m) out.set(m[1]!.toUpperCase(), m[2]!);
+  }
+  return out;
+}

@@ -82,3 +82,26 @@ describe('Prüfungen «Firmennetz mit drei Standorten»', () => {
     expect(checkExamSpec({ ...spec, intranet: { ...spec.intranet, domain: 'bern.ch' } })).toMatchObject({ code: 'domain' });
   });
 });
+
+describe('Server-Prüfung: Abgaben-Sammlung wird automatisch korrigiert', () => {
+  it('Musterlösung des Platzes erhält volle Punkte, leerer Platz keine', async () => {
+    const { buildExam, chooseVariant, parseBundle, readTasks, reviewSubmission, serializeBundle, serializeExamKey, parseExamKey } = await import('../core');
+    const specs = [1, 2].map((s) => randomExam(s, String(s)));
+    const { learner, key } = await buildExam({ id: 'P-WEB', title: 'Web', code: 'X1', totalLabel: 'Total', variants: specs.map((s, i) => ({ id: `0${i + 1}`, tasks: buildExamTasks(s), topology: emptyTopology() })) });
+    const chosen = chooseVariant(learner.tasks, '02')!;
+    const done = JSON.parse(serializeProject(buildExamSolution(specs[1]!), chosen.tasks));
+    const empty = JSON.parse(serializeProject(emptyTopology(), chooseVariant(learner.tasks, '01')!.tasks));
+    const text = serializeBundle({ title: 'Web', key: serializeExamKey(key), submissions: [{ seat: '01', updated: 1, project: empty }, { seat: '02', updated: 2, project: done }] });
+    const bundle = parseBundle(text, 'Platz')!;
+    const parsedKey = parseExamKey(bundle.key!, readTasks);
+    expect(parsedKey.ok).toBe(true);
+    const k = parsedKey.ok ? parsedKey.key : null;
+    const [a, b] = bundle.files.map((f) => reviewSubmission(f.name, f.text, null, k));
+    expect(a).toMatchObject({ ok: true, name: 'Platz 01', variant: '01' });
+    expect(b).toMatchObject({ ok: true, name: 'Platz 02', variant: '02' });
+    if (!a!.ok || !b!.ok) return;
+    expect(a!.points).toBe(0);
+    expect(b!.maxPoints).toBe(EXAM_POINTS.total);
+    expect(b!.points).toBe(b!.maxPoints);
+  });
+});

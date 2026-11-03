@@ -17,6 +17,7 @@
   import ExamDialog from './ExamDialog.svelte';
   import ExamEndDialog from './ExamEndDialog.svelte';
   import ExamExportDialog from './ExamExportDialog.svelte';
+  import ExamJoinDialog from './ExamJoinDialog.svelte';
   import ExamStartDialog from './ExamStartDialog.svelte';
   import SaveDialog from './SaveDialog.svelte';
   import SessionDialog from './SessionDialog.svelte';
@@ -57,6 +58,8 @@
   <ExamExportDialog onclose={close} />
 {:else if dialogs.open === 'examStart'}
   <ExamStartDialog onclose={close} />
+{:else if dialogs.open === 'examJoin'}
+  <ExamJoinDialog onclose={close} />
 {:else if dialogs.open === 'examEnd'}
   <ExamEndDialog onclose={close} />
 {:else if dialogs.open === 'taskEditor'}

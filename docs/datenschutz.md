@@ -19,10 +19,10 @@ Das Konzept folgt dem Schweizer Datenschutzgesetz (revDSG, in Kraft seit 1.9.202
 |---|---|---|
 | Aktuelles Projekt (Autosave) inkl. Snapshots | IndexedDB im Browserprofil bzw. im App-Datenordner | bis «Neues Netz» oder Löschen der Browserdaten |
 | Sprache, Darstellung (hell/dunkel), Funktionsprofil bzw. Funktionsauswahl, Währung, Adressanzeige und Schnittstellennamen an Kabeln ein/aus, ein- und ausgefahrene Bereiche, Anschlusswahl beim Verbinden, Aussehen des Avatars (nur Frisur, Farben usw., kein Name, kein Bild) | `localStorage` | bis Löschen der Browserdaten |
-| Laufende Prüfung (Kennung, Titel, Platznummer, Beginn, Prüfwert des Codes), damit der Prüfungsmodus ein Neuladen übersteht | `localStorage` | bis die Lehrperson die Prüfung beendet |
+| Laufende Prüfung (Kennung, Titel, Platznummer, Beginn, Prüfwert des Codes; in der Webversion zusätzlich Platz-Code und Ende), damit der Prüfungsmodus ein Neuladen übersteht | `localStorage` | bis die Lehrperson die Prüfung beendet bzw. nach der Abgabe |
 | Gespeicherte Projekte und Funktionsdateien | `.json`-Dateien, die die Person selbst ablegt | liegt in ihrer Hand |
 
-Projektdateien enthalten Geräte, Kabel, Adressen und Konfiguration, auch Webseiten und Bilder, die auf einem simulierten Webserver liegen. Bilder werden beim Hochladen auf höchstens 480 Pixel verkleinert und neu kodiert, dabei gehen Metadaten wie Ort und Kamera verloren (EXIF). Trotzdem gilt: **keine Fotos von Personen hochladen.** Gerätenamen sind frei wählbar; sie sollten neutral sein («PC 1», nicht «PC Anna»). Der gemeinsame Schlüssel eines simulierten VPN-Tunnels steht im Klartext in der Projektdatei; er schützt nichts Reales und darf **kein echtes Passwort** sein. Bei Prüfungen erstellt die Lehrperson zusätzlich einen Prüfungsschlüssel und allenfalls eine Korrekturdatei (Punkte und Bemerkungen je Abgabe, mit den Dateinamen der Abgaben). Beide entstehen und bleiben auf ihrem Gerät; leyoNET lädt nichts hoch.
+Projektdateien enthalten Geräte, Kabel, Adressen und Konfiguration, auch Webseiten und Bilder, die auf einem simulierten Webserver liegen. Bilder werden beim Hochladen auf höchstens 480 Pixel verkleinert und neu kodiert, dabei gehen Metadaten wie Ort und Kamera verloren (EXIF). Trotzdem gilt: **keine Fotos von Personen hochladen.** Gerätenamen sind frei wählbar; sie sollten neutral sein («PC 1», nicht «PC Anna»). Der gemeinsame Schlüssel eines simulierten VPN-Tunnels steht im Klartext in der Projektdatei; er schützt nichts Reales und darf **kein echtes Passwort** sein. Bei Prüfungen erstellt die Lehrperson zusätzlich einen Prüfungsschlüssel und allenfalls eine Korrekturdatei (Punkte und Bemerkungen je Abgabe, mit den Dateinamen der Abgaben). Beide entstehen und bleiben auf ihrem Gerät; leyoNET lädt nichts hoch (Ausnahme: Prüfungen in der Webversion, siehe unten).
 
 Es wird nichts übertragen. Die Admin-Konsole, Sessions und Rückmeldungen sind hier ausgegraut.
 
@@ -40,6 +40,13 @@ Es wird nichts übertragen. Die Admin-Konsole, Sessions und Rückmeldungen sind 
 - Die Lehrperson eröffnet in der Admin-Konsole eine Klasse mit einer **Bezeichnung ohne Personenbezug** (z.B. «INF22a»). Lernende treten mit dem Klassencode bei.
 - Die Lehrperson sieht die Session-Codes und kann die Arbeiten öffnen, aber **keine Namen**. Wer welche Session hat, klärt die Klasse mündlich oder über den Code, ohne dass der Server davon weiss.
 - Löschung: automatisch nach der eingestellten Zeit (Standard 14 Tage) oder mit **Schliessen**.
+
+### Prüfungen (Webversion)
+
+- Inhalt: Bezeichnung (z.B. «INF22a LB3»), die **Prüfungsdatei**, der **Prüfungsschlüssel verschlüsselt** (AES-256-GCM, Schlüssel aus dem Admin-Passwort abgeleitet), Dauer, Startzeit, je Platz eine **Platznummer** und ein **Platz-Code**, allfällige Zusatzminuten (Nachteilsausgleich) und das Ende. Die Arbeiten liegen als Sessions mit Verweis auf Prüfung und Platz.
+- **Keine Namen:** Der Server kennt nur Plätze. Die Zuordnung Platz ↔ Person hat nur die Lehrperson (Sitzplan, Platzkarten). Eine Namensliste im Auswertungsfenster bleibt im Arbeitsspeicher des Browsers und wird nicht übertragen. Die Zusatzminuten sind eine Zahl ohne Begründung; der Grund für einen Nachteilsausgleich gehört nicht in leyoNET.
+- Löschung: automatisch **60 Tage** nach dem Anlegen (Prüfungseinsicht und Rekursfrist), oder sofort mit «Löschen» in der Admin-Konsole (Prüfung samt allen Abgaben). Lernende können eine Prüfungs-Session nicht selbst löschen, damit die Abgabe erhalten bleibt.
+- Im Browser der Lernenden: Platz-Code, Session-Code und Zustand der Prüfung in `localStorage`, bis sie die Prüfung nach der Abgabe schliessen.
 
 ### Rückmeldungen
 
@@ -69,7 +76,7 @@ Auch ein vorgeschaltetes CDN oder ein Reverse-Proxy kann protokollieren.
 
 ## Prüfung bei jedem Release
 
-`npm run release` führt `scripts/release-checks.mjs` aus und bricht bei einem Fehler ab. Das Ergebnis steht in `release/checks.json` und in der Webversion unter **Admin-Konsole → Prüfungen**. Geprüft wird automatisch:
+`npm run release` führt `scripts/release-checks.mjs` aus und bricht bei einem Fehler ab. Das Ergebnis steht in `release/checks.json` und in der Webversion unter **Admin-Konsole → Systemprüfung**. Geprüft wird automatisch:
 
 | Bereich | Prüfung |
 |---|---|
@@ -77,7 +84,7 @@ Auch ein vorgeschaltetes CDN oder ein Reverse-Proxy kann protokollieren.
 | Sicherheit | Server ohne npm-Pakete; keine Laufzeitabhängigkeiten; `npm audit` der Build-Werkzeuge; Sicherheits-Header (CSP, nosniff, no-referrer, kein Einbetten); kein `eval`; Admin nur mit Passwort, Vergleich in konstanter Zeit |
 | Lizenzen | eingebaute Pakete nur mit freigegebener Lizenz; Lizenztexte eingebettet; eigener Code unter AGPL-3.0 mit Link zum Quellcode in der App; Lizenzen der Build-Werkzeuge |
 
-Die Prüfung ersetzt keine rechtliche Beurteilung, verhindert aber, dass sich unbemerkt ein Tracker, eine externe Schrift oder eine unpassende Lizenz einschleicht.
+Die Release-Prüfung ersetzt keine rechtliche Beurteilung, verhindert aber, dass sich unbemerkt ein Tracker, eine externe Schrift oder eine unpassende Lizenz einschleicht.
 
 ## Ort der Daten
 

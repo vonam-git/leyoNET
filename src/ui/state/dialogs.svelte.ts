@@ -28,7 +28,8 @@ export type DialogName =
   | 'save'
   | 'examStart'
   | 'examEnd'
-  | 'examExport';
+  | 'examExport'
+  | 'examJoin';
 
 /** Werte, die der IP-Rechner übernehmen kann (z.B. in das Formular eines Rechners). */
 export interface IpCalcTarget {

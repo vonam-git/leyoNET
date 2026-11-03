@@ -2,6 +2,8 @@
   import {
     correctedScore,
     goalPoints,
+    parseBundle,
+    parseNameList,
     parseCorrections,
     parseExamKey,
     pointsOf,
@@ -20,6 +22,7 @@
   import { downloadText } from '../persist/files';
   import { reviewReportHtml } from '../reviewReport';
   import { editor } from '../state/editor.svelte';
+  import { reviewInbox } from '../state/reviewInbox';
 
   /**
    * Für Lehrpersonen: Projektdateien der Klasse auf einmal öffnen und gegen die
@@ -36,6 +39,13 @@
   let corrections = $state<Corrections>({});
   let selected = $state<{ file: string; goal: string | null } | null>(null);
   let running = $state(0);
+  let total = $state(0);
+  /** Namensliste der Lehrperson: bleibt nur in diesem Fenster, wird nirgends gespeichert. */
+  let nameText = $state('');
+  const names = $derived(parseNameList(nameText));
+  const seatOf = (file: string) => file.split(/\s+/).pop()!.replace(/\.json$/i, '').toUpperCase();
+  const person = (file: string) => names.get(seatOf(file)) ?? null;
+  const display = (file: string) => (person(file) ? `${file} – ${person(file)}` : file);
   let dialog: HTMLDialogElement;
 
   // Spalten: Schlüssel, geladene Aufgabe, sonst die der ersten lesbaren Datei.
@@ -47,15 +57,43 @@
 
   $effect(() => {
     dialog.showModal();
+    // Abgaben aus der Admin-Konsole (Server-Prüfung): sofort automatisch auswerten.
+    const inbox = reviewInbox.value;
+    reviewInbox.value = null;
+    if (inbox) {
+      if (inbox.key) useKey(inbox.key);
+      texts = inbox.files;
+      void evaluate();
+    }
   });
 
-  function evaluate() {
-    running = texts.length;
-    // Die Prüf-Simulationen laufen synchron; kurz warten, damit «prüfe …» sichtbar wird.
-    setTimeout(() => {
-      reviews = texts.map(({ name, text }): SubmissionReview => (text === null ? { ok: false, name, error: { code: 'readFailed' } } : reviewSubmission(name, text, key ? null : editor.tasks, key)));
-      running = 0;
-    }, 20);
+  let run = 0;
+  /** Eine Abgabe nach der anderen auswerten, damit Fortschritt sichtbar bleibt und der Browser nicht hängt. */
+  async function evaluate() {
+    const id = ++run;
+    const list = texts;
+    total = list.length;
+    running = list.length;
+    const out: SubmissionReview[] = [];
+    for (const { name, text } of list) {
+      await new Promise((r) => setTimeout(r, 0));
+      if (id !== run) return;
+      out.push(text === null ? { ok: false, name, error: { code: 'readFailed' } } : reviewSubmission(name, text, key ? null : editor.tasks, key));
+      running = list.length - out.length;
+    }
+    reviews = out;
+    running = 0;
+  }
+
+  function useKey(text: string): boolean {
+    const parsed = parseExamKey(text, readTasks);
+    if (!parsed.ok) {
+      editor.notify(t('review.keyInvalid'), 'error');
+      return false;
+    }
+    key = parsed.key;
+    editor.notify(t('review.keyLoaded', { title: parsed.key.title, n: parsed.key.variants.length }));
+    return true;
   }
 
   async function choose(event: Event) {
@@ -64,18 +102,20 @@
     input.value = '';
     if (files.length === 0) return;
     const read = await Promise.all(files.map((f) => f.text().catch(() => null)));
-    texts = files.map((f, i) => ({ name: f.name, text: read[i] ?? null }));
-    evaluate();
+    // Sammeldatei einer Server-Prüfung: je Platz eine Abgabe, Schlüssel dabei.
+    const bundles = read.map((text) => (text ? parseBundle(text, t('exam.seatWord')) : null));
+    if (bundles.some(Boolean)) {
+      const keyText = bundles.find((b) => b?.key)?.key;
+      if (keyText) useKey(keyText);
+    }
+    texts = files.flatMap((f, i) => bundles[i]?.files ?? [{ name: f.name, text: read[i] ?? null }]);
+    void evaluate();
   }
 
   async function loadKey() {
     const file = await pickFile('.json,application/json');
     if (!file) return;
-    const parsed = parseExamKey(file.text, readTasks);
-    if (!parsed.ok) return editor.notify(t('review.keyInvalid'), 'error');
-    key = parsed.key;
-    editor.notify(t('review.keyLoaded', { title: parsed.key.title, n: parsed.key.variants.length }));
-    if (texts.length) evaluate();
+    if (useKey(parseBundle(file.text, '')?.key ?? file.text) && texts.length) void evaluate();
   }
 
   async function loadCorrections() {
@@ -92,20 +132,32 @@
     downloadText(`korrektur-${slug()}.json`, serializeCorrections(key?.id, $state.snapshot(corrections) as Corrections));
   }
 
+  /** Für CSV und Berichte: Namen aus der Namensliste anfügen (nur in der Datei bei der Lehrperson). */
+  function labelled(): { reviews: SubmissionReview[]; corrections: Corrections } {
+    const plain = $state.snapshot(corrections) as Corrections;
+    if (names.size === 0) return { reviews, corrections: plain };
+    return {
+      reviews: reviews.map((r) => ({ ...r, name: display(r.name) })),
+      corrections: Object.fromEntries(Object.entries(plain).map(([file, c]) => [display(file), c])),
+    };
+  }
+
   function saveCsv() {
     if (!columns) return;
+    const out = labelled();
     const csv = reviewCsv(
       columns,
-      reviews,
-      { file: t('review.file'), score: t('review.score'), error: t('review.error'), points: t('review.points'), grade: t('review.grade'), variant: t('exam.seat'), comment: t('review.report.comment') },
-      $state.snapshot(corrections) as Corrections,
+      out.reviews,
+      { file: t('review.file'), score: t('review.score'), error: t('review.error'), points: t('review.points'), grade: t('review.grade'), variant: t('exam.seatWord'), comment: t('review.report.comment') },
+      out.corrections,
     );
     // BOM, damit Excel Umlaute richtig liest.
     downloadText(`auswertung-${slug()}.csv`, '\ufeff' + csv, 'text/csv');
   }
 
   function saveReports() {
-    downloadText(`berichte-${slug()}.html`, reviewReportHtml(reviews, $state.snapshot(corrections) as Corrections, title), 'text/html');
+    const out = labelled();
+    downloadText(`berichte-${slug()}.html`, reviewReportHtml(out.reviews, out.corrections, title), 'text/html');
   }
 
   function close() {
@@ -153,9 +205,14 @@
     {#if key}<button onclick={() => ((key = null), texts.length && evaluate())}>{t('review.keyRemove')}</button>{/if}
     <button onclick={loadCorrections}>{t('review.loadCorrections')}</button>
   </div>
+  <details class="names">
+    <summary>{t('review.names')}{names.size ? ` (${names.size})` : ''}</summary>
+    <p class="muted">{t('review.namesHint')}</p>
+    <textarea bind:value={nameText} rows="4" placeholder={t('review.namesPlaceholder')} spellcheck="false" autocomplete="off"></textarea>
+  </details>
 
   {#if running}
-    <p role="status">{t('review.running', { n: running })}</p>
+    <p role="status">{t('review.running', { n: running })} <progress max={total} value={total - running}></progress></p>
   {:else if reviews.length === 0}
     <p class="muted">{t('review.empty')}</p>
   {:else if !columns}
@@ -169,7 +226,7 @@
         <thead>
           <tr>
             <th scope="col">{t('review.file')}</th>
-            {#if key}<th scope="col">{t('exam.seat')}</th>{/if}
+            {#if key}<th scope="col">{t('exam.seatWord')}</th>{/if}
             <th scope="col" class="num">{t('review.score')}</th>
             {#if withPoints}<th scope="col" class="num">{t('review.points')}</th>{/if}
             {#if columns.grading}<th scope="col" class="num">{t('review.grade')}</th>{/if}
@@ -184,6 +241,7 @@
             <tr class:similar={similarTo(review.name).length > 0}>
               <th scope="row">
                 <button class="link" onclick={() => (selected = { file: review.name, goal: null })} disabled={!review.ok} title={t('review.commentHint')}>{review.name}</button>
+                {#if person(review.name)}<span class="person">{person(review.name)}</span>{/if}
                 {#if c?.comment}<span title={c.comment}>💬</span>{/if}
                 {#if similarTo(review.name).length}<span class="warn" title={t('review.similarTo', { list: similarTo(review.name).join(', ') })}>⚠</span>{/if}
                 {#if review.ok && review.ownTasks && review.tasks.title !== columns.title}
@@ -401,6 +459,18 @@
   .block textarea {
     width: 100%;
     min-height: 4em;
+  }
+  .names {
+    margin-top: 6px;
+    font-size: 0.85rem;
+  }
+  .names textarea {
+    width: 100%;
+    font-family: ui-monospace, Consolas, monospace;
+  }
+  .person {
+    margin-left: 4px;
+    font-weight: 600;
   }
   .legend {
     font-size: 0.75rem;

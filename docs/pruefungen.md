@@ -45,6 +45,34 @@ Die Lernenden sehen also nur, *was* zu tun ist und wie viele Punkte ein Teil gib
 - Der Modus übersteht ein Neuladen. Er endet nur mit dem **Code der Lehrperson** (steht im Schlüssel und im Dialog beim Erstellen). In der Datei steht nur ein Prüfwert (SHA-256) des Codes.
 - **Abgeben** heisst: Projekt speichern (Strg+S) und die Datei wie vereinbart abgeben (Prüfungsordner, Teams, Moodle, USB-Stick).
 
+## Prüfung in der Webversion (Server)
+
+Läuft leyoNET als Webversion mit Node-Server (siehe [plesk.md](plesk.md)), geht es ohne Dateiablage:
+
+1. **Admin-Konsole → Prüfungen:** Prüfungsdatei und Schlüssel hochladen, Bezeichnung (z.B. «INF22a LB3»), Plätze und Minuten. Bei einer Prüfung mit Varianten gibt es je Variante einen Platz.
+2. **Platzkarten drucken:** eine Karte je Platz mit Platz-Code (z.B. `K7QX-3MPA`), Adresse und Anleitung. Karten an die Plätze legen.
+3. Die Lernenden öffnen leyoNET, **Datei → Prüfung beitreten …** und tippen den Platz-Code ein. Vor dem Start warten sie; danach erhält jeder Platz seine Variante, der Prüfungsmodus beginnt.
+4. **Starten.** Die Tabelle zeigt je Platz: beigetreten, zuletzt gespeichert, Ende. Der Stand wird **alle 20 Sekunden** automatisch gespeichert (und beim Schliessen der Seite). Ein Neuladen oder ein Absturz kostet höchstens diese 20 Sekunden; mit demselben Platz-Code geht es auf jedem Rechner weiter.
+5. **Nachteilsausgleich** je Platz: «+5′», «+15′» (vor oder während der Prüfung, auch nach Ablauf – der Platz öffnet dann wieder), «−5′» zum Korrigieren.
+6. Ist die Zeit eines Platzes um, nimmt der Server nichts mehr an: Der letzte Stand ist **automatisch abgegeben**, die Lernenden sehen «Abgegeben». «Für alle beenden» beendet alle Plätze sofort.
+7. **Automatisch auswerten:** alle Abgaben werden mit dem hinterlegten Schlüssel korrigiert (wie unten beschrieben, mit Nachkorrektur, CSV und Berichten). **Abgaben herunterladen** speichert eine Datei mit allen Abgaben und dem Schlüssel (`abgaben-….json`); «Abgaben auswerten» liest sie später wieder.
+
+### Wer ist wer?
+
+Der Server kennt **keine Namen**, nur Plätze. Die Zuordnung behältst du:
+
+- Du verteilst die Platzkarten gezielt (Sitzplan) bzw. die Lernenden schreiben ihren Namen auf die Karte und geben sie am Ende zurück.
+- Im Auswertungsfenster kannst du eine **Namensliste** einfügen (je Zeile «07 Anna Muster»). Die Namen erscheinen in der Tabelle, in der CSV-Datei und in den Berichten, werden aber weder gespeichert noch an den Server geschickt und sind beim Schliessen des Fensters weg.
+
+Die Lernenden müssen dir also nichts schicken; der Platz-Code ist zugleich ihre Abgabe.
+
+### Sicherheit und Aufbewahrung
+
+- Der Schlüssel liegt auf dem Server **verschlüsselt** (AES-256-GCM, abgeleitet vom Admin-Passwort). Wird das Admin-Passwort geändert, lässt er sich nicht mehr entschlüsseln; dann den Schlüssel im Auswertungsfenster von Hand laden.
+- Die Lernenden erhalten nur die Prüfungsdatei (ohne Lösungen). Der Platz-Code ist wie ein Passwort: Wer ihn kennt, arbeitet an diesem Platz.
+- Prüfung, Abgaben und Platz-Codes werden **60 Tage** nach dem Anlegen gelöscht (Aufbewahrung für Einsicht und Rekurs) oder sofort mit «Löschen».
+- Gesperrt werden auf dem Server auch das Löschen der Session und das Speichern nach Ablauf (30 Sekunden Kulanz für die letzte Übertragung).
+
 ## Auswerten
 
 Werkzeuge → Aufgabe prüfen … (Abgaben auswerten):
@@ -73,6 +101,7 @@ Darum gehört zur Prüfung die **Organisation**:
 
 - Prüfungsdatei: normale Projektdatei (`netzwerk-simulator`) mit `tasks.exam` (Kennung, Variante bzw. Varianten zur Auswahl, Prüfwert des Codes, Dauer, Punkteraster). Antworten auf Fragen stehen in `tasks.answers`.
 - Schlüssel: `meta.format = "netzwerk-simulator-pruefungsschluessel"`, je Variante die vollständige Aufgabe.
+- Abgaben einer Server-Prüfung: `meta.format = "netzwerk-simulator-abgaben"` mit Titel, Bezeichnung, Schlüssel und je Platz `seat`, `updated`, `project`.
 - Korrektur: `meta.format = "netzwerk-simulator-korrektur"`, je Datei Punkte, Bemerkungen und Gesamtbemerkung. Sie enthält Dateinamen der Abgaben und bleibt bei der Lehrperson.
 
 Bausteine im Detail: [aufgaben.md](aufgaben.md).

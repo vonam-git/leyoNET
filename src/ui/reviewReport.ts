@@ -23,7 +23,7 @@ export function reviewReportHtml(reviews: readonly SubmissionReview[], correctio
     return [
       `<section>
 <h1>${escape(title)}</h1>
-<table class="meta"><tr><th>${escape(t('review.file'))}</th><td>${escape(r.name)}</td>${r.variant ? `<th>${escape(t('exam.seat'))}</th><td>${escape(r.variant)}</td>` : ''}</tr>
+<table class="meta"><tr><th>${escape(t('review.file'))}</th><td>${escape(r.name)}</td>${r.variant ? `<th>${escape(t('exam.seatWord'))}</th><td>${escape(r.variant)}</td>` : ''}</tr>
 <tr><th>${escape(t('review.points'))}</th><td>${num(score.points)} / ${score.max}</td>${score.grade !== undefined ? `<th>${escape(t('review.grade'))}</th><td><strong>${num(score.grade)}</strong></td>` : ''}</tr></table>
 <table><thead><tr><th>${escape(t('review.report.part'))}</th><th>${escape(t('review.report.goal'))}</th><th class="num">${escape(t('review.report.max'))}</th><th class="num">${escape(t('review.report.reached'))}</th><th>${escape(t('review.report.note'))}</th></tr></thead>
 <tbody>${rows.join('')}</tbody></table>

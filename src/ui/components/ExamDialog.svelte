@@ -115,7 +115,7 @@
   {#if seats > 1}
     <p class="muted">{t('exam.seatsIntro', { n: specs.length })}</p>
     <table class="list">
-      <thead><tr><th scope="col">{t('exam.seat')}</th><th scope="col">{t('exam.company')}</th>{#each [0, 1, 2] as i (i)}<th scope="col">{t(i === 0 ? 'exam.seatShort' : 'exam.branchShort', { n: i })}</th>{/each}</tr></thead>
+      <thead><tr><th scope="col">{t('exam.seatWord')}</th><th scope="col">{t('exam.company')}</th>{#each [0, 1, 2] as i (i)}<th scope="col">{t(i === 0 ? 'exam.seatShort' : 'exam.branchShort', { n: i })}</th>{/each}</tr></thead>
       <tbody>
         {#each specs as s (s.id)}
           <tr><td>{s.id}</td><td>{s.company}</td>{#each s.sites as site (site.name)}<td class="mono">{site.name} {site.network}</td>{/each}</tr>
@@ -197,7 +197,7 @@
 
   {#snippet actions()}
     {#if seats > 1}
-      <select bind:value={seat} aria-label={t('exam.seat')}>{#each specs as s (s.id)}<option value={s.id}>{t('exam.mode.seat', { seat: s.id })}</option>{/each}</select>
+      <select bind:value={seat} aria-label={t('exam.seatWord')}>{#each specs as s (s.id)}<option value={s.id}>{t('exam.mode.seat', { seat: s.id })}</option>{/each}</select>
     {/if}
     <button onclick={() => open(true)} disabled={!!issue}>{t('exam.openSolution')}</button>
     {#if seats <= 1}<button onclick={() => open(false)} disabled={!!issue}>{t('exam.open')}</button>{/if}

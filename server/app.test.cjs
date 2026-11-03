@@ -147,3 +147,93 @@ test('lehnt Formular-Posts ohne JSON ab', async () => {
   const res = await fetch(base + '/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'text=x' });
   assert.equal(res.status, 415);
 });
+
+test('Prüfung: Plätze mit Code, warten, starten, speichern, Nachteilsausgleich, Ende, Abgaben mit Schlüssel', async () => {
+  const { token } = (await call('POST', '/api/admin/login', { password: 'test-admin-passwort' })).data;
+  const learner = { ...project(0), tasks: { title: 'LB3', goals: [], noSelfCheck: true, exam: { id: 'P-SRV', unlock: 'a'.repeat(64), minutes: 30, variants: [{ id: '01', title: 'Platz 1' }, { id: '02', title: 'Platz 2' }] } } };
+  const key = { meta: { format: 'netzwerk-simulator-pruefungsschluessel', version: 1 }, key: { id: 'P-SRV', title: 'LB3', code: 'ABCD', variants: [] } };
+  assert.equal((await call('POST', '/api/admin/exams', { label: 'INF22a LB3', learner, key: { ...key, key: { ...key.key, id: 'ANDERS' } } }, token)).data.error, 'keyMismatch');
+  const created = await call('POST', '/api/admin/exams', { label: 'INF22a LB3', learner, key, minutes: 45 }, token);
+  assert.equal(created.status, 201);
+  const exam = created.data;
+  assert.equal(exam.seats.length, 2);
+  assert.equal(exam.minutes, 45);
+  const [seat1, seat2] = exam.seats;
+  assert.match(seat1.code, /^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+  // Der Schlüssel liegt verschlüsselt im Datenordner.
+  const raw = fs.readFileSync(path.join(dataDir, 'exams', `${exam.id}.json`), 'utf8');
+  assert.doesNotMatch(raw, /pruefungsschluessel/);
+
+  // Vor dem Start: warten, keine Session.
+  assert.equal((await call('POST', '/api/exams/join', { seatCode: seat1.code })).data.exam.state, 'waiting');
+  assert.equal((await call('POST', '/api/exams/join', { seatCode: 'AAAA-AAAA' })).status, 404);
+  await call('POST', `/api/admin/exams/${exam.id}/seats/02/extra`, { minutes: 15 }, token);
+  const started = (await call('POST', `/api/admin/exams/${exam.id}/start`, {}, token)).data;
+  assert.equal(started.state, 'running');
+  const until2 = started.seats.find((s) => s.id === '02').until;
+  const until1 = started.seats.find((s) => s.id === '01').until;
+  assert.equal(until2 - until1, 15 * 60_000);
+
+  // Beitreten: neue Session mit der Prüfungsdatei, Variante des Platzes.
+  const join = (await call('POST', '/api/exams/join', { seatCode: seat1.code.toLowerCase().replace('-', ' ') })).data;
+  assert.equal(join.fresh, true);
+  assert.equal(join.variant, '01');
+  assert.equal(join.project.tasks.exam.id, 'P-SRV');
+  const work = { ...project(3), tasks: { ...learner.tasks, exam: { id: 'P-SRV', variant: '01' } } };
+  const put = await call('PUT', `/api/sessions/${join.session}`, { project: work });
+  assert.equal(put.status, 200);
+  assert.equal(put.data.exam.state, 'open');
+  // Nochmals beitreten (anderes Gerät): dieselbe Session mit dem gespeicherten Stand.
+  const again = (await call('POST', '/api/exams/join', { seatCode: seat1.code })).data;
+  assert.equal(again.session, join.session);
+  assert.equal(again.fresh, false);
+  assert.equal(again.project.topology.devices.length, 3);
+  // Lernende können ihre Abgabe nicht löschen.
+  assert.equal((await call('DELETE', `/api/sessions/${join.session}`)).status, 403);
+
+  // Übersicht: wer ist dabei, wann zuletzt gespeichert.
+  const detail = (await call('GET', `/api/admin/exams/${exam.id}`, null, token)).data;
+  assert.equal(detail.seats.find((s) => s.id === '01').joined, true);
+  assert.equal(detail.seats.find((s) => s.id === '02').joined, false);
+
+  // Ende: Speichern abgewiesen (nach der Gnadenfrist sicher; hier sofort, weil until in der Vergangenheit liegt).
+  const ended = (await call('POST', `/api/admin/exams/${exam.id}/end`, {}, token)).data;
+  assert.ok(ended.seats.every((s) => s.until <= Date.now()));
+  // Nachteilsausgleich nach dem Ende öffnet den Platz wieder.
+  const reopened = (await call('POST', `/api/admin/exams/${exam.id}/seats/01/extra`, { minutes: 10 }, token)).data;
+  assert.equal(reopened.seats.find((s) => s.id === '01').state, 'open');
+  assert.equal((await call('PUT', `/api/sessions/${join.session}`, { project: work })).status, 200);
+
+  // Abgaben mit entschlüsseltem Schlüssel.
+  const subs = (await call('GET', `/api/admin/exams/${exam.id}/submissions`, null, token)).data;
+  assert.equal(subs.key.key.id, 'P-SRV');
+  assert.equal(subs.submissions.length, 1);
+  assert.equal(subs.submissions[0].seat, '01');
+  assert.equal(subs.submissions[0].project.topology.devices.length, 3);
+
+  // «Alle Sessions löschen» lässt Prüfungsabgaben stehen; die Prüfung löschen entfernt sie.
+  await call('DELETE', '/api/admin/sessions', null, token);
+  assert.equal((await call('GET', `/api/admin/exams/${exam.id}/submissions`, null, token)).data.submissions.length, 1);
+  await call('DELETE', `/api/admin/exams/${exam.id}`, null, token);
+  assert.equal((await call('GET', `/api/sessions/${join.session}`)).status, 404);
+  void seat2;
+});
+
+test('Prüfung: Speichern nach Ablauf der Zeit wird abgewiesen', async () => {
+  const { token } = (await call('POST', '/api/admin/login', { password: 'test-admin-passwort' })).data;
+  const learner = { ...project(0), tasks: { title: 'Kurz', goals: [], exam: { id: 'P-KURZ', variant: '1' } } };
+  const exam = (await call('POST', '/api/admin/exams', { label: 'Kurz', learner, seats: 3, minutes: 1 }, token)).data;
+  assert.deepEqual(exam.seats.map((s) => s.id), ['01', '02', '03']);
+  await call('POST', `/api/admin/exams/${exam.id}/start`, {}, token);
+  const join = (await call('POST', '/api/exams/join', { seatCode: exam.seats[2].code })).data;
+  assert.equal(join.variant, null);
+  // Zeit künstlich ablaufen lassen: Platz-Ende in die Vergangenheit (Datei direkt anpassen).
+  const file = path.join(dataDir, 'exams', `${exam.id}.json`);
+  const stored = JSON.parse(fs.readFileSync(file, 'utf8'));
+  for (const s of stored.seats) s.until = Date.now() - 60_000;
+  fs.writeFileSync(file, JSON.stringify(stored));
+  const put = await call('PUT', `/api/sessions/${join.session}`, { project: learner });
+  assert.equal(put.status, 423);
+  assert.equal(put.data.exam.state, 'closed');
+  assert.equal((await call('GET', `/api/admin/exams/${exam.id}`, null, token)).data.state, 'ended');
+});

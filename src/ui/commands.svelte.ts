@@ -67,6 +67,7 @@ const COMMANDS: Command[] = [
   { id: 'file.save', label: () => t('menu.file.save'), keys: ['Mod+S'], run: saveProject, icon: 'download' },
   { id: 'file.pcap', label: () => t('menu.file.pcap'), run: exportPcap, visible: () => ui.has('tool.pcap'), enabled: () => (simStore.sim?.getPacketLog().length ?? 0) > 0 },
   { id: 'file.snapshots', label: () => t('menu.file.snapshots'), keys: ['Shift+Mod+S'], run: () => dialogs.show('snapshots'), visible: () => ui.has('tool.snapshots'), icon: 'snapshot' },
+  { id: 'file.examJoin', label: () => t('menu.file.examJoin'), run: () => dialogs.show('examJoin'), visible: () => ui.online },
   { id: 'file.session', label: () => t('menu.file.session'), run: () => dialogs.show('session'), visible: () => ui.online },
 
   // Bearbeiten
@@ -209,6 +210,7 @@ export const MENUS: Menu[] = [
       { command: 'file.snapshots' },
       { command: 'file.pcap' },
       { command: 'file.session' },
+      { command: 'file.examJoin' },
     ],
   },
   {
