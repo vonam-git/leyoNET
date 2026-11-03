@@ -1835,7 +1835,7 @@ dependencies = [
 
 [[package]]
 name = "leyonet"
-version = "0.10.2"
+version = "0.10.3"
 dependencies = [
  "tauri",
  "tauri-build",

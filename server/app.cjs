@@ -1029,9 +1029,12 @@ function createServer() {
       if (status === 500) console.error('Serverfehler:', error && error.message);
       // Platte voll (z.B. durch andere Programme): sauber melden statt Serverfehler.
       if (error && error.code === 'ENOSPC') return fail(res, 507, 'storageFull');
-      // Zu gross: antworten und die Verbindung danach schliessen, statt den Rest zu lesen.
+      // Zu gross: Rest verwerfen (bis 16 MB, damit der Absender die Antwort sicher erhält),
+      // bei noch grösseren Anfragen die Verbindung nach der Antwort schliessen.
       if (status === 413) {
-        res.on('finish', () => req.destroy());
+        const declared = Number(req.headers['content-length'] || 0);
+        if (declared > 0 && declared <= 16 * 1024 * 1024) req.resume();
+        else res.on('finish', () => req.destroy());
         return send(res, 413, JSON.stringify({ error: 'tooLarge' }), { 'Content-Type': 'application/json; charset=utf-8', Connection: 'close' });
       }
       return fail(res, status, error && error.status ? error.message : 'serverError');

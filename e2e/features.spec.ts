@@ -480,3 +480,38 @@ test('Prüfung: erstellen mit Plätzen, Platz wählen, gesperrt, abgeben, beende
   await expect(review.locator('tbody tr td').first()).toHaveText('02');
   await expect(review.locator('tbody tr')).toContainText('1.0');
 });
+
+test('Doppelte MAC: Warnung, MAC ändern behebt sie; Schritt zurück und Zurücksetzen', async ({ page }) => {
+  await openProject(page, example('doppelte-mac'));
+  await page.getByRole('button', { name: 'Notebook, Notebook' }).click();
+  const props = page.getByRole('complementary');
+  await expect(props).toContainText('eth0');
+  await expect(props).toContainText('02:00:00:00:03:00');
+  await expect(props.getByRole('alert')).toContainText('zweimal');
+  await props.getByRole('button', { name: 'ändern' }).click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.type('02-00-00-00-04-00');
+  await page.keyboard.press('Enter');
+  await expect(props).toContainText('02:00:00:00:04:00');
+  await expect(props.getByText(/zweimal/)).toHaveCount(0);
+
+  await page.keyboard.press('m');
+  await page.keyboard.press('Space');
+  // Die Paketliste kann PC 1 verdecken: per Tastatur auswählen.
+  await page.getByRole('button', { name: 'PC 1, Rechner' }).focus();
+  await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: 'Desktop öffnen' }).click();
+  const input = page.getByLabel('Befehl eingeben');
+  await input.fill('ping 192.168.1.11');
+  await input.press('Enter');
+  await page.getByRole('button', { name: 'Desktop schliessen' }).click();
+  for (let i = 0; i < 8; i++) await page.locator('.controls').getByRole('button', { name: /Einzelschritt/ }).click();
+  const rows = page.locator('.packets tbody tr');
+  const forward = await rows.count();
+  expect(forward).toBeGreaterThan(0);
+  await page.locator('.controls').getByRole('button', { name: /Schritt zurück/ }).click();
+  await page.locator('.controls').getByRole('button', { name: /Schritt zurück/ }).click();
+  await page.locator('.controls').getByRole('button', { name: /Zurücksetzen/ }).click();
+  await expect(page.locator('.controls')).toContainText('0.000');
+  await expect(rows).toHaveCount(0);
+});

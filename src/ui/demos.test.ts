@@ -80,6 +80,9 @@ describe('Demo-Netze', () => {
       case 'mail':
         expect(sim.getDeviceState(id(check.device)).mail?.inbox.map((m) => m.subject)).toContain(check.subject);
         break;
+      case 'macFlap':
+        expect(codes(check.device)).toContain('switch.macFlap');
+        break;
       case 'storm':
         expect(sim.stormingDevices().length).toBeGreaterThan(0);
         break;

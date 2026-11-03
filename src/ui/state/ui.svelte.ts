@@ -47,6 +47,7 @@ const KEYS = {
   portLabels: 'netzwerk-simulator.portLabels',
   currency: 'netzwerk-simulator.currency',
   panels: 'netzwerk-simulator.panels',
+  sizes: 'netzwerk-simulator.sizes',
   oldLevel: 'netzwerk-simulator.level',
 };
 
@@ -106,6 +107,24 @@ function readPanels(): Record<PanelName, boolean> {
   return all;
 }
 
+/** Von Hand eingestellte Grössen der Bereiche in Pixeln; fehlt = Standard. */
+export type SizeName = 'left' | 'right' | 'bottom' | 'details';
+export const SIZE_LIMITS: Record<SizeName, [number, number]> = { left: [150, 480], right: [220, 640], bottom: [110, 900], details: [220, 1000] };
+
+function readSizes(): Partial<Record<SizeName, number>> {
+  const out: Partial<Record<SizeName, number>> = {};
+  try {
+    const raw = JSON.parse(read('netzwerk-simulator.sizes') ?? '{}') as Record<string, unknown>;
+    for (const k of Object.keys(SIZE_LIMITS) as SizeName[]) {
+      const v = raw[k];
+      if (typeof v === 'number' && Number.isFinite(v)) out[k] = Math.min(SIZE_LIMITS[k][1], Math.max(SIZE_LIMITS[k][0], Math.round(v)));
+    }
+  } catch {
+    // Ungültig: Standardgrössen.
+  }
+  return out;
+}
+
 class Ui {
   /** Webversion mit Server (Sessions, Rückmeldungen, Admin). */
   readonly online = detectServer();
@@ -122,6 +141,7 @@ class Ui {
   showPortLabels = $state(read(KEYS.portLabels) !== '0');
   /** Seitenbereiche ein- oder ausgefahren (Shop links, Eigenschaften rechts, Paketliste unten). */
   panels = $state<Record<PanelName, boolean>>(readPanels());
+  sizes = $state<Partial<Record<SizeName, number>>>(readSizes());
   currency = $state<Currency>((['EUR', 'USD'] as const).find((c) => c === read(KEYS.currency)) ?? 'CHF');
 
   /** Neue Regeln vom Server übernehmen; ohne eigene Wahl gilt das Standardprofil. */
@@ -243,6 +263,15 @@ class Ui {
 
   setShowPrices(on: boolean) {
     this.setFeature('tool.prices', on);
+  }
+
+  /** Grösse eines Bereichs setzen (null = Standard) und merken. */
+  setSize(name: SizeName, px: number | null) {
+    const next = { ...this.sizes };
+    if (px === null) delete next[name];
+    else next[name] = Math.min(SIZE_LIMITS[name][1], Math.max(SIZE_LIMITS[name][0], Math.round(px)));
+    this.sizes = next;
+    write(KEYS.sizes, JSON.stringify(next));
   }
 
   togglePanel(name: PanelName) {

@@ -6,7 +6,7 @@ import { checkHostConfig, maskToText, parseIp, parseMask, type HostConfigInput }
 import { checkStaticRoute, decodeIface, normalizeRoute } from '../net/routing';
 import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
 import { MIN_SIGNAL, portMedium, signalBetween } from './links';
-import { macFor } from './mac';
+import { macFor, normalizeMac } from './mac';
 import { MAX_VPN_TUNNELS, checkFirewall, checkVpnTunnel, type FirewallConfig, type VpnTunnel } from './security';
 import { formatCidr6, formatIp6, isLinkLocal6, isLoopback6, isMulticast6, isUnspecified6, networkOf6, parseCidr6, parseIp6 } from '../net/ipv6';
 import type {
@@ -129,6 +129,9 @@ export type ErrorCode =
   | 'lastFloor'
   | 'invalidUser'
   | 'textTooLong'
+  | 'invalidMac'
+  | 'macGroup'
+  | 'macZero'
   | 'noSfpModule'
   | 'notAnSfpSlot'
   | 'noFreeSfpSlot'
@@ -1218,6 +1221,22 @@ export function setInterfaceDescription(t: Topology, id: string, index: number, 
       return value ? { ...base, description: value } : base;
     }),
   );
+}
+
+/**
+ * MAC-Adresse eines Anschlusses von Hand setzen (z.B. um eine doppelte MAC
+ * vorzuführen). Leer = wieder die ab Werk vergebene Adresse. Gruppenadressen
+ * (Multicast, Broadcast) und 00:00:00:00:00:00 sind als Absender ungültig.
+ */
+export function setInterfaceMac(t: Topology, id: string, index: number, raw: string): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!device.interfaces[index]) return fail('unknownInterface');
+  const mac = raw.trim() ? normalizeMac(raw) : macFor(deviceSeq(id), index);
+  if (!mac) return fail('invalidMac', { value: raw.trim() });
+  if (mac === '00:00:00:00:00:00') return fail('macZero');
+  if (parseInt(mac.slice(0, 2), 16) & 1) return fail('macGroup', { value: mac });
+  return ok(updatePort(t, id, index, (i) => ({ ...i, mac })));
 }
 
 // --- WLAN ----------------------------------------------------------------------

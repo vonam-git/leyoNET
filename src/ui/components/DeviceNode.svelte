@@ -87,6 +87,10 @@
   });
   /** Doppelte Adressen: rotes Ausrufezeichen am Gerät, auch wenn die Adressen ausgeblendet sind. */
   const duplicated = $derived(duplicates.of(device.id));
+  const dupMacs = $derived(duplicates.macsOf(device.id).map((i) => device.interfaces[i]?.mac ?? ''));
+  const dupText = $derived(
+    [duplicated.length ? t('canvas.duplicateIp', { ip: duplicated.join(', ') }) : '', dupMacs.length ? t('canvas.duplicateMac', { mac: [...new Set(dupMacs)].join(', ') }) : ''].filter(Boolean).join(' '),
+  );
 
   function onkeydown(event: KeyboardEvent) {
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -133,11 +137,11 @@
       {#if line.duplicate}<title>{t('canvas.duplicateIp', { ip: line.text.split('/')[0] ?? '' })}</title>{:else if line.scope}<title>{t(`scope.${line.scope}.hint`)}</title>{/if}
     </text>
   {/each}
-  {#if duplicated.length > 0}
-    <g class="dup-badge" transform="translate(-30 -26)" role="img" aria-label={t('canvas.duplicateIp', { ip: duplicated.join(', ') })}>
+  {#if dupText}
+    <g class="dup-badge" transform="translate(-30 -26)" role="img" aria-label={dupText}>
       <circle r="8" />
       <text y="4">!</text>
-      <title>{t('canvas.duplicateIp', { ip: duplicated.join(', ') })}</title>
+      <title>{dupText}</title>
     </g>
   {/if}
   {#if floorLabel}

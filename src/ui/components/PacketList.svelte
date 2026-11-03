@@ -7,6 +7,7 @@
   import { simStore } from '../state/sim.svelte';
   import { ui } from '../state/ui.svelte';
   import PacketDetails from './PacketDetails.svelte';
+  import Splitter from './Splitter.svelte';
 
   /**
    * Nur sichtbare Zeilen werden gezeichnet (feste Zeilenhöhe), so bleibt die
@@ -25,6 +26,7 @@
   /** Rahmen, die ein Switch unverändert weiterleitet, nur beim ersten Abschnitt zeigen. */
   let once = $state(true);
   let scroller: HTMLDivElement;
+  let detailPane: HTMLDivElement | undefined = $state();
   let followTail = true;
   let scrollTop = $state(0);
   let viewport = $state(300);
@@ -194,7 +196,8 @@
     {/if}
   </div>
   {#if selected}
-    <div class="detail-pane">
+    <div class="detail-pane" bind:this={detailPane} style:width={ui.sizes.details ? `${ui.sizes.details}px` : null}>
+      <Splitter name="details" edge="left" current={() => detailPane?.offsetWidth ?? 360} label={t('splitter.details')} />
       <PacketDetails entry={selected} onclose={() => (selectedId = null)} />
     </div>
   {/if}
@@ -279,7 +282,9 @@
     overflow: auto;
   }
   .detail-pane {
+    position: relative;
     width: min(360px, 45%);
+    max-width: 75%;
     flex-shrink: 0;
   }
   tbody tr {

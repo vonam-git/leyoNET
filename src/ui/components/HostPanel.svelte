@@ -5,6 +5,7 @@
   import { simStore } from '../state/sim.svelte';
   import { editor } from '../state/editor.svelte';
   import AddressView from './AddressView.svelte';
+  import AdapterInfo from './AdapterInfo.svelte';
   import StateTables from './StateTables.svelte';
 
   /** Simulation, Endgerät: wirksame Adresse, Desktop öffnen, ARP-Tabelle. */
@@ -14,6 +15,7 @@
   const now = $derived((simStore.tick, simStore.sim?.now ?? 0));
 </script>
 
+<AdapterInfo {device} />
 <AddressView {device} />
 
 <button class="open" onclick={() => openDesktop(device.id)}>{t('desktop.open')}</button>

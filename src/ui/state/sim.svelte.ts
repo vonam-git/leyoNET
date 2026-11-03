@@ -29,6 +29,16 @@ export interface Unpacking extends UnpackPlan {
   index: number;
 }
 
+/**
+ * Eingaben während der Simulation (Befehle, Pings, Topologie-Änderungen …).
+ * Zusammen mit der Topologie beim Start lässt sich so jeder frühere Zustand
+ * exakt wiederherstellen: Die Simulation ist deterministisch.
+ */
+type Input = { events: number; at: number; apply: (sim: Simulation) => void };
+
+/** Ab so vielen Ereignissen wird «Schritt zurück» zu langsam und ist gesperrt. */
+const MAX_REPLAY_EVENTS = 200_000;
+
 class SimStore {
   tick = $state(0);
   unpacking = $state.raw<Unpacking | null>(null);
@@ -40,6 +50,11 @@ class SimStore {
   #last = 0;
   #lastRefresh = 0;
   #idleSince = 0;
+  /** Topologie beim Start und alle Eingaben seither. */
+  #start: Topology | null = null;
+  #inputs: Input[] = [];
+  /** Verarbeitete Ereignisse seit dem Start. */
+  events = $state(0);
 
   get sim(): Simulation | null {
     return this.#sim;
@@ -47,10 +62,10 @@ class SimStore {
 
   activate(topology: Topology, generation: number) {
     if (!this.#sim || generation !== this.#generation) {
-      this.#sim = new Simulation(topology);
+      this.#begin(topology);
       this.#generation = generation;
-    } else {
-      this.#sim.updateTopology(topology);
+    } else if (topology !== this.#sim.topology) {
+      this.#record((sim) => sim.updateTopology(topology));
     }
     this.tick++;
     if (!this.#frame) {
@@ -63,6 +78,67 @@ class SimStore {
     this.unpacking = null;
     cancelAnimationFrame(this.#frame);
     this.#frame = 0;
+  }
+
+  #begin(topology: Topology) {
+    this.#sim = new Simulation(topology);
+    this.#start = topology;
+    this.#inputs = [];
+    this.events = 0;
+    this.unpacking = null;
+  }
+
+  /** Eingabe ausführen und für das Zurückspulen merken. */
+  #record(apply: (sim: Simulation) => void) {
+    const sim = this.#sim;
+    if (!sim) return;
+    this.#inputs.push({ events: this.events, at: sim.now, apply });
+    apply(sim);
+    this.tick++;
+  }
+
+  /** Simulation neu starten (Zeit 0) mit dem aktuellen Netz; angehalten bleibt angehalten. */
+  reset(topology: Topology) {
+    this.#begin(topology);
+    this.tick++;
+  }
+
+  get canStepBack(): boolean {
+    return !!this.unpacking || (this.events > 0 && this.events <= MAX_REPLAY_EVENTS);
+  }
+
+  /**
+   * Einzelschritt zurück: zuerst das Auspacken eines Rahmens rückwärts, sonst
+   * den Ablauf vom Start bis ein Ereignis vor jetzt wiederholen.
+   */
+  stepBack() {
+    this.paused = true;
+    const current = this.unpacking;
+    if (current) {
+      this.unpacking = current.index > 0 ? { ...current, index: current.index - 1 } : null;
+      this.tick++;
+      return;
+    }
+    if (!this.#start || this.events === 0 || this.events > MAX_REPLAY_EVENTS) return;
+    this.#replay(this.events - 1);
+    this.tick++;
+  }
+
+  #replay(target: number) {
+    const sim = new Simulation(this.#start!);
+    let count = 0;
+    const kept: Input[] = [];
+    for (const input of this.#inputs) {
+      if (input.events > target) break;
+      while (count < input.events && sim.step()) count++;
+      sim.advanceClock(input.at);
+      input.apply(sim);
+      kept.push(input);
+    }
+    while (count < target && sim.step()) count++;
+    this.#sim = sim;
+    this.#inputs = kept;
+    this.events = count;
   }
 
   togglePause() {
@@ -84,7 +160,7 @@ class SimStore {
       if (current.index < current.layers.length - 1) this.unpacking = { ...current, index: current.index + 1 };
       else {
         this.unpacking = null;
-        sim.step();
+        if (sim.step()) this.events++;
       }
       this.tick++;
       return;
@@ -95,68 +171,58 @@ class SimStore {
     if (arriving && plan) {
       // Der Rahmen steht nun beim Empfänger; die nächsten Schritte packen ihn aus.
       this.unpacking = { ...plan, entryId: arriving.id, deviceId: arriving.to.device, index: 0 };
-    } else {
-      sim.step();
+    } else if (sim.step()) {
+      this.events++;
     }
     this.tick++;
   }
 
   /** WLAN-Roaming: neue Topologie übernehmen und den Client neu anmelden lassen. */
   roam(topology: Topology, deviceId: string) {
-    if (!this.#sim) return;
-    this.#sim.updateTopology(topology);
-    this.#sim.reassociate(deviceId);
-    this.tick++;
+    this.#record((sim) => {
+      sim.updateTopology(topology);
+      sim.reassociate(deviceId);
+    });
   }
 
   runCommand(deviceId: string, line: string) {
-    this.#sim?.runCommand(deviceId, line);
-    this.tick++;
+    this.#record((sim) => sim.runCommand(deviceId, line));
   }
 
   ping(deviceId: string, target: string) {
-    this.#sim?.ping(deviceId, target);
-    this.tick++;
+    this.#record((sim) => sim.ping(deviceId, target));
   }
 
   ssh(deviceId: string, target: string, user: string, password: string) {
-    this.#sim?.ssh(deviceId, target, user, password);
-    this.tick++;
+    this.#record((sim) => sim.ssh(deviceId, target, user, password));
   }
 
   sshSend(deviceId: string, line: string) {
-    this.#sim?.sshSend(deviceId, line);
-    this.tick++;
+    this.#record((sim) => sim.sshSend(deviceId, line));
   }
 
   sshClose(deviceId: string) {
-    this.#sim?.sshClose(deviceId);
-    this.tick++;
+    this.#record((sim) => sim.sshClose(deviceId));
   }
 
   browse(deviceId: string, url: string) {
-    this.#sim?.browse(deviceId, url);
-    this.tick++;
+    this.#record((sim) => sim.browse(deviceId, url));
   }
 
   sendMail(deviceId: string, message: { to: string[]; subject: string; body: string }) {
-    this.#sim?.sendMail(deviceId, message);
-    this.tick++;
+    this.#record((sim) => sim.sendMail(deviceId, message));
   }
 
   fetchMail(deviceId: string) {
-    this.#sim?.fetchMail(deviceId);
-    this.tick++;
+    this.#record((sim) => sim.fetchMail(deviceId));
   }
 
   clearPacketLog() {
-    this.#sim?.clearPacketLog();
-    this.tick++;
+    this.#record((sim) => sim.clearPacketLog());
   }
 
   clearConsole(deviceId: string) {
-    this.#sim?.clearConsole(deviceId);
-    this.tick++;
+    this.#record((sim) => sim.clearConsole(deviceId));
   }
 
   #advance(sim: Simulation, elapsed: number, timestamp: number): number {
@@ -178,6 +244,7 @@ class SimStore {
     const elapsed = Math.min(timestamp - this.#last, MAX_FRAME_MS);
     this.#last = timestamp;
     const processed = this.paused ? 0 : this.#advance(sim, elapsed, timestamp);
+    if (processed > 0) this.events += processed;
     // In der Zeitlupe bewegen sich Rahmen auch ohne neue Ereignisse: jedes Bild zeichnen.
     const animating = this.speed !== 'realtime' && sim.getInFlight().length > 0 && !this.paused;
     if (processed > 0 || animating || timestamp - this.#lastRefresh > CLOCK_REFRESH_MS) {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AdapterInfo from './AdapterInfo.svelte';
   import { SFP_MODULES, cableAt, getDevice, linkStatus, otherEnd, vlanColor, vlanLabel, type Device, type SfpModule, type TagColor } from '../../core';
   import { t } from '../../i18n';
   import { interfaceLabel } from '../labels';
@@ -93,7 +94,7 @@
         <tr class="details">
           <td></td>
           <td colspan="3">
-            <div class="mac">MAC {iface.mac}</div>
+            <AdapterInfo {device} index={iface.index} />
             <label class="field">
               <span>{t('ports.description')}</span>
               <input
@@ -227,12 +228,6 @@
   }
   .details td {
     background: var(--surface-2);
-  }
-  .mac {
-    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
-    font-size: 0.75rem;
-    color: var(--muted);
-    margin-bottom: 4px;
   }
   .field {
     display: grid;

@@ -97,6 +97,8 @@ export interface LocalPort {
 export class SwitchNode implements SimNode {
   protected local: LocalPort | null = null;
   #table = new Map<string, MacEntry>();
+  /** Letzte Meldung «MAC springt» je Adresse (höchstens alle 5 s, sonst flutet eine Schleife die Konsole). */
+  #flapNoted = new Map<string, number>();
   #received = new Map<number, Received>();
   #roles = new Map<number, PortRole>();
   #since = new Map<number, number>();
@@ -299,6 +301,15 @@ export class SwitchNode implements SimNode {
     if (!this.#isTrunk(inPort) && frame.vlan !== undefined) return;
     const vlan = this.#isTrunk(inPort) ? (frame.vlan ?? DEFAULT_VLAN) : this.#vlanOf(inPort);
     const now = this.ctx.now;
+    // Dieselbe Absender-MAC an einem anderen Port: doppelte MAC oder Schleife («MAC flapping»).
+    const before = this.#table.get(`${vlan}|${frame.src}`);
+    if (before && before.port !== inPort && before.expires > now && this.ctx.isConnected(before.port)) {
+      const last = this.#flapNoted.get(frame.src) ?? -Infinity;
+      if (now - last >= 5000) {
+        this.#flapNoted.set(frame.src, now);
+        this.ctx.print('switch.macFlap', { mac: frame.src, vlan, from: before.port + 1, to: inPort + 1 });
+      }
+    }
     this.#table.set(`${vlan}|${frame.src}`, { mac: frame.src, port: inPort, vlan, expires: now + MAC_TTL });
     if (inState === 'learning') return;
 

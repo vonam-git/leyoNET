@@ -1,4 +1,4 @@
-import type { DeviceType, Medium, Topology } from '../core';
+import { duplicateMacs, type DeviceType, type Medium, type Topology } from '../core';
 
 /**
  * Funktionsumfang: Jede Funktion des Simulators lässt sich ausblenden, damit
@@ -48,6 +48,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('service.mail', 'services', 3),
   // Netzwerk
   f('net.portShutdown', 'network', 2),
+  f('net.macEdit', 'network', 3),
   f('net.cableDamage', 'network', 3),
   f('net.vlan', 'network', 3),
   f('net.stp', 'network', 3),
@@ -115,6 +116,7 @@ export function mediumFeature(medium: Medium): string | null {
 /** Funktionen, die ein Projekt verwendet: Beim Laden werden sie eingeschaltet, damit nichts verborgen wirkt. */
 export function usedFeatures(t: Topology): string[] {
   const used = new Set<string>();
+  if (duplicateMacs(t).size) used.add('net.macEdit');
   if (t.ipMode && t.ipMode !== 'ipv4') used.add('net.ipv6');
   for (const d of t.devices) {
     used.add(deviceFeature(d.type));
@@ -140,6 +142,8 @@ export function usedFeatures(t: Topology): string[] {
     if (d.wlan?.mesh) used.add('net.wlanMesh');
     if (d.cli?.ssh) used.add('net.ssh');
     for (const i of d.interfaces) {
+      // Von Hand gesetzte MAC (ab Werk immer 02:00:…).
+      if (!i.mac.startsWith('02:00:')) used.add('net.macEdit');
       if (i.trunk || (i.vlan && i.vlan !== 1)) used.add('net.vlan');
       if (i.nat) used.add('net.nat');
       if (i.dhcpRelay) used.add('net.dhcpRelay');

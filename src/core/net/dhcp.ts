@@ -1,6 +1,6 @@
 import type { Device, DhcpReservation, DhcpScope, DhcpServerConfig } from '../model/types';
 import { canHostServices } from '../model/devices';
-import { MAC_PATTERN } from '../model/mac';
+import { normalizeMac } from '../model/mac';
 import { broadcastOf, formatIp, maskToText, networkOf, parseIp, parseMask } from './ipv4';
 
 export const DEFAULT_LEASE_TIME = 3600;
@@ -55,12 +55,6 @@ export function checkDhcpServer(device: Device, config: DhcpServerConfig): DhcpI
     if (issue) return issue;
   }
   return null;
-}
-
-/** «02-00-00-00-05-00» oder «02:00:00:00:05:00» → Grossbuchstaben mit Doppelpunkten; null bei ungültiger Eingabe. */
-export function normalizeMac(text: string): string | null {
-  const mac = text.trim().toUpperCase().replace(/-/g, ':');
-  return MAC_PATTERN.test(mac) ? mac : null;
 }
 
 /** Reservierung: gültige MAC, Adresse im Netz des Servers (nicht Netz-/Broadcastadresse, nicht der Server selbst), keine Doppelten. */

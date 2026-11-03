@@ -1,4 +1,4 @@
-import { duplicateAddresses } from '../../core';
+import { duplicateAddresses, duplicateMacs } from '../../core';
 import { editor } from './editor.svelte';
 import { simStore } from './sim.svelte';
 
@@ -21,6 +21,19 @@ class Duplicates {
     }
     return duplicateAddresses(topology, live);
   });
+
+  /** Doppelte MAC-Adressen im selben Netzabschnitt: `<Geräte-ID>#<Anschluss>`. */
+  readonly macs = $derived(duplicateMacs(editor.topology));
+
+  hasMac(deviceId: string, index: number): boolean {
+    return this.macs.has(`${deviceId}#${index}`);
+  }
+
+  /** Anschlüsse eines Geräts mit doppelter MAC. */
+  macsOf(deviceId: string): number[] {
+    const prefix = `${deviceId}#`;
+    return [...this.macs].filter((k) => k.startsWith(prefix)).map((k) => Number(k.slice(prefix.length)));
+  }
 
   has(deviceId: string, ip: string | undefined): boolean {
     return !!ip && this.keys.has(`${deviceId}#${ip}`);

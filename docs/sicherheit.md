@@ -19,7 +19,7 @@ Diese Seite beschreibt, wie man leyoNET angreifen könnte, was dagegen getan ist
 | Angriff | Gegenmassnahme |
 |---|---|
 | Viele oder grosse Projekte hochladen, bis die Platte voll ist | Projekt höchstens 1 MB; insgesamt höchstens `MAX_SESSIONS` (5000) Sessions und `MAX_STORAGE_MB` (1 GB) → «507 Speicher voll». Prüfungsplätze und Admin sind ausgenommen. Volle Platte (ENOSPC) gibt 507 statt Absturz. |
-| Sehr grosse Anfrage | Angekündigte Grösse über der Grenze wird gar nicht gelesen (413), sonst Abbruch beim Überschreiten, Verbindung danach geschlossen. |
+| Sehr grosse Anfrage | Angekündigte Grösse über der Grenze wird nicht verarbeitet (413). Bis 16 MB wird der Rest verworfen, damit der Absender die Antwort sicher erhält; darüber wird die Verbindung geschlossen. |
 | Viele Anfragen von einer Adresse | Grenzen je Adresse und Minute: neue Sessions 60, Speichern 600 (ganze Klassen hinter einer Schuladresse), Klassen beitreten 30, Rückmeldungen 5, Anmeldung 10. |
 | Viele Anfragen mit gefälschten Adressen (falls der Proxy den Weiterleitungs-Kopf nicht selbst setzt) | Zusätzlich Grenzen insgesamt: neue Sessions 1200, Rückmeldungen 60, Anmeldeversuche 30 pro Minute. Die Liste der Zähler ist auf 50 000 Einträge begrenzt. |
 | Server mit vielen Dateien blockieren | Verzeichnis im Arbeitsspeicher, beim Start in Stapeln gelesen; Aufräumen und Listen lesen nicht alle Dateien. |
@@ -42,6 +42,7 @@ Diese Seite beschreibt, wie man leyoNET angreifen könnte, was dagegen getan ist
 |---|---|
 | Skript in einer Projektdatei (Gerätenamen, Notizen, Webseiten eines simulierten Webservers) – z.B. eine Abgabe, die die Lehrperson öffnet | Svelte gibt Texte immer maskiert aus. Simulierte Webseiten laufen in einem `iframe` mit `sandbox` ohne Skripte, Formulare und Popups; die CSP der Seite (`default-src 'none'`, `script-src 'self'`) gilt auch dort. Bilder nur als `data:`. |
 | Die Seite in einen fremden Rahmen einbetten (Clickjacking) | `frame-ancestors 'none'` und `X-Frame-Options: DENY`. |
+| Ungültige Eingaben in Formularen (z.B. MAC-Adressen, Grössen der Bereiche) | Eingaben werden geprüft und vereinheitlicht (MAC nur als 6 Bytes, keine Gruppenadressen); gespeicherte Grössen im Browser werden auf feste Grenzen beschränkt. |
 | Formeln in der CSV-Auswertung (Dateinamen, Bemerkungen wie `=HYPERLINK(…)`) | Zellen, die mit `= + - @` beginnen, erhalten ein `'` davor. |
 | Skripte in heruntergeladenen Berichten, Platzkarten, Aufgabenblättern | Alle Werte HTML-maskiert, zusätzlich eine CSP ohne Skripte im Dokument. |
 | Fremde Pakete mit Schadcode | Server ohne Abhängigkeiten; Oberfläche ohne Laufzeitabhängigkeiten; Lizenz- und `npm audit`-Prüfung bei jedem Release. |

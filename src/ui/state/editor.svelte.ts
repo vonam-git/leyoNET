@@ -71,6 +71,7 @@ import {
   setDeviceFloor,
   setInterfaceColor,
   setInterfaceDescription,
+  setInterfaceMac,
   setInterfaceShutdown,
   setIpRouting,
   setRoutingMode,
@@ -476,6 +477,11 @@ class Editor {
   /** Standardgateway eines Vermittlungsgeräts (Route 0.0.0.0/0), z.B. das Gateway des Providers an der CPE. */
   setDefaultGateway(id: string, gateway: string): TopologyError | null {
     return this.#applyForm(setDefaultGateway(this.topology, id, gateway));
+  }
+
+  /** MAC-Adresse von Hand (leer = ab Werk). */
+  setInterfaceMac(id: string, index: number, mac: string): TopologyError | null {
+    return this.#applyForm(setInterfaceMac(this.topology, id, index, mac));
   }
 
   setInterfaceAddress(id: string, index: number, ip: string, mask: string): TopologyError | null {

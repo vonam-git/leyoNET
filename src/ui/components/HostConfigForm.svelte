@@ -9,6 +9,7 @@
   import { subnetSummary } from '../subnet';
   import Icon from './Icon.svelte';
   import ScopeBadge from './ScopeBadge.svelte';
+  import AdapterInfo from './AdapterInfo.svelte';
 
   let { device }: { device: Device } = $props();
 
@@ -89,6 +90,7 @@
 
 <form class="config" use:autosave={save} onsubmit={(e) => (e.preventDefault(), save(false))}>
   <h3>{t('config.title')}</h3>
+  <AdapterInfo {device} />
   <fieldset class="mode">
     <legend class="visually-hidden">{t('address.mode')}</legend>
     <label><input type="radio" bind:group={dhcp} value={false} /> {t('address.mode.static')}</label>

@@ -104,6 +104,8 @@ const COMMANDS: Command[] = [
   { id: 'sim.toggle', label: () => t('menu.sim.toggle'), keys: ['M', 'F5'], run: () => editor.setMode(editor.acting ? 'design' : 'simulation'), checked: design, enabled: () => ui.allowed('design') && ui.allowed('simulation') },
   { id: 'sim.pause', label: () => (simStore.paused ? t('sim.resume') : t('sim.pause')), keys: ['Space'], run: () => simStore.togglePause(), enabled: simulation, icon: 'pause' },
   { id: 'sim.step', label: () => t('sim.step'), keys: ['N'], run: () => simStore.step(), enabled: simulation, icon: 'step' },
+  { id: 'sim.stepBack', label: () => t('sim.stepBack'), keys: ['Shift+N'], run: () => simStore.stepBack(), enabled: () => simulation() && simStore.canStepBack },
+  { id: 'sim.reset', label: () => t('sim.reset'), run: () => simStore.reset(editor.topology), enabled: simulation },
   { id: 'sim.clear', label: () => t('packets.clear'), run: () => simStore.clearPacketLog(), enabled: simulation, visible: () => ui.has('tool.sniffer') },
   {
     id: 'sim.desktop',
@@ -290,7 +292,9 @@ export const MENUS: Menu[] = [
       dynamic('sim.toSimulation', () => t('mode.simulation'), () => editor.setMode('simulation'), { checked: simulation, enabled: () => ui.allowed('simulation') }),
       { separator: true },
       { command: 'sim.pause' },
+      { command: 'sim.stepBack' },
       { command: 'sim.step' },
+      { command: 'sim.reset' },
       {
         submenu: () => t('sim.speed'),
         entries: () => SPEEDS.map((speed) => dynamic(`speed.${speed}`, () => t(`sim.speed.${speed}`), () => (simStore.speed = speed), { checked: () => simStore.speed === speed })),
