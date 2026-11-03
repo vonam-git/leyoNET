@@ -18,7 +18,8 @@
  * nur einen gesalzenen Hash für wenige Minuten im Arbeitsspeicher.
  *
  * Nur Node.js-Bordmittel, keine Abhängigkeiten. Start: node server/start.cjs
- * Umgebung: PORT, ADMIN_PASSWORD (ohne: Admin gesperrt), DATA_DIR.
+ * Umgebung: PORT, ADMIN_PASSWORD (ohne: Admin gesperrt), DATA_DIR,
+ * MAX_SESSIONS (Standard 5000), MAX_STORAGE_MB (Standard 1024).
  */
 
 const http = require('node:http');
@@ -31,10 +32,21 @@ const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
 const RELEASE_FILE = path.join(ROOT, 'release', 'leyonet.html');
 const NOTICES_FILE = path.join(ROOT, 'release', 'THIRD_PARTY_NOTICES.md');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
-const MAX_BODY = 2 * 1024 * 1024;
+/** Grösste Anfrage bzw. grösstes Projekt (Webserver-Bilder sind auf 160 KB je Datei begrenzt). */
+const MAX_BODY = 1024 * 1024;
 /** Prüfungsdatei samt Schlüssel (bis 60 Varianten). */
 const MAX_EXAM_BODY = 12 * 1024 * 1024;
 const MAX_FEEDBACK_TEXT = 2000;
+/**
+ * Schutz gegen Überlastung ohne Anmeldung: Gesamtzahl der Sessions und Platz für
+ * Sessions und Rückmeldungen. Darüber gibt es «507 storageFull» für neue Daten;
+ * Prüfungsplätze und Admin-Funktionen sind ausgenommen. Mit Umgebungsvariablen anpassbar.
+ */
+const MAX_SESSIONS = Math.max(1, Number(process.env.MAX_SESSIONS) || 5000);
+const MAX_STORAGE_BYTES = Math.max(1, Number(process.env.MAX_STORAGE_MB) || 1024) * 1024 * 1024;
+const MAX_FEEDBACK = 500;
+/** Neue Sessions je Adresse und Minute (eine Klasse tritt auf einmal bei). */
+const NEW_SESSIONS_PER_MINUTE = 60;
 const ADMIN_TOKEN_HOURS = 8;
 
 /** Feature-IDs dürfen nur aus Buchstaben, Ziffern und Punkten bestehen (Liste in src/ui/features.ts). */
@@ -95,6 +107,88 @@ function remove(file) {
     fs.unlinkSync(file);
   } catch {
     // schon weg
+  }
+}
+
+// --- Verzeichnis der Sessions und Rückmeldungen (im Arbeitsspeicher) ------------------
+//
+// Damit der Server nie alle Dateien auf einmal lesen muss (das würde ihn blockieren),
+// stehen Eckdaten (ohne Projekt) und Grösse jeder Datei hier. Aufgebaut beim Start
+// in kleinen Stapeln, danach bei jedem Schreiben und Löschen nachgeführt.
+
+const indexes = { sessions: new Map(), feedback: new Map() };
+
+function metaOf(item, size) {
+  const { project, ...rest } = item;
+  return { ...rest, hasProject: !!project, size };
+}
+
+/** Speichert einen Eintrag und führt das Verzeichnis nach; liefert die Grösse in Bytes. */
+function store(kind, key, item) {
+  const text = JSON.stringify(item);
+  const file = fileFor(dirs[kind], key);
+  const tmp = `${file}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;
+  fs.writeFileSync(tmp, text, { mode: 0o600 });
+  fs.renameSync(tmp, file);
+  const size = Buffer.byteLength(text);
+  indexes[kind].set(key, metaOf(item, size));
+  return size;
+}
+
+function drop(kind, key) {
+  remove(fileFor(dirs[kind], key));
+  indexes[kind].delete(key);
+}
+
+/** Gültige Einträge (ohne Projekt); das Projekt liest bei Bedarf loadSession(). */
+function entries(kind) {
+  const now = Date.now();
+  return [...indexes[kind].values()].filter((m) => m.expires > now);
+}
+
+function usage() {
+  let bytes = 0;
+  for (const index of Object.values(indexes)) for (const m of index.values()) bytes += m.size || 0;
+  return { bytes, sessions: indexes.sessions.size, feedback: indexes.feedback.size };
+}
+
+/** Passt ein neuer bzw. grösserer Eintrag noch in den Speicher? */
+function fits(extraBytes, newSessions = 0) {
+  const u = usage();
+  return u.bytes + Math.max(0, extraBytes) <= MAX_STORAGE_BYTES && u.sessions + newSessions <= MAX_SESSIONS;
+}
+
+const projectSize = (project) => Buffer.byteLength(JSON.stringify(project));
+
+async function buildIndexes() {
+  const now = Date.now();
+  for (const kind of Object.keys(indexes)) {
+    let names = [];
+    try {
+      names = await fs.promises.readdir(dirs[kind]);
+    } catch {
+      continue;
+    }
+    for (let i = 0; i < names.length; i += 25) {
+      await Promise.all(
+        names.slice(i, i + 25).map(async (name) => {
+          const file = path.join(dirs[kind], name);
+          if (name.endsWith('.tmp')) return remove(file);
+          if (!name.endsWith('.json')) return;
+          try {
+            const text = await fs.promises.readFile(file, 'utf8');
+            const item = JSON.parse(text);
+            const key = name.slice(0, -5);
+            if (typeof item.expires !== 'number' || item.expires < now) return remove(file);
+            indexes[kind].set(key, metaOf(item, Buffer.byteLength(text)));
+          } catch {
+            remove(file);
+          }
+        }),
+      );
+      // Zwischen den Stapeln andere Anfragen bedienen.
+      await new Promise((resolve) => setImmediate(resolve));
+    }
   }
 }
 
@@ -166,8 +260,25 @@ function summary(project) {
 const SALT = crypto.randomBytes(16);
 const buckets = new Map();
 
+const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
+/**
+ * Adresse für die Ratenbegrenzung (nur gehasht im Arbeitsspeicher, nie gespeichert).
+ * Hinter dem Proxy von Plesk (Verbindung von 127.0.0.1) gilt der letzte Eintrag im
+ * Weiterleitungs-Kopf, den der Proxy selbst anhängt; andere Absender können ihn nicht fälschen.
+ */
+function clientIp(req) {
+  const direct = req.socket.remoteAddress || '';
+  if (!LOOPBACK.has(direct)) return direct;
+  const forwarded = String(req.headers['x-forwarded-for'] || '')
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean);
+  return forwarded.length ? forwarded[forwarded.length - 1] : String(req.headers['x-real-ip'] || direct);
+}
+
 function limited(req, kind, perMinute) {
-  const ip = req.socket.remoteAddress || '';
+  const ip = clientIp(req);
   const key = crypto.createHash('sha256').update(SALT).update(ip).update(kind).digest('base64url').slice(0, 16);
   const now = Date.now();
   const bucket = buckets.get(key) || { start: now, count: 0 };
@@ -209,12 +320,17 @@ function isAdmin(req) {
 
 // --- Aufräumen ---------------------------------------------------------------------
 
-function cleanup() {
+/** Abgelaufenes löschen: Sessions und Rückmeldungen über das Verzeichnis, ohne alles zu lesen. */
+async function cleanup() {
   const now = Date.now();
-  for (const dir of [dirs.sessions, dirs.feedback, dirs.classes, dirs.exams]) {
+  for (const kind of Object.keys(indexes)) {
+    for (const [key, m] of indexes[kind]) if (!(m.expires > now)) drop(kind, key);
+  }
+  // Klassen und Prüfungen legt nur der Admin an; es sind wenige Dateien.
+  for (const dir of [dirs.classes, dirs.exams]) {
     let names = [];
     try {
-      names = fs.readdirSync(dir);
+      names = await fs.promises.readdir(dir);
     } catch {
       continue;
     }
@@ -224,8 +340,12 @@ function cleanup() {
         remove(file);
         continue;
       }
-      const item = readJson(file);
-      if (!item || typeof item.expires !== 'number' || item.expires < now) remove(file);
+      try {
+        const item = JSON.parse(await fs.promises.readFile(file, 'utf8'));
+        if (typeof item.expires !== 'number' || item.expires < now) remove(file);
+      } catch {
+        remove(file);
+      }
     }
   }
 }
@@ -269,18 +389,25 @@ function fail(res, status, code) {
 
 function readBody(req, max = MAX_BODY) {
   return new Promise((resolve, reject) => {
+    const tooLarge = () => Object.assign(new Error('tooLarge'), { status: 413 });
+    // Angekündigte Grösse zu gross: gar nicht erst lesen.
+    if (Number(req.headers['content-length'] || 0) > max) return reject(tooLarge());
     let size = 0;
+    let done = false;
     const chunks = [];
     req.on('data', (chunk) => {
+      if (done) return;
       size += chunk.length;
       if (size > max) {
-        reject(Object.assign(new Error('tooLarge'), { status: 413 }));
-        req.destroy();
+        done = true;
+        chunks.length = 0;
+        reject(tooLarge());
         return;
       }
       chunks.push(chunk);
     });
     req.on('end', () => {
+      if (done) return;
       if (size === 0) return resolve({});
       try {
         resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
@@ -412,7 +539,7 @@ function seatStatus(exam, seat) {
 /** Übersicht für den Admin (ohne Schlüssel und ohne Projekte). */
 function examSummary(exam, withSeats = false) {
   const now = Date.now();
-  const sessions = withSeats ? new Map(list(dirs.sessions).filter((x) => x.exam && x.exam.id === exam.id).map((x) => [x.exam.seat, x])) : null;
+  const sessions = withSeats ? new Map(entries('sessions').filter((x) => x.exam && x.exam.id === exam.id).map((x) => [x.exam.seat, x])) : null;
   return {
     id: exam.id,
     label: exam.label,
@@ -429,7 +556,7 @@ function examSummary(exam, withSeats = false) {
           return { id: s.id, code: s.code, extra: s.extra || 0, until: s.until || null, state: seatState(exam, s, now), joined: !!session, saved: session ? session.updated : null };
         })
       : exam.seats.length,
-    joined: withSeats ? undefined : list(dirs.sessions).filter((x) => x.exam && x.exam.id === exam.id).length,
+    joined: withSeats ? undefined : entries('sessions').filter((x) => x.exam && x.exam.id === exam.id).length,
   };
 }
 
@@ -465,6 +592,8 @@ async function api(req, res, url) {
   if (parts[0] === 'sessions') {
     // Ganze Klassen hinter einer Schul-Adresse (NAT) speichern laufend: grosszügige Grenze.
     if (limited(req, 'sessions', 600)) return fail(res, 429, 'rateLimited');
+    // Neue Sessions legen Dateien an: eigene, engere Grenze.
+    if (parts.length === 1 && method === 'POST' && limited(req, 'newSession', NEW_SESSIONS_PER_MINUTE)) return fail(res, 429, 'rateLimited');
     const s = settings();
     const ttl = s.sessionHours * 3_600_000;
 
@@ -476,11 +605,12 @@ async function api(req, res, url) {
         classCode = normalizeCode(body.classCode);
         if (!classCode || !loadClass(classCode)) return fail(res, 404, 'unknownClass');
       }
+      if (!fits(projectSize(body.project), 1)) return fail(res, 507, 'storageFull');
       let code = newCode();
-      while (fs.existsSync(fileFor(dirs.sessions, code))) code = newCode();
+      while (indexes.sessions.has(code) || fs.existsSync(fileFor(dirs.sessions, code))) code = newCode();
       const now = Date.now();
       const item = { code, created: now, updated: now, expires: now + ttl, classCode, project: body.project };
-      writeJson(fileFor(dirs.sessions, code), item);
+      store('sessions', code, item);
       return json(res, 201, { code, expires: item.expires, classCode });
     }
 
@@ -500,18 +630,20 @@ async function api(req, res, url) {
         const seat = exam && exam.seats.find((s) => s.id === item.exam.seat);
         if (!exam || !seat) return fail(res, 404, 'unknownSession');
         if (!exam.started || now > seat.until + EXAM_GRACE_MS) return json(res, 423, { error: 'examClosed', exam: seatStatus(exam, seat) });
-        writeJson(fileFor(dirs.sessions, code), { ...item, project: body.project, updated: now });
+        store('sessions', code, { ...item, project: body.project, updated: now });
         return json(res, 200, { code, expires: item.expires, exam: seatStatus(exam, seat) });
       }
       // Die Frist läuft ab der letzten Änderung (Arbeit geht nicht mitten in der Lektion verloren).
+      const before = indexes.sessions.get(code);
+      if (!fits(projectSize(body.project) - (before ? before.size : 0))) return fail(res, 507, 'storageFull');
       const next = { ...item, project: body.project, updated: now, expires: now + ttl };
-      writeJson(fileFor(dirs.sessions, code), next);
+      store('sessions', code, next);
       return json(res, 200, { code, expires: next.expires });
     }
     if (method === 'DELETE') {
       // Abgaben einer Prüfung löscht nur der Admin.
       if (item.exam) return fail(res, 403, 'examSession');
-      remove(fileFor(dirs.sessions, code));
+      drop('sessions', code);
       return json(res, 200, { deleted: true });
     }
     return fail(res, 405, 'methodNotAllowed');
@@ -528,15 +660,17 @@ async function api(req, res, url) {
     const status = seatStatus(exam, seat);
     if (status.state === 'waiting') return json(res, 200, { exam: status });
     // Weiterarbeiten: vorhandene Session des Platzes; sonst neue mit der Prüfungsdatei.
-    let session = list(dirs.sessions).find((x) => x.exam && x.exam.id === exam.id && x.exam.seat === seat.id);
+    const known = entries('sessions').find((x) => x.exam && x.exam.id === exam.id && x.exam.seat === seat.id);
+    let session = known ? loadSession(known.code) : null;
     let fresh = false;
     if (!session) {
       if (status.state === 'closed') return json(res, 200, { exam: status });
       let code = newCode();
-      while (fs.existsSync(fileFor(dirs.sessions, code))) code = newCode();
+      while (indexes.sessions.has(code) || fs.existsSync(fileFor(dirs.sessions, code))) code = newCode();
       const now = Date.now();
       session = { code, created: now, updated: now, expires: exam.expires, classCode: null, exam: { id: exam.id, seat: seat.id }, project: exam.learner };
-      writeJson(fileFor(dirs.sessions, code), session);
+      // Prüfungsplätze zählen nicht zur Grenze: Eine Prüfung darf nie an vollem Speicher scheitern.
+      store('sessions', code, session);
       fresh = true;
     }
     return json(res, 200, { exam: status, session: session.code, fresh, variant: seat.variant || null, project: session.project });
@@ -561,6 +695,8 @@ async function api(req, res, url) {
     const kind = ['problem', 'idea', 'other'].includes(body.kind) ? body.kind : 'other';
     const text = typeof body.text === 'string' ? body.text.trim().slice(0, MAX_FEEDBACK_TEXT) : '';
     if (!text) return fail(res, 400, 'emptyText');
+    const withProject = validProject(body.project);
+    if (indexes.feedback.size >= MAX_FEEDBACK || !fits((withProject ? projectSize(body.project) : 0) + text.length)) return fail(res, 507, 'storageFull');
     const id = crypto.randomUUID();
     const now = Date.now();
     const item = {
@@ -573,9 +709,9 @@ async function api(req, res, url) {
       // Nur technische Angaben, keine Personendaten.
       version: typeof body.version === 'string' ? body.version.slice(0, 20) : '',
       locale: typeof body.locale === 'string' ? body.locale.slice(0, 5) : '',
-      project: validProject(body.project) ? body.project : null,
+      project: withProject ? body.project : null,
     };
-    writeJson(fileFor(dirs.feedback, id), item);
+    store('feedback', id, item);
     return json(res, 201, { ok: true });
   }
 
@@ -614,11 +750,13 @@ async function admin(req, res, parts, method) {
   }
 
   if (parts[0] === 'overview' && method === 'GET') {
-    const sessions = list(dirs.sessions);
-    const feedback = list(dirs.feedback);
+    const sessions = entries('sessions');
+    const feedback = entries('feedback');
+    const u = usage();
     return json(res, 200, {
       settings: settings(),
       sessions: sessions.length,
+      storage: { bytes: u.bytes, maxBytes: MAX_STORAGE_BYTES, sessions: u.sessions, maxSessions: MAX_SESSIONS },
       classes: list(dirs.classes)
         .map((c) => ({ code: c.code, label: c.label, created: c.created, expires: c.expires, sessions: sessions.filter((s) => s.classCode === c.code).length }))
         .sort((a, b) => b.created - a.created),
@@ -657,7 +795,7 @@ async function admin(req, res, parts, method) {
 
   if (parts[0] === 'feedback') {
     if (parts.length === 1 && method === 'GET') {
-      return json(res, 200, list(dirs.feedback).sort((a, b) => b.created - a.created).map(({ project, ...f }) => ({ ...f, hasProject: !!project })));
+      return json(res, 200, entries('feedback').sort((a, b) => b.created - a.created).map(({ size, ...f }) => f));
     }
     const id = /^[0-9a-f-]{36}$/.test(parts[1] || '') ? parts[1] : null;
     const item = id && readJson(fileFor(dirs.feedback, id));
@@ -665,11 +803,11 @@ async function admin(req, res, parts, method) {
     if (method === 'GET') return json(res, 200, item);
     if (method === 'PATCH') {
       const body = await readBody(req);
-      if (body.status === 'open' || body.status === 'done') writeJson(fileFor(dirs.feedback, id), { ...item, status: body.status });
+      if (body.status === 'open' || body.status === 'done') store('feedback', id, { ...item, status: body.status });
       return json(res, 200, { ok: true });
     }
     if (method === 'DELETE') {
-      remove(fileFor(dirs.feedback, id));
+      drop('feedback', id);
       return json(res, 200, { ok: true });
     }
   }
@@ -693,15 +831,17 @@ async function admin(req, res, parts, method) {
     const item = code && loadClass(code);
     if (!item) return fail(res, 404, 'unknownClass');
     if (parts[2] === 'sessions' && method === 'GET') {
-      const sessions = list(dirs.sessions)
+      const sessions = entries('sessions')
         .filter((s) => s.classCode === code)
         .sort((a, b) => a.created - b.created)
+        .map((m) => loadSession(m.code))
+        .filter(Boolean)
         .map((s) => ({ code: s.code, created: s.created, updated: s.updated, expires: s.expires, ...summary(s.project) }));
       return json(res, 200, sessions);
     }
     if (parts.length === 2 && method === 'DELETE') {
       // Klasse schliessen: auch alle ihre Sessions löschen.
-      for (const s of list(dirs.sessions)) if (s.classCode === code) remove(fileFor(dirs.sessions, s.code));
+      for (const s of entries('sessions')) if (s.classCode === code) drop('sessions', s.code);
       remove(fileFor(dirs.classes, code));
       return json(res, 200, { ok: true });
     }
@@ -710,7 +850,7 @@ async function admin(req, res, parts, method) {
   if (parts[0] === 'sessions') {
     if (parts.length === 1 && method === 'DELETE') {
       // Abgaben von Prüfungen bleiben (sie werden mit der Prüfung gelöscht).
-      for (const s of list(dirs.sessions)) if (!s.exam) remove(fileFor(dirs.sessions, s.code));
+      for (const s of entries('sessions')) if (!s.exam) drop('sessions', s.code);
       return json(res, 200, { ok: true });
     }
     const code = normalizeCode(parts[1]);
@@ -718,7 +858,7 @@ async function admin(req, res, parts, method) {
     if (!item) return fail(res, 404, 'unknownSession');
     if (method === 'GET') return json(res, 200, { code, project: item.project, classCode: item.classCode });
     if (method === 'DELETE') {
-      remove(fileFor(dirs.sessions, code));
+      drop('sessions', code);
       return json(res, 200, { ok: true });
     }
   }
@@ -776,7 +916,7 @@ async function adminExams(req, res, parts, method) {
   const now = Date.now();
   if (parts.length === 1 && method === 'GET') return json(res, 200, examSummary(exam, true));
   if (parts.length === 1 && method === 'DELETE') {
-    for (const s of list(dirs.sessions)) if (s.exam && s.exam.id === exam.id) remove(fileFor(dirs.sessions, s.code));
+    for (const s of entries('sessions')) if (s.exam && s.exam.id === exam.id) drop('sessions', s.code);
     remove(path.join(dirs.exams, `${exam.id}.json`));
     return json(res, 200, { ok: true });
   }
@@ -808,8 +948,10 @@ async function adminExams(req, res, parts, method) {
   // Abgaben für die Auswertung, mit entschlüsseltem Schlüssel.
   if (parts[1] === 'submissions' && method === 'GET') {
     const key = exam.key ? decryptKey(exam.key) : null;
-    const submissions = list(dirs.sessions)
+    const submissions = entries('sessions')
       .filter((s) => s.exam && s.exam.id === exam.id)
+      .map((m) => loadSession(m.code))
+      .filter(Boolean)
       .sort((a, b) => a.exam.seat.localeCompare(b.exam.seat))
       .map((s) => ({ seat: s.exam.seat, code: exam.seats.find((x) => x.id === s.exam.seat)?.code || '', updated: s.updated, project: s.project }));
     return json(res, 200, { id: exam.id, examId: exam.examId, title: exam.title, label: exam.label, key, keyError: exam.key && !key ? 'unreadable' : null, submissions });
@@ -821,11 +963,14 @@ async function adminExams(req, res, parts, method) {
 
 function createServer() {
   ensureDirs();
-  cleanup();
-  const timer = setInterval(cleanup, 10 * 60_000);
+  // Verzeichnis im Hintergrund aufbauen, danach regelmässig aufräumen.
+  const ready = buildIndexes()
+    .then(cleanup)
+    .catch((error) => console.error('Verzeichnis:', error && error.message));
+  const timer = setInterval(() => void cleanup().catch(() => undefined), 10 * 60_000);
   timer.unref();
 
-  return http.createServer(async (req, res) => {
+  const server = http.createServer(async (req, res) => {
     let url;
     try {
       url = new URL(req.url || '/', 'http://localhost');
@@ -856,9 +1001,18 @@ function createServer() {
       const status = error && error.status ? error.status : 500;
       // Keine Anfragedaten ins Log: nur der Fehlercode.
       if (status === 500) console.error('Serverfehler:', error && error.message);
+      // Platte voll (z.B. durch andere Programme): sauber melden statt Serverfehler.
+      if (error && error.code === 'ENOSPC') return fail(res, 507, 'storageFull');
+      // Zu gross: antworten und die Verbindung danach schliessen, statt den Rest zu lesen.
+      if (status === 413) {
+        res.on('finish', () => req.destroy());
+        return send(res, 413, JSON.stringify({ error: 'tooLarge' }), { 'Content-Type': 'application/json; charset=utf-8', Connection: 'close' });
+      }
       return fail(res, status, error && error.status ? error.message : 'serverError');
     }
   });
+  server.ready = ready;
+  return server;
 }
 
 module.exports = { createServer, normalizeCode, newCode, cleanup, DATA_DIR, ADMIN_PASSWORD };

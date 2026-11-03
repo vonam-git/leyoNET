@@ -144,6 +144,34 @@ test('Aufgabe aus dem Katalog laden', async ({ page }) => {
   await expect(page.locator('.tasks')).not.toBeEmpty();
 });
 
+test('erledigte Übungen sind im Katalog markiert', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('netzwerk-simulator.catalogDone', JSON.stringify({ 'two-pcs': Date.now() })));
+  await page.reload();
+  await page.getByRole('button', { name: /Aufgaben-Katalog/ }).click();
+  await expect(page.getByRole('dialog')).toContainText(/1 von \d+ erledigt/);
+  await expect(page.locator('li.done')).toHaveCount(1);
+  await expect(page.locator('li.done')).toContainText('erledigt');
+  await expect(page.locator('li.done').getByRole('button', { name: 'Nochmals' })).toBeVisible();
+});
+
+test('Adresse wird gespeichert, wenn man mit der Maus ein anderes Gerät anklickt', async ({ page }) => {
+  await page.getByRole('button', { name: /Aufgaben-Katalog/ }).click();
+  await page.getByRole('button', { name: 'Starten' }).first().click();
+  const nodes = page.locator('g.device');
+  const click = async (i: number) => {
+    const box = (await nodes.nth(i).boundingBox())!;
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 3);
+  };
+  await click(0);
+  await page.locator('#config-ip').click();
+  await page.keyboard.type('192.168.5.20');
+  // Ohne Enter, ohne Maske: direkt das andere Gerät anklicken.
+  await click(1);
+  await click(0);
+  await expect(page.locator('#config-ip')).toHaveValue('192.168.5.20');
+  await expect(page.locator('#config-mask')).toHaveValue('255.255.255.0');
+});
+
 test('Befehlssuche und Hilfe', async ({ page }) => {
   await page.keyboard.press('Control+k');
   const palette = page.getByRole('dialog', { name: /Befehl suchen/ });

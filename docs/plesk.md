@@ -33,6 +33,8 @@ Rechner (du)  ──git push──►  GitHub: develop  ──Plesk Git (Pull)�
      |---|---|---|
      | `ADMIN_PASSWORD` | ein langes, zufälliges Passwort | öffnet die Admin-Konsole; ohne diese Variable ist sie gesperrt |
      | `DATA_DIR` | optional, z.B. `/var/www/vhosts/deine-domain.ch/simulator-data` | Ablage der Sessions; Standard ist `httpdocs/data` (ausserhalb des Dokumentstamms) |
+     | `MAX_SESSIONS` | optional, Standard `5000` | höchstens so viele Sessions gleichzeitig (Schutz vor Überlastung) |
+     | `MAX_STORAGE_MB` | optional, Standard `1024` | höchstens so viel Platz für Sessions und Rückmeldungen; Prüfungen sind ausgenommen |
    - *NPM install* ist nicht nötig. Auf **Node.js aktivieren** bzw. **App neu starten** klicken.
 4. **SSL/TLS** für die Subdomain aktivieren (Let's Encrypt in Plesk) und *Permanente SEO-sichere 301-Weiterleitung von HTTP zu HTTPS* einschalten.
 5. **Zugriffsprotokolle** (Datenschutz): Plesk speichert standardmässig IP-Adressen im Access-Log des Webservers. Unter *Protokolle → Protokollrotation* die Aufbewahrung auf wenige Tage begrenzen oder die Protokollierung für die Subdomain abschalten (siehe [datenschutz.md](datenschutz.md#webserver-protokolle)).
@@ -48,6 +50,7 @@ Danach unter der Adresse der Subdomain den Simulator öffnen. Oben rechts ersche
   - erlaubte Modi (Entwurf, Simulation)
   - **Standardprofil** und **höchstes Profil** (1 = 1. Lehrjahr … 5 = Studium) sowie einzelne **gesperrte Funktionen** (siehe [funktionsprofile.md](funktionsprofile.md))
   - Aufbewahrung von Sessions, Klassen und Rückmeldungen, Rückmeldungen ein/aus
+  - belegter Speicher und Anzahl Sessions im Vergleich zur Grenze (Warnung ab 80 %)
 - **Systemprüfung**: Ergebnis der Release-Prüfung (Datenschutz, Sicherheit, Lizenzen) der ausgelieferten Version aus `release/checks.json` (siehe [datenschutz.md](datenschutz.md#prüfung-bei-jedem-release)).
 
 Ältere Einstellungen (Aktions- und Dokumentationsmodus, Pro-Version) werden beim ersten Start automatisch übernommen: «Pro aus» wird zu höchstem Profil 3.

@@ -6,6 +6,7 @@
   import { dialogs } from '../state/dialogs.svelte';
   import { ui } from '../state/ui.svelte';
   import { examMode } from '../state/exam.svelte';
+  import { catalogIdOf, progress } from '../state/progress.svelte';
   import Stars from './Stars.svelte';
 
   /** Aufgabe mit Lernzielen; "Prüfen" wertet das aktuelle Netz automatisch aus. */
@@ -33,6 +34,9 @@
     setTimeout(() => {
       results = evaluateTasks(editor.topology, tasks, simStore.sim?.getPacketLog() ?? []);
       checking = false;
+      // Übung aus dem Katalog vollständig gelöst: im Katalog als erledigt zeigen.
+      const id = catalogIdOf(tasks);
+      if (id && results.length > 0 && results.every((r) => r.passed || r.manual) && progress.mark(id)) editor.notify(t('catalog.doneNotice'));
     }, 20);
   }
 

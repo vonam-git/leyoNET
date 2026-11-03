@@ -141,6 +141,21 @@
     ArrowDown: [0, 1],
   };
 
+  /**
+   * Eingaben übernehmen, wenn man mit der Maus weiterklickt: Die Zeichenfläche
+   * verhindert beim Anklicken den Fokuswechsel (Ziehen), darum verlöre ein Feld
+   * sonst seine Eingabe, sobald ein anderes Gerät gewählt wird. Vorher das Feld
+   * verlassen, damit es speichert (autosave.ts bzw. «change»).
+   */
+  function onpointerdowncapture(event: PointerEvent) {
+    const active = document.activeElement;
+    if (!(active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement)) return;
+    const target = event.target as Node | null;
+    const scope = active.closest('form, dialog, .device-window') ?? active;
+    if (target && scope.contains(target)) return;
+    active.blur();
+  }
+
   function onkeydown(event: KeyboardEvent) {
     // Offene Dialoge und Geräte-Fenster behandeln ihre Tasten selbst.
     if (document.querySelector('dialog[open]') || (event.target as Element | null)?.closest('.device-window')) return;
@@ -159,7 +174,7 @@
 </script>
 
 <svelte:window {onkeydown} {onpagehide} />
-<svelte:document {onvisibilitychange} />
+<svelte:document {onvisibilitychange} onpointerdowncapture={onpointerdowncapture} />
 
 <div class="app" class:help-open={dialogs.help !== null} class:no-left={!ui.panels.left} class:no-right={!ui.panels.right}>
   <MenuBar />
