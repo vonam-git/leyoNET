@@ -31,7 +31,7 @@ import type {
 import { IP_MODES, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type IpMode, type RoutingMode } from '../model/types';
 import { formatCidr6, formatIp6, isLinkLocal6, isMulticast6, parseCidr6, parseIp6 } from '../net/ipv6';
 import { isValidName, normalizeName } from '../net/dns';
-import { normalizeMac } from '../net/dhcp';
+import { normalizeMac } from '../model/mac';
 import { isValidPath } from '../net/http';
 import { checkMailAccount } from '../net/mail';
 import { readTasks, type TaskSet } from '../tasks/tasks';

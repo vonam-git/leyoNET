@@ -33,7 +33,7 @@ ${c?.comment ? `<h2>${escape(t('review.report.comment'))}</h2><p>${escape(c.comm
     ];
   });
   return `<!doctype html>
-<html lang="de"><head><meta charset="utf-8"><title>${escape(title)}</title>
+<html lang="de"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"><title>${escape(title)}</title>
 <style>
 body{font:10.5pt/1.4 system-ui,sans-serif;max-width:50em;margin:2em auto;padding:0 1em;color:#111}
 h1{font-size:15pt;margin:0 0 .4em}h2{font-size:11pt;margin:1em 0 .2em}

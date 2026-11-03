@@ -41,6 +41,14 @@ describe('Abgaben auswerten', () => {
     expect(lines[2]).toBe('"x.json";"Fehler"');
   });
 
+  it('CSV: Formeln in Dateinamen und Bemerkungen werden entschärft', () => {
+    const reviews = [reviewSubmission('=HYPERLINK("http://x.example")', solution, tasks)];
+    const csv = reviewCsv(tasks!, reviews, { file: 'Datei', score: 'Punkte', error: 'Fehler' }, { '=HYPERLINK("http://x.example")': { comment: '+1 gut' } });
+    const line = csv.trim().split('\r\n')[1]!;
+    expect(line.startsWith(`"'=HYPERLINK(""http://x.example"")"`)).toBe(true);
+    expect(line.endsWith(`"'+1 gut"`)).toBe(true);
+  });
+
   it('Prüfung: wertet mit dem Schlüssel aus, erkennt fremde Prüfungen, Nachkorrektur und Ähnlichkeit', async () => {
     const solved = parseProject(solution);
     if (!solved.ok || !tasks) throw new Error('Testdaten');

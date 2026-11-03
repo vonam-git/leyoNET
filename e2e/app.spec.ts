@@ -75,6 +75,11 @@ test('Ping über einen Router in der Simulation, mit Filter und OSI-Ansicht', as
   await packets.getByRole('searchbox').fill('icmp and ip.dst == 192.168.2.10');
   await expect(packets.locator('tbody tr').first()).toContainText('ICMP');
   await expect(packets.locator('tbody')).not.toContainText('ARP');
+  // Weiterleitungen durch den Switch: ausgeblendet, eingeschaltet zusätzliche Zeilen.
+  const once = await packets.locator('tbody tr').count();
+  await packets.getByLabel('Jedes Paket nur einmal').uncheck();
+  await expect.poll(() => packets.locator('tbody tr').count()).toBeGreaterThan(once);
+  await packets.getByLabel('Jedes Paket nur einmal').check();
   await packets.locator('tbody tr').first().click();
   const details = page.locator('.details');
   await expect(details).toContainText('Vermittlung');

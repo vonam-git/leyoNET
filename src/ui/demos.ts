@@ -27,6 +27,7 @@ export type DemoCheck =
   | { kind: 'dhcp'; devices: string[] }
   | { kind: 'mail'; device: string; subject: string }
   | { kind: 'storm' }
+  | { kind: 'macFlap'; device: string }
   | { kind: 'trace'; device: string };
 
 /**
@@ -124,6 +125,14 @@ export const DEMOS: readonly Demo[] = [
   },
   // Switching
   { id: 'vlanStp', file: 'vlan-stp.json', topic: 'switching', layers: [2], actions: [{ at: 6500, device: 'Verwaltung 1', command: 'ping 10.0.10.12' }], check: { kind: 'ping', device: 'Verwaltung 1' }, until: 15_000 },
+  { id: 'duplicateMac', file: 'doppelte-mac.json', topic: 'switching', layers: [2], actions: [{ at: 600, device: 'PC 1', command: 'ping 192.168.1.11' }, { at: 900, device: 'Notebook', command: 'ping 192.168.1.10' }], check: { kind: 'macFlap', device: 'Switch' }, until: 8000,
+    tour: [
+      { sim: false, highlight: 'Notebook', window: { device: 'Notebook', tab: 'ports' } },
+      { sim: true, pause: true, action: { at: 0, device: 'PC 1', command: 'ping 192.168.1.11' }, highlight: 'PC 1' },
+      { pause: false, action: { at: 0, device: 'Notebook', command: 'ping 192.168.1.10' }, highlight: 'Notebook' },
+      { highlight: 'Switch', window: { device: 'Switch', tab: 'state' } },
+      { highlight: 'PC 1' },
+    ] },
   { id: 'storm', file: 'broadcast-sturm.json', topic: 'switching', layers: [2], actions: [{ at: 600, device: 'PC 1', command: 'ping 192.168.1.11' }], check: { kind: 'storm' }, until: 3000 },
   { id: 'routerOnAStick', file: 'router-on-a-stick.json', topic: 'switching', layers: [2, 3], actions: [{ at: 600, device: 'PC Verwaltung', command: 'ping 192.168.20.11' }], check: { kind: 'ping', device: 'PC Verwaltung' }, until: 8000 },
   { id: 'l3switch', file: 'layer3-switch.json', topic: 'switching', layers: [2, 3], actions: [{ at: 5000, device: 'Notebook 1', command: 'ping 10.99.0.10' }], check: { kind: 'ping', device: 'Notebook 1' }, until: 15_000 },

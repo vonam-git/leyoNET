@@ -2,7 +2,7 @@
 
 # leyoNET
 
-**Netzwerke bauen, simulieren und verstehen.**
+**Netzwerke bauen, simulieren und verstehen.** Website: [leyonet.ch](https://leyonet.ch) · im Browser: [app.leyonet.ch](https://app.leyonet.ch)
 
 [![CI](https://github.com/vonam-git/leyoNET/actions/workflows/ci.yml/badge.svg)](https://github.com/vonam-git/leyoNET/actions/workflows/ci.yml)
 
@@ -10,7 +10,7 @@ leyoNET ist ein Simulator für Rechnernetze im Informatik-Unterricht, vom ersten
 
 Die ursprüngliche Anforderungsbeschreibung steht in [docs/konzept.md](docs/konzept.md).
 
-**Dokumentation:** [Anleitung für Lernende](docs/anleitung.md) · [Hinweise für Lehrpersonen](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Prüfungen](docs/pruefungen.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Normen und automatische Prüfungen](docs/normen.md) · [Richtpreise](docs/preise.md) · [Befehlszeile](docs/cli.md) · [Datenschutz](docs/datenschutz.md) · [Installation](docs/installation.md) · [Webversion auf Plesk](docs/plesk.md) · [Desktop](docs/desktop.md)
+**Dokumentation:** [Anleitung für Lernende](docs/anleitung.md) · [Hinweise für Lehrpersonen](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Prüfungen](docs/pruefungen.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Normen und automatische Prüfungen](docs/normen.md) · [Richtpreise](docs/preise.md) · [Befehlszeile](docs/cli.md) · [Datenschutz](docs/datenschutz.md) · [IT-Sicherheit](docs/sicherheit.md) · [Installation](docs/installation.md) · [Webversion auf Plesk](docs/plesk.md) · [Desktop](docs/desktop.md)
 
 ## Sofort loslegen
 
@@ -49,6 +49,7 @@ Dann **`release/leyonet.html`** doppelklicken – fertig, ohne Installation und 
 | v0.6 | **IPv6**: IP-Version wählbar (IPv4, Dual Stack, IPv6), Neighbor Discovery, SLAAC, DHCPv6, ICMPv6, IPv6-Routing; **DS-Lite** mit CGNAT; Projektname, Mehrfachauswahl, automatisches Routing | ✅ |
 | v0.7 | **Firewall** (zustandsbehafteter Paketfilter auf Routern und Endgeräten) und **Site-to-Site-VPN** mit IPsec (IKEv2, ESP); Demos und Übungen dazu | ✅ |
 | v0.8 | **Prüfungen** mit Punkten und Note, Prüfungsgenerator; Übungen zum Modul 117 mit ausfüllbaren Arbeitsblättern (PDF); DHCP mit festen Zuweisungen | ✅ |
+| v0.10.3 | MAC-Adressen ändern und doppelte MAC vorführen (Warnung, «MAC springt» am Switch, Demo), Adapter und MAC in der Schnellansicht, Bereiche in der Grösse verstellbar, Simulation zurücksetzen und Schritt zurück | ✅ |
 | v0.10 | **Prüfungen in der Webversion**: Platz-Codes und Platzkarten, Start/Ende durch die Lehrperson, Speichern alle 20 s, automatische Abgabe, Nachteilsausgleich je Platz, automatische Auswertung, Abgaben als Datei, Namensliste nur im Browser | ✅ |
 | v0.9 | **Prüfungsdatei ohne Lösungen** mit Schlüssel, Prüfungsmodus mit Code, eigene Variante je Platz, **Fehlersuche-Prüfungen**, Ziele aus einer Musterlösung, Fragen, Teilpunkte und Folgefehler, Dokumentation prüfen, Nachkorrektur, Berichte, Hinweis auf ähnliche Abgaben | ✅ |
 

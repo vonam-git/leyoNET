@@ -497,7 +497,7 @@ export function examSheetsHtml(specs: readonly ExamSpec[]): string {
   const pages = specs.map((spec) => examPageHtml(spec)).join('\n<div class="break"></div>\n');
   const title = specs.length === 1 ? buildExamTasks(specs[0]!).title : t('exam.sheet.many', { n: specs.length });
   return `<!doctype html>
-<html lang="de"><head><meta charset="utf-8"><title>${escape(title)}</title>
+<html lang="de"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"><title>${escape(title)}</title>
 <style>
 body{font:11pt/1.45 system-ui,sans-serif;max-width:46em;margin:2em auto;padding:0 1em;color:#111}
 h1{font-size:16pt;margin:0 0 .2em}p{margin:.15em 0}

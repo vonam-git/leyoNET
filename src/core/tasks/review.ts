@@ -142,7 +142,8 @@ export function reviewCsv(
   labels: { file: string; score: string; error: string; points?: string; grade?: string; variant?: string; comment?: string },
   corrections: Corrections = {},
 ): string {
-  const quote = (s: string) => `"${s.replace(/"/g, '""')}"`;
+  // Zellen, die mit = + - @ beginnen, würde Excel als Formel ausführen (CSV-Injektion): mit ' entschärfen.
+  const quote = (s: string) => `"${(/^[=+\-@\t\r]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`;
   // Mit Punkten: je Ziel die erreichten Punkte, dazu Total und Note (Dezimalkomma für Excel in der Schweiz).
   const withPoints = tasks.grading || tasks.goals.some((g) => g.points !== undefined);
   const decimal = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',');

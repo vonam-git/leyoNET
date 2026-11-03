@@ -74,3 +74,43 @@ export function duplicateAddresses(topology: Topology, live?: ReadonlyMap<string
   for (const [id, count] of perDevice) if (count > 1) result.add(id);
   return result;
 }
+
+/**
+ * Doppelte MAC-Adressen im selben Netzabschnitt (ohne Router dazwischen).
+ * Dort lernen Switches die Adresse abwechselnd an zwei Ports, und Rahmen landen
+ * beim falschen Gerät. Hinter verschiedenen Routern stört dieselbe MAC nicht.
+ * Ergebnis: Schlüssel `<Geräte-ID>#<Anschluss>` aller betroffenen Anschlüsse.
+ */
+export function duplicateMacs(topology: Topology): Set<string> {
+  const parent = new Map<string, string>();
+  const find = (x: string): string => {
+    let root = x;
+    while (parent.has(root) && parent.get(root) !== root) root = parent.get(root)!;
+    parent.set(x, root);
+    return root;
+  };
+  const devices = new Map(topology.devices.map((d) => [d.id, d]));
+  const node = (device: Device | undefined, iface: number) =>
+    device && isBridge(device) ? device.id : device?.type === 'cpe' && iface !== 0 ? `${device.id}:lan` : `${device?.id}:${iface}`;
+  for (const cable of topology.cables) {
+    const a = find(node(devices.get(cable.a.device), cable.a.iface));
+    const b = find(node(devices.get(cable.b.device), cable.b.iface));
+    if (a !== b) parent.set(a, b);
+  }
+  const seen = new Map<string, string[]>();
+  for (const device of topology.devices) {
+    // Brücken leiten nur weiter; ihre eigenen Port-MACs senden (fast) nie.
+    if (isBridge(device)) continue;
+    for (const iface of device.interfaces) {
+      // Nur verkabelte Anschlüsse stören sich.
+      if (!topology.cables.some((c) => (c.a.device === device.id && c.a.iface === iface.index) || (c.b.device === device.id && c.b.iface === iface.index))) continue;
+      const key = `${find(node(device, iface.index))}|${iface.mac}`;
+      const list = seen.get(key) ?? [];
+      list.push(`${device.id}#${iface.index}`);
+      seen.set(key, list);
+    }
+  }
+  const result = new Set<string>();
+  for (const list of seen.values()) if (list.length > 1) for (const k of list) result.add(k);
+  return result;
+}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Splitter from './components/Splitter.svelte';
   import { onMount, untrack } from 'svelte';
   import { parseProject, serializeProject } from '../core';
   import { locale, t } from '../i18n';
@@ -68,6 +69,8 @@
   });
 
   let restored = $state(false);
+  let leftPanel: HTMLDivElement | undefined = $state();
+  let packetPanel: HTMLDivElement | undefined = $state();
 
   onMount(() => {
     void restore();
@@ -179,8 +182,9 @@
 <div class="app" class:help-open={dialogs.help !== null} class:no-left={!ui.panels.left} class:no-right={!ui.panels.right}>
   <MenuBar />
   <ToolBar />
-  <div class="body">
-    <div class="left" hidden={!ui.panels.left}>
+  <div class="body" style:--left-w={ui.sizes.left ? `${ui.sizes.left}px` : null} style:--right-w={ui.sizes.right ? `${ui.sizes.right}px` : null}>
+    <div class="left" hidden={!ui.panels.left} bind:this={leftPanel}>
+      <Splitter name="left" edge="right" current={() => leftPanel?.offsetWidth ?? 210} label={t('splitter.left')} />
       <div class="left-scroll">
         <Palette />
         <TaskPanel />
@@ -197,8 +201,12 @@
       <Canvas />
       <CliWindow />
       <PanelToggles />
+      {#if ui.panels.right}
+        <div class="edge-right"><Splitter name="right" edge="left" current={() => (document.querySelector('.inspector') as HTMLElement | null)?.offsetWidth ?? 310} label={t('splitter.right')} /></div>
+      {/if}
       {#if editor.acting && ui.has('tool.sniffer') && ui.panels.bottom}
-        <div class="packet-panel">
+        <div class="packet-panel" bind:this={packetPanel} style:height={ui.sizes.bottom ? `${ui.sizes.bottom}px` : null}>
+          <Splitter name="bottom" edge="top" current={() => packetPanel?.offsetHeight ?? 240} label={t('splitter.bottom')} />
           <PanelToggles inside />
           <PacketList />
         </div>
@@ -226,7 +234,7 @@
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: 210px minmax(0, 1fr) 310px;
+    grid-template-columns: var(--left-w, 210px) minmax(0, 1fr) var(--right-w, 310px);
   }
   .left {
     position: relative;
@@ -257,13 +265,21 @@
   .packet-panel {
     position: relative;
     height: 40%;
-    min-height: 180px;
+    min-height: 110px;
+    max-height: calc(100% - 120px);
+  }
+  .edge-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 0;
   }
   .no-left .body {
-    grid-template-columns: minmax(0, 1fr) 310px;
+    grid-template-columns: minmax(0, 1fr) var(--right-w, 310px);
   }
   .no-right .body {
-    grid-template-columns: 210px minmax(0, 1fr);
+    grid-template-columns: var(--left-w, 210px) minmax(0, 1fr);
   }
   .no-left.no-right .body {
     grid-template-columns: minmax(0, 1fr);
@@ -273,13 +289,13 @@
   }
   @media (max-width: 1100px) {
     .body {
-      grid-template-columns: 180px minmax(0, 1fr) 260px;
+      grid-template-columns: var(--left-w, 180px) minmax(0, 1fr) var(--right-w, 260px);
     }
     .no-left .body {
-      grid-template-columns: minmax(0, 1fr) 260px;
+      grid-template-columns: minmax(0, 1fr) var(--right-w, 260px);
     }
     .no-right .body {
-      grid-template-columns: 180px minmax(0, 1fr);
+      grid-template-columns: var(--left-w, 180px) minmax(0, 1fr);
     }
     .no-left.no-right .body {
       grid-template-columns: minmax(0, 1fr);

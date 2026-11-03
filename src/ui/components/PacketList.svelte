@@ -7,6 +7,7 @@
   import { simStore } from '../state/sim.svelte';
   import { ui } from '../state/ui.svelte';
   import PacketDetails from './PacketDetails.svelte';
+  import Splitter from './Splitter.svelte';
 
   /**
    * Nur sichtbare Zeilen werden gezeichnet (feste Zeilenhöhe), so bleibt die
@@ -22,7 +23,10 @@
   const parsedFilter = $derived(parseFilter(expression));
   let device = $state('');
   let direction = $state<'' | 'sent' | 'received'>('');
+  /** Rahmen, die ein Switch unverändert weiterleitet, nur beim ersten Abschnitt zeigen. */
+  let once = $state(true);
   let scroller: HTMLDivElement;
+  let detailPane: HTMLDivElement | undefined = $state();
   let followTail = true;
   let scrollTop = $state(0);
   let viewport = $state(300);
@@ -32,7 +36,7 @@
   const log = $derived((simStore.tick, [...(simStore.sim?.getPacketLog() ?? [])]));
   const protocols = $derived([...new Set(log.map((e) => protocolOf(e.frame)))].sort());
   const selected = $derived(selectedId === null ? undefined : log.find((e) => e.id === selectedId));
-  const filtered = $derived(
+  const matching = $derived(
     log.filter((entry) => {
       if (parsedFilter.ok && parsedFilter.test && !parsedFilter.test(entry, editor.topology)) return false;
       if (protocol && protocolOf(entry.frame) !== protocol) return false;
@@ -42,6 +46,24 @@
       return entry.from.device === device || entry.to.device === device;
     }),
   );
+  /**
+   * Gleiches Paket = gleicher Inhalt (ein Switch gibt ihn unverändert weiter) und gleiche
+   * MAC-Adressen. Ein Router baut einen neuen Rahmen; der erscheint wieder. Verluste bleiben sichtbar.
+   */
+  const filtered = $derived.by(() => {
+    if (!once) return matching;
+    const seen = new WeakMap<object, Set<string>>();
+    return matching.filter((entry) => {
+      if (entry.status === 'lost') return true;
+      const key = `${entry.frame.src}|${entry.frame.dst}`;
+      const keys = seen.get(entry.frame.payload) ?? new Set<string>();
+      if (keys.has(key)) return false;
+      keys.add(key);
+      seen.set(entry.frame.payload, keys);
+      return true;
+    });
+  });
+  const hidden = $derived(matching.length - filtered.length);
   const first = $derived(Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN));
   const last = $derived(Math.min(filtered.length, Math.ceil((scrollTop + viewport) / ROW_HEIGHT) + OVERSCAN));
   // Nur die sichtbaren Einträge in Tabellenzeilen übersetzen (das ist der teure Teil).
@@ -61,7 +83,8 @@
 <section class="packets" aria-labelledby="packets-title">
   <header>
     <h2 id="packets-title">{t('packets.title')}</h2>
-    <span class="muted">{t('packets.count', { n: filtered.length })}</span>
+    <span class="muted">{t('packets.count', { n: filtered.length })}{#if hidden}{` · ${t('packets.hiddenForwards', { n: hidden })}`}{/if}</span>
+    <label class="once" title={t('packets.onceHint')}><input type="checkbox" bind:checked={once} /> {t('packets.once')}</label>
     <label>
       {t('packets.filterProtocol')}
       <select bind:value={protocol}>
@@ -173,7 +196,8 @@
     {/if}
   </div>
   {#if selected}
-    <div class="detail-pane">
+    <div class="detail-pane" bind:this={detailPane} style:width={ui.sizes.details ? `${ui.sizes.details}px` : null}>
+      <Splitter name="details" edge="left" current={() => detailPane?.offsetWidth ?? 360} label={t('splitter.details')} />
       <PacketDetails entry={selected} onclose={() => (selectedId = null)} />
     </div>
   {/if}
@@ -258,7 +282,9 @@
     overflow: auto;
   }
   .detail-pane {
+    position: relative;
     width: min(360px, 45%);
+    max-width: 75%;
     flex-shrink: 0;
   }
   tbody tr {

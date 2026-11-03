@@ -3,6 +3,7 @@
   import DesktopTaskbar from './DesktopTaskbar.svelte';
   import { t } from '../../i18n';
   import { simStore, type Speed } from '../state/sim.svelte';
+  import { editor } from '../state/editor.svelte';
 
   /** Zeitlauf-Regler: Anhalten, Einzelschritt und Zeitlupe für die Demonstration am Beamer. */
   const speeds: Speed[] = ['realtime', 'slow', 'slower'];
@@ -13,7 +14,9 @@
   <button onclick={() => simStore.togglePause()} aria-pressed={simStore.paused}>
     {simStore.paused ? `▶ ${t('sim.resume')}` : `⏸ ${t('sim.pause')}`}
   </button>
+  <button onclick={() => simStore.stepBack()} disabled={!simStore.canStepBack} title={t('sim.stepBackHint')}>⏮ {t('sim.stepBack')}</button>
   <button class="step" onclick={() => simStore.step()} title={t('sim.stepHint')}>⏭ {t('sim.step')}</button>
+  <button onclick={() => simStore.reset(editor.topology)} title={t('sim.resetHint')}>↺ {t('sim.reset')}</button>
   {#if simStore.paused}<span class="badge">{t('canvas.stepMode')}</span>{/if}
   <label>
     {t('sim.speed')}

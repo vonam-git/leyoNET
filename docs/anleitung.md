@@ -100,6 +100,8 @@ Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routi
 | Internet-Box (CPE) | Wie zu Hause: Modem, Router mit NAT, DHCP-Server und vier LAN-Buchsen in einem Gerät. Ab Werk LAN 192.168.1.1/24; einzutragen sind nur WAN-Adresse und Gateway des Providers. |
 | Internet | Provider mit öffentlichen Adressen und Webseiten. |
 
+**Adapter und MAC-Adresse:** Rechts über der IP-Konfiguration steht, welcher Adapter eingestellt wird (z.B. eth0, per Kabel oder WLAN mit wem verbunden) und seine MAC-Adresse. Ab Profil 3 lässt sich die MAC ändern («ändern», leer bzw. «Ab Werk» = ursprüngliche Adresse), auch für jeden Anschluss im Fenster unter «Anschlüsse». Haben zwei Geräte im selben Netz dieselbe MAC, zeigen beide ein rotes **!**, und der Switch meldet in der Simulation «MAC springt von Port … zu Port …» (Demo «Doppelte MAC-Adresse»).
+
 **Eingaben speichern:** Formulare speichern von selbst, sobald du ein Feld verlässt: mit Tab, Enter oder einem Klick daneben, auch direkt auf ein anderes Gerät. Trägst du nur eine IP-Adresse ohne Maske ein, setzt leyoNET die übliche Maske der Adressklasse ein (10.x.x.x → /8, 172.16–31.x.x → /16, 192.168.x.x → /24). Prüfe sie und ändere sie, wenn dein Netz anders aufgeteilt ist.
 
 ## Adressen sichtbar machen
@@ -128,6 +130,8 @@ Zwei Kabel zwischen denselben Switches oder ein Ring bilden eine Schleife. Ohne 
 - **Maus darüber:** Geräte zeigen Adressen, MAC, Gateway und die Grösse ihrer Tabellen; Kabel ihren Zustand und den Verkehr; Pakete Protokoll, Quelle, Ziel und OSI-Schichten.
 - **Leuchten an den Kabeln:** grün verbunden, orange Daten unterwegs, rot keine Verbindung.
 - **Einzelschritt mit OSI-Schichten:** Angehalten (Leertaste) zeigt jedes Paket seine Schichten ineinander, jede in ihrer Farbe. **N** packt ein ankommendes Paket beim Empfänger Schicht für Schicht aus: Ein Switch bis Schicht 2 (MAC), ein Router bis Schicht 3 (IP), das Ziel ganz. Ein Rechner, für den das Paket nicht bestimmt ist, verwirft es auf Schicht 2.
+- **Schritt zurück und Zurücksetzen:** **Umschalt+N** (bzw. «⏮ Schritt zurück») geht ein Ereignis zurück, auch durch das Auspacken; leyoNET wiederholt dafür den Ablauf vom Start an exakt. «↺ Zurücksetzen» startet die Simulation neu bei Zeit 0, mit leeren Tabellen und leerer Paketliste; das Netz bleibt.
+- **Bereiche anpassen:** Die Ränder der linken Leiste, der Eigenschaften, der Paketliste und der Paketdetails lassen sich mit der Maus ziehen (oder mit dem Griff im Fokus per Pfeiltasten). Doppelklick auf den Rand stellt die Standardgrösse wieder her; die Grössen bleiben gespeichert.
 
 ## Pakete mitschneiden
 
@@ -136,6 +140,7 @@ In der Simulation zeigt die Paketliste unten jeden Rahmen. Ein Klick öffnet die
 - **OSI-Ansicht** von Schicht 7 (Anwendung) bis 1 (Leitung). Leere Schichten sind grau.
 - **Hex-Ansicht** (ab Profil 4): die echten Bytes. Ein Klick auf ein Feld markiert seine Bytes.
 - **Filter** wie in Wireshark: `dhcp`, `ip.addr == 10.0.0.1`, `tcp.port == 80`, `host PC1`, verknüpft mit `and`, `or`, `not`. Die Knöpfe unter dem Filter setzen häufige Ausdrücke.
+- **Jedes Paket nur einmal** (eingeschaltet): Ein Switch gibt einen Rahmen unverändert weiter; er erscheint dann nur beim ersten Kabel. Ausschalten, um den Weg über jeden Switch zu sehen. Nach einem Router erscheint das Paket wieder, weil der Router einen neuen Rahmen baut (neue MAC-Adressen).
 - **pcap**: speichert den Mitschnitt für Wireshark.
 
 ## Aufgaben

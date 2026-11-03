@@ -105,6 +105,13 @@ ADMIN_PASSWORD=test npm run server     # http://localhost:3000
 
 Ist der Stand auf `develop` gut, wird er nach `main` übernommen (Pull Request auf GitHub oder lokal `git switch main && git merge develop && git push`). Eine zweite Subdomain kann auf gleiche Weise den Branch `main` ausliefern; jede Subdomain hat ihre eigenen Sessions und ihr eigenes Admin-Passwort.
 
+## leyonet.ch: Auftritt und Programm
+
+- **leyonet.ch** (Hauptdomain): der Auftritt mit Übersicht und Downloads, reine statische Dateien (nicht in diesem Repo). Dokumentstamm `httpdocs`, kein Node.js.
+- **app.leyonet.ch** (Subdomain): das Programm wie oben beschrieben, mit Branch **`main`** (stabile Version für Klassen und Prüfungen).
+- Optional **beta.leyonet.ch** mit Branch `develop` zum Ausprobieren neuer Funktionen, mit eigenem `ADMIN_PASSWORD` und eigenem `DATA_DIR`.
+- Für jede Subdomain SSL/TLS mit Let's Encrypt aktivieren (oder ein Wildcard-Zertifikat für `*.leyonet.ch`).
+
 ## Ohne Node.js (nur statisch)
 
 Bietet das Hosting kein Node.js, kann die Datei auch rein statisch ausgeliefert werden: Dokumentstamm auf `httpdocs/release` setzen; `release/.htaccess` öffnet den Simulator ohne Dateinamen und setzt die Sicherheits-Header. Sessions, Klassen, Rückmeldungen und Admin-Konsole gibt es dann nicht; die Seite verhält sich wie die lokale Datei.
@@ -119,5 +126,6 @@ add_header Content-Security-Policy "default-src 'none'; script-src 'unsafe-inlin
 
 - Alle Daten liegen als JSON-Dateien in `DATA_DIR` (`sessions/`, `classes/`, `feedback/`, `settings.json`). Abgelaufene Einträge löscht der Server selbständig (beim Start und danach regelmässig).
 - Während einer Prüfung speichern alle Plätze alle 20 Sekunden. Ganze Klassen hinter einer Schuladresse (NAT) sind eingeplant (bis 600 Speicherungen pro Minute und Adresse).
+- Angriffe und Schutzmassnahmen der Webversion: [sicherheit.md](sicherheit.md). Ein langes, zufälliges `ADMIN_PASSWORD` (mindestens 12 Zeichen) und HTTPS sind Pflicht.
 - Eine Sicherung ist nicht nötig und aus Datenschutzsicht auch nicht erwünscht: Sessions sind kurzlebige Arbeitsstände. Wer `DATA_DIR` trotzdem sichert, muss die Sicherungen ebenso kurz aufbewahren.
 - Alles sofort löschen: App stoppen, Ordner `DATA_DIR` leeren, App starten.

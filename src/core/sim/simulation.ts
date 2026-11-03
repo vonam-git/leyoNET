@@ -208,6 +208,11 @@ export class Simulation {
     return count;
   }
 
+  /** Uhr vorstellen, ohne Ereignisse zu verarbeiten (zum exakten Wiederholen eines Ablaufs). */
+  advanceClock(time: number) {
+    this.#now = Math.max(this.#now, time);
+  }
+
   /** Für Tests: alles abarbeiten, mit Obergrenze gegen Endlosschleifen. */
   runUntilIdle(maxEvents = 100_000) {
     for (let i = 0; i < maxEvents && this.step(); i++);

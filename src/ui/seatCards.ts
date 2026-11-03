@@ -19,7 +19,7 @@ export function seatCardsHtml(exam: { title: string; label: string; minutes: num
     )
     .join('\n');
   return `<!doctype html>
-<html lang="${esc(t('seatCards.lang'))}"><head><meta charset="utf-8"><title>${esc(t('seatCards.title', { label: exam.label }))}</title>
+<html lang="${esc(t('seatCards.lang'))}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"><title>${esc(t('seatCards.title', { label: exam.label }))}</title>
 <style>
 body{font-family:system-ui,sans-serif;margin:10mm;color:#111}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:6mm}

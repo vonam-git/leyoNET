@@ -31,6 +31,7 @@
   })();
 
   const SOURCE = 'https://github.com/vonam-git/leyoNET';
+  const WEBSITE = 'https://leyonet.ch';
   const LICENSE_URL = 'https://www.gnu.org/licenses/agpl-3.0.html';
 
   $effect(() => {
@@ -46,6 +47,7 @@
   <h2 id="about-title" class="title"><Logo height={56} label={t('app.title')} /></h2>
   <p class="muted">{t('about.version', { version: __APP_VERSION__ })} · {t('about.tagline')}</p>
   <p>{t('about.intro')}</p>
+  <p class="small">{t('about.website')} <a href={WEBSITE} target="_blank" rel="noopener noreferrer">leyonet.ch</a></p>
 
   <section class="story" aria-labelledby="story-title">
     <h3 id="story-title">{t('about.storyTitle')}</h3>
