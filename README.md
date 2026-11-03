@@ -2,7 +2,7 @@
 
 # leyoNET
 
-**Netzwerke bauen, simulieren und verstehen.**
+**Netzwerke bauen, simulieren und verstehen.** Website: [leyonet.ch](https://leyonet.ch) · im Browser: [app.leyonet.ch](https://app.leyonet.ch)
 
 [![CI](https://github.com/vonam-git/leyoNET/actions/workflows/ci.yml/badge.svg)](https://github.com/vonam-git/leyoNET/actions/workflows/ci.yml)
 

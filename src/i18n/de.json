@@ -1474,6 +1474,7 @@
   "toolbar.about": "Über leyoNET",
   "about.version": "Version {version}",
   "about.intro": "Freie Software für den Informatik-Unterricht. Läuft im Browser oder installiert auf dem eigenen Gerät, ohne Konten und ohne Tracking.",
+  "about.website": "Website mit Downloads:",
   "about.ownLicense": "Lizenz",
   "about.thirdParty": "Enthaltene Software",
   "about.thirdPartyHint": "Diese Pakete sind in leyoNET eingebaut. Ihre Lizenzen erlauben das, sofern die folgenden Hinweise mitgegeben werden.",

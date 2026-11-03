@@ -81,7 +81,7 @@
 <section class="packets" aria-labelledby="packets-title">
   <header>
     <h2 id="packets-title">{t('packets.title')}</h2>
-    <span class="muted">{t('packets.count', { n: filtered.length })}{#if hidden} · {t('packets.hiddenForwards', { n: hidden })}{/if}</span>
+    <span class="muted">{t('packets.count', { n: filtered.length })}{#if hidden}{` · ${t('packets.hiddenForwards', { n: hidden })}`}{/if}</span>
     <label class="once" title={t('packets.onceHint')}><input type="checkbox" bind:checked={once} /> {t('packets.once')}</label>
     <label>
       {t('packets.filterProtocol')}

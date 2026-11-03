@@ -1418,6 +1418,7 @@
   "toolbar.about": "About leyoNET",
   "about.version": "Version {version}",
   "about.intro": "Free software for computer science lessons. Runs in the browser or installed on your own device, without accounts and without tracking.",
+  "about.website": "Website with downloads:",
   "about.ownLicense": "License",
   "about.thirdParty": "Included software",
   "about.thirdPartyHint": "These packages are built into leyoNET. Their licences allow this provided the following notices are included.",
