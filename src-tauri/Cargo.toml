@@ -1,6 +1,6 @@
 [package]
 name = "leyonet"
-version = "0.10.4"
+version = "1.0.0"
 description = "leyoNET für den Informatik-Unterricht"
 authors = ["Mark v. A.", "Mikael v. A."]
 license = "AGPL-3.0-or-later"
