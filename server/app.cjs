@@ -19,7 +19,7 @@
  *
  * Nur Node.js-Bordmittel, keine Abhängigkeiten. Start: node server/start.cjs
  * Umgebung: PORT, ADMIN_PASSWORD (ohne: Admin gesperrt), DATA_DIR,
- * MAX_SESSIONS (Standard 5000), MAX_STORAGE_MB (Standard 1024).
+ * MAX_SESSIONS (Standard 5000), MAX_STORAGE_MB (Standard 1024), LEYONET_CHANNEL=beta (Testumgebung).
  */
 
 const http = require('node:http');
@@ -32,6 +32,11 @@ const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
 const RELEASE_FILE = path.join(ROOT, 'release', 'leyonet.html');
 const NOTICES_FILE = path.join(ROOT, 'release', 'THIRD_PARTY_NOTICES.md');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+/**
+ * «beta»: Testumgebung (z.B. beta.leyonet.ch mit Branch develop). Die Oberfläche zeigt
+ * «Testversion», Suchmaschinen sollen nichts aufnehmen. Alles andere gilt als stabil.
+ */
+const CHANNEL = String(process.env.LEYONET_CHANNEL || '').trim().toLowerCase() === 'beta' ? 'beta' : 'stable';
 /** Grösste Anfrage bzw. grösstes Projekt (Webserver-Bilder sind auf 160 KB je Datei begrenzt). */
 const MAX_BODY = 1024 * 1024;
 /** Prüfungsdatei samt Schlüssel (bis 60 Varianten). */
@@ -395,7 +400,7 @@ const SECURITY_HEADERS = {
 };
 
 function send(res, status, body, headers = {}) {
-  res.writeHead(status, { ...SECURITY_HEADERS, ...headers });
+  res.writeHead(status, { ...SECURITY_HEADERS, ...(CHANNEL === 'beta' ? { 'X-Robots-Tag': 'noindex, nofollow' } : {}), ...headers });
   res.end(body);
 }
 
@@ -479,7 +484,7 @@ function appBundle() {
   html = html
     // frame-ancestors wirkt nur als HTTP-Header; im Meta-Tag würde der Browser warnen.
     .replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, `<meta http-equiv="Content-Security-Policy" content="${CSP.replace("; frame-ancestors 'none'", '')}" />`)
-    .replace('<head>', '<head>\n    <meta name="ns-server" content="1" />');
+    .replace('<head>', `<head>\n    <meta name="ns-server" content="1" />${CHANNEL === 'beta' ? '\n    <meta name="robots" content="noindex, nofollow" />' : ''}`);
   return { html, assets };
 }
 
@@ -593,6 +598,7 @@ function publicConfig() {
     feedbackEnabled: s.feedbackEnabled,
     feedbackDays: s.feedbackDays,
     admin: !!ADMIN_PASSWORD,
+    channel: CHANNEL,
   };
 }
 
@@ -1020,6 +1026,10 @@ function createServer() {
       if (asset) return send(res, 200, req.method === 'HEAD' ? '' : asset.body, { 'Content-Type': asset.type });
       if (url.pathname === '/THIRD_PARTY_NOTICES.md') {
         return send(res, 200, fs.readFileSync(NOTICES_FILE), { 'Content-Type': 'text/markdown; charset=utf-8' });
+      }
+      // Testumgebung: Suchmaschinen sollen nichts aufnehmen; die stabile Version darf gefunden werden.
+      if (url.pathname === '/robots.txt') {
+        return send(res, 200, CHANNEL === 'beta' ? 'User-agent: *\nDisallow: /\n' : 'User-agent: *\nAllow: /\n', { 'Content-Type': 'text/plain; charset=utf-8' });
       }
       if (url.pathname === '/healthz') return send(res, 200, 'ok', { 'Content-Type': 'text/plain' });
       return fail(res, 404, 'notFound');

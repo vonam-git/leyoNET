@@ -143,6 +143,15 @@ test('Admin: Anmeldung, Einstellungen, Klassen, Rückmeldungen', async () => {
   assert.equal((await call('GET', `/api/admin/feedback/${id}`, null, token)).data.status, 'done');
 });
 
+test('stabile Version: kein noindex, robots.txt erlaubt alles, Kanal «stable»', async () => {
+  const config = await call('GET', '/api/config');
+  assert.equal(config.data.channel, 'stable');
+  const page = await call('GET', '/');
+  assert.equal(page.headers.get('x-robots-tag'), null);
+  assert.doesNotMatch(page.data, /name="robots"/);
+  assert.match((await call('GET', '/robots.txt')).data, /Allow: \//);
+});
+
 test('lehnt Formular-Posts ohne JSON ab', async () => {
   const res = await fetch(base + '/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'text=x' });
   assert.equal(res.status, 415);

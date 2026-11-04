@@ -1,7 +1,7 @@
 {
   "name": "leyonet",
   "private": true,
-  "version": "0.10.3",
+  "version": "0.10.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,7 +16,7 @@
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
     "tauri": "tauri",
-    "test:server": "node --test server/app.test.cjs server/limits.test.cjs",
+    "test:server": "node --test server/app.test.cjs server/limits.test.cjs server/beta.test.cjs",
     "arbeitsblaetter": "node scripts/arbeitsblaetter/erzeugen.mjs",
     "server": "node server/start.cjs"
   },
