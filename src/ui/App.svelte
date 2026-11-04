@@ -55,7 +55,8 @@
   $effect(() => {
     document.documentElement.lang = locale();
     const title = editor.topology.title;
-    document.title = title ? `${title} – ${t('app.title')}` : t('app.title');
+    const name = session.config?.channel === 'beta' ? `${t('beta.titlePrefix')} ${t('app.title')}` : t('app.title');
+    document.title = title ? `${title} – ${name}` : name;
   });
 
   // In der Simulation läuft die Zeit, im Entwurf pausiert sie (Zustände bleiben).
@@ -180,6 +181,9 @@
 <svelte:document {onvisibilitychange} onpointerdowncapture={onpointerdowncapture} />
 
 <div class="app" class:help-open={dialogs.help !== null} class:no-left={!ui.panels.left} class:no-right={!ui.panels.right}>
+  {#if session.config?.channel === 'beta'}
+    <div class="beta" role="note"><strong>{t('beta.label')}</strong> {t('beta.text')}</div>
+  {/if}
   <MenuBar />
   <ToolBar />
   <div class="body" style:--left-w={ui.sizes.left ? `${ui.sizes.left}px` : null} style:--right-w={ui.sizes.right ? `${ui.sizes.right}px` : null}>
@@ -229,6 +233,14 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+  }
+  .beta {
+    padding: 3px 12px;
+    background: repeating-linear-gradient(-45deg, #fde68a, #fde68a 12px, #fcd34d 12px, #fcd34d 24px);
+    color: #422006;
+    font-size: 0.8rem;
+    text-align: center;
+    border-bottom: 1px solid #f59e0b;
   }
   .body {
     flex: 1;

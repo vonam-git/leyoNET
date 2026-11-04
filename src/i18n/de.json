@@ -143,6 +143,9 @@
   "warning.gatewayIsSelf": "Das Gerät ist als sein eigenes Standardgateway eingetragen.",
 
   "config.title": "IP-Konfiguration",
+  "beta.label": "Testversion",
+  "beta.text": "Hier laufen die neuesten Funktionen zum Ausprobieren. Für Klassen und Prüfungen die stabile Version verwenden.",
+  "beta.titlePrefix": "[Beta]",
   "splitter.hint": "Ziehen, um die Grösse zu ändern; Doppelklick: Standard",
   "splitter.left": "Breite der linken Leiste",
   "splitter.right": "Breite der Eigenschaften",

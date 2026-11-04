@@ -16,6 +16,8 @@ export interface ServerConfig {
   feedbackEnabled: boolean;
   feedbackDays: number;
   admin: boolean;
+  /** «beta»: Testumgebung (Server mit LEYONET_CHANNEL=beta). */
+  channel?: 'beta' | 'stable';
 }
 
 export class ApiError extends Error {

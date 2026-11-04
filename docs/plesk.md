@@ -34,6 +34,7 @@ Rechner (du)  ──git push──►  GitHub: develop  ──Plesk Git (Pull)�
      | `ADMIN_PASSWORD` | ein langes, zufälliges Passwort | öffnet die Admin-Konsole; ohne diese Variable ist sie gesperrt |
      | `DATA_DIR` | optional, z.B. `/var/www/vhosts/deine-domain.ch/simulator-data` | Ablage der Sessions; Standard ist `httpdocs/data` (ausserhalb des Dokumentstamms) |
      | `MAX_SESSIONS` | optional, Standard `5000` | höchstens so viele Sessions gleichzeitig (Schutz vor Überlastung) |
+     | `LEYONET_CHANNEL` | nur für die Testumgebung: `beta` | zeigt oben «Testversion» und hält Suchmaschinen fern (`noindex`, `robots.txt`) |
      | `MAX_STORAGE_MB` | optional, Standard `1024` | höchstens so viel Platz für Sessions und Rückmeldungen; Prüfungen sind ausgenommen |
    - *NPM install* ist nicht nötig. Auf **Node.js aktivieren** bzw. **App neu starten** klicken.
 4. **SSL/TLS** für die Subdomain aktivieren (Let's Encrypt in Plesk) und *Permanente SEO-sichere 301-Weiterleitung von HTTP zu HTTPS* einschalten.
@@ -109,7 +110,8 @@ Ist der Stand auf `develop` gut, wird er nach `main` übernommen (Pull Request a
 
 - **leyonet.ch** (Hauptdomain): der Auftritt mit Übersicht und Downloads, reine statische Dateien (nicht in diesem Repo). Dokumentstamm `httpdocs`, kein Node.js.
 - **app.leyonet.ch** (Subdomain): das Programm wie oben beschrieben, mit Branch **`main`** (stabile Version für Klassen und Prüfungen).
-- Optional **beta.leyonet.ch** mit Branch `develop` zum Ausprobieren neuer Funktionen, mit eigenem `ADMIN_PASSWORD` und eigenem `DATA_DIR`.
+- **beta.leyonet.ch** mit Branch `develop` als Testumgebung: Umgebungsvariable `LEYONET_CHANNEL=beta`, eigenes `ADMIN_PASSWORD` und eigenes `DATA_DIR`. Oben steht dann «Testversion», und Suchmaschinen nehmen die Seite nicht auf. Keine Prüfungen auf beta durchführen: Nach einem Push kann dort etwas vorübergehend nicht funktionieren.
+- Ablauf: auf beta testen; läuft es, Pull Request `develop` → `main`, dann bei app.leyonet.ch *Pull Updates*.
 - Für jede Subdomain SSL/TLS mit Let's Encrypt aktivieren (oder ein Wildcard-Zertifikat für `*.leyonet.ch`).
 
 ## Ohne Node.js (nur statisch)
