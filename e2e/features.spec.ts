@@ -418,7 +418,7 @@ test('VPN: Tunnel steht, Ping durch den Tunnel, ESP in der Paketliste', async ({
 test('Modul 117: Übung aus der Reihe starten', async ({ page }) => {
   await page.getByRole('button', { name: /Aufgaben-Katalog/ }).click();
   const catalog = page.getByRole('dialog');
-  await catalog.getByRole('radio', { name: /Modul 117/ }).check();
+  await catalog.getByRole('tab', { name: /M117/ }).click();
   await expect(catalog.locator('li')).toHaveCount(10);
   await expect(catalog).toContainText('Arbeitsblatt: M06C_M117_UE03_Router01.pdf');
   await catalog.locator('li').filter({ hasText: 'Auftrag 1: Ein Netz mit zwei Switches' }).getByRole('button', { name: 'Starten' }).click();
@@ -539,4 +539,16 @@ test('OSPFv3: Anschlüsse statt Netze im Reiter Routing', async ({ page }) => {
   await expect(r1.getByLabel('Area von eth1')).toHaveValue('0');
   if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
   await tour.getByRole('button', { name: 'Führung beenden' }).click();
+});
+
+test('Modul 129: Reiter, Übung mit Frage starten', async ({ page }) => {
+  await page.getByRole('button', { name: /Aufgaben-Katalog/ }).click();
+  const catalog = page.getByRole('dialog');
+  await catalog.getByRole('tab', { name: /M129/ }).click();
+  await expect(catalog.getByRole('tab', { name: /M129/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(catalog.locator('li')).toHaveCount(9);
+  await expect(catalog).toContainText('Modul 129 (Subnetting, Routing, Protokollanalyse)');
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  await catalog.locator('li').filter({ hasText: 'Auftrag 1: ICMP und TTL' }).getByRole('button', { name: 'Starten' }).click();
+  await expect(page.locator('.tasks')).toContainText('Welche TTL hat der Echo Request');
 });

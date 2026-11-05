@@ -13,9 +13,22 @@
 
   // Texte erst beim Öffnen erzeugen (aktuelle Sprache).
   const entries = $derived(CATALOG.map((entry) => ({ entry, preview: entry.build() })));
-  /** Reihen (z.B. Modul 117) als Filter; leer = alle Übungen. */
-  const SERIES = [...new Set(CATALOG.flatMap((e) => (e.series ? [e.series] : [])))];
+  /** Reihen (Module wie M117, M129) als Reiter; leer = alle Übungen. Neue Module erscheinen von selbst. */
+  const SERIES = [...new Set(CATALOG.flatMap((e) => (e.series ? [e.series] : [])))].sort();
   let series = $state('');
+  const inSeries = (id: string) => (id ? entries.filter((e) => e.entry.series === id) : entries);
+  const doneIn = (id: string) => inSeries(id).filter((e) => progress.done[e.entry.id]).length;
+
+  /** Reiter mit den Pfeiltasten wechseln (wie bei einer Tab-Leiste üblich). */
+  function keyNav(event: KeyboardEvent) {
+    const ids = ['', ...SERIES];
+    const i = ids.indexOf(series);
+    const next = event.key === 'ArrowRight' ? i + 1 : event.key === 'ArrowLeft' ? i - 1 : event.key === 'Home' ? 0 : event.key === 'End' ? ids.length - 1 : -2;
+    if (next === -2) return;
+    event.preventDefault();
+    series = ids[(next + ids.length) % ids.length]!;
+    (event.currentTarget as HTMLElement).querySelector<HTMLElement>(`[data-series="${series}"]`)?.focus();
+  }
   const shown = $derived(series ? entries.filter((e) => e.entry.series === series) : entries);
   const doneCount = $derived(shown.filter((e) => progress.done[e.entry.id]).length);
   const when = (ms: number) => new Date(ms).toLocaleDateString();
@@ -37,10 +50,27 @@
 <Modal title={t('catalog.title')} {onclose} width={760}>
   <p class="muted">{t('catalog.intro')}</p>
   {#if SERIES.length}
-    <div class="series" role="radiogroup" aria-label={t('catalog.series.label')}>
-      <label><input type="radio" name="series" value="" bind:group={series} /> {t('catalog.series.all')}</label>
-      {#each SERIES as id (id)}<label><input type="radio" name="series" value={id} bind:group={series} /> {t(`catalog.series.${id}`)}</label>{/each}
+    <!-- svelte-ignore a11y_interactive_supports_focus -->
+    <div class="tabs" role="tablist" aria-label={t('catalog.series.label')} onkeydown={keyNav}>
+      {#each ['', ...SERIES] as id (id)}
+        {@const total = inSeries(id).length}
+        {@const done = doneIn(id)}
+        <button
+          type="button"
+          role="tab"
+          data-series={id}
+          aria-selected={series === id}
+          tabindex={series === id ? 0 : -1}
+          class:active={series === id}
+          title={id ? t(`catalog.series.${id}`) : t('catalog.series.all')}
+          onclick={() => (series = id)}
+        >
+          <span class="tab-name">{id ? id.toUpperCase() : t('catalog.series.allShort')}</span>
+          <span class="tab-count" class:complete={total > 0 && done === total}>{done}/{total}</span>
+        </button>
+      {/each}
     </div>
+    <p class="series-title">{series ? t(`catalog.series.${series}`) : t('catalog.series.all')}</p>
   {/if}
   <div class="progress">
     <span>{t('catalog.progress', { n: doneCount, total: shown.length })}</span>
@@ -90,6 +120,7 @@
     background: color-mix(in srgb, #16a34a 7%, var(--surface));
   }
   .done-badge {
+    white-space: nowrap;
     margin-left: 6px;
     font-size: 0.72rem;
     font-weight: 600;
@@ -123,25 +154,73 @@
     margin: 4px 0;
     font-size: 0.82rem;
   }
-  .series {
+  .tabs {
     display: flex;
-    gap: 16px;
+    gap: 4px;
     flex-wrap: wrap;
-    margin: 0 0 10px;
-    font-size: 0.85rem;
+    padding: 4px;
+    margin: 0 0 6px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--text) 6%, var(--surface));
   }
-  .series label {
-    display: flex;
+  .tabs button {
+    display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
+    padding: 6px 14px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition:
+      background 0.15s,
+      color 0.15s;
   }
-  .series input {
-    width: auto;
+  .tabs button:hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--text) 5%, transparent);
+  }
+  .tabs button.active {
+    color: var(--text);
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: 0 1px 3px color-mix(in srgb, #000 12%, transparent);
+  }
+  .tabs button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .tab-count {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text) 10%, transparent);
+    font-variant-numeric: tabular-nums;
+  }
+  .active .tab-count {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--accent);
+  }
+  .tab-count.complete {
+    background: #15803d;
+    color: #fff;
+  }
+  .series-title {
+    margin: 0 0 10px 4px;
+    font-size: 0.8rem;
+    color: var(--muted);
   }
   .small {
     font-size: 0.75rem;
   }
   .badge {
+    white-space: nowrap;
     margin-left: 6px;
     font-size: 0.7rem;
     padding: 1px 6px;

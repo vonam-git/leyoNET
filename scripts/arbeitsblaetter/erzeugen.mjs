@@ -139,7 +139,7 @@ class Writer {
     this.y -= size * 1.6;
     this.page.drawLine({ start: { x: MARGIN.left, y: this.y + 4 }, end: { x: A4[0] - MARGIN.right, y: this.y + 4 }, thickness: 0.6, color: LINE });
     this.y -= 6;
-    if (s.catalog) this.box(`In leyoNET: **Werkzeuge » Aufgaben-Katalog**, Reihe «Modul 117», Übung **«${s.catalog}»** starten. Das Startnetz und die Lernziele sind vorbereitet; «Prüfen» zeigt, was schon erfüllt ist.`);
+    if (s.catalog) this.box(`In leyoNET: **Werkzeuge » Aufgaben-Katalog**, Reiter «${this.sheet.series ?? 'M117'}», Übung **«${s.catalog}»** starten. Das Startnetz und die Lernziele sind vorbereitet; «Prüfen» zeigt, was schon erfüllt ist.`);
     for (const block of s.blocks ?? []) this.block(block, s.id);
   }
 
@@ -269,7 +269,7 @@ class Writer {
     const total = this.pages.length;
     for (const [i, page] of this.pages.entries()) {
       const top = A4[1] - 40;
-      page.drawText(`leyoNET · Modul 117 – ${this.sheet.block}`, { x: MARGIN.left, y: top, size: 8.5, font: this.font, color: MUTED });
+      page.drawText(`leyoNET · ${this.sheet.module ?? 'Modul 117'} – ${this.sheet.block}`, { x: MARGIN.left, y: top, size: 8.5, font: this.font, color: MUTED });
       const right = this.solution ? 'Musterlösung (Lehrperson)' : (this.sheet.label ?? 'Arbeitsblatt');
       page.drawText(right, { x: A4[0] - MARGIN.right - this.font.widthOfTextAtSize(right, 8.5), y: top, size: 8.5, font: this.solution ? this.bold : this.font, color: this.solution ? rgb(0.75, 0.1, 0.1) : MUTED });
       page.drawLine({ start: { x: MARGIN.left, y: top - 6 }, end: { x: A4[0] - MARGIN.right, y: top - 6 }, thickness: 0.6, color: LINE });
@@ -308,7 +308,7 @@ export async function buildSheet(sheet, { solution = false } = {}) {
   };
   const title = `${sheet.title}${solution ? ' – Musterlösung' : ''}`;
   doc.setTitle(title);
-  doc.setSubject(`Modul 117 – ${sheet.block}`);
+  doc.setSubject(`${sheet.module ?? 'Modul 117'} – ${sheet.block}`);
   doc.setAuthor('leyoNET');
   doc.setCreator('leyoNET (scripts/arbeitsblaetter)');
   doc.setProducer('leyoNET');

@@ -35,6 +35,7 @@ import {
 import { t } from '../i18n';
 import { Start, goal, task, unwrap, type CatalogEntry } from './catalogKit';
 import { M117 } from './catalogM117';
+import { M129 } from './catalogM129';
 
 export type { CatalogEntry } from './catalogKit';
 
@@ -980,4 +981,5 @@ export const CATALOG: CatalogEntry[] = [
     },
   },
   ...M117,
+  ...M129,
 ];

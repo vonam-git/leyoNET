@@ -79,7 +79,7 @@ Tipp: Vorführen, dann mit **Leertaste** anhalten und mit **N** im Einzelschritt
 
 ## Modul 117: Übungen, Arbeitsblätter und Prüfung
 
-Im Aufgaben-Katalog gibt es die Reihe **«Modul 117»** (Filter oben im Katalog) mit den Übungen aus Block 6 «IP und Router» und Block 7 «Netzwerkdienste»:
+Im Aufgaben-Katalog gibt es den Reiter **«M117»** (Reiter oben im Katalog) mit den Übungen aus Block 6 «IP und Router» und Block 7 «Netzwerkdienste»:
 
 | Sterne | Übung | Arbeitsblatt |
 |---|---|---|
@@ -97,6 +97,26 @@ Im Aufgaben-Katalog gibt es die Reihe **«Modul 117»** (Filter oben im Katalog)
 Zu jeder Übung gibt es ein **ausfüllbares Arbeitsblatt** (PDF) mit den Fragen, die sich nicht automatisch prüfen lassen (Netz-ID, Beobachtungen, Begründungen), dazu eine Version mit Musterlösung: [docs/arbeitsblaetter](arbeitsblaetter/README.md). Die Lernenden geben das ausgefüllte PDF und ihre Projektdateien über die Plattform der Klasse ab (z.B. Teams oder Moodle); ausgewertet wird mit **«Abgaben auswerten …»**.
 
 Die praktische Prüfung (LB3) erstellt **Werkzeuge → Prüfung erstellen …**: eine gewürfelte Variante oder eine eigene je Platz, 75 Punkte, Note = 5 × Punkte / 75 + 1. Die Lernenden erhalten eine Prüfungsdatei ohne Prüfbausteine und Lösungen; du behältst den Schlüssel und wertest damit aus, mit Nachkorrektur und Berichten. Jede andere Aufgabe wird mit **Werkzeuge → Als Prüfung speichern …** zur Prüfung, auch als Fehlersuche mit zufälligen Fehlern je Platz. In der **Webversion** lädst du Prüfungsdatei und Schlüssel in der Admin-Konsole hoch, verteilst Platzkarten mit Platz-Codes, gibst je Platz Nachteilsausgleich und lässt am Ende automatisch auswerten; gespeichert wird alle 20 Sekunden, abgegeben automatisch. Ablauf, Prüfungsmodus, «wer ist wer» und Grenzen: [pruefungen.md](pruefungen.md).
+
+## Modul 129: Subnetting, Routing und Protokollanalyse
+
+Der Reiter **«M129»** im Aufgaben-Katalog enthält drei Gruppen mit je einem ausfüllbaren Arbeitsblatt. Die Aufträge beruhen auf den Laborübungen der Schule (VyOS-Router, pfSense, Wireshark in VirtualBox), laufen hier aber ganz in leyoNET. Öffentliche Adressen der Vorlagen (8.8.8.8, 1.1.1.1, srf.ch, das NAT-Netz von VirtualBox) sind durch Dokumentationsadressen nach RFC 5737 und Namen unter `.example` ersetzt.
+
+| Sterne | Übung | Arbeitsblatt |
+|---|---|---|
+| ★★ | UE01 Subnetting – Auftrag 1: Vier gleich grosse Subnetze | M129_UE01_Subnetting |
+| ★★★★ | UE01 Subnetting – Auftrag 2: Subnetze nach Bedarf (VLSM) | M129_UE01_Subnetting |
+| ★★★ | UE01 Subnetting – Auftrag 3: Fehlersuche im Firmennetz | M129_UE01_Subnetting |
+| ★★★ | UE02 Routing – Auftrag 1: Drei Router statisch verbinden | M129_UE02_Routing |
+| ★★★★ | UE02 Routing – Auftrag 2: Ins Internet mit NAT | M129_UE02_Routing |
+| ★★★ | UE02 Routing – Auftrag 3: Verwaltungsnetz und SSH | M129_UE02_Routing |
+| ★★ | UE03 Protokollanalyse – Auftrag 1: ICMP und TTL | M129_UE03_Protokollanalyse |
+| ★★★ | UE03 Protokollanalyse – Auftrag 2: DHCP | M129_UE03_Protokollanalyse |
+| ★★★★ | UE03 Protokollanalyse – Auftrag 3: ARP, DNS und HTTP | M129_UE03_Protokollanalyse |
+
+Neu sind **Fragen direkt in leyoNET** (Baustein «Antwort»): z.B. der EtherType von ARP oder die TTL nach der Firewall. «Prüfen» bewertet sie zusammen mit den Netzzielen. Das Arbeitsblatt zum Routing stellt die Befehle von leyoNET und VyOS nebeneinander, damit der Wechsel auf echte Router leichtfällt. Nummern und Titel der Übungen lassen sich später an die Unterlagen der Schule anpassen (`src/ui/catalogM129.ts`, Texte in `src/i18n`, Arbeitsblätter in `scripts/arbeitsblaetter/inhaltM129.mjs`).
+
+Weitere Module erhalten einen eigenen Reiter, sobald ihre Übungen eine Reihe (`series`) haben, z.B. `m123` oder `m145`.
 
 ## Eigene Aufgaben
 

@@ -1,4 +1,4 @@
-// Inhalt der Arbeitsblätter zu den Katalog-Übungen «Modul 117».
+// Inhalt der Arbeitsblätter zu den Katalog-Übungen «Modul 117» (Modul 129: inhaltM129.mjs).
 // Jedes Blatt gehört zu einer oder mehreren Übungen (catalogM117.ts, Feld
 // `sheet`); jeder Abschnitt nennt seine Übung im Katalog. `answer` ist die
 // Musterlösung (nur im _mL-PDF ausgefüllt).
@@ -30,6 +30,8 @@ const siteFields = (prefix, s) => [
   { label: 'Broadcast', name: `${prefix}bc`, answer: s.bc },
   { label: 'Anzahl Hosts', name: `${prefix}hosts`, answer: s.hosts },
 ];
+
+import { M129_SHEETS } from './inhaltM129.mjs';
 
 export const SHEETS = [
   {
@@ -504,4 +506,5 @@ export const SHEETS = [
       },
     ],
   },
+  ...M129_SHEETS,
 ];

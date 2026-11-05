@@ -44,6 +44,7 @@ import {
 } from '../core';
 import { setLocale } from '../i18n';
 import { CATALOG } from './catalog';
+import { LAB_ANSWERS, solveLab2, solveRouting1, solveRouting2, solveRouting3, solveSub1, solveSub2, solveSub3 } from './catalogM129';
 import { readdressUe03, solveHolzer, solveUe03a1, solveUe04a1, solveUe04a2, solveUe05, solveWatch1, solveWatch2 } from './catalogM117';
 
 setLocale('de');
@@ -54,14 +55,28 @@ function unwrap<T>(r: Result<T>): T {
 }
 
 const byName = (t: Topology, name: string) => t.devices.find((d) => d.name === name)!.id;
-const passed = (t: Topology, id: string, log: readonly PacketLogEntry[] = []) => {
+const passed = (t: Topology, id: string, log: readonly PacketLogEntry[] = [], answers?: Record<string, string>) => {
   const entry = CATALOG.find((e) => e.id === id)!;
   const { tasks } = entry.build();
-  return evaluateTasks(t, tasks, log);
+  return evaluateTasks(t, answers ? { ...tasks, answers } : tasks, log);
+};
+
+/** Mitschnitt im Labornetz M129: Ping in die DMZ, DHCP des Gast-Notebooks, Webseite per Name. */
+const labLog = (t: Topology) => {
+  const sim = new Simulation(t);
+  sim.runUntil(4000);
+  sim.ping(byName(t, 'PC W11'), '10.10.1.20');
+  sim.runUntil(sim.now + 6000);
+  sim.browse(byName(t, 'PC W11'), 'http://web.labor.example/');
+  sim.runUntil(sim.now + 6000);
+  return sim.getPacketLog();
 };
 
 /** Mitschnitt einer Simulation, für Aufgaben, die gesendete Pakete prüfen. */
 const LOGS: Record<string, (t: Topology) => readonly PacketLogEntry[]> = {
+  'm129-lab-a1': labLog,
+  'm129-lab-a2': labLog,
+  'm129-lab-a3': labLog,
   'sniff-arp': (t) => {
     const sim = new Simulation(t);
     sim.ping(byName(t, 'PC 1'), '192.168.1.20');
@@ -69,6 +84,9 @@ const LOGS: Record<string, (t: Topology) => readonly PacketLogEntry[]> = {
     return sim.getPacketLog();
   },
 };
+
+/** Antworten auf Fragen (Ziel «answer») in den Musterlösungen. */
+const ANSWERS: Record<string, Record<string, string>> = { ...LAB_ANSWERS, 'm129-routing-a3': { 'ziel-5': 'show ip route', 'ziel-6': '192.168.2.2' } };
 
 /** Musterlösungen: Jede Aufgabe muss lösbar sein. */
 const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
@@ -82,6 +100,15 @@ const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
   'm117-m07a': solveWatch1,
   'm117-m07b': solveWatch2,
   'm117-m07c': () => solveHolzer(),
+  'm129-sub-a1': solveSub1,
+  'm129-sub-a2': solveSub2,
+  'm129-sub-a3': solveSub3,
+  'm129-routing-a1': solveRouting1,
+  'm129-routing-a2': solveRouting2,
+  'm129-routing-a3': solveRouting3,
+  'm129-lab-a1': (t) => t,
+  'm129-lab-a2': solveLab2,
+  'm129-lab-a3': (t) => t,
   'sniff-arp': (t) => t,
   'budget-office': (t) => {
     const added = unwrap(addDevice(t, 'switch', 'Switch', { x: 0, y: 0 }, { ports: 8, sfpSlots: 0 }));
@@ -296,7 +323,7 @@ describe('Aufgabenkatalog', () => {
     expect(tasks.difficulty).toBe(entry.stars);
     expect(passed(topology, id).every((r) => r.passed)).toBe(false);
     const solved = SOLUTIONS[id]!(topology);
-    const results = passed(solved, id, LOGS[id]?.(solved));
+    const results = passed(solved, id, LOGS[id]?.(solved), ANSWERS[id]);
     expect(results.filter((r) => !r.passed)).toEqual([]);
   });
 });
