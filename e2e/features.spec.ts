@@ -552,3 +552,20 @@ test('Modul 129: Reiter, Übung mit Frage starten', async ({ page }) => {
   await catalog.locator('li').filter({ hasText: 'Auftrag 1: ICMP und TTL' }).getByRole('button', { name: 'Starten' }).click();
   await expect(page.locator('.tasks')).toContainText('Welche TTL hat der Echo Request');
 });
+
+test('Grosse Aufgabe: eigenes Fenster mit Gliederung', async ({ page }) => {
+  await page.getByRole('button', { name: /Aufgaben-Katalog/ }).click();
+  const catalog = page.getByRole('dialog');
+  await catalog.getByRole('tab', { name: /M129/ }).click();
+  await catalog.locator('li').filter({ hasText: 'Drei Router statisch' }).first().getByRole('button', { name: 'Starten' }).click();
+  const win = page.getByRole('dialog', { name: 'Aufgabe' });
+  await expect(win).toBeVisible();
+  await expect(win.locator('li').filter({ hasText: 'Router2: eth0' })).toBeVisible();
+  await expect(win.locator('strong').filter({ hasText: 'Router-Adressen' })).toBeVisible();
+  await expect(win.locator('code').filter({ hasText: 'ip route 0.0.0.0/0 192.168.2.2' })).toBeVisible();
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  await page.keyboard.press('Escape');
+  await expect(win).toBeHidden();
+  await page.locator('.tasks').getByRole('button', { name: /Gross anzeigen/ }).click();
+  await expect(win).toBeVisible();
+});

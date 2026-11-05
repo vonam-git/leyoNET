@@ -40,6 +40,10 @@ Ein vollständiges Beispiel liegt in [aufgaben/zwei-subnetze.json](aufgaben/zwei
 | `points` | Punkte für das Ziel (ganze Zahl, höchstens 100); fehlt = 1. |
 | `section` | Teil der Prüfung für das Punkteraster, z.B. «Standort Bern». |
 
+### Text gestalten
+
+In `description` (und im Text der Ziele) gilt eine einfache Auszeichnung, ohne HTML: Leerzeile = neuer Absatz, Zeilen mit `- ` bzw. `1. ` werden zu Listen, `**fett**`, `` `Befehl` `` als Code. IP-Adressen (IPv4 und IPv6, auch mit Präfix) werden automatisch hervorgehoben, lange Absätze in Sätze geteilt. HTML in Aufgabendateien wird nie ausgeführt, sondern als Text gezeigt. Aufträge mit mehr als 280 Zeichen oder mehr als acht Zielen öffnen sich beim Laden zusätzlich im grossen Aufgabenfenster.
+
 Auf oberster Ebene gibt es zusätzlich `difficulty` (1–5 Sterne), `grading: true` (Note nach Schweizer Skala: 5 × Punkte / Maximum + 1, auf Zehntel gerundet) und `noSelfCheck: true` (der Knopf «Prüfen» ist für Lernende ausgeblendet, z.B. an Prüfungen). Im Aufgabeneditor sind das die Felder «Schwierigkeit», «Note berechnen» und «Lernende prüfen nicht selbst».
 
 ## Prüfbausteine

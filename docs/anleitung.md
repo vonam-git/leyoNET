@@ -163,6 +163,8 @@ In der Simulation zeigt die Paketliste unten jeden Rahmen. Ein Klick öffnet die
 
 **Werkzeuge → Aufgaben-Katalog** enthält Übungen von ★ (Einstieg) bis ★★★★★ (Studium). Eine Aufgabe lädt ein Startnetz und zeigt unten ihre Lernziele. **Prüfen** sagt, was schon erfüllt ist und was fehlt. Viele Ziele haben einen Tipp. Sind alle Ziele erfüllt, steht die Übung im Katalog mit **✓ erledigt** (nur in diesem Browser; «Fortschritt zurücksetzen» löscht die Markierungen).
 
+Lange Aufträge öffnen sich zusätzlich in einem **grossen Fenster**: Absätze, Listen, Befehle und IP-Adressen sind dort hervorgehoben, die Ziele stehen als Karten darunter. Das Fenster ist nicht modal, du arbeitest daneben im Netz weiter; am Kopf verschieben, unten rechts vergrössern, Esc schliesst. **⤢ Gross anzeigen** im Aufgabenbereich öffnet es jederzeit.
+
 ## Demo-Netze
 
 **Datei → Demo-Netze …** (oder ▶ in der Werkzeugleiste) bietet zu jedem Protokoll ein fertig eingerichtetes Netz. «Vorführen» startet die Simulation und zeigt das Protokoll in Aktion, «Öffnen» lädt es zum Erkunden. Bei vielen Demos erklärt **Schritt für Schritt** ein Avatar den Testfall; mit «Weiter» geht es zum nächsten Schritt. Den Avatar stellst du dir selbst ein (Klick auf ihn oder **Hilfe → Avatar anpassen …**). Mit **—** (oder Esc) blendest du die Sprechblase aus; der Avatar bleibt klein in der Ecke, ein Klick holt sie zurück. Eine beendete Führung blendet **Hilfe → Lehrperson einblenden** wieder ein.

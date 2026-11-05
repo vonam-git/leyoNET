@@ -91,9 +91,12 @@ test('Ping über einen Router in der Simulation, mit Filter und OSI-Ansicht', as
 
 test('Aufgabe prüfen', async ({ page }) => {
   await openProject(page, task('zwei-subnetze-loesung'));
-  await page.getByRole('button', { name: 'Prüfen' }).click();
+  // Mit neun Zielen öffnet sich die Aufgabe zusätzlich im grossen Fenster.
+  const win = page.getByRole('dialog', { name: 'Aufgabe' });
+  await win.getByRole('button', { name: 'Prüfen' }).click();
   // Das letzte Ziel verlangt einen selbst gesendeten Ping.
-  await expect(page.getByRole('status').filter({ hasText: 'Zielen erfüllt' })).toHaveText('8 von 9 Zielen erfüllt.');
+  await expect(win.getByRole('status').filter({ hasText: 'Zielen erfüllt' })).toHaveText('8 von 9 Zielen erfüllt.');
+  await expect(page.locator('.tasks').getByRole('status').filter({ hasText: 'Zielen erfüllt' })).toHaveText('8 von 9 Zielen erfüllt.');
 });
 
 test('Abgaben mehrerer Lernender auswerten', async ({ page }) => {
