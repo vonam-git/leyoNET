@@ -16,7 +16,7 @@ import {
   solicitedNode,
 } from '../net/ipv6';
 import { autoRoutes6 } from '../net/autoroute';
-import { ADMIN_DISTANCE, type RouteKind } from '../net/routing';
+import { ADMIN_DISTANCE, sviId, sviMac, type RouteKind } from '../net/routing';
 import { DHCP6_CLIENT_PORT, DHCP6_SERVER_PORT, type Dhcpv6Message, type EthernetFrame, type Icmpv6Message, type Ipv4Packet, type Ipv6Packet, type TcpSegment, type UdpDatagram } from './frames';
 import type { NodeContext } from './simulation';
 
@@ -104,6 +104,8 @@ export interface Ip6Host {
   onTcp6?(packet: Ipv6Packet, segment: TcpSegment): void;
   /** Paketfilter für TCP und UDP (Firewall); false = verwerfen. `forwarded`: Paket wird weitergeleitet. */
   filter6?(packet: Ipv6Packet, inIndex: number, forwarded: boolean): boolean;
+  /** Anschluss verbunden? Fehlt = Kabel steckt (ctx.isConnected). */
+  linkUp?(index: number): boolean;
   /** DS-Lite: getunneltes IPv4-Paket an eine eigene Adresse. true = erledigt. */
   onTunnel?(packet: Ipv6Packet, inner: Ipv4Packet, index: number): boolean;
 }
@@ -124,16 +126,37 @@ export function lookupRoute6(routes: readonly Route6[], dst: bigint): Route6 | u
   return best;
 }
 
-/** Physische Anschlüsse eines Geräts, die IPv6 sprechen (Endgerät: erster Anschluss). */
+/** Ein Anschluss, der IPv6 sprechen kann: physischer Port oder (Layer-3-Switch) VLAN-Interface. */
+export interface Link6 {
+  index: number;
+  mac: string;
+  ipv6?: string;
+  dhcp6?: boolean;
+  dns6?: string;
+  shutdown?: boolean;
+}
+
+/** Mögliche IPv6-Anschlüsse: Endgerät der erste Port, Layer-3-Switch seine SVIs, Router alle Ethernet-Ports. */
+export function ipv6Links(device: Device): Link6[] {
+  if (DEVICE_SPECS[device.type].role === 'endpoint') return device.interfaces.slice(0, 1);
+  if (device.type === 'l3switch') {
+    const mac = sviMac(device);
+    return (device.svis ?? []).map((s) => ({ index: sviId(s.vlan), mac, ...(s.ipv6 ? { ipv6: s.ipv6 } : {}), ...(s.dhcp6 ? { dhcp6: true } : {}), ...(s.dns6 ? { dns6: s.dns6 } : {}) }));
+  }
+  if (!hasRoutingTable(device.type)) return [];
+  return device.interfaces.filter((i) => !i.serial);
+}
+
+/** Anschlüsse eines Geräts, die IPv6 sprechen (Endgerät: erster Anschluss; sonst mit Adresse). */
 export function ipv6Ports(device: Device): number[] {
-  if (DEVICE_SPECS[device.type].role === 'endpoint') return device.interfaces[0] ? [0] : [];
-  if (device.type === 'l3switch' || !hasRoutingTable(device.type)) return [];
-  return device.interfaces.filter((i) => i.ipv6 && !i.serial).map((i) => i.index);
+  const links = ipv6Links(device);
+  if (DEVICE_SPECS[device.type].role === 'endpoint') return links.map((l) => l.index);
+  return links.filter((l) => l.ipv6).map((l) => l.index);
 }
 
 /** Konfigurierte (statische) IPv6-Adressen der Anschlüsse, z.B. für das automatische Routing. */
 export function configuredAddresses6(device: Device): { index: number; address: bigint; prefix: number }[] {
-  return device.interfaces.flatMap((i) => {
+  return ipv6Links(device).flatMap((i) => {
     const c = i.ipv6 ? parseCidr6(i.ipv6) : null;
     return c && !i.shutdown ? [{ index: i.index, address: c.address, prefix: c.prefix }] : [];
   });
@@ -175,6 +198,15 @@ export class Ip6Stack {
   }
 
   /** CPE: Der WAN-Anschluss lernt Präfix und Standardrouter vom Provider wie ein Endgerät. */
+  #link(device: Device, index: number): Link6 | undefined {
+    return ipv6Links(device).find((l) => l.index === index);
+  }
+
+  /** Anschluss verbunden? VLAN-Interfaces gelten als verbunden. */
+  #up(index: number): boolean {
+    return this.host.linkUp ? this.host.linkUp(index) : this.#ctx.isConnected(index);
+  }
+
   #hostLike(device: Device, index: number) {
     return this.#isEndpoint(device) || (device.type === 'cpe' && index === 0);
   }
@@ -182,8 +214,9 @@ export class Ip6Stack {
   interfaces(): Iface6[] {
     const device = this.device();
     if (!device || !this.enabled()) return [];
+    const links = ipv6Links(device);
     return ipv6Ports(device).flatMap((index) => {
-      const iface = device.interfaces[index];
+      const iface = links.find((l) => l.index === index);
       if (!iface || iface.shutdown) return [];
       const addresses: Address6[] = [{ address: linkLocal(iface.mac), prefix: 64, origin: 'link-local' }];
       const manual = iface.ipv6 && !(this.#isEndpoint(device) && device.ipv6Auto) ? parseCidr6(iface.ipv6) : null;
@@ -210,7 +243,7 @@ export class Ip6Stack {
     const device = this.device();
     const groups = [parseIp6(ALL_NODES)!, ...iface.addresses.map((a) => solicitedNode(a.address))];
     if (this.host.forwarding && device && !this.#hostLike(device, iface.index)) groups.push(parseIp6(ALL_ROUTERS)!);
-    if (device?.interfaces[iface.index]?.dhcp6) groups.push(parseIp6(ALL_DHCP6)!);
+    if (device && this.#link(device, iface.index)?.dhcp6) groups.push(parseIp6(ALL_DHCP6)!);
     return groups;
   }
 
@@ -247,10 +280,11 @@ export class Ip6Stack {
     if (this.#isEndpoint(device)) return routes;
 
     const mode = routingModeOf(device);
-    if (device.type === 'internet' || (mode === 'auto' && device.type === 'router')) {
+    const auto = mode === 'auto' && (device.type === 'router' || device.type === 'l3switch');
+    if (device.type === 'internet' || auto) {
       routes.push(...autoRoutes6(this.#ctx.topology(), device.id));
     }
-    if (mode !== 'auto' || device.type !== 'router') {
+    if (!auto) {
       for (const r of device.routes6 ?? []) {
         const net = parseCidr6(r.network);
         if (!net) continue;
@@ -270,7 +304,7 @@ export class Ip6Stack {
     if (!device || !this.enabled() || this.#booted) return;
     this.#booted = true;
     for (const iface of this.interfaces()) {
-      if (!this.#ctx.isConnected(iface.index)) continue;
+      if (!this.#up(iface.index)) continue;
       // Duplicate Address Detection: Gehört die Adresse schon jemandem?
       for (const a of iface.addresses) this.#sendDad(iface, a.address);
       if (this.#hostLike(device, iface.index) && (device.ipv6Auto || device.type === 'cpe')) {
@@ -307,8 +341,9 @@ export class Ip6Stack {
     if (!device || this.#hostLike(device, index)) return;
     const iface = this.interfaces().find((i) => i.index === index);
     const global = iface?.addresses.find((a) => a.origin === 'manual');
-    if (!iface || !global || !this.#ctx.isConnected(index)) return;
-    const managed = !!device.interfaces[index]?.dhcp6;
+    if (!iface || !global || !this.#up(index)) return;
+    const link = this.#link(device, index);
+    const managed = !!link?.dhcp6;
     const message: Icmpv6Message = {
       kind: 'icmpv6',
       type: 'routerAdvertisement',
@@ -321,7 +356,7 @@ export class Ip6Stack {
       flags: { managed, other: managed },
       // SLAAC funktioniert nur mit /64; bei DHCPv6 dient das Präfix nur als On-Link-Angabe.
       prefix: { network: formatIp6(networkOf6(global.address, global.prefix)), length: global.prefix, autonomous: !managed && global.prefix === 64, valid: PREFIX_VALID, preferred: PREFIX_VALID / 2 },
-      ...(device.interfaces[index]?.dns6 ? { rdnss: device.interfaces[index]!.dns6! } : {}),
+      ...(link?.dns6 ? { rdnss: link.dns6 } : {}),
     };
     this.#sendRaw(index, formatIp6(iface.addresses[0]!.address), ALL_NODES, message, 255);
   }
@@ -409,7 +444,7 @@ export class Ip6Stack {
     if ((m.routerLifetime ?? 0) > 0) this.#routers.set(index, { address: router, expires: this.#ctx.now + (m.routerLifetime ?? 0) * 1000 });
     const p = m.prefix;
     const net = p ? parseIp6(p.network) : null;
-    const auto = this.#isEndpoint(device) ? !!device.ipv6Auto : !device.interfaces[index]?.ipv6;
+    const auto = this.#isEndpoint(device) ? !!device.ipv6Auto : !this.#link(device, index)?.ipv6;
     if (!p || net === null) return;
     this.#onLink.set(index, { network: net, prefix: p.length, managed: !!m.flags?.managed });
     if (!auto) return;
@@ -547,6 +582,9 @@ export class Ip6Stack {
   #forward(inIface: Iface6, packet: Ipv6Packet) {
     const src = parseIp6(packet.src);
     if (src === null || isLinkLocal6(src) || isLinkLocal6(parseIp6(packet.dst) ?? 0n)) return;
+    // Layer-3-Switch mit «no ip routing»: erreichbar, aber keine Weiterleitung.
+    const self = this.device();
+    if (self?.type === 'l3switch' && self.ipRouting === false) return;
     if (packet.hopLimit <= 1) return this.#error(inIface, packet, 'timeExceeded');
     if ((packet.payload.kind === 'tcp' || packet.payload.kind === 'udp') && this.host.filter6 && !this.host.filter6(packet, inIface.index, true)) return;
     const dst = parseIp6(packet.dst)!;
@@ -601,13 +639,13 @@ export class Ip6Stack {
     if (m.type === 'solicit' || m.type === 'request') {
       const iface = this.interfaces().find((i) => i.index === index);
       const global = iface?.addresses.find((a) => a.origin === 'manual');
-      if (!iface || !global || !device.interfaces[index]?.dhcp6) return;
+      if (!iface || !global || !this.#link(device, index)?.dhcp6) return;
       let address = this.#leases.get(m.clientMac);
       if (address === undefined) {
         address = networkOf6(global.address, global.prefix) + 0x100n + BigInt(this.#leases.size);
         this.#leases.set(m.clientMac, address);
       }
-      const dns = device.interfaces[index]?.dns6;
+      const dns = this.#link(device, index)?.dns6;
       const reply: Dhcpv6Message = { kind: 'dhcpv6', type: m.type === 'solicit' ? 'advertise' : 'reply', xid: m.xid, clientMac: m.clientMac, serverMac: iface.mac, address: formatIp6(address), lifetime: PREFIX_VALID, ...(dns ? { dns } : {}) };
       this.#learn(packet.src, srcMac, index, false);
       this.#sendDhcp(index, packet.src, reply, DHCP6_SERVER_PORT, DHCP6_CLIENT_PORT, srcMac);

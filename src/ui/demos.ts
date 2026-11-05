@@ -155,6 +155,15 @@ export const DEMOS: readonly Demo[] = [
   { id: 'storm', file: 'broadcast-sturm.json', topic: 'switching', layers: [2], actions: [{ at: 600, device: 'PC 1', command: 'ping 192.168.1.11' }], check: { kind: 'storm' }, until: 3000 },
   { id: 'routerOnAStick', file: 'router-on-a-stick.json', topic: 'switching', layers: [2, 3], actions: [{ at: 600, device: 'PC Verwaltung', command: 'ping 192.168.20.11' }], check: { kind: 'ping', device: 'PC Verwaltung' }, until: 8000 },
   { id: 'l3switch', file: 'layer3-switch.json', topic: 'switching', layers: [2, 3], actions: [{ at: 5000, device: 'Notebook 1', command: 'ping 10.99.0.10' }], check: { kind: 'ping', device: 'Notebook 1' }, until: 15_000 },
+  { id: 'l3switchIpv6', file: 'layer3-switch-ipv6.json', topic: 'switching', layers: [2, 3], actions: [{ at: 4000, device: 'Notebook 2', command: 'ping 2001:db8:10::ff:fe00:500' }, { at: 9000, device: 'Notebook 1', browse: 'http://intranet.schule.example/' }], check: { kind: 'browser', device: 'Notebook 1', contains: 'Intranet' }, until: 14_000,
+    tour: [
+      { sim: false, highlight: 'Core', window: { device: 'Core', tab: 'addresses' } },
+      { sim: true, pause: false, highlight: 'Notebook 1', window: { device: 'Notebook 1', tab: 'state' } },
+      { highlight: 'Notebook 2', window: { device: 'Notebook 2', tab: 'state' } },
+      { action: { at: 0, device: 'Notebook 2', command: 'ping 2001:db8:10::ff:fe00:500' }, highlight: 'Core' },
+      { action: { at: 0, device: 'Notebook 1', browse: 'http://intranet.schule.example/' }, highlight: 'Server' },
+      { highlight: 'Core', window: { device: 'Core', tab: 'state' } },
+    ] },
   // Routing
   { id: 'autoRouting', file: 'automatisches-routing.json', topic: 'routing', layers: [3], actions: [{ at: 600, device: 'PC A', command: 'tracert 192.168.30.10' }], check: { kind: 'trace', device: 'PC A' }, until: 10_000,
     tour: [

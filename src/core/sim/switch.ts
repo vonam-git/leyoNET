@@ -313,10 +313,11 @@ export class SwitchNode implements SimNode {
     this.#table.set(`${vlan}|${frame.src}`, { mac: frame.src, port: inPort, vlan, expires: now + MAC_TTL });
     if (inState === 'learning') return;
 
-    // Layer-3-Switch: Rahmen an die eigene SVI gehen nach oben, Broadcasts zusätzlich.
+    // Layer-3-Switch: Rahmen an die eigene SVI gehen nach oben, Broadcasts und
+    // Multicasts (z.B. IPv6 Neighbor Discovery, DHCPv6) zusätzlich; die SVI prüft selbst, ob sie die Gruppe hört.
     if (this.local?.has(vlan)) {
       if (frame.dst === this.local.mac) return this.local.deliver(vlan, frame);
-      if (frame.dst === BROADCAST_MAC) this.local.deliver(vlan, frame);
+      if (frame.dst === BROADCAST_MAC || (isGroupMac(frame.dst) && frame.dst !== STP_MAC)) this.local.deliver(vlan, frame);
     }
 
     const flood = frame.dst === BROADCAST_MAC || frame.dst === STP_MAC;
@@ -485,4 +486,9 @@ export class ModemNode implements SimNode {
     const modem: ModemState = { kind, standard: p.standard, phase: this.#phase, progress: this.#progress, total: p.steps.length, downstream: p.downstream, upstream: p.upstream };
     return { modem };
   }
+}
+
+/** Gruppenadresse (Multicast/Broadcast): niedrigstes Bit des ersten Bytes gesetzt. */
+function isGroupMac(mac: string): boolean {
+  return (parseInt(mac.slice(0, 2), 16) & 1) === 1;
 }

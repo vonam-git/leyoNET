@@ -25,7 +25,7 @@ import { isModemWan } from '../model/links';
 import type { ModemKind } from '../model/types';
 import { BGP_PORT, IKE_PORT, OSPF_ALL_ROUTERS, RIP_MULTICAST, RIP_PORT } from './frames';
 import { ACCESS_PROFILES, nextSteps, stepIndex } from './access';
-import { PingRun, type IcmpApp } from './apps';
+import { PingRun, icmpView, type IcmpApp, type IcmpHost } from './apps';
 import { SSH_PORT, startSshServer } from './ssh';
 import { TcpStack } from './tcp';
 import { PppLinks } from './ppp';
@@ -103,6 +103,7 @@ export class IpNode implements SimNode {
         onIcmp6: (packet) => this.onIcmp6(packet),
         onUdp6: (packet, datagram, index) => this.onUdp6(packet, datagram, index),
         onTcp6: (packet, segment) => this.onTcp6(packet, segment),
+        linkUp: (index) => this.linkUp6(index),
         // Dieselbe Firewall wie für IPv4: Endgeräte prüfen eingehende, Router weitergeleitete Pakete.
         filter6: (packet, inIndex, forwarded) => {
           if (forwarded !== this.forwarding || packet.payload.kind === 'icmpv6' || packet.payload.kind === 'ipv4') return true;
@@ -123,6 +124,11 @@ export class IpNode implements SimNode {
   protected onIcmp6(_packet: Ipv6Packet) {}
 
   protected onUdp6(_packet: Ipv6Packet, _datagram: UdpDatagram, _index: number) {}
+
+  /** Anschluss verbunden (für IPv6)? Router und Layer-3-Switches: VLAN-Interfaces immer. */
+  protected linkUp6(index: number): boolean {
+    return this.ctx.isConnected(index);
+  }
 
   /**
    * TCP über IPv6: dieselben Dienste wie über IPv4 (Web, Mail, SSH, BGP). Der
@@ -763,6 +769,10 @@ export class ForwardingNode extends IpNode {
     return ref.kind === 'svi' ? true : this.ctx.isConnected(ref.port);
   }
 
+  protected override linkUp6(index: number): boolean {
+    return this.ifaceUp(index);
+  }
+
   boot() {
     this.ospf.boot();
     this.rip.boot();
@@ -920,13 +930,28 @@ export class RouterNode extends ForwardingNode {
   /** «ping» aus der Befehlszeile des Routers. */
   ping(target: string) {
     this.#ping?.cancel();
-    const run = new PingRun(this, target, ++this.#pingId, '');
+    // IPv6-Ziel: Echo als ICMPv6 über den IPv6-Stack.
+    const v6 = parseIp(target) === null && parseIp6(target) !== null;
+    const via: IcmpHost = v6
+      ? {
+          ctx: this.ctx,
+          sendIp: (dst, payload, options, onError) => {
+            if (payload.kind === 'icmp') this.v6.send(dst, { ...payload, kind: 'icmpv6' }, options?.ttl !== undefined ? { hopLimit: options.ttl } : {}, onError);
+          },
+        }
+      : this;
+    const run = new PingRun(via, v6 ? (normalizeIp6(target) ?? target) : target, ++this.#pingId, '');
     this.#ping = run;
     run.start();
   }
 
   protected override onIcmp(packet: Ipv4Packet) {
     this.#ping?.onIcmp(packet);
+  }
+
+  protected override onIcmp6(packet: Ipv6Packet) {
+    const view = icmpView(packet);
+    if (view) this.#ping?.onIcmp(view);
   }
 
   /** Verwaltung per SSH (Port 22) und BGP (179); alles andere an den Router selbst verwirft er still, wie Heimrouter. */

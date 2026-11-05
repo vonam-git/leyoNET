@@ -43,8 +43,10 @@ import {
   addStaticRoute6,
   removeStaticRoute6,
   setInterfaceDhcp6,
+  setInterfaceDns6,
   setInterfaceIpv6,
 } from '../model/topology';
+import { ipv6Links } from '../sim/ip6';
 import type { BgpConfig, CliConfig, Device, DeviceType, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, Topology } from '../model/types';
 import { formatIp, maskToText, networkOf, parseIp, parseMask } from '../net/ipv4';
 import { formatCidr6, formatIp6, parseCidr6, parseIp6 } from '../net/ipv6';
@@ -148,6 +150,8 @@ interface Command {
 }
 
 const ROUTERS: DeviceType[] = ['router'];
+/** IPv6-Befehle: Router und Layer-3-Switch (dort auf den VLAN-Interfaces). */
+const ROUTERS6: DeviceType[] = ['router', 'l3switch'];
 const SWITCHES: DeviceType[] = ['switch', 'l3switch'];
 const L3: DeviceType[] = ['router', 'l3switch'];
 const EXEC: CliMode[] = ['user', 'enable'];
@@ -322,6 +326,16 @@ function forPorts(call: Call, step: (t: Topology, port: number) => Result<Topolo
   );
 }
 
+/** IPv6 auf Ports (Router) und VLAN-Interfaces (Layer-3-Switch); Subinterfaces sprechen nur IPv4. */
+function forLinks6(call: Call, step: (t: Topology, id: number) => Result<Topology>): Partial<CliOutput> {
+  const targets = call.session.targets ?? [];
+  if (targets.some((id) => decodeIface(id).kind === 'sub')) return ok(['% IPv6 is not supported on subinterfaces']);
+  return applyAll(
+    call.env.topology,
+    targets.map((id) => (t: Topology) => step(t, id)),
+  );
+}
+
 function exitMode(session: CliSession): Partial<CliOutput> {
   switch (session.mode) {
     case 'if':
@@ -368,9 +382,9 @@ const COMMANDS: Command[] = [
   { modes: EXEC, syntax: 'show version', help: 'Software version', run: ({ device }) => ok(showVersion(device)) },
   { modes: ['enable'], syntax: 'show running-config', help: 'Current operating configuration', run: ({ device }) => ok(runningConfig(device)) },
   { modes: EXEC, types: L3, syntax: 'show ip route', help: 'IP routing table', run: ({ device, env }) => ok(showIpRoute(device, env)) },
-  { modes: EXEC, types: ROUTERS, syntax: 'show ipv6 route', help: 'IPv6 routing table', run: ({ device, env }) => ok(showIpv6Route(device, env)) },
-  { modes: EXEC, types: ROUTERS, syntax: 'show ipv6 neighbors', help: 'IPv6 neighbour cache (Neighbor Discovery)', run: ({ device, env }) => ok(showIpv6Neighbors(device, env)) },
-  { modes: EXEC, types: ROUTERS, syntax: 'show ipv6 interface brief', help: 'IPv6 addresses per interface', run: ({ device, env }) => ok(showIpv6Brief(device, env)) },
+  { modes: EXEC, types: ROUTERS6, syntax: 'show ipv6 route', help: 'IPv6 routing table', run: ({ device, env }) => ok(showIpv6Route(device, env)) },
+  { modes: EXEC, types: ROUTERS6, syntax: 'show ipv6 neighbors', help: 'IPv6 neighbour cache (Neighbor Discovery)', run: ({ device, env }) => ok(showIpv6Neighbors(device, env)) },
+  { modes: EXEC, types: ROUTERS6, syntax: 'show ipv6 interface brief', help: 'IPv6 addresses per interface', run: ({ device, env }) => ok(showIpv6Brief(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip ospf neighbor', help: 'OSPF neighbours', run: ({ device, env }) => ok(showOspfNeighbors(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip ospf database', help: 'OSPF link-state database', run: ({ device, env }) => ok(showOspfDatabase(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip bgp summary', help: 'BGP neighbours', run: ({ device, env }) => ok(showBgpSummary(device, env)) },
@@ -433,9 +447,9 @@ const COMMANDS: Command[] = [
     help: 'Delete a VLAN interface',
     run: ({ args, device, env }) => apply(removeSvi(env.topology, device.id, Number(args[0]))),
   },
-  { modes: ['config'], types: ROUTERS, syntax: 'ipv6 route <cidr6> <word>', help: 'Static IPv6 route: prefix, next hop or interface', run: (call) => addRoute6(call, call.args[0]!, call.args[1]!) },
-  { modes: ['config'], types: ROUTERS, syntax: 'ipv6 route <cidr6> <ip6> <iface>', help: 'Static IPv6 route via a link-local next hop', run: (call) => addRoute6(call, call.args[0]!, call.args[1]!, call.args[2]) },
-  { modes: ['config'], types: ROUTERS, syntax: 'no ipv6 route <cidr6>', help: 'Remove a static IPv6 route', run: (call) => removeRoute6(call, call.args[0]!) },
+  { modes: ['config'], types: ROUTERS6, syntax: 'ipv6 route <cidr6> <word>', help: 'Static IPv6 route: prefix, next hop or interface', run: (call) => addRoute6(call, call.args[0]!, call.args[1]!) },
+  { modes: ['config'], types: ROUTERS6, syntax: 'ipv6 route <cidr6> <ip6> <iface>', help: 'Static IPv6 route via a link-local next hop', run: (call) => addRoute6(call, call.args[0]!, call.args[1]!, call.args[2]) },
+  { modes: ['config'], types: ROUTERS6, syntax: 'no ipv6 route <cidr6>', help: 'Remove a static IPv6 route', run: (call) => removeRoute6(call, call.args[0]!) },
   { modes: ['config'], types: L3, syntax: 'ip route <cidr> <word>', help: 'Static route: prefix, next hop or interface', run: (call) => addRoute(call, call.args[0]!, call.args[1]!) },
   { modes: ['config'], types: L3, syntax: 'ip route <ip> <mask> <word>', help: 'Static route: network, mask, next hop or interface', run: (call) => addRoute(call, `${call.args[0]}/${call.args[1]}`, call.args[2]!) },
   { modes: ['config'], types: L3, syntax: 'no ip route <cidr> <word>', help: 'Remove a static route', run: (call) => removeRoute(call, call.args[0]!) },
@@ -604,10 +618,12 @@ const COMMANDS: Command[] = [
   },
 
   // --- interface -------------------------------------------------------------
-  { modes: ['if'], types: ROUTERS, syntax: 'ipv6 address <cidr6>', help: 'IPv6 address with prefix, e.g. 2001:db8:1::1/64', run: (call) => forPorts(call, (t, port) => setInterfaceIpv6(t, call.device.id, port, call.args[0]!)) },
-  { modes: ['if'], types: ROUTERS, syntax: 'no ipv6 address', help: 'Remove the IPv6 address', run: (call) => forPorts(call, (t, port) => setInterfaceIpv6(t, call.device.id, port, '')) },
-  { modes: ['if'], types: ROUTERS, syntax: 'ipv6 nd managed-config-flag', help: 'Hand out addresses by DHCPv6 (M flag in router advertisements)', run: (call) => forPorts(call, (t, port) => setInterfaceDhcp6(t, call.device.id, port, true)) },
-  { modes: ['if'], types: ROUTERS, syntax: 'no ipv6 nd managed-config-flag', help: 'Addresses by SLAAC (no M flag)', run: (call) => forPorts(call, (t, port) => setInterfaceDhcp6(t, call.device.id, port, false)) },
+  { modes: ['if'], types: ROUTERS6, syntax: 'ipv6 address <cidr6>', help: 'IPv6 address with prefix, e.g. 2001:db8:1::1/64', run: (call) => forLinks6(call, (t, id) => setInterfaceIpv6(t, call.device.id, id, call.args[0]!)) },
+  { modes: ['if'], types: ROUTERS6, syntax: 'no ipv6 address', help: 'Remove the IPv6 address', run: (call) => forLinks6(call, (t, id) => setInterfaceIpv6(t, call.device.id, id, '')) },
+  { modes: ['if'], types: ROUTERS6, syntax: 'ipv6 nd managed-config-flag', help: 'Hand out addresses by DHCPv6 (M flag in router advertisements)', run: (call) => forLinks6(call, (t, id) => setInterfaceDhcp6(t, call.device.id, id, true)) },
+  { modes: ['if'], types: ROUTERS6, syntax: 'no ipv6 nd managed-config-flag', help: 'Addresses by SLAAC (no M flag)', run: (call) => forLinks6(call, (t, id) => setInterfaceDhcp6(t, call.device.id, id, false)) },
+  { modes: ['if'], types: ROUTERS6, syntax: 'ipv6 nd ra dns server <ip6>', help: 'DNS server in router advertisements (RDNSS) and DHCPv6', run: (call) => forLinks6(call, (t, id) => setInterfaceDns6(t, call.device.id, id, call.args[0]!)) },
+  { modes: ['if'], types: ROUTERS6, syntax: 'no ipv6 nd ra dns server', help: 'No DNS server in router advertisements', run: (call) => forLinks6(call, (t, id) => setInterfaceDns6(t, call.device.id, id, '')) },
   { modes: ['if'], types: L3, syntax: 'ip address <cidr>', help: 'Address with prefix length, e.g. 192.168.1.1/24', run: (call) => addressOn(call, ...splitCidr(call.args[0]!)) },
   { modes: ['if'], types: L3, syntax: 'ip address <ip> <mask>', help: 'Address and netmask', run: (call) => addressOn(call, call.args[0]!, call.args[1]!) },
   { modes: ['if'], types: L3, syntax: 'no ip address', help: 'Remove the IP address', run: (call) => addressOn(call, '', '') },
@@ -840,7 +856,9 @@ function showIpv6Brief(device: Device, env: CliEnv): string[] {
   const live = env.state?.ipv6?.addresses;
   const rows = live
     ? live.map((a) => [cliIfaceName(device, a.iface), `${a.address}/${a.prefix}`, a.origin])
-    : device.interfaces.filter((i) => i.ipv6).map((i) => [cliIfaceName(device, i.index), i.ipv6!, 'manual']);
+    : ipv6Links(device)
+        .filter((i) => i.ipv6)
+        .map((i) => [cliIfaceName(device, i.index), i.ipv6!, 'manual']);
   if (rows.length === 0) return ['(no IPv6 addresses)'];
   return table(['Interface', 'IPv6-Address', 'Origin'], rows);
 }
@@ -1302,6 +1320,7 @@ export function runningConfig(device: Device): string[] {
       if (p.ospfCost) lines.push(` ip ospf cost ${p.ospfCost}`);
       if (p.ipv6) lines.push(` ipv6 address ${p.ipv6}`);
       if (p.dhcp6) lines.push(' ipv6 nd managed-config-flag');
+      if (p.dns6) lines.push(` ipv6 nd ra dns server ${p.dns6}`);
     }
     if (p.shutdown) lines.push(' shutdown');
     lines.push('!');
@@ -1316,6 +1335,9 @@ export function runningConfig(device: Device): string[] {
     lines.push(`interface vlan${s.vlan}`);
     if (s.ip && s.mask) lines.push(` ip address ${s.ip}/${parseMask(s.mask)}`);
     if (s.dhcpRelay) lines.push(` ip helper-address ${s.dhcpRelay}`);
+    if (s.ipv6) lines.push(` ipv6 address ${s.ipv6}`);
+    if (s.dhcp6) lines.push(' ipv6 nd managed-config-flag');
+    if (s.dns6) lines.push(` ipv6 nd ra dns server ${s.dns6}`);
     lines.push('!');
   }
   for (const r of device.routes ?? []) {

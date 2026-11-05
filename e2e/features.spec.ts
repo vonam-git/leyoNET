@@ -515,3 +515,16 @@ test('Doppelte MAC: Warnung, MAC ändern behebt sie; Schritt zurück und Zurück
   await expect(page.locator('.controls')).toContainText('0.000');
   await expect(rows).toHaveCount(0);
 });
+
+test('IPv6 auf dem Layer-3-Switch: SVIs mit IPv6-Adresse, DHCPv6 und DNS-Server', async ({ page }) => {
+  await page.getByRole('button', { name: 'Demo-Netze …' }).click();
+  await page.locator('li').filter({ hasText: 'IPv6 auf dem Layer-3-Switch' }).getByRole('button', { name: /Schritt für Schritt/ }).click();
+  const tour = page.getByRole('dialog', { name: 'IPv6 auf dem Layer-3-Switch' });
+  await expect(tour).toContainText('Schritt 1 von 6');
+  const core = page.getByRole('dialog', { name: 'Core' });
+  await expect(core.getByLabel('IPv6-Adresse von VLAN 20')).toHaveValue('2001:db8:20::1/64');
+  await expect(core.getByLabel(/IPv6-DNS-Server für das Netz an VLAN 10/)).toHaveValue('2001:db8:99::10');
+  await expect(core).toContainText('2001:db8:99::1/64');
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  await tour.getByRole('button', { name: 'Führung beenden' }).click();
+});

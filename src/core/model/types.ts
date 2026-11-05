@@ -126,6 +126,12 @@ export interface Svi {
   ip?: string;
   mask?: string;
   dhcpRelay?: string;
+  /** IPv6-Adresse mit Präfix, z.B. "2001:db8:10::1/64"; der Switch kündigt das Präfix im VLAN an. */
+  ipv6?: string;
+  /** In diesem VLAN IPv6-Adressen per DHCPv6 vergeben. */
+  dhcp6?: boolean;
+  /** IPv6-DNS-Server für dieses VLAN (RDNSS, DHCPv6). */
+  dns6?: string;
 }
 
 export interface PortForward {

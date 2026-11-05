@@ -28,7 +28,7 @@ import type {
   RoutedNetwork,
   VlanDef,
 } from '../model/types';
-import { DNS_TYPES, IP_MODES, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type DnsType, type IpMode, type RoutingMode } from '../model/types';
+import { DNS_TYPES, IP_MODES, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type DnsType, type IpMode, type Svi, type RoutingMode } from '../model/types';
 import { formatCidr6, formatIp6, isLinkLocal6, isMulticast6, parseCidr6, parseIp6 } from '../net/ipv6';
 import { checkDnsRecord, isValidName, normalizeName, normalizeRecord } from '../net/dns';
 import { normalizeMac } from '../model/mac';
@@ -573,7 +573,15 @@ function readDevice(v: unknown, path: string): Device {
       const vlan = vlanNumber(si.vlan, `${p}.vlan`);
       if (seen.has(vlan)) throw new Invalid(`${p}.vlan`);
       seen.add(vlan);
-      return { vlan, ...readAddress(si, p) };
+      const svi: Svi = { vlan, ...readAddress(si, p) };
+      if (si.ipv6 !== undefined) {
+        const c = parseCidr6(str(si.ipv6, `${p}.ipv6`));
+        if (!c || isMulticast6(c.address) || isLinkLocal6(c.address) || c.address === 0n) throw new Invalid(`${p}.ipv6`);
+        svi.ipv6 = formatCidr6(c.address, c.prefix);
+      }
+      if (si.dhcp6 !== undefined && bool(si.dhcp6, `${p}.dhcp6`)) svi.dhcp6 = true;
+      if (si.dns6 !== undefined) svi.dns6 = ip6(si.dns6, `${p}.dns6`);
+      return svi;
     });
   }
   if (o.ipRouting !== undefined && !bool(o.ipRouting, `${path}.ipRouting`)) device.ipRouting = false;

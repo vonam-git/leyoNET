@@ -1596,18 +1596,29 @@ function checkUnicast6(text: string, field: string): Result<{ address: bigint; p
 export function setInterfaceIpv6(t: Topology, id: string, index: number, text: string): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  if (!device.interfaces[index]) return fail('unknownInterface');
+  if (!hasLink6(device, index)) return fail('unknownInterface');
   let value = '';
   if (text.trim()) {
     const checked = checkUnicast6(text, 'ipv6');
     if (!checked.ok) return checked;
     value = formatCidr6(checked.value.address, checked.value.prefix);
   }
-  return ok(
-    updateDevice(t, id, (d) => ({
-      ...d,
-      interfaces: d.interfaces.map((i) => (i.index !== index ? i : value ? { ...i, ipv6: value } : without(i, 'ipv6'))),
-    })),
+  return ok(updateLink6(t, id, index, 'ipv6', value || undefined));
+}
+
+/** Gibt es diesen IPv6-Anschluss? Physischer Port oder (Layer-3-Switch) VLAN-Interface. */
+function hasLink6(device: Device, index: number): boolean {
+  const ref = decodeIface(index);
+  if (ref.kind === 'svi') return device.type === 'l3switch' && !!device.svis?.some((s) => s.vlan === ref.vlan);
+  return ref.kind === 'port' && !!device.interfaces[index];
+}
+
+/** Ein IPv6-Feld eines Ports oder SVIs setzen (undefined = entfernen). */
+function updateLink6<K extends 'ipv6' | 'dhcp6' | 'dns6'>(t: Topology, id: string, index: number, key: K, value: (K extends 'dhcp6' ? true : string) | undefined): Topology {
+  const ref = decodeIface(index);
+  const apply = <T extends Partial<Record<'ipv6' | 'dhcp6' | 'dns6', unknown>>>(item: T): T => (value === undefined ? (without(item, key) as T) : { ...item, [key]: value });
+  return updateDevice(t, id, (d) =>
+    ref.kind === 'svi' ? { ...d, svis: (d.svis ?? []).map((s) => (s.vlan === ref.vlan ? apply(s) : s)) } : { ...d, interfaces: d.interfaces.map((i) => (i.index === index ? apply(i) : i)) },
   );
 }
 
@@ -1616,13 +1627,8 @@ export function setInterfaceDhcp6(t: Topology, id: string, index: number, enable
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
   if (!hasRoutingTable(device.type)) return fail('notARouter');
-  if (!device.interfaces[index]) return fail('unknownInterface');
-  return ok(
-    updateDevice(t, id, (d) => ({
-      ...d,
-      interfaces: d.interfaces.map((i) => (i.index !== index ? i : enabled ? { ...i, dhcp6: true } : without(i, 'dhcp6'))),
-    })),
-  );
+  if (!hasLink6(device, index)) return fail('unknownInterface');
+  return ok(updateLink6(t, id, index, 'dhcp6', enabled ? true : undefined));
 }
 
 export interface Host6Input {
@@ -1647,11 +1653,10 @@ export function setInterfaceDns6(t: Topology, id: string, index: number, dns: st
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
   if (!hasRoutingTable(device.type)) return fail('notARouter');
-  if (!device.interfaces[index]) return fail('unknownInterface');
+  if (!hasLink6(device, index)) return fail('unknownInterface');
   const checked = checkDns6(dns, 'dns6');
   if (!checked.ok) return checked;
-  const value = checked.value;
-  return ok(updateDevice(t, id, (d) => ({ ...d, interfaces: d.interfaces.map((i) => (i.index !== index ? i : value ? { ...i, dns6: value } : without(i, 'dns6'))) })));
+  return ok(updateLink6(t, id, index, 'dns6', checked.value ?? undefined));
 }
 
 /** IPv6 eines Endgeräts: automatisch oder feste Adresse mit Standardgateway. */
@@ -1704,7 +1709,7 @@ export function checkStaticRoute6(device: Device, route: StaticRoute6): Result<S
     gateway = formatIp6(g);
   }
   if (!gateway && route.iface === undefined) return { ok: false, error: { code: 'routeNeedsTarget', field: 'gateway' } };
-  if (route.iface !== undefined && !device.interfaces[route.iface]) return fail('unknownInterface');
+  if (route.iface !== undefined && !hasLink6(device, route.iface)) return fail('unknownInterface');
   const network = formatCidr6(net.address, net.prefix);
   if ((device.routes6 ?? []).some((r) => r.network === network)) return { ok: false, error: { code: 'duplicateRoute', params: { net: network }, field: 'network' } };
   return ok({ network, ...(gateway ? { gateway } : {}), ...(route.iface !== undefined ? { iface: route.iface } : {}) });

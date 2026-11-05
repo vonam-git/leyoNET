@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CPE_LAN, formatIp6, linkLocal, networkOf6, parseCidr6, type Device } from '../../core';
+  import { CPE_LAN, formatIp6, ipv6Links, linkLocal, networkOf6, parseCidr6, type Device, type Link6 } from '../../core';
   import { t } from '../../i18n';
   import { autosave } from '../autosave';
   import { interfaceLabel } from '../labels';
@@ -15,20 +15,24 @@
    */
   let { device, compact = false }: { device: Device; compact?: boolean } = $props();
 
-  /** Anschlüsse mit IPv6: CPE nur WAN und LAN (die LAN-Buchsen teilen sich ein Netz), sonst alle ausser seriellen. */
-  const ports = $derived(device.type === 'cpe' ? device.interfaces.filter((i) => i.index === 0 || i.index === CPE_LAN) : device.interfaces.filter((i) => !i.serial));
+  /**
+   * Anschlüsse mit IPv6: CPE nur WAN und LAN (die LAN-Buchsen teilen sich ein Netz),
+   * Layer-3-Switch seine VLAN-Interfaces (SVIs), sonst alle ausser seriellen.
+   */
+  const ports = $derived<Link6[]>(device.type === 'cpe' ? device.interfaces.filter((i) => i.index === 0 || i.index === CPE_LAN) : ipv6Links(device));
+  const byIndex = (index: number) => ports.find((p) => p.index === index);
   const announces = $derived(device.type !== 'internet');
 
-  let drafts = $state<string[]>([]);
-  let dnsDrafts = $state<string[]>([]);
+  let drafts = $state<Record<number, string>>({});
+  let dnsDrafts = $state<Record<number, string>>({});
   let dnsError = $state<{ index: number; text: string } | null>(null);
   let error = $state<{ index: number; text: string } | null>(null);
   let aftr = $state('');
   let aftrError = $state<string | null>(null);
 
   $effect(() => {
-    drafts = device.interfaces.map((i) => i.ipv6 ?? '');
-    dnsDrafts = device.interfaces.map((i) => i.dns6 ?? '');
+    drafts = Object.fromEntries(ports.map((i) => [i.index, i.ipv6 ?? '']));
+    dnsDrafts = Object.fromEntries(ports.map((i) => [i.index, i.dns6 ?? '']));
     dnsError = null;
     aftr = device.dsLite?.aftr ?? '';
     error = null;
@@ -37,7 +41,7 @@
 
   function save(index: number, quiet: boolean): boolean {
     const draft = (drafts[index] ?? '').trim();
-    if (draft === (device.interfaces[index]?.ipv6 ?? '')) return true;
+    if (draft === (byIndex(index)?.ipv6 ?? '')) return true;
     const failure = editor.setInterfaceIpv6(device.id, index, draft);
     if (failure) {
       if (!quiet) error = { index, text: t(`error.${failure.code}`, failure.params) };
@@ -50,7 +54,7 @@
   /** DNS-Server, den das Netz im Router Advertisement (RDNSS) und per DHCPv6 erhält. */
   function saveDns(index: number, quiet: boolean): boolean {
     const draft = (dnsDrafts[index] ?? '').trim();
-    if (draft === (device.interfaces[index]?.dns6 ?? '')) return true;
+    if (draft === (byIndex(index)?.dns6 ?? '')) return true;
     const failure = editor.setInterfaceDns6(device.id, index, draft);
     if (failure) {
       if (!quiet) dnsError = { index, text: t(`error.${failure.code}`, failure.params) };

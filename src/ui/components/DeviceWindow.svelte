@@ -238,7 +238,7 @@
           {:else if editor.ipMode !== 'ipv6'}
             <RouterConfig {device} part="interfaces" />
           {/if}
-          {#if editor.ipMode !== 'ipv4' && (isRouterType(device.type) || device.type === 'cpe')}<Ipv6Interfaces {device} />{/if}
+          {#if editor.ipMode !== 'ipv4' && (isRouterType(device.type) || device.type === 'cpe' || device.type === 'l3switch')}<Ipv6Interfaces {device} />{/if}
         {:else if tab === 'group'}
           <GroupConfig {device} />
         {:else if tab === 'ports'}

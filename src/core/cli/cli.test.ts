@@ -161,6 +161,34 @@ group('CLI Switch', () => {
     ]);
   });
 
+  it('richtet IPv6 auf den SVIs ein (Adresse, DHCPv6, DNS-Server) und zeigt sie in der Konfiguration', () => {
+    const net = new NetBuilder();
+    const sw = net.add('l3switch', 'L3');
+    const { topology, output } = run(net.topology, sw, [
+      'en',
+      'conf t',
+      'interface vlan 10',
+      'ipv6 address 2001:db8:10::1/64',
+      'ipv6 nd ra dns server 2001:db8:10::53',
+      'exit',
+      'int vlan20',
+      'ipv6 address 2001:DB8:20::1/64',
+      'ipv6 nd managed-config-flag',
+      'exit',
+      'ipv6 route 2001:db8:99::/48 2001:db8:10::fe',
+      'end',
+      'show ipv6 interface brief',
+    ]);
+    expect(getDevice(topology, sw)!.svis).toEqual([
+      { vlan: 10, ipv6: '2001:db8:10::1/64', dns6: '2001:db8:10::53' },
+      { vlan: 20, ipv6: '2001:db8:20::1/64', dhcp6: true },
+    ]);
+    expect(output.join('\n')).toMatch(/Vlan20\s+2001:db8:20::1\/64/i);
+    const config = runningConfig(getDevice(topology, sw)!).join('\n');
+    expect(config).toContain('interface vlan10\n ipv6 address 2001:db8:10::1/64\n ipv6 nd ra dns server 2001:db8:10::53');
+    expect(config).toContain('ipv6 route 2001:db8:99::/48 2001:db8:10::fe');
+  });
+
   it('kennt keine IP-Befehle am Layer-2-Switch', () => {
     const net = new NetBuilder();
     const sw = net.add('switch', 'S1');
