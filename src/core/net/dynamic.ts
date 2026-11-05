@@ -1,5 +1,5 @@
 import type { ErrorCode, TopologyError } from '../model/topology';
-import type { BgpConfig, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork } from '../model/types';
+import type { BgpConfig, Ospf6Config, OspfConfig, RedistributeSource, RipConfig, RipngConfig, RoutedNetwork } from '../model/types';
 import { formatIp, maskToText, networkOf, parseIp, parseMask } from './ipv4';
 
 /**
@@ -99,6 +99,51 @@ export function normalizeRip(c: RipConfig): RipConfig {
   const redistribute = cleanRedistribute(c.redistribute, 'rip');
   return {
     networks: c.networks.map(normalizeNetwork),
+    ...(c.passive?.length ? { passive: [...new Set(c.passive)].sort((a, b) => a - b) } : {}),
+    ...(c.defaultOriginate ? { defaultOriginate: true } : {}),
+    ...(redistribute.length ? { redistribute } : {}),
+  };
+}
+
+/** IPv6: Quellen ohne BGP (das gibt es hier nur für IPv4). */
+const cleanRedistribute6 = (list: RedistributeSource[] | undefined, self: RedistributeSource) => cleanRedistribute(list, self).filter((s) => s !== 'bgp');
+
+const validArea = (area: number) => Number.isInteger(area) && area >= 0 && area <= 4294967295;
+
+/** OSPFv3: Router-ID nötig als IPv4-Schreibweise; Anschlüsse prüft die Topologie (gibt es sie?). */
+export function checkOspf6(c: Ospf6Config, hasIface: (index: number) => boolean): TopologyError | null {
+  const id = checkRouterId(c.routerId);
+  if (id) return id;
+  const seen = new Set<number>();
+  for (const [i, entry] of c.interfaces.entries()) {
+    if (!validArea(entry.area)) return issue('invalidArea', `interfaces.${i}`);
+    if (!hasIface(entry.iface)) return issue('unknownInterface', `interfaces.${i}`);
+    if (seen.has(entry.iface)) return issue('duplicateNetwork', `interfaces.${i}`, { net: String(entry.iface) });
+    seen.add(entry.iface);
+  }
+  return null;
+}
+
+export function normalizeOspf6(c: Ospf6Config): Ospf6Config {
+  const redistribute = cleanRedistribute6(c.redistribute, 'ospf');
+  return {
+    ...(c.routerId?.trim() ? { routerId: c.routerId.trim() } : {}),
+    interfaces: [...c.interfaces].sort((a, b) => a.iface - b.iface).map((e) => ({ iface: e.iface, area: e.area })),
+    ...(c.passive?.length ? { passive: [...new Set(c.passive)].sort((a, b) => a - b) } : {}),
+    ...(c.defaultOriginate ? { defaultOriginate: true } : {}),
+    ...(redistribute.length ? { redistribute } : {}),
+  };
+}
+
+export function checkRipng(c: RipngConfig, hasIface: (index: number) => boolean): TopologyError | null {
+  for (const [i, index] of c.interfaces.entries()) if (!hasIface(index)) return issue('unknownInterface', `interfaces.${i}`);
+  return null;
+}
+
+export function normalizeRipng(c: RipngConfig): RipngConfig {
+  const redistribute = cleanRedistribute6(c.redistribute, 'rip');
+  return {
+    interfaces: [...new Set(c.interfaces)].sort((a, b) => a - b),
     ...(c.passive?.length ? { passive: [...new Set(c.passive)].sort((a, b) => a - b) } : {}),
     ...(c.defaultOriginate ? { defaultOriginate: true } : {}),
     ...(redistribute.length ? { redistribute } : {}),

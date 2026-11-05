@@ -222,6 +222,9 @@ export interface Device {
   dsLite?: { aftr: string };
   /** Internet (Provider): arbeitet als AFTR für DS-Lite und übersetzt die getunnelten IPv4-Pakete per CGNAT. */
   aftr?: boolean;
+  /** IPv6: OSPFv3 und RIPng (Router und Layer-3-Switches). */
+  ospf6?: Ospf6Config;
+  ripng?: RipngConfig;
   /** Dynamisches Routing (Router und Layer-3-Switches). */
   ospf?: OspfConfig;
   bgp?: BgpConfig;
@@ -259,6 +262,29 @@ export interface OspfConfig {
   /** Diese Anschlüsse senden keine Hellos (Netz wird trotzdem bekanntgegeben). */
   passive?: number[];
   /** Standardroute an alle OSPF-Nachbarn verteilen («default-information originate»). */
+  defaultOriginate?: boolean;
+  redistribute?: RedistributeSource[];
+}
+
+/**
+ * OSPFv3 (RFC 5340) für IPv6: anders als bei OSPFv2 nimmt man Anschlüsse auf,
+ * nicht Netze («ipv6 ospf6 area 0» am Interface in FRRouting).
+ */
+export interface Ospf6Config {
+  /** Router-ID (32 Bit, als IPv4-Adresse geschrieben); fehlt = höchste IPv4-Adresse, sonst aus der MAC. */
+  routerId?: string;
+  /** Anschlüsse (bei Layer-3-Switches VLAN-Interfaces) mit OSPFv3 und ihre Area. */
+  interfaces: { iface: number; area: number }[];
+  passive?: number[];
+  defaultOriginate?: boolean;
+  /** «ospf»/«rip» meinen hier die IPv6-Protokolle (OSPFv3, RIPng). */
+  redistribute?: RedistributeSource[];
+}
+
+/** RIPng (RFC 2080) für IPv6: Anschlüsse mit RIPng. */
+export interface RipngConfig {
+  interfaces: number[];
+  passive?: number[];
   defaultOriginate?: boolean;
   redistribute?: RedistributeSource[];
 }

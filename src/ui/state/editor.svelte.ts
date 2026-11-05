@@ -130,6 +130,8 @@ import {
   setOspfCost,
   setPortSerial,
   setRip,
+  setOspf6,
+  setRipng,
   setVlanDef,
   wouldLoopWithoutStp,
   noPortError,
@@ -143,6 +145,8 @@ import {
   type ModemKind,
   type OspfConfig,
   type RipConfig,
+  type Ospf6Config,
+  type RipngConfig,
   type SerialEncapsulation,
   type StaticNat,
   type VlanDef,
@@ -930,6 +934,14 @@ class Editor {
 
   setRip(id: string, config: RipConfig | null): TopologyError | null {
     return this.#applyForm(setRip(this.topology, id, config));
+  }
+
+  setOspf6(id: string, config: Ospf6Config | null): TopologyError | null {
+    return this.#applyForm(setOspf6(this.topology, id, config));
+  }
+
+  setRipng(id: string, config: RipngConfig | null): TopologyError | null {
+    return this.#applyForm(setRipng(this.topology, id, config));
   }
 
   setVlanDef(vlan: VlanDef): TopologyError | null {

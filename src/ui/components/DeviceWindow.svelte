@@ -254,7 +254,7 @@
             <h3 data-help="routing">{editor.acting ? t('routing.title') : t('deviceDialog.routingTitle')}</h3>
             <RoutingEditor {device} />
           {/if}
-          {#if editor.ipMode !== 'ipv4' && device.type !== 'l3switch'}<Routing6Editor {device} />{/if}
+          {#if editor.ipMode !== 'ipv4'}<Routing6Editor {device} />{/if}
           {#if !canAutoRoute(device.type) || routingModeOf(device) === 'dynamic'}<RoutingProtocols {device} />{/if}
         {:else if tab === 'nat'}
           <RouterConfig {device} part="nat" />

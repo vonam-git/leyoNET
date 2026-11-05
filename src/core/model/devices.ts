@@ -69,8 +69,9 @@ export function canAutoRoute(type: DeviceType): boolean {
 
 /** Wirksame Routing-Art; ohne Angabe wie bisher: dynamisch, sobald ein Protokoll eingerichtet ist. */
 export function routingModeOf(device: Device): RoutingMode {
-  if (!canAutoRoute(device.type)) return device.ospf || device.rip || device.bgp ? 'dynamic' : 'static';
-  return device.routingMode ?? (device.ospf || device.rip || device.bgp ? 'dynamic' : 'static');
+  const dynamic = device.ospf || device.rip || device.bgp || device.ospf6 || device.ripng;
+  if (!canAutoRoute(device.type)) return dynamic ? 'dynamic' : 'static';
+  return device.routingMode ?? (dynamic ? 'dynamic' : 'static');
 }
 
 /** Geräte, die in ein Rack eingebaut werden können. */

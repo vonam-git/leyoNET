@@ -38,6 +38,8 @@ import type {
   WebFile,
   BgpConfig,
   OspfConfig,
+  Ospf6Config,
+  RipngConfig,
   RipConfig,
   RoutingMode,
   IpMode,
@@ -46,7 +48,7 @@ import type {
   StaticNat,
   VlanDef,
 } from './types';
-import { checkBgp, checkOspf, checkRip, normalizeBgp, normalizeOspf, normalizeRip } from '../net/dynamic';
+import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
 
 export const MAX_NAME_LENGTH = 32;
 /** Grösse einer Webserver-Datei in Zeichen (Bilder als data:-URL, also etwa 4/3 der Bytes). */
@@ -1925,6 +1927,27 @@ export function setRip(t: Topology, id: string, config: RipConfig | null): Resul
     if (issue) return { ok: false, error: issue };
   }
   return ok(updateDevice(t, id, (d) => (config ? { ...d, rip: normalizeRip(config) } : without(d, 'rip'))));
+}
+
+/** OSPFv3 einrichten (null = aus). Anschlüsse: Ports oder, beim Layer-3-Switch, VLAN-Interfaces. */
+export function setOspf6(t: Topology, id: string, config: Ospf6Config | null): Result<Topology> {
+  const device = routingDevice(t, id);
+  if (!device.ok) return device;
+  if (config) {
+    const issue = checkOspf6(config, (index) => hasLink6(device.value, index));
+    if (issue) return { ok: false, error: issue };
+  }
+  return ok(updateDevice(t, id, (d) => (config ? { ...d, ospf6: normalizeOspf6(config) } : without(d, 'ospf6'))));
+}
+
+export function setRipng(t: Topology, id: string, config: RipngConfig | null): Result<Topology> {
+  const device = routingDevice(t, id);
+  if (!device.ok) return device;
+  if (config) {
+    const issue = checkRipng(config, (index) => hasLink6(device.value, index));
+    if (issue) return { ok: false, error: issue };
+  }
+  return ok(updateDevice(t, id, (d) => (config ? { ...d, ripng: normalizeRipng(config) } : without(d, 'ripng'))));
 }
 
 /** Dokumentiertes VLAN mit Farbe anlegen oder ändern; die Farbe erscheint an allen Switch-Ports dieses VLANs. */

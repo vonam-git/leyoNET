@@ -58,6 +58,10 @@
       "titel": "Post Office Protocol – Version 3",
       "verwendung": "POP3 im Mailserver"
     },
+    "2080": {
+      "titel": "RIPng for IPv6",
+      "verwendung": "RIPng: UDP 521, ff02::9, Hop-Anzahl"
+    },
     "2131": {
       "titel": "Dynamic Host Configuration Protocol",
       "verwendung": "DHCP"
@@ -149,6 +153,10 @@
     "5321": {
       "titel": "Simple Mail Transfer Protocol",
       "verwendung": "SMTP im Mailserver"
+    },
+    "5340": {
+      "titel": "OSPF for IPv6",
+      "verwendung": "OSPFv3: Hellos über Link-Local, Intra-Area-Prefix-LSA"
     },
     "5737": {
       "titel": "IPv4 Address Blocks Reserved for Documentation",

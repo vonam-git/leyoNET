@@ -17,7 +17,7 @@ import {
 } from '../net/ipv6';
 import { autoRoutes6 } from '../net/autoroute';
 import { ADMIN_DISTANCE, sviId, sviMac, type RouteKind } from '../net/routing';
-import { DHCP6_CLIENT_PORT, DHCP6_SERVER_PORT, type Dhcpv6Message, type EthernetFrame, type Icmpv6Message, type Ipv4Packet, type Ipv6Packet, type TcpSegment, type UdpDatagram } from './frames';
+import { DHCP6_CLIENT_PORT, DHCP6_SERVER_PORT, type Dhcpv6Message, type EthernetFrame, type Icmpv6Message, type Ipv4Packet, type Ipv6Packet, type OspfPacket, type TcpSegment, type UdpDatagram } from './frames';
 import type { NodeContext } from './simulation';
 
 /**
@@ -106,6 +106,12 @@ export interface Ip6Host {
   filter6?(packet: Ipv6Packet, inIndex: number, forwarded: boolean): boolean;
   /** Anschluss verbunden? Fehlt = Kabel steckt (ctx.isConnected). */
   linkUp?(index: number): boolean;
+  /** Zusätzliche Multicast-Gruppen eines Anschlusses (OSPFv3 ff02::5, RIPng ff02::9). */
+  groups6?(index: number): string[];
+  /** OSPFv3-Pakete an diesen Router. */
+  onOspf6?(packet: Ipv6Packet, ospf: OspfPacket, index: number): void;
+  /** Routen aus OSPFv3 und RIPng. */
+  dynamicRoutes6?(): Route6[];
   /** DS-Lite: getunneltes IPv4-Paket an eine eigene Adresse. true = erledigt. */
   onTunnel?(packet: Ipv6Packet, inner: Ipv4Packet, index: number): boolean;
 }
@@ -244,6 +250,7 @@ export class Ip6Stack {
     const groups = [parseIp6(ALL_NODES)!, ...iface.addresses.map((a) => solicitedNode(a.address))];
     if (this.host.forwarding && device && !this.#hostLike(device, iface.index)) groups.push(parseIp6(ALL_ROUTERS)!);
     if (device && this.#link(device, iface.index)?.dhcp6) groups.push(parseIp6(ALL_DHCP6)!);
+    for (const g of this.host.groups6?.(iface.index) ?? []) groups.push(parseIp6(g)!);
     return groups;
   }
 
@@ -285,6 +292,7 @@ export class Ip6Stack {
       routes.push(...autoRoutes6(this.#ctx.topology(), device.id));
     }
     if (!auto) {
+      routes.push(...(this.host.dynamicRoutes6?.() ?? []).filter((r) => ifaces.some((i) => i.index === r.iface)));
       for (const r of device.routes6 ?? []) {
         const net = parseCidr6(r.network);
         if (!net) continue;
@@ -389,6 +397,7 @@ export class Ip6Stack {
       if (!multicast) this.host.onTcp6?.(packet, payload);
       return;
     }
+    if (payload.kind === 'ospf') return this.host.onOspf6?.(packet, payload, index);
     if (payload.kind === 'ipv4') this.host.onTunnel?.(packet, payload, index);
   }
 
@@ -544,6 +553,25 @@ export class Ip6Stack {
   }
 
   // --- Senden und Weiterleiten -------------------------------------------------
+
+  /** Link-Local-Adresse eines Anschlusses (Absender für Routingprotokolle). */
+  linkLocalOf(index: number): string | null {
+    const a = this.interfaces().find((i) => i.index === index)?.addresses[0];
+    return a ? formatIp6(a.address) : null;
+  }
+
+  /**
+   * Routingprotokolle (OSPFv3, RIPng): vom Link-Local des Anschlusses an eine
+   * Multicast-Gruppe oder einen Nachbarn auf derselben Leitung.
+   */
+  sendLinkLocal(index: number, dst: string, payload: Ipv6Packet['payload'], hopLimit: number) {
+    const iface = this.interfaces().find((i) => i.index === index);
+    const d = parseIp6(dst);
+    if (!iface || d === null) return;
+    const packet: Ipv6Packet = { kind: 'ipv6', src: formatIp6(iface.addresses[0]!.address), dst: formatIp6(d), hopLimit, payload };
+    if (isMulticast6(d)) return void this.host.sendFrame(index, { src: iface.mac, dst: multicastMac6(d), payload: packet });
+    this.#resolve(index, d, (mac) => this.host.sendFrame(index, { src: iface.mac, dst: mac, payload: packet }), () => {});
+  }
 
   /** Eigene Adresse, über die `remote` erreicht wird (oder null). */
   localFor(remote: bigint): bigint | null {

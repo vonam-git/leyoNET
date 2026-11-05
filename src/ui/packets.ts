@@ -23,7 +23,7 @@ export { protocolOf };
 export const protocolClass = (protocol: string) => protocol.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 function portLabel(port: number): string {
-  const names: Record<number, string> = { 53: 'DNS', 67: 'DHCP-Server', 68: 'DHCP-Client', 520: 'RIP', ...TCP_APPS };
+  const names: Record<number, string> = { 53: 'DNS', 67: 'DHCP-Server', 68: 'DHCP-Client', 520: 'RIP', 521: 'RIPng', ...TCP_APPS };
   return names[port] ? `${port} (${names[port]})` : String(port);
 }
 
@@ -51,7 +51,7 @@ function infoOf6(frame: EthernetFrame, p: Ipv6Packet): string {
     return t(`packets.dhcp6.${m.type}`, { address: m.address ?? '', xid: `0x${m.xid.toString(16).padStart(6, '0')}` });
   }
   // TCP und DNS über IPv6: dieselbe Beschreibung wie über IPv4.
-  if (inner.kind === 'udp' || inner.kind === 'tcp') return infoOf({ ...frame, payload: asIpv4View(p, inner) });
+  if (inner.kind === 'udp' || inner.kind === 'tcp' || inner.kind === 'ospf') return infoOf({ ...frame, payload: asIpv4View(p, inner) });
   switch (inner.type) {
     case 'neighborSolicitation':
       return p.src === '::' ? t('packets.icmp6.dad', { target: inner.target ?? '' }) : t('packets.icmp6.neighborSolicitation', { target: inner.target ?? '' });
@@ -139,6 +139,9 @@ export function infoOf(frame: EthernetFrame): string {
   if (msg.kind === 'rip') {
     return access + t(msg.command === 'request' ? 'packets.rip.request' : 'packets.rip.response', { routes: msg.entries.map((e) => `${e.network}/${e.metric}`).join(', ') });
   }
+  if (msg.kind === 'ripng') {
+    return access + t(msg.command === 'request' ? 'packets.rip.request' : 'packets.rip.response', { routes: msg.entries.map((e) => `${e.prefix}/${e.length} (${e.metric})`).join(', ') });
+  }
   if (msg.kind === 'dhcpv6') return access + t(`packets.dhcp6.${msg.type}`, { address: msg.address ?? '', xid: hex(msg.xid) });
   return access + t(`packets.dhcp.${msg.op}`, { ip: msg.yourIp ?? msg.requestedIp ?? '', xid: hex(msg.xid) });
 }
@@ -208,8 +211,11 @@ const PROTOCOL_WORDS: Record<string, (proto: string, frame: EthernetFrame) => bo
   mail: (p) => p === 'SMTP' || p === 'POP3' || p === 'IMAP',
   ssh: (p) => p === 'SSH',
   bgp: (p) => p === 'BGP',
-  ospf: (p) => p === 'OSPF',
-  rip: (p) => p === 'RIP',
+  ospf: (p) => p === 'OSPF' || p === 'OSPFv3',
+  ospfv3: (p) => p === 'OSPFv3',
+  ospf6: (p) => p === 'OSPFv3',
+  rip: (p) => p === 'RIP' || p === 'RIPng',
+  ripng: (p) => p === 'RIPng',
   stp: (p) => p === 'STP',
   ppp: (p) => p.startsWith('PPP'),
   wlan: (p) => p === '802.11',

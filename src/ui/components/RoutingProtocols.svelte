@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { buildRoutes, formatIp, maskToText, parseMask, type BgpConfig, type Device, type OspfConfig, type RedistributeSource, type RipConfig, type RoutedNetwork } from '../../core';
+  import { buildRoutes, formatIp, ipv6Links, maskToText, parseMask, type BgpConfig, type Device, type Ospf6Config, type OspfConfig, type RedistributeSource, type RipConfig, type RipngConfig, type RoutedNetwork } from '../../core';
   import { t } from '../../i18n';
   import { interfaceLabel } from '../labels';
   import { editor } from '../state/editor.svelte';
@@ -12,9 +12,10 @@
    */
   let { device }: { device: Device } = $props();
 
-  type Protocol = 'ospf' | 'rip' | 'bgp';
+  type Protocol4 = 'ospf' | 'rip' | 'bgp';
+  type Protocol = Protocol4 | 'ospf6' | 'ripng';
   let error = $state<{ protocol: Protocol; text: string } | null>(null);
-  let netDraft = $state<Record<Protocol, { network: string; mask: string; area: string }>>({
+  let netDraft = $state<Record<Protocol4, { network: string; mask: string; area: string }>>({
     ospf: { network: '', mask: '', area: '0' },
     rip: { network: '', mask: '', area: '' },
     bgp: { network: '', mask: '', area: '' },
@@ -39,13 +40,13 @@
   const setRip = (c: RipConfig | null) => apply('rip', editor.setRip(device.id, c));
   const setBgp = (c: BgpConfig | null) => apply('bgp', editor.setBgp(device.id, c));
 
-  function update(protocol: Protocol, change: <T extends { networks: RoutedNetwork[]; redistribute?: RedistributeSource[]; passive?: number[]; defaultOriginate?: boolean }>(c: T) => T) {
+  function update(protocol: Protocol4, change: <T extends { networks: RoutedNetwork[]; redistribute?: RedistributeSource[]; passive?: number[]; defaultOriginate?: boolean }>(c: T) => T) {
     if (protocol === 'ospf' && device.ospf) setOspf(change(device.ospf));
     if (protocol === 'rip' && device.rip) setRip(change(device.rip));
     if (protocol === 'bgp' && device.bgp) setBgp(change(device.bgp));
   }
 
-  function addNetwork(event: SubmitEvent, protocol: Protocol) {
+  function addNetwork(event: SubmitEvent, protocol: Protocol4) {
     event.preventDefault();
     const d = netDraft[protocol];
     const net = { network: d.network.trim(), mask: d.mask.trim() || '24' };
@@ -55,14 +56,14 @@
     if (!error) netDraft[protocol] = { network: '', mask: '', area: d.area };
   }
 
-  function addOwn(protocol: Protocol) {
+  function addOwn(protocol: Protocol4) {
     const has = (list: RoutedNetwork[], n: RoutedNetwork) => list.some((x) => x.network === n.network && x.mask === n.mask);
     if (protocol === 'ospf' && device.ospf) setOspf({ ...device.ospf, networks: [...device.ospf.networks, ...ownNetworks.filter((n) => !has(device.ospf!.networks, n)).map((n) => ({ ...n, area: 0 }))] });
     if (protocol === 'rip' && device.rip) setRip({ ...device.rip, networks: [...device.rip.networks, ...ownNetworks.filter((n) => !has(device.rip!.networks, n))] });
     if (protocol === 'bgp' && device.bgp) setBgp({ ...device.bgp, networks: [...device.bgp.networks, ...ownNetworks.filter((n) => !has(device.bgp!.networks, n))] });
   }
 
-  function removeNetwork(protocol: Protocol, index: number) {
+  function removeNetwork(protocol: Protocol4, index: number) {
     update(protocol, (c) => ({ ...c, networks: c.networks.filter((_, i) => i !== index) }));
   }
 
@@ -70,7 +71,7 @@
     update(protocol, (c) => ({ ...c, passive: on ? [...(c.passive ?? []), index] : (c.passive ?? []).filter((p) => p !== index) }));
   }
 
-  function toggleSource(protocol: Protocol, source: RedistributeSource, on: boolean) {
+  function toggleSource(protocol: Protocol4, source: RedistributeSource, on: boolean) {
     update(protocol, (c) => ({ ...c, redistribute: on ? [...(c.redistribute ?? []), source] : (c.redistribute ?? []).filter((s) => s !== source) }));
   }
 
@@ -81,10 +82,39 @@
     if (!error) neighborDraft = { ip: '', remoteAs: neighborDraft.remoteAs };
   }
 
-  const enabled = (p: Protocol) => (p === 'ospf' ? !!device.ospf : p === 'rip' ? !!device.rip : !!device.bgp);
+  const enabled = (p: Protocol) => !!device[p];
+
+  // --- IPv6: OSPFv3 und RIPng nehmen Anschlüsse auf, nicht Netze. -------------
+  const links6 = $derived(ipv6Links(device).filter((l) => l.ipv6));
+  const setOspf6 = (c: Ospf6Config | null) => apply('ospf6', editor.setOspf6(device.id, c));
+  const setRipng = (c: RipngConfig | null) => apply('ripng', editor.setRipng(device.id, c));
+  /** Im Modell heissen die IPv6-Quellen «ospf» (OSPFv3) und «rip» (RIPng). */
+  const SOURCES6: { source: RedistributeSource; label: string }[] = [
+    { source: 'connected', label: 'routing.source.connected' },
+    { source: 'static', label: 'routing.source.static' },
+    { source: 'ospf', label: 'routing.source.ospf6' },
+    { source: 'rip', label: 'routing.source.ripng' },
+  ];
+
+  function ospf6Iface(index: number, on: boolean, area = 0) {
+    const c = device.ospf6;
+    if (c) setOspf6({ ...c, interfaces: [...c.interfaces.filter((e) => e.iface !== index), ...(on ? [{ iface: index, area }] : [])] });
+  }
+
+  function ripngIface(index: number, on: boolean) {
+    const c = device.ripng;
+    if (c) setRipng({ ...c, interfaces: on ? [...c.interfaces, index] : c.interfaces.filter((i) => i !== index) });
+  }
+
+  function toggle6<T extends { passive?: number[]; redistribute?: RedistributeSource[] }>(c: T, key: 'passive', value: number, on: boolean): T;
+  function toggle6<T extends { passive?: number[]; redistribute?: RedistributeSource[] }>(c: T, key: 'redistribute', value: RedistributeSource, on: boolean): T;
+  function toggle6<T extends { passive?: number[]; redistribute?: RedistributeSource[] }>(c: T, key: 'passive' | 'redistribute', value: number | RedistributeSource, on: boolean): T {
+    const list = (c[key] ?? []) as (number | RedistributeSource)[];
+    return { ...c, [key]: on ? [...list, value] : list.filter((x) => x !== value) };
+  }
 </script>
 
-{#snippet networks(protocol: Protocol, list: (RoutedNetwork & { area?: number })[])}
+{#snippet networks(protocol: Protocol4, list: (RoutedNetwork & { area?: number })[])}
   <ul class="list">
     {#each list as n, i (i)}
       <li>
@@ -104,7 +134,7 @@
   <button class="link" disabled={!editor.editable || ownNetworks.length === 0} onclick={() => addOwn(protocol)}>{t('routing.addOwn')}</button>
 {/snippet}
 
-{#snippet redistribute(protocol: Protocol, selected: RedistributeSource[] | undefined)}
+{#snippet redistribute(protocol: Protocol4, selected: RedistributeSource[] | undefined)}
   <div class="sources">
     <span>{t('routing.redistribute')}</span>
     {#each SOURCES.filter((s) => s !== protocol) as source (source)}
@@ -113,7 +143,7 @@
   </div>
 {/snippet}
 
-{#if ui.has('routing.ospf')}
+{#if ui.has('routing.ospf') && editor.ipMode !== 'ipv6'}
   <details class="proto" open={enabled('ospf')} data-help="ospf">
     <summary>OSPF {#if device.ospf}<span class="on">{t('routing.active')}</span>{/if}</summary>
     <label class="toggle"><input type="checkbox" checked={!!device.ospf} disabled={!editor.editable} onchange={(e) => setOspf(e.currentTarget.checked ? { networks: [] } : null)} /> {t('routing.ospf.enable')}</label>
@@ -142,7 +172,7 @@
   </details>
 {/if}
 
-{#if ui.has('routing.rip')}
+{#if ui.has('routing.rip') && editor.ipMode !== 'ipv6'}
   <details class="proto" open={enabled('rip')} data-help="rip">
     <summary>RIP v2 {#if device.rip}<span class="on">{t('routing.active')}</span>{/if}</summary>
     <label class="toggle"><input type="checkbox" checked={!!device.rip} disabled={!editor.editable} onchange={(e) => setRip(e.currentTarget.checked ? { networks: [] } : null)} /> {t('routing.rip.enable')}</label>
@@ -163,7 +193,7 @@
   </details>
 {/if}
 
-{#if ui.has('routing.bgp')}
+{#if ui.has('routing.bgp') && editor.ipMode !== 'ipv6'}
   <details class="proto" open={enabled('bgp')} data-help="bgp">
     <summary>BGP {#if device.bgp}<span class="on">AS {device.bgp.asn}</span>{/if}</summary>
     {#if !device.bgp}
@@ -197,6 +227,75 @@
     {/if}
     {#if error?.protocol === 'bgp'}<p class="error" role="alert">{error.text}</p>{/if}
     <p class="muted">{t('routing.bgp.hint')}</p>
+  </details>
+{/if}
+
+{#snippet sources6(protocol: 'ospf6' | 'ripng', selected: RedistributeSource[] | undefined, change: (source: RedistributeSource, on: boolean) => void)}
+  <div class="sources">
+    <span>{t('routing.redistribute')}</span>
+    {#each SOURCES6.filter((s) => s.source !== (protocol === 'ospf6' ? 'ospf' : 'rip')) as item (item.source)}
+      <label><input type="checkbox" checked={selected?.includes(item.source) ?? false} disabled={!editor.editable} onchange={(e) => change(item.source, e.currentTarget.checked)} /> {t(item.label)}</label>
+    {/each}
+  </div>
+{/snippet}
+
+{#if ui.has('routing.ospf') && editor.ipMode !== 'ipv4'}
+  <details class="proto" open={enabled('ospf6')} data-help="ospf6">
+    <summary>OSPFv3 (IPv6) {#if device.ospf6}<span class="on">{t('routing.active')}</span>{/if}</summary>
+    <label class="toggle"><input type="checkbox" checked={!!device.ospf6} disabled={!editor.editable} onchange={(e) => setOspf6(e.currentTarget.checked ? { interfaces: links6.map((l) => ({ iface: l.index, area: 0 })) } : null)} /> {t('routing.ospf6.enable')}</label>
+    {#if device.ospf6}
+      {@const c = device.ospf6}
+      <label class="field"><span>{t('routing.routerId')}</span><input value={c.routerId ?? ''} placeholder={t('routing.ospf6.routerIdAuto')} disabled={!editor.editable} onchange={(e) => setOspf6({ ...c, routerId: e.currentTarget.value.trim() || undefined })} /></label>
+      <table>
+        <thead><tr><th>{t('router.iface')}</th><th>OSPFv3</th><th>Area</th><th>{t('routing.passive')}</th></tr></thead>
+        <tbody>
+          {#each links6 as link (link.index)}
+            {@const entry = c.interfaces.find((e) => e.iface === link.index)}
+            <tr>
+              <td>{interfaceLabel(device, link.index)}</td>
+              <td><input type="checkbox" checked={!!entry} disabled={!editor.editable} aria-label={t('routing.ospf6.on', { iface: interfaceLabel(device, link.index) })} onchange={(e) => ospf6Iface(link.index, e.currentTarget.checked)} /></td>
+              <td><input class="short" type="number" min="0" value={entry?.area ?? 0} disabled={!editor.editable || !entry} aria-label={t('routing.ospf6.area', { iface: interfaceLabel(device, link.index) })} onchange={(e) => ospf6Iface(link.index, true, Number(e.currentTarget.value))} /></td>
+              <td><input type="checkbox" checked={c.passive?.includes(link.index) ?? false} disabled={!editor.editable || !entry} onchange={(e) => setOspf6(toggle6(c, 'passive', link.index, e.currentTarget.checked))} /></td>
+            </tr>
+          {:else}
+            <tr><td colspan="4" class="muted">{t('routing.noIpv6')}</td></tr>
+          {/each}
+        </tbody>
+      </table>
+      <label class="toggle"><input type="checkbox" checked={!!c.defaultOriginate} disabled={!editor.editable} onchange={(e) => setOspf6({ ...c, defaultOriginate: e.currentTarget.checked || undefined })} /> {t('routing.defaultOriginate')}</label>
+      {@render sources6('ospf6', c.redistribute, (source, on) => setOspf6(toggle6(c, 'redistribute', source, on)))}
+    {/if}
+    {#if error?.protocol === 'ospf6'}<p class="error" role="alert">{error.text}</p>{/if}
+    <p class="muted">{t('routing.ospf6.hint')}</p>
+  </details>
+{/if}
+
+{#if ui.has('routing.rip') && editor.ipMode !== 'ipv4'}
+  <details class="proto" open={enabled('ripng')} data-help="ripng">
+    <summary>RIPng (IPv6) {#if device.ripng}<span class="on">{t('routing.active')}</span>{/if}</summary>
+    <label class="toggle"><input type="checkbox" checked={!!device.ripng} disabled={!editor.editable} onchange={(e) => setRipng(e.currentTarget.checked ? { interfaces: links6.map((l) => l.index) } : null)} /> {t('routing.ripng.enable')}</label>
+    {#if device.ripng}
+      {@const c = device.ripng}
+      <table>
+        <thead><tr><th>{t('router.iface')}</th><th>RIPng</th><th>{t('routing.passive')}</th></tr></thead>
+        <tbody>
+          {#each links6 as link (link.index)}
+            {@const on = c.interfaces.includes(link.index)}
+            <tr>
+              <td>{interfaceLabel(device, link.index)}</td>
+              <td><input type="checkbox" checked={on} disabled={!editor.editable} aria-label={t('routing.ripng.on', { iface: interfaceLabel(device, link.index) })} onchange={(e) => ripngIface(link.index, e.currentTarget.checked)} /></td>
+              <td><input type="checkbox" checked={c.passive?.includes(link.index) ?? false} disabled={!editor.editable || !on} onchange={(e) => setRipng(toggle6(c, 'passive', link.index, e.currentTarget.checked))} /></td>
+            </tr>
+          {:else}
+            <tr><td colspan="3" class="muted">{t('routing.noIpv6')}</td></tr>
+          {/each}
+        </tbody>
+      </table>
+      <label class="toggle"><input type="checkbox" checked={!!c.defaultOriginate} disabled={!editor.editable} onchange={(e) => setRipng({ ...c, defaultOriginate: e.currentTarget.checked || undefined })} /> {t('routing.defaultOriginate')}</label>
+      {@render sources6('ripng', c.redistribute, (source, on) => setRipng(toggle6(c, 'redistribute', source, on)))}
+    {/if}
+    {#if error?.protocol === 'ripng'}<p class="error" role="alert">{error.text}</p>{/if}
+    <p class="muted">{t('routing.ripng.hint')}</p>
   </details>
 {/if}
 

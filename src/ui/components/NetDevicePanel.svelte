@@ -1,6 +1,6 @@
 <script lang="ts">
   import Ipv6StateView from './Ipv6StateView.svelte';
-  import { isRouterType, isSwitchType, type Device } from '../../core';
+  import { isRouterType, isSwitchType, type Device, type OspfState } from '../../core';
   import { t } from '../../i18n';
   import { interfaceLabel } from '../labels';
   import { simStore } from '../state/sim.svelte';
@@ -13,6 +13,28 @@
   const deviceState = $derived((simStore.tick, simStore.sim?.getDeviceState(device.id)));
   const now = $derived((simStore.tick, simStore.sim?.now ?? 0));
 </script>
+
+{#snippet ospfView(ospf: OspfState, title: string)}
+  <h3>{t(title, { id: ospf.routerId })}</h3>
+  {#if ospf.neighbors.length === 0}
+    <p class="muted">{t('live.ospfNone')}</p>
+  {:else}
+    <table>
+      <thead><tr><th scope="col">{t('routing.routerId')}</th><th scope="col">IP</th><th scope="col">{t('routing.iface')}</th><th scope="col">{t('live.state')}</th></tr></thead>
+      <tbody>
+        {#each ospf.neighbors as n (n.routerId + n.iface)}
+          <tr class:ok={n.state === 'full'}>
+            <td class="mono">{n.routerId}</td>
+            <td class="mono">{n.ip}</td>
+            <td>{interfaceLabel(device, n.iface)}</td>
+            <td>{n.state.toUpperCase()}</td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  {/if}
+  <p class="muted">{t('live.lsdb', { n: ospf.lsdb.length })}{#if ospf.lsdb.some((l) => l.type === 'intraAreaPrefix')} · {t('live.lsdb6', { router: ospf.lsdb.filter((l) => l.type === 'router').length, prefix: ospf.lsdb.filter((l) => l.type === 'intraAreaPrefix').length })}{/if}</p>
+{/snippet}
 
 <Ipv6StateView {device} state={deviceState?.ipv6} />
 {#if deviceState?.storm}
@@ -53,6 +75,8 @@
   <StateTables {device} macTable={deviceState?.macTable ?? []} {now} />
   {#if device.type === 'l3switch'}
     <RoutingTable {device} live={deviceState?.routes} />
+    {#if deviceState?.ospf}{@render ospfView(deviceState.ospf, 'live.ospf')}{/if}
+    {#if deviceState?.ospf6}{@render ospfView(deviceState.ospf6, 'live.ospf6')}{/if}
     <StateTables {device} arp={deviceState?.arp ?? []} {now} />
   {/if}
 {:else if isRouterType(device.type) || device.type === 'cpe'}
@@ -60,28 +84,8 @@
     <p class="muted">{t('internet.explain')}</p>
   {/if}
   <RoutingTable {device} live={deviceState?.routes} />
-  {#if deviceState?.ospf}
-    {@const ospf = deviceState.ospf}
-    <h3>{t('live.ospf', { id: ospf.routerId })}</h3>
-    {#if ospf.neighbors.length === 0}
-      <p class="muted">{t('live.ospfNone')}</p>
-    {:else}
-      <table>
-        <thead><tr><th scope="col">{t('routing.routerId')}</th><th scope="col">IP</th><th scope="col">{t('routing.iface')}</th><th scope="col">{t('live.state')}</th></tr></thead>
-        <tbody>
-          {#each ospf.neighbors as n (n.routerId + n.iface)}
-            <tr class:ok={n.state === 'full'}>
-              <td class="mono">{n.routerId}</td>
-              <td class="mono">{n.ip}</td>
-              <td>{interfaceLabel(device, n.iface)}</td>
-              <td>{n.state.toUpperCase()}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    {/if}
-    <p class="muted">{t('live.lsdb', { n: ospf.lsdb.length })}</p>
-  {/if}
+  {#if deviceState?.ospf}{@render ospfView(deviceState.ospf, 'live.ospf')}{/if}
+  {#if deviceState?.ospf6}{@render ospfView(deviceState.ospf6, 'live.ospf6')}{/if}
   {#if deviceState?.bgp}
     <h3>{t('live.bgp')}</h3>
     {#if deviceState.bgp.length === 0}

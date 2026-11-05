@@ -75,6 +75,13 @@ export interface RipMessage {
   entries: { network: string; mask: string; nextHop: string; metric: number }[];
 }
 
+/** RIPng (RFC 2080) für IPv6, UDP-Port 521 an ff02::9; nächster Hop ist der Absender (Link-Local). */
+export interface RipngMessage {
+  kind: 'ripng';
+  command: 'request' | 'response';
+  entries: { prefix: string; length: number; metric: number }[];
+}
+
 /**
  * DHCPv6 (RFC 9915): Solicit → Advertise → Request → Reply, UDP 546/547.
  * Client und Server werden über ihre DUID erkannt (hier aus der MAC, DUID-LL).
@@ -115,7 +122,7 @@ export interface IkeMessage {
   notify?: 'AUTHENTICATION_FAILED' | 'TS_UNACCEPTABLE';
 }
 
-export type AppMessage = DhcpMessage | DnsMessage | RipMessage | Dhcpv6Message | IkeMessage;
+export type AppMessage = DhcpMessage | DnsMessage | RipMessage | RipngMessage | Dhcpv6Message | IkeMessage;
 
 export interface UdpDatagram {
   kind: 'udp';
@@ -142,7 +149,8 @@ export interface TcpSegment {
 
 /** Link-State-Advertisement eines Routers (OSPF Typ 1, Router-LSA), vereinfacht. */
 export interface OspfLsa {
-  type: 'router' | 'external';
+  /** «intraAreaPrefix» nur OSPFv3: die Netze eines Routers (bei OSPFv2 stehen sie im Router-LSA). */
+  type: 'router' | 'external' | 'intraAreaPrefix';
   /** Router-ID des Erzeugers. */
   advertisingRouter: string;
   seq: number;
@@ -150,14 +158,18 @@ export interface OspfLsa {
   links: { kind: 'transit' | 'stub' | 'p2p'; id: string; data: string; cost: number }[];
 }
 
-/** OSPFv2 (RFC 2328), IP-Protokoll 89, an 224.0.0.5 (alle OSPF-Router). */
+/**
+ * OSPFv2 (RFC 2328), IP-Protokoll 89, an 224.0.0.5 (alle OSPF-Router);
+ * mit `version: 3` OSPFv3 (RFC 5340) über IPv6 an ff02::5, Absender Link-Local.
+ */
 export interface OspfPacket {
   kind: 'ospf';
+  version?: 3;
   type: 'hello' | 'dbd' | 'lsr' | 'lsu' | 'lsack';
   routerId: string;
   area: number;
   /** Hello: Netzmaske, Intervalle und gesehene Nachbarn. */
-  hello?: { mask: string; helloInterval: number; deadInterval: number; neighbors: string[]; dr?: string };
+  hello?: { mask: string; helloInterval: number; deadInterval: number; neighbors: string[]; dr?: string; /** OSPFv3: Interface-ID statt Maske. */ interfaceId?: number };
   /** DBD/LSR/LSAck: Kopf der LSAs; LSU: vollständige LSAs. */
   headers?: { advertisingRouter: string; seq: number; type: OspfLsa['type'] }[];
   lsas?: OspfLsa[];
@@ -231,7 +243,7 @@ export interface Ipv6Packet {
   src: string;
   dst: string;
   hopLimit: number;
-  payload: Icmpv6Message | UdpDatagram | TcpSegment | Ipv4Packet;
+  payload: Icmpv6Message | UdpDatagram | TcpSegment | OspfPacket | Ipv4Packet;
 }
 
 /**
@@ -310,12 +322,16 @@ export const SMTP_PORT = 25;
 export const POP3_PORT = 110;
 export const IMAP_PORT = 143;
 export const RIP_PORT = 520;
+export const RIPNG_PORT = 521;
 export const IKE_PORT = 500;
 export const DHCP6_CLIENT_PORT = 546;
 export const DHCP6_SERVER_PORT = 547;
 export const BGP_PORT = 179;
 export const OSPF_ALL_ROUTERS = '224.0.0.5';
 export const RIP_MULTICAST = '224.0.0.9';
+/** IPv6-Gruppen: alle OSPF-Router (OSPFv3) und alle RIPng-Router. */
+export const OSPF6_ALL_ROUTERS = 'ff02::5';
+export const RIPNG_MULTICAST = 'ff02::9';
 /** Ethernet-Multicast-Adressen zu 224.0.0.5 und 224.0.0.9 (01:00:5E + untere 23 Bit). */
 export const OSPF_MAC = '01:00:5E:00:00:05';
 export const RIP_MAC = '01:00:5E:00:00:09';

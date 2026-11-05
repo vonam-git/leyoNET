@@ -38,7 +38,7 @@
     <div class="choice" role="radiogroup" aria-label={t('routingMode.manual')}>
       <label><input type="radio" name="routing-mode-{device.id}" checked={mode === 'static'} onchange={() => set('static')} /> {t('routingMode.static')}</label>
       <label class:locked={!canDynamic} title={canDynamic ? undefined : t('routingMode.dynamicLocked')}>
-        <input type="radio" name="routing-mode-{device.id}" checked={mode === 'dynamic'} disabled={!canDynamic} onchange={() => set('dynamic')} /> {t('routingMode.dynamic')}
+        <input type="radio" name="routing-mode-{device.id}" checked={mode === 'dynamic'} disabled={!canDynamic} onchange={() => set('dynamic')} /> {t(editor.ipMode === 'ipv6' ? 'routingMode.dynamic6' : editor.ipMode === 'dual' ? 'routingMode.dynamicDual' : 'routingMode.dynamic')}
       </label>
     </div>
     {#if !compact}<p class="muted">{t(mode === 'dynamic' ? 'routingMode.dynamicHint' : 'routingMode.staticHint')}</p>{/if}

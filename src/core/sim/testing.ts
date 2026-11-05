@@ -159,6 +159,7 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
     const v6 = p.payload;
     if (v6.kind === 'icmpv6') return `${route} ICMPv6 ${v6.type}${v6.target ? ` ${v6.target}` : ''} ${p.src}>${p.dst}`;
     if (v6.kind === 'ipv4') return `${route} DS-Lite ${p.src}>${p.dst} [${describe(topology, { ...entry, frame: { ...entry.frame, payload: v6 } }).slice(route.length + 1)}]`;
+    if (v6.kind === 'ospf') return `${route} OSPFv3 ${v6.type} ${v6.routerId} ${p.src}>${p.dst}`;
     if (v6.kind === 'tcp' || v6.payload.kind !== 'dhcpv6') return `${describe(topology, { ...entry, frame: { ...entry.frame, payload: asIpv4View(p, v6) } })} (IPv6)`;
     const m = v6.payload;
     return `${route} DHCPv6 ${m.type}${m.address ? ` ${m.address}` : ''} ${p.src}>${p.dst}`;
@@ -177,6 +178,7 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
       return `${route} DNS ${msg.response ? 'response' : 'query'} ${msg.question.name}${answer}`;
     }
     if (msg.kind === 'rip') return `${route} RIP ${msg.command} ${msg.entries.map((e) => `${e.network}/${e.metric}`).join(',')}`;
+    if (msg.kind === 'ripng') return `${route} RIPng ${msg.command} ${msg.entries.map((e) => `${e.prefix}/${e.length}:${e.metric}`).join(',')}`;
     if (msg.kind === 'dhcpv6') return `${route} DHCPv6 ${msg.type}`;
     if (msg.kind === 'ike') return `${route} IKEv2 ${msg.exchange}${msg.response ? ' response' : ''}${msg.notify ? ` ${msg.notify}` : ''}`;
     return `${route} DHCP ${msg.op} ${p.src}>${p.dst}`;

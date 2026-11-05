@@ -189,6 +189,37 @@ group('CLI Switch', () => {
     expect(config).toContain('ipv6 route 2001:db8:99::/48 2001:db8:10::fe');
   });
 
+  it('richtet OSPFv3 und RIPng im FRRouting-Stil ein', () => {
+    const net = new NetBuilder();
+    const r = net.add('router', 'R1');
+    const { topology, output } = run(net.topology, r, [
+      'en',
+      'conf t',
+      'router ospf6',
+      'ospf6 router-id 1.1.1.1',
+      'interface eth0 area 0',
+      'passive-interface eth0',
+      'redistribute connected',
+      'exit',
+      'interface eth1',
+      'ipv6 ospf6 area 0',
+      'exit',
+      'router ripng',
+      'network eth1',
+      'redistribute ospf6',
+      'default-information originate',
+      'end',
+    ]);
+    expect(output).toEqual([]);
+    const device = getDevice(topology, r)!;
+    expect(device.ospf6).toEqual({ routerId: '1.1.1.1', interfaces: [{ iface: 0, area: 0 }, { iface: 1, area: 0 }], passive: [0], redistribute: ['connected'] });
+    expect(device.ripng).toEqual({ interfaces: [1], defaultOriginate: true, redistribute: ['ospf'] });
+    const config = runningConfig(device).join('\n');
+    expect(config).toContain('router ospf6\n ospf6 router-id 1.1.1.1\n interface eth0 area 0\n interface eth1 area 0\n passive-interface eth0\n redistribute connected');
+    expect(config).toContain('router ripng\n network eth1\n default-information originate\n redistribute ospf6');
+    expect(run(topology, r, ['en', 'show ipv6 ospf6 neighbor']).output.join('\n')).toMatch(/simulation/i);
+  });
+
   it('kennt keine IP-Befehle am Layer-2-Switch', () => {
     const net = new NetBuilder();
     const sw = net.add('switch', 'S1');

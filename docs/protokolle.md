@@ -20,6 +20,7 @@ Der Simulator sendet Pakete, die den Standards folgen. Jeder Rahmen lässt sich 
 | 3 | SLAAC | RFC 4862 | Adresse aus Präfix (/64) und EUI-64; Duplicate Address Detection optimistisch (Adresse sofort nutzbar, Konflikt wird gemeldet); keine Privacy-Adressen |
 | 3 | DS-Lite | RFC 6333, RFC 2473 | IPv4 in IPv6 (Next Header 4) von der Internet-Box (B4) zum AFTR, dort CGNAT; Tunneladressen 192.0.0.1/192.0.0.2 nur intern |
 | 3 | OSPFv2 | RFC 2328 | Router-LSAs und externe LSAs (Redistribution), keine Summary-LSAs zwischen Areas, kein DR/BDR (Nachbarn wie Punkt-zu-Punkt); Hello 2 s statt 10 s |
+| 3 | OSPFv3 | RFC 5340 | Wie OSPFv2, aber über IPv6 (Next Header 89, ff02::5, Absender Link-Local); Anschlüsse statt Netze, Router-LSAs plus Intra-Area-Prefix-LSAs, AS-External-LSAs; Prüfsumme über den IPv6-Pseudo-Header; Router-ID ohne IPv4 aus der MAC; keine Link-LSAs, kein DR/BDR |
 | 3 | NAT: PAT, statisches SNAT, DNAT (Portweiterleitung, statisch), 1:1-NAT, CGNAT | RFC 3022, RFC 6598 | Endpunktunabhängige Zuordnung; keine Application Layer Gateways; SNAT und DNAT merken sich Verbindungen für die Antworten |
 | 3 | Firewall (Paketfilter) | – | Regeln der Reihe nach, erste passende gilt, sonst Standardregel; zustandsbehaftet über Protokoll, Adressen und Ports (Zeitlimit 5 Minuten), zugehörige ICMP-Fehler dürfen zurück. Router filtern weitergeleitete Pakete nach DNAT und vor SNAT, Endgeräte eingehende; Broadcasts und DHCP-Antworten sind ausgenommen |
 | 3 | IPsec ESP (Tunnelmodus) | RFC 4301, RFC 4303 | Ganzes IPv4-Paket in ESP (IP-Protokoll 50) zwischen den Router-Adressen; SPI, Sequenznummer und 16 Byte ICV im Mitschnitt, Nutzlast nur verwürfelt (keine echte Verschlüsselung); kein Anti-Replay-Fenster, kein NAT-Traversal; Tunnelverkehr umgeht NAT |
@@ -32,6 +33,7 @@ Der Simulator sendet Pakete, die den Standards folgen. Jeder Rahmen lässt sich 
 | 7 | SMTP, POP3, IMAP | RFC 5321, RFC 1939, RFC 9051 | Kleiner Befehlsumfang, keine Authentisierung per TLS |
 | 7 | SSH | RFC 4253 | Versionsaustausch im Klartext, danach nur verschlüsselte Bytes |
 | 7 | RIP v2 | RFC 2453 | Update alle 5 s statt 30 s, Timeout 30 s statt 180 s; Split Horizon |
+| 7 | RIPng | RFC 2080 | Wie RIP v2 über IPv6: UDP 521 an ff02::9, Absender Link-Local, Hop Limit 255; nur Updates von Link-Local-Absendern; keine Next-Hop-Einträge |
 | 7 | IKEv2 | RFC 7296 | IKE_SA_INIT und IKE_AUTH mit echtem Kopf (SPIs, Austauschtyp, Flags); Diffie-Hellman nur angedeutet, Anmeldung mit gemeinsamem Schlüssel als Prüfwert; Traffic Selectors müssen gespiegelt passen (sonst TS_UNACCEPTABLE); drei Versuche à 2 s; kein Rekeying, kein CREATE_CHILD_SA |
 | 7 | BGP-4 | RFC 4271 | Binär über TCP 179: OPEN, KEEPALIVE, UPDATE, NOTIFICATION; Pfadwahl nach AS-Pfad-Länge; keine Policies |
 

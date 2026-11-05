@@ -18,6 +18,8 @@ export function protocolOf(frame: EthernetFrame): string {
     // DS-Lite: Ein Analysator zeigt das innerste Protokoll des getunnelten IPv4-Pakets.
     if (v6.kind === 'ipv4') return protocolOf({ ...frame, payload: v6 });
     if (v6.kind === 'udp' && v6.payload.kind === 'dhcpv6') return 'DHCPv6';
+    if (v6.kind === 'ospf') return 'OSPFv3';
+    if (v6.kind === 'udp' && v6.payload.kind === 'ripng') return 'RIPng';
     // TCP (HTTP, SMTP, SSH …) und DNS über IPv6: Anwendung wie bei IPv4 bestimmen.
     return protocolOf({ ...frame, payload: asIpv4View(p, v6) });
   }

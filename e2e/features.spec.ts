@@ -528,3 +528,15 @@ test('IPv6 auf dem Layer-3-Switch: SVIs mit IPv6-Adresse, DHCPv6 und DNS-Server'
   if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
   await tour.getByRole('button', { name: 'Führung beenden' }).click();
 });
+
+test('OSPFv3: Anschlüsse statt Netze im Reiter Routing', async ({ page }) => {
+  await page.getByRole('button', { name: 'Demo-Netze …' }).click();
+  await page.locator('li').filter({ hasText: 'OSPFv3 für IPv6' }).getByRole('button', { name: /Schritt für Schritt/ }).click();
+  const tour = page.getByRole('dialog', { name: 'OSPFv3 für IPv6' });
+  const r1 = page.getByRole('dialog', { name: 'R1' });
+  await expect(r1.getByText('OSPFv3 (IPv6)')).toBeVisible();
+  await expect(r1.getByLabel('OSPFv3 auf eth1')).toBeChecked();
+  await expect(r1.getByLabel('Area von eth1')).toHaveValue('0');
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  await tour.getByRole('button', { name: 'Führung beenden' }).click();
+});

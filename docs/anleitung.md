@@ -93,7 +93,7 @@ Das erste Paket ins entfernte Netz startet den Aufbau (IKEv2), danach laufen die
 
 ## Router: automatisches Routing
 
-Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routing**. Er findet dann alle Netze im Plan selbst, ohne dass du Routen eintragen musst. Jeder Router auf dem Weg braucht das Häkchen. Ohne Häkchen wählst du **statisch** (Routen von Hand) oder **dynamisch** (OSPF, RIP, BGP), im Fenster **Erweitert … → Routing**.
+Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routing**. Er findet dann alle Netze im Plan selbst, ohne dass du Routen eintragen musst. Jeder Router auf dem Weg braucht das Häkchen. Ohne Häkchen wählst du **statisch** (Routen von Hand) oder **dynamisch** (OSPF, RIP, BGP; mit IPv6 OSPFv3 und RIPng), im Fenster **Erweitert … → Routing**. OSPFv3 und RIPng nehmen Anschlüsse auf statt Netze; siehe Demos «OSPFv3 für IPv6» und «RIPng für IPv6».
 
 ## Mehrere Geräte auf einmal
 
@@ -110,7 +110,7 @@ Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routi
 | Client-Gruppe | 10, 25 oder 50 gleiche PCs als ein Symbol; alle holen ihre Adresse per DHCP. |
 | Server | DHCP, DNS, Web und Mail. Im Shop auch fertig eingerichtet erhältlich. |
 | Switch, L3-Switch | Verbinden Geräte im selben Netz; der L3-Switch routet zusätzlich zwischen VLANs. |
-| Router | Verbindet Netze. Ports wahlweise Ethernet oder seriell. NAT, OSPF, RIP, BGP. |
+| Router | Verbindet Netze. Ports wahlweise Ethernet oder seriell. NAT, OSPF, RIP, BGP; für IPv6 OSPFv3 und RIPng. |
 | Access Point | WLAN-Funkzelle. |
 | Modem | Kabel, Glasfaser, Mobilfunk, ADSL oder VDSL zum Provider. |
 | Internet-Box (CPE) | Wie zu Hause: Modem, Router mit NAT, DHCP-Server und vier LAN-Buchsen in einem Gerät. Ab Werk LAN 192.168.1.1/24; einzutragen sind nur WAN-Adresse und Gateway des Providers. |

@@ -176,6 +176,15 @@ export const DEMOS: readonly Demo[] = [
   { id: 'static', file: 'statische-routen.json', topic: 'routing', layers: [3], actions: [{ at: 600, device: 'PC A', command: 'tracert 192.168.20.10' }], check: { kind: 'trace', device: 'PC A' }, until: 10_000 },
   { id: 'ospf', file: 'ospf.json', topic: 'routing', layers: [3], actions: [{ at: 9000, device: 'PC 1', command: 'tracert 192.168.2.10' }], check: { kind: 'trace', device: 'PC 1' }, until: 20_000 },
   { id: 'rip', file: 'rip.json', topic: 'routing', layers: [3, 4], actions: [{ at: 9000, device: 'PC 1', command: 'tracert 192.168.2.10' }], check: { kind: 'trace', device: 'PC 1' }, until: 20_000 },
+  { id: 'ospfv3', file: 'ospfv3.json', topic: 'routing', layers: [3], actions: [{ at: 9000, device: 'PC 1', command: 'tracert 2001:db8:2::10' }], check: { kind: 'trace', device: 'PC 1' }, until: 20_000,
+    tour: [
+      { sim: false, highlight: 'R1', window: { device: 'R1', tab: 'routing' } },
+      { sim: true, pause: false, highlight: 'R1' },
+      { highlight: 'R2', window: { device: 'R2', tab: 'state' } },
+      { action: { at: 0, device: 'PC 1', command: 'tracert 2001:db8:2::10' }, highlight: 'PC 1' },
+      { highlight: 'R3' },
+    ] },
+  { id: 'ripng', file: 'ripng.json', topic: 'routing', layers: [3, 4], actions: [{ at: 12_000, device: 'PC 1', command: 'tracert 2001:db8:2::10' }], check: { kind: 'trace', device: 'PC 1' }, until: 22_000 },
   { id: 'bgp', file: 'bgp.json', topic: 'routing', layers: [4, 7], actions: [{ at: 12_000, device: 'PC AS 65001', command: 'ping 10.3.0.10' }], check: { kind: 'ping', device: 'PC AS 65001' }, until: 25_000 },
   // Zugang ins Internet
   { id: 'nat', file: 'heimnetz-nat.json', topic: 'access', layers: [3, 4], actions: [{ at: 600, device: 'PC', browse: 'http://198.51.100.10/' }], check: { kind: 'browser', device: 'PC', contains: 'Öffentlicher Webserver' }, until: 6000 },

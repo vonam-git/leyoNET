@@ -1,0 +1,218 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "pc",
+        "name": "PC 1",
+        "position": {
+          "x": 100,
+          "y": 140
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00"
+          }
+        ],
+        "ipv6Auto": true
+      },
+      {
+        "id": "d2",
+        "type": "pc",
+        "name": "PC 2",
+        "position": {
+          "x": 820,
+          "y": 140
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ipv6": "2001:db8:2::10/64"
+          }
+        ],
+        "gateway6": "2001:db8:2::1"
+      },
+      {
+        "id": "d3",
+        "type": "router",
+        "name": "R1",
+        "position": {
+          "x": 280,
+          "y": 160
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ipv6": "2001:db8:1::1/64"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:03:01",
+            "ipv6": "2001:db8:12::1/64"
+          },
+          {
+            "mac": "02:00:00:00:03:03",
+            "index": 2,
+            "ipv6": "2001:db8:13::1/64"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:03:02",
+            "sfpSlot": true
+          }
+        ],
+        "ripng": {
+          "interfaces": [
+            0,
+            1,
+            2
+          ],
+          "passive": [
+            0
+          ]
+        }
+      },
+      {
+        "id": "d4",
+        "type": "router",
+        "name": "R2",
+        "position": {
+          "x": 640,
+          "y": 160
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ipv6": "2001:db8:2::1/64"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:04:01",
+            "ipv6": "2001:db8:12::2/64"
+          },
+          {
+            "mac": "02:00:00:00:04:03",
+            "index": 2,
+            "ipv6": "2001:db8:23::2/64"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:04:02",
+            "sfpSlot": true
+          }
+        ],
+        "ripng": {
+          "interfaces": [
+            0,
+            1,
+            2
+          ],
+          "passive": [
+            0
+          ]
+        }
+      },
+      {
+        "id": "d5",
+        "type": "router",
+        "name": "R3",
+        "position": {
+          "x": 460,
+          "y": 400
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ipv6": "2001:db8:13::3/64"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:05:01",
+            "ipv6": "2001:db8:23::3/64"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:05:02",
+            "sfpSlot": true
+          }
+        ],
+        "ripng": {
+          "interfaces": [
+            0,
+            1
+          ]
+        }
+      }
+    ],
+    "cables": [
+      {
+        "id": "c6",
+        "a": {
+          "device": "d1",
+          "iface": 0
+        },
+        "b": {
+          "device": "d3",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c7",
+        "a": {
+          "device": "d2",
+          "iface": 0
+        },
+        "b": {
+          "device": "d4",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c8",
+        "a": {
+          "device": "d3",
+          "iface": 1
+        },
+        "b": {
+          "device": "d4",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c9",
+        "a": {
+          "device": "d3",
+          "iface": 2
+        },
+        "b": {
+          "device": "d5",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c10",
+        "a": {
+          "device": "d4",
+          "iface": 2
+        },
+        "b": {
+          "device": "d5",
+          "iface": 1
+        }
+      }
+    ],
+    "nextId": 11,
+    "title": "RIPng für IPv6",
+    "ipMode": "ipv6"
+  },
+  "configuration": {}
+}

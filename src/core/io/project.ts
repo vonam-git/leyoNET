@@ -4,8 +4,8 @@ import { MAC_PATTERN } from '../model/mac';
 import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
 import { checkFirewall, checkVpnTunnel, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
 import { MAX_GROUP_SIZE } from '../model/devices';
-import { checkBgp, checkOspf, checkRip, normalizeBgp, normalizeOspf, normalizeRip } from '../net/dynamic';
-import { logicalInterfaces } from '../net/routing';
+import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
+import { logicalInterfaces, sviId } from '../net/routing';
 import type {
   Cable,
   Device,
@@ -771,6 +771,37 @@ function readDevice(v: unknown, path: string): Device {
     };
     if (checkRip(config)) throw new Invalid(p);
     device.rip = normalizeRip(config);
+  }
+  // IPv6: Ports oder (Layer-3-Switch) VLAN-Interfaces.
+  const link6 = (index: number) => (device.type === 'l3switch' ? !!device.svis?.some((sv) => sviId(sv.vlan) === index) : !!device.interfaces[index]);
+  const ifaceList = (v: unknown, p: string) => arr(v, p).map((x, i) => int(x, `${p}[${i}]`));
+  if (o.ospf6 !== undefined) {
+    const p = `${path}.ospf6`;
+    const c = obj(o.ospf6, p);
+    const config = {
+      ...(c.routerId !== undefined ? { routerId: ip(c.routerId, `${p}.routerId`) } : {}),
+      interfaces: arr(c.interfaces, `${p}.interfaces`).map((raw, i) => {
+        const e = obj(raw, `${p}.interfaces[${i}]`);
+        return { iface: int(e.iface, `${p}.interfaces[${i}].iface`), area: int(e.area, `${p}.interfaces[${i}].area`) };
+      }),
+      ...(c.passive !== undefined ? { passive: ifaceList(c.passive, `${p}.passive`) } : {}),
+      ...(c.defaultOriginate !== undefined && bool(c.defaultOriginate, `${p}.defaultOriginate`) ? { defaultOriginate: true } : {}),
+      ...(c.redistribute !== undefined ? { redistribute: readRedistribute(c.redistribute, `${p}.redistribute`) } : {}),
+    };
+    if (checkOspf6(config, link6)) throw new Invalid(p);
+    device.ospf6 = normalizeOspf6(config);
+  }
+  if (o.ripng !== undefined) {
+    const p = `${path}.ripng`;
+    const c = obj(o.ripng, p);
+    const config = {
+      interfaces: ifaceList(c.interfaces, `${p}.interfaces`),
+      ...(c.passive !== undefined ? { passive: ifaceList(c.passive, `${p}.passive`) } : {}),
+      ...(c.defaultOriginate !== undefined && bool(c.defaultOriginate, `${p}.defaultOriginate`) ? { defaultOriginate: true } : {}),
+      ...(c.redistribute !== undefined ? { redistribute: readRedistribute(c.redistribute, `${p}.redistribute`) } : {}),
+    };
+    if (checkRipng(config, link6)) throw new Invalid(p);
+    device.ripng = normalizeRipng(config);
   }
   // Routen dürfen auch auf Subinterfaces und SVIs zeigen.
   if (device.routes) {

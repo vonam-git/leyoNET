@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { autoRoutes6, canAutoRoute, formatIp6, parseCidr6, routingModeOf, type Device, type Route6 } from '../../core';
+  import { autoRoutes6, canAutoRoute, formatIp6, ipv6Links, parseCidr6, routingModeOf, type Device, type Route6 } from '../../core';
   import { t } from '../../i18n';
   import { interfaceLabel } from '../labels';
   import { editor } from '../state/editor.svelte';
@@ -32,7 +32,7 @@
       iface: interfaceLabel(device, r.iface),
     });
     if (live) return live.map(fromRoute);
-    const connected: Row[] = device.interfaces.flatMap((i) => {
+    const connected: Row[] = ipv6Links(device).flatMap((i) => {
       const c = i.ipv6 ? parseCidr6(i.ipv6) : null;
       if (!c) return [];
       return [{ kind: 'connected', destination: `${formatIp6(c.address & ~((1n << BigInt(128 - c.prefix)) - 1n))}/${c.prefix}`, via: t('routing.direct'), iface: interfaceLabel(device, i.index) }];
@@ -94,7 +94,7 @@
           <td>
             <select bind:value={draft.iface} aria-label={t('routing.iface')}>
               <option value="">{t('router.ifaceAuto')}</option>
-              {#each device.interfaces.filter((i) => !i.serial) as iface (iface.index)}<option value={String(iface.index)}>{interfaceLabel(device, iface.index)}</option>{/each}
+              {#each ipv6Links(device) as iface (iface.index)}<option value={String(iface.index)}>{interfaceLabel(device, iface.index)}</option>{/each}
             </select>
           </td>
           <td><button type="submit" disabled={!draft.network.trim()} aria-label={t('router.addRoute')}>+</button></td>

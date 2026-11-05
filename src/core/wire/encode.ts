@@ -16,6 +16,8 @@ import {
   type IcmpMessage,
   type Ipv4Packet,
   type LinkControl,
+  type OspfLsa,
+  type RipngMessage,
   type OspfPacket,
   type PppControl,
   type RipMessage,
@@ -149,6 +151,18 @@ function rip(m: RipMessage): Part {
   return p;
 }
 
+/** RIPng (RFC 2080): Routeneinträge zu 20 Bytes (Präfix, Tag, Präfixlänge, Metrik). */
+function ripng(m: RipngMessage): Part {
+  const p = new Part();
+  p.u8('rip.command', m.command === 'request' ? 1 : 2, m.command === 'request' ? '1 (Request)' : '2 (Response)');
+  p.u8('rip.version', 1);
+  p.u16('rip.zero', 0);
+  if (m.command === 'request' && m.entries.length === 0) p.field('rip.entry', ':: /0, metric 16 (whole table)', [...new Array(16).fill(0), 0, 0, 0, 16]);
+  for (const e of m.entries) p.field('rip.entry', `${e.prefix}/${e.length}, metric ${e.metric}`, [...ip6Bytes(e.prefix), 0, 0, e.length, e.metric]);
+  p.close(7, 'RIPng', 0);
+  return p;
+}
+
 function bgp(data: string): Part {
   const p = new Part();
   const bytes = latin1(data);
@@ -221,7 +235,7 @@ function readable(data: string): string {
 }
 
 function portName(port: number): string {
-  const names: Record<number, string> = { 53: 'DNS', 67: 'DHCP Server', 68: 'DHCP Client', 500: 'IKE', 520: 'RIP', 546: 'DHCPv6 Client', 547: 'DHCPv6 Server', ...TCP_APPS };
+  const names: Record<number, string> = { 53: 'DNS', 67: 'DHCP Server', 68: 'DHCP Client', 500: 'IKE', 520: 'RIP', 521: 'RIPng', 546: 'DHCPv6 Client', 547: 'DHCPv6 Server', ...TCP_APPS };
   return names[port] ? `${port} (${names[port]})` : String(port);
 }
 
@@ -237,7 +251,7 @@ function pseudoHeader6(src: string, dst: string, nextHeader: number, length: num
 function udp(d: UdpDatagram, srcIp: string, dstIp: string, v6 = false): Part {
   const p = new Part();
   const m = d.payload;
-  const inner = m.kind === 'dhcp' ? dhcp(m) : m.kind === 'dns' ? dns(m) : m.kind === 'dhcpv6' ? dhcp6(m) : m.kind === 'ike' ? ike(m) : rip(m);
+  const inner = m.kind === 'dhcp' ? dhcp(m) : m.kind === 'dns' ? dns(m) : m.kind === 'dhcpv6' ? dhcp6(m) : m.kind === 'ike' ? ike(m) : m.kind === 'ripng' ? ripng(m) : rip(m);
   p.u16('udp.srcPort', d.srcPort, portName(d.srcPort));
   p.u16('udp.dstPort', d.dstPort, portName(d.dstPort));
   p.u16('udp.length', 8 + inner.length);
@@ -367,12 +381,20 @@ function icmpv6(m: Icmpv6Message, src: string, dst: string): Part {
 function ipv6(packet: Ipv6Packet): Part {
   const inner = packet.payload;
   const payload =
-    inner.kind === 'icmpv6' ? icmpv6(inner, packet.src, packet.dst) : inner.kind === 'udp' ? udp(inner, packet.src, packet.dst, true) : inner.kind === 'tcp' ? tcp(inner, packet.src, packet.dst, true) : ipv4(inner);
-  const nextHeader = inner.kind === 'icmpv6' ? 58 : inner.kind === 'udp' ? 17 : inner.kind === 'tcp' ? 6 : 4;
+    inner.kind === 'icmpv6'
+      ? icmpv6(inner, packet.src, packet.dst)
+      : inner.kind === 'udp'
+        ? udp(inner, packet.src, packet.dst, true)
+        : inner.kind === 'tcp'
+          ? tcp(inner, packet.src, packet.dst, true)
+          : inner.kind === 'ospf'
+            ? ospf3(inner, packet.src, packet.dst)
+            : ipv4(inner);
+  const nextHeader = inner.kind === 'icmpv6' ? 58 : inner.kind === 'udp' ? 17 : inner.kind === 'tcp' ? 6 : inner.kind === 'ospf' ? 89 : 4;
   const p = new Part();
   p.field('ip6.version', '6, Traffic Class 0, Flow Label 0', [0x60, 0, 0, 0]);
   p.u16('ip6.payloadLength', payload.length);
-  p.u8('ip6.nextHeader', nextHeader, `${nextHeader} (${{ 58: 'ICMPv6', 17: 'UDP', 6: 'TCP', 4: 'IPv4 (DS-Lite)' }[nextHeader]})`);
+  p.u8('ip6.nextHeader', nextHeader, `${nextHeader} (${{ 58: 'ICMPv6', 17: 'UDP', 6: 'TCP', 89: 'OSPFv3', 4: 'IPv4 (DS-Lite)' }[nextHeader]})`);
   p.u8('ip6.hopLimit', packet.hopLimit);
   p.field('ip6.src', packet.src, ip6Bytes(packet.src));
   p.field('ip6.dst', packet.dst, ip6Bytes(packet.dst));
@@ -410,10 +432,95 @@ function icmp(m: IcmpMessage): Part {
 }
 
 const OSPF_TYPES: Record<OspfPacket['type'], number> = { hello: 1, dbd: 2, lsr: 3, lsu: 4, lsack: 5 };
-const LSA_TYPES = { router: 1, external: 5 } as const;
+const LSA_TYPES = { router: 1, external: 5, intraAreaPrefix: 9 } as const;
+/** OSPFv3: LS-Typ mit Geltungsbereich (RFC 5340, A.4.2.1): Router 0x2001, AS-External 0x4005, Intra-Area-Prefix 0x2009. */
+const LSA_TYPES6 = { router: 0x2001, external: 0x4005, intraAreaPrefix: 0x2009 } as const;
+const LSA_NAMES = { router: 'Router-LSA', external: 'AS-External-LSA', intraAreaPrefix: 'Intra-Area-Prefix-LSA' } as const;
 
-function lsaHeader(h: { type: 'router' | 'external'; advertisingRouter: string; seq: number }, length: number, linkStateId = h.advertisingRouter): number[] {
+function lsaHeader(h: { type: OspfLsa['type']; advertisingRouter: string; seq: number }, length: number, linkStateId = h.advertisingRouter): number[] {
   return [...u16(1), 0x02, LSA_TYPES[h.type], ...ipBytes(linkStateId), ...ipBytes(h.advertisingRouter), ...u32(h.seq >>> 0), ...u16(0), ...u16(length)];
+}
+
+/** LSA-Kopf OSPFv3: ohne Options-Byte, dafür 16-Bit-LS-Typ; Link State ID als Zahl. */
+function lsaHeader6(h: { type: OspfLsa['type']; advertisingRouter: string; seq: number }, length: number, linkStateId = 0): number[] {
+  return [...u16(1), ...u16(LSA_TYPES6[h.type]), ...u32(linkStateId), ...ipBytes(h.advertisingRouter), ...u32(h.seq >>> 0), ...u16(0), ...u16(length)];
+}
+
+/** IPv6-Präfix in OSPFv3: Länge, Optionen, dann nur so viele 32-Bit-Wörter wie nötig (RFC 5340, A.4.1). */
+function prefix6(network: string, length: number): number[] {
+  return ip6Bytes(network).slice(0, Math.ceil(length / 32) * 4);
+}
+
+/**
+ * OSPFv3 (RFC 5340): 16-Byte-Kopf ohne Authentisierung, Prüfsumme über den
+ * IPv6-Pseudo-Header (Next Header 89). Netze stehen im Intra-Area-Prefix-LSA.
+ */
+function ospf3(m: OspfPacket, src: string, dst: string): Part {
+  const p = new Part();
+  p.u8('ospf.version', 3);
+  p.u8('ospf.type', OSPF_TYPES[m.type], `${OSPF_TYPES[m.type]} (${{ hello: 'Hello', dbd: 'Database Description', lsr: 'LS Request', lsu: 'LS Update', lsack: 'LS Acknowledge' }[m.type]})`);
+  const lengthAt = p.length;
+  p.u16('ospf.length', 0);
+  p.ip('ospf.routerId', m.routerId);
+  p.ip('ospf.area', `${(m.area >>> 24) & 255}.${(m.area >>> 16) & 255}.${(m.area >>> 8) & 255}.${m.area & 255}`, `${m.area}`);
+  const checksumAt = p.length;
+  p.u16('ospf.checksum', 0);
+  p.u8('ospf.instance', 0);
+  p.u8('ospf.reserved', 0);
+  const name = (t: OspfLsa['type']) => LSA_NAMES[t];
+  if (m.type === 'hello' && m.hello) {
+    p.u32('ospf.interfaceId', m.hello.interfaceId ?? 0);
+    p.u8('ospf.priority', 1);
+    p.field('ospf.options', '0x000013 (R, E, V6)', [0, 0, 0x13]);
+    p.u16('ospf.helloInterval', m.hello.helloInterval, `${m.hello.helloInterval} s`);
+    p.u16('ospf.deadInterval', m.hello.deadInterval, `${m.hello.deadInterval} s`);
+    p.ip('ospf.dr', '0.0.0.0');
+    p.ip('ospf.bdr', '0.0.0.0');
+    for (const n of m.hello.neighbors) p.ip('ospf.neighbor', n);
+  } else if (m.type === 'dbd') {
+    p.field('ospf.options', '0x000013 (R, E, V6)', [0, 0, 0, 0x13]);
+    p.u16('ospf.mtu', 1500);
+    p.u8('ospf.reserved', 0);
+    p.u8('ospf.dbdFlags', 0x07, '0x07 (I, M, MS)');
+    p.u32('ospf.ddSeq', 1);
+    for (const h of m.headers ?? []) p.field('ospf.lsaHeader', `${name(h.type)} ${h.advertisingRouter} seq ${hex(h.seq >>> 0, 8)}`, lsaHeader6(h, 20));
+  } else if (m.type === 'lsr') {
+    for (const h of m.headers ?? []) p.field('ospf.request', `${name(h.type)} ${h.advertisingRouter}`, [0, 0, ...u16(LSA_TYPES6[h.type]), ...u32(0), ...ipBytes(h.advertisingRouter)]);
+  } else if (m.type === 'lsu') {
+    const encoded: { label: string; bytes: number[] }[] = [];
+    for (const lsa of m.lsas ?? []) {
+      if (lsa.type === 'router') {
+        // Verbindung Typ 1 (Punkt-zu-Punkt): Metrik, eigene und fremde Interface-ID, Router-ID des Nachbarn.
+        const links = lsa.links.filter((l) => l.kind === 'p2p').flatMap((l) => [1, 0, ...u16(l.cost), ...u32(Number(l.data) || 0), ...u32(0), ...ipBytes(l.id)]);
+        const body = [0, 0, 0, 0x13, ...links];
+        encoded.push({ label: `Router-LSA ${lsa.advertisingRouter}: ${lsa.links.map((l) => `→${l.id} (${l.cost})`).join(', ') || '–'}`, bytes: [...lsaHeader6(lsa, 20 + body.length), ...body] });
+      } else if (lsa.type === 'intraAreaPrefix') {
+        const prefixes = lsa.links.flatMap((l) => {
+          const length = Number(l.data);
+          return [length, 0, ...u16(l.cost), ...prefix6(l.id, length)];
+        });
+        const body = [...u16(lsa.links.length), ...u16(LSA_TYPES6.router), ...u32(0), ...ipBytes(lsa.advertisingRouter), ...prefixes];
+        encoded.push({ label: `Intra-Area-Prefix-LSA ${lsa.advertisingRouter}: ${lsa.links.map((l) => `${l.id}/${l.data} (${l.cost})`).join(', ')}`, bytes: [...lsaHeader6(lsa, 20 + body.length), ...body] });
+      } else {
+        lsa.links.forEach((l, i) => {
+          const length = Number(l.data);
+          const body = [0x04, (l.cost >> 16) & 255, (l.cost >> 8) & 255, l.cost & 255, length, 0, ...u16(0), ...prefix6(l.id, length)];
+          encoded.push({ label: `AS-External-LSA ${l.id}/${l.data} E2 ${l.cost}`, bytes: [...lsaHeader6(lsa, 20 + body.length, i), ...body] });
+        });
+      }
+    }
+    p.u32('ospf.lsaCount', encoded.length);
+    for (const e of encoded) p.field('ospf.lsa', e.label, e.bytes);
+  } else if (m.type === 'lsack') {
+    for (const h of m.headers ?? []) p.field('ospf.lsaHeader', `${name(h.type)} ${h.advertisingRouter} seq ${hex(h.seq >>> 0, 8)}`, lsaHeader6(h, 20));
+  }
+  p.patch(lengthAt, u16(p.length));
+  p.fields.find((f) => f.key === 'ospf.length')!.value = String(p.length);
+  const sum = internetChecksum([...pseudoHeader6(src, dst, 89, p.length), ...p.bytes]);
+  p.patch(checksumAt, u16(sum));
+  p.fields.find((f) => f.key === 'ospf.checksum')!.value = hex(sum, 4);
+  p.close(3, 'OSPFv3', 0, { note: 'note.ospf' });
+  return p;
 }
 
 function ospf(m: OspfPacket): Part {
@@ -442,7 +549,7 @@ function ospf(m: OspfPacket): Part {
     p.u8('ospf.options', 0x02, '0x02 (E)');
     p.u8('ospf.dbdFlags', 0x07, '0x07 (I, M, MS)');
     p.u32('ospf.ddSeq', 1);
-    for (const h of m.headers ?? []) p.field('ospf.lsaHeader', `${h.type === 'router' ? 'Router-LSA' : 'AS-External-LSA'} ${h.advertisingRouter} seq ${hex(h.seq >>> 0, 8)}`, lsaHeader(h, 20));
+    for (const h of m.headers ?? []) p.field('ospf.lsaHeader', `${LSA_NAMES[h.type]} ${h.advertisingRouter} seq ${hex(h.seq >>> 0, 8)}`, lsaHeader(h, 20));
   } else if (m.type === 'lsr') {
     for (const h of m.headers ?? []) p.field('ospf.request', `${h.type} ${h.advertisingRouter}`, [...u32(LSA_TYPES[h.type]), ...ipBytes(h.advertisingRouter), ...ipBytes(h.advertisingRouter)]);
   } else if (m.type === 'lsu') {
