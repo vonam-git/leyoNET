@@ -346,6 +346,8 @@ test('IPv6: SLAAC, Ping über den Router, IP-Version umschalten', async ({ page 
   const ipMode = page.getByRole('radiogroup', { name: 'IP-Version' });
   await expect(ipMode.getByRole('radio', { name: 'IPv6' })).toBeChecked();
   await page.getByRole('radio', { name: 'Simulation' }).click();
+  // Erst das Router Advertisement abwarten (SLAAC), sonst hat der PC noch keine globale Adresse.
+  await page.waitForTimeout(2500);
   await page.getByRole('button', { name: 'PC 1, Rechner' }).click();
   await page.getByRole('button', { name: 'Desktop öffnen' }).click();
   const input = page.getByLabel('Befehl eingeben');
