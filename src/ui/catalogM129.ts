@@ -3,10 +3,8 @@
  * statisches Routing mit drei Routern und Protokollanalyse. Zu jeder Gruppe
  * gibt es ein ausfüllbares Arbeitsblatt (PDF) in docs/arbeitsblaetter/.
  *
- * Die Vorlagen der Schule arbeiten mit virtuellen Maschinen (VyOS, pfSense,
- * Wireshark); hier läuft alles in leyoNET. Öffentliche Adressen der Vorlagen
- * (8.8.8.8, 1.1.1.1, srf.ch) sind durch Dokumentationsadressen (RFC 5737)
- * und Namen unter .example ersetzt.
+ * Alles läuft in leyoNET. Adressen im «Internet» stammen aus den
+ * Dokumentationsbereichen (RFC 5737), Namen enden auf .example.
  */
 import {
   addDnsRecord,
@@ -143,10 +141,10 @@ export const solveSub3 = (_t: Topology): Topology => solveSub1(sub1Start().topol
 // --- UE02 Statisches Routing mit drei Routern ----------------------------------------------
 
 /**
- * Wie die VyOS-Übung: LAN1 192.168.1.0/24, Transfer 192.168.2.0/30, LAN3 192.168.3.0/24,
- * Transfer 172.16.12.80/28, Router3 am Provider 203.0.113.0/24 (Provider .2; in der Vorlage
- * das NAT-Netz 10.0.0.0/24 von VirtualBox), Verwaltungsnetz 192.168.56.0/24.
- * «Internet»: Webserver 198.51.100.10 (statt 1.1.1.1 bzw. 8.8.8.8).
+ * LAN1 192.168.1.0/24, Transfer 192.168.2.0/30, LAN3 192.168.3.0/24,
+ * Transfer 172.16.12.80/28, Router3 am Provider 203.0.113.0/24 (Provider .2),
+ * Verwaltungsnetz 192.168.56.0/24.
+ * «Internet»: Webserver 198.51.100.10.
  */
 export const R129 = {
   r1: { lan: '192.168.1.254/24', transfer: '192.168.2.1/30', mgmt: '192.168.56.101/24' },
@@ -242,10 +240,10 @@ export function solveRouting3(topology: Topology): Topology {
 // --- UE03 Protokollanalyse ------------------------------------------------------------------
 
 /**
- * Labornetz wie in der Vorlage: Intranet 192.168.1.0/24 (PC W11 .11, Server Intranet .2
+ * Labornetz: Intranet 192.168.1.0/24 (PC W11 .11, Server Intranet .2
  * mit DHCP und DNS), Firewall 192.168.1.1 / 10.10.1.1, DMZ 10.10.1.0/24 mit Webserver
- * .20 (statt Ubuntu-VM), WAN mit NAT zum Provider; im «Internet» www.news.example
- * (statt srf.ch) und der DNS des Providers.
+ * .20, WAN mit NAT zum Provider; im «Internet» www.news.example
+ * und der DNS des Providers.
  */
 export const LAB_DOMAIN = 'labor.example';
 export const LAB_WEB = `web.${LAB_DOMAIN}`;

@@ -33,7 +33,7 @@ Die Lehrperson wertet die Projektdateien mit **«Abgaben auswerten …»** im Au
 
 ## Adressen
 
-Wo die ursprünglichen Unterlagen Adressen aus dem öffentlichen Internet verwendeten (z.B. 11.128.13.57/24, 1.0.0.0/30, 33.14.12.0/25, 20.40.90.0/24, in M129 8.8.8.8, 1.1.1.1, 178.16.12.80/28), stehen hier private Netze nach RFC 1918 bzw. Dokumentationsadressen nach RFC 5737; Domains enden auf `.example` (RFC 2606). Präfixlängen und damit die Rechenaufgaben sind gleich geblieben.
+Wo die ursprünglichen Unterlagen Adressen aus dem öffentlichen Internet verwendeten (z.B. 11.128.13.57/24, 1.0.0.0/30, 33.14.12.0/25, 20.40.90.0/24), stehen hier private Netze nach RFC 1918; im «Internet» der Übungen zu Modul 129 stehen Dokumentationsadressen nach RFC 5737; Domains enden auf `.example` (RFC 2606). Präfixlängen und damit die Rechenaufgaben sind gleich geblieben.
 
 ## Ändern und neu erzeugen
 

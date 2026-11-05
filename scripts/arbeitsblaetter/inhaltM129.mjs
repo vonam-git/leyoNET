@@ -196,7 +196,7 @@ export const M129_SHEETS = [
     entries: ['m129-routing-a1', 'm129-routing-a2', 'm129-routing-a3'],
     projects: ['M129_UE02_A1', 'M129_UE02_A2', 'M129_UE02_A3'],
     intro: [
-      { p: 'Drei Router verbinden vier Netze und führen ins Internet. Im Unterricht mit «echter» Hardware übernehmen das virtuelle Router (z.B. VyOS); hier richtest du die Router in leyoNET ein, im Fenster des Routers oder auf seiner **Befehlszeile** (Doppelklick auf den Router). Wichtig: **Router-Adressen werden immer fest eingetragen**, nie per DHCP, damit sie stets unter derselben Adresse erreichbar sind. Üblich ist die erste oder letzte Adresse des Netzes.' },
+      { p: 'Drei Router verbinden vier Netze und führen ins Internet. Du richtest sie in leyoNET ein, im Fenster des Routers oder auf seiner **Befehlszeile** (Doppelklick auf den Router). Wichtig: **Router-Adressen werden immer fest eingetragen**, nie per DHCP, damit sie stets unter derselben Adresse erreichbar sind. Üblich ist die erste oder letzte Adresse des Netzes.' },
       {
         table: [
           ['Netz', 'Adressbereich', 'Router', 'Adresse'],
@@ -209,7 +209,7 @@ export const M129_SHEETS = [
         ],
         widths: [1.3, 1.4, 1.9, 1.4],
       },
-      { tip: 'Die Vorlage arbeitet mit dem NAT-Netz 10.0.0.0/24 von VirtualBox und pingt 8.8.8.8 bzw. 1.1.1.1. In leyoNET steht der Provider auf 203.0.113.2 und der Webserver im Internet auf 198.51.100.10 (Adressen für Dokumentation, RFC 5737).' },
+      { tip: 'Der Provider steht auf 203.0.113.2, der Webserver im Internet auf 198.51.100.10 (Adressen für Dokumentation, RFC 5737).' },
     ],
     sections: [
       {
@@ -228,18 +228,18 @@ export const M129_SHEETS = [
               { label: 'LAN4: Broadcast', name: 'lan4_bc', answer: '172.16.12.95' },
             ],
           },
-          { h: 'Befehlszeile: so geht es in leyoNET (und in VyOS)' },
+          { h: 'Befehlszeile: so geht es in leyoNET' },
           {
             table: [
-              ['Schritt', 'leyoNET (Befehlszeile)', 'VyOS'],
-              ['Konfigurieren', 'enable, configure terminal', 'configure'],
-              ['Name', 'hostname Router1', 'set system host-name Router1'],
-              ['Adresse', 'interface eth0, ip address 192.168.1.254/24', 'set interfaces ethernet eth0 address 192.168.1.254/24'],
-              ['Statische Route', 'ip route 0.0.0.0/0 192.168.2.2', 'set protocols static route 0.0.0.0/0 next-hop 192.168.2.2'],
-              ['Übernehmen', 'sofort wirksam', 'commit, save'],
-              ['Kontrolle', 'show ip interface brief, show ip route', 'show interfaces, show ip route'],
+              ['Schritt', 'Befehl in leyoNET'],
+              ['Konfigurieren', 'enable, configure terminal'],
+              ['Name', 'hostname Router1'],
+              ['Adresse', 'interface eth0, ip address 192.168.1.254/24'],
+              ['Statische Route', 'ip route 0.0.0.0/0 192.168.2.2'],
+              ['Übernehmen', 'sofort wirksam (mit «end» zurück, Rückgängig mit Strg+Z)'],
+              ['Kontrolle', 'show ip interface brief, show ip route'],
             ],
-            widths: [1.2, 2.4, 2.8],
+            widths: [1.4, 4],
           },
           { h: 'Statische Routen planen' },
           {
@@ -281,12 +281,12 @@ export const M129_SHEETS = [
           { p: 'Die LANs sollen ins Internet. Router3 braucht dafür eine **Standardroute zum Provider** (203.0.113.2) und muss die privaten Absenderadressen übersetzen: **Source-NAT mit Masquerade**, das heisst «nimm die Adresse des ausgehenden Anschlusses».' },
           {
             table: [
-              ['Schritt', 'leyoNET (Befehlszeile Router3)', 'VyOS'],
-              ['Standardroute', 'ip route 0.0.0.0/0 203.0.113.2', 'set protocols static route 0.0.0.0/0 next-hop …'],
-              ['NAT', 'interface eth1, ip nat outside', 'set nat source rule 10 outbound-interface name eth1, … translation address masquerade'],
-              ['Kontrolle', 'show ip nat translations', 'show nat source rules'],
+              ['Schritt', 'Befehl in leyoNET (Router3)'],
+              ['Standardroute', 'ip route 0.0.0.0/0 203.0.113.2'],
+              ['NAT (Masquerade)', 'interface eth1, ip nat outside'],
+              ['Kontrolle', 'show ip route, show ip nat translations'],
             ],
-            widths: [1.2, 2.4, 2.8],
+            widths: [1.4, 4],
           },
           {
             question: {
@@ -326,7 +326,7 @@ export const M129_SHEETS = [
         stars: 3,
         catalog: 'UE02 Routing – Auftrag 3: Verwaltungsnetz und SSH',
         blocks: [
-          { p: 'Router werden selten an der Konsole eingerichtet, sondern über das Netz. Dafür bekommen sie einen eigenen Anschluss in einem **Verwaltungsnetz** 192.168.56.0/24 (in der Vorlage ein Host-only-Adapter von VirtualBox). Das Admin-Notebook (192.168.56.10/24) meldet sich per **SSH** an.' },
+          { p: 'Router werden selten an der Konsole eingerichtet, sondern über das Netz. Dafür bekommen sie einen eigenen Anschluss in einem **Verwaltungsnetz** 192.168.56.0/24. Das Admin-Notebook (192.168.56.10/24) meldet sich per **SSH** an.' },
           {
             table: [
               ['Schritt', 'leyoNET (Befehlszeile)'],
@@ -374,7 +374,7 @@ export const M129_SHEETS = [
     entries: ['m129-lab-a1', 'm129-lab-a2', 'm129-lab-a3'],
     projects: ['M129_UE03_A1', 'M129_UE03_A2', 'M129_UE03_A3'],
     intro: [
-      { p: 'Ein **Netzwerkprotokoll** legt fest, in welchem Format und in welcher Reihenfolge Geräte Daten austauschen. Mit einem **Protokollanalysator** wie Wireshark (Kommandozeile: tshark, tcpdump) zeichnet man den Verkehr auf und untersucht jedes Paket Schicht für Schicht. leyoNET hat einen solchen Analysator eingebaut: die **Paketliste** mit Filtern, OSI-Ansicht und Hex-Ansicht. Der Export als .pcapng öffnet die Aufzeichnung auch in Wireshark.' },
+      { p: 'Ein **Netzwerkprotokoll** legt fest, in welchem Format und in welcher Reihenfolge Geräte Daten austauschen. Mit einem **Protokollanalysator** zeichnet man den Verkehr auf und untersucht jedes Paket Schicht für Schicht. In leyoNET ist das die **Paketliste** mit Filtern, OSI-Ansicht und Hex-Ansicht; sie zeichnet in der Simulation alles auf.' },
       { box: '**Rechtliches:** Netzwerkverkehr anderer Personen darf man nur mit deren Zustimmung mitschneiden. Wer ohne Wissen der Betroffenen aufzeichnet, verletzt ihre Persönlichkeitsrechte. In leyoNET ist das kein Problem: Alles ist simuliert.' },
       {
         table: [
@@ -387,7 +387,7 @@ export const M129_SHEETS = [
         ],
         widths: [1.4, 2.6, 2],
       },
-      { tip: 'Aufzeichnen auf einem bestimmten Gerät (in der Vorlage tcpdump auf der Firewall): In der Paketliste mit «host Firewall» filtern. Jede Zeile zeigt, von welchem Gerät zu welchem das Paket gerade läuft.' },
+      { tip: 'Nur den Verkehr an einem bestimmten Gerät ansehen, z.B. an der Firewall: In der Paketliste mit «host Firewall» filtern. Jede Zeile zeigt, von welchem Gerät zu welchem das Paket gerade läuft.' },
     ],
     sections: [
       {
@@ -466,7 +466,7 @@ export const M129_SHEETS = [
         stars: 3,
         catalog: 'UE03 Protokollanalyse – Auftrag 2: DHCP',
         blocks: [
-          { p: 'Das Notebook Gast hat noch keine Adresse. Stelle es auf **automatisch (DHCP)**, starte die Simulation und filtere die Paketliste mit **dhcp**. In der Vorlage startet man tcpdump dafür im Hintergrund (&) und beendet es mit killall; in leyoNET läuft die Aufzeichnung immer mit.' },
+          { p: 'Das Notebook Gast hat noch keine Adresse. Stelle es auf **automatisch (DHCP)**, starte die Simulation und filtere die Paketliste mit **dhcp**.' },
           {
             fields: [
               { label: '1. Nachricht', name: 'd1', answer: 'Discover' },

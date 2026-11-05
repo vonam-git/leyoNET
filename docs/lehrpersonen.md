@@ -100,7 +100,7 @@ Die praktische Prüfung (LB3) erstellt **Werkzeuge → Prüfung erstellen …**:
 
 ## Modul 129: Subnetting, Routing und Protokollanalyse
 
-Der Reiter **«M129»** im Aufgaben-Katalog enthält drei Gruppen mit je einem ausfüllbaren Arbeitsblatt. Die Aufträge beruhen auf den Laborübungen der Schule (VyOS-Router, pfSense, Wireshark in VirtualBox), laufen hier aber ganz in leyoNET. Öffentliche Adressen der Vorlagen (8.8.8.8, 1.1.1.1, srf.ch, das NAT-Netz von VirtualBox) sind durch Dokumentationsadressen nach RFC 5737 und Namen unter `.example` ersetzt.
+Der Reiter **«M129»** im Aufgaben-Katalog enthält drei Gruppen mit je einem ausfüllbaren Arbeitsblatt. Alles läuft in leyoNET: Router, Firewall, Server und die Paketanalyse. Adressen im «Internet» stammen aus den Dokumentationsbereichen nach RFC 5737, Namen enden auf `.example`.
 
 | Sterne | Übung | Arbeitsblatt |
 |---|---|---|
@@ -114,7 +114,7 @@ Der Reiter **«M129»** im Aufgaben-Katalog enthält drei Gruppen mit je einem a
 | ★★★ | UE03 Protokollanalyse – Auftrag 2: DHCP | M129_UE03_Protokollanalyse |
 | ★★★★ | UE03 Protokollanalyse – Auftrag 3: ARP, DNS und HTTP | M129_UE03_Protokollanalyse |
 
-Neu sind **Fragen direkt in leyoNET** (Baustein «Antwort»): z.B. der EtherType von ARP oder die TTL nach der Firewall. «Prüfen» bewertet sie zusammen mit den Netzzielen. Das Arbeitsblatt zum Routing stellt die Befehle von leyoNET und VyOS nebeneinander, damit der Wechsel auf echte Router leichtfällt. Nummern und Titel der Übungen lassen sich später an die Unterlagen der Schule anpassen (`src/ui/catalogM129.ts`, Texte in `src/i18n`, Arbeitsblätter in `scripts/arbeitsblaetter/inhaltM129.mjs`).
+Neu sind **Fragen direkt in leyoNET** (Baustein «Antwort»): z.B. der EtherType von ARP oder die TTL nach der Firewall. «Prüfen» bewertet sie zusammen mit den Netzzielen. Das Arbeitsblatt zum Routing zeigt die passenden Befehle für die Befehlszeile der Router. Nummern und Titel der Übungen lassen sich später an die Unterlagen der Schule anpassen (`src/ui/catalogM129.ts`, Texte in `src/i18n`, Arbeitsblätter in `scripts/arbeitsblaetter/inhaltM129.mjs`).
 
 Weitere Module erhalten einen eigenen Reiter, sobald ihre Übungen eine Reihe (`series`) haben, z.B. `m123` oder `m145`.
 
