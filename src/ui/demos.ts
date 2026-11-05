@@ -111,6 +111,15 @@ export const DEMOS: readonly Demo[] = [
       { highlight: 'Webserver' },
       { pause: false, highlight: 'Notebook 1' },
     ] },
+  { id: 'dns', file: 'dns.json', topic: 'services', layers: [7], actions: [{ at: 600, device: 'PC 1', command: 'nslookup intranet.schule.example' }, { at: 1500, device: 'PC 1', command: 'nslookup -type=MX schule.example' }, { at: 2500, device: 'PC 1', browse: 'http://www.provider.example/' }], check: { kind: 'browser', device: 'PC 1', contains: 'Provider' }, until: 8000,
+    tour: [
+      { sim: false, highlight: 'Schul-DNS', window: { device: 'Schul-DNS', tab: 'services' } },
+      { sim: true, pause: false, action: { at: 0, device: 'PC 1', command: 'nslookup intranet.schule.example' }, highlight: 'PC 1' },
+      { action: { at: 0, device: 'PC 1', command: 'nslookup -type=MX schule.example' }, highlight: 'PC 1' },
+      { action: { at: 0, device: 'PC 1', command: 'nslookup 192.168.10.3' }, highlight: 'Webserver' },
+      { action: { at: 0, device: 'PC 1', browse: 'http://www.provider.example/' }, highlight: 'Provider-DNS' },
+      { highlight: 'Schul-DNS', window: { device: 'Schul-DNS', tab: 'state' } },
+    ] },
   {
     id: 'mail',
     file: 'mail.json',

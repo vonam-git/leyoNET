@@ -62,12 +62,12 @@ class Lines {
 function resolveHost(host: MailHost, name: string, report: Report, next: (ip: string) => void, fail: () => void) {
   if (parseIp(name) !== null) return next(name);
   report('mail.resolve', { host: name });
-  host.resolver.resolve(name, 'A', (result) => {
+  host.resolver.resolveAddress(name, (result) => {
     if (!result.ok) {
-      report(`mail.dns.${result.error}`, { host: name, server: result.server });
+      report(`mail.dns.${result.error === 'nodata' ? 'nxdomain' : result.error}`, { host: name, server: result.server });
       return fail();
     }
-    const ip = result.records[0]!.value;
+    const ip = result.ip;
     report('mail.resolved', { host: name, ip });
     next(ip);
   });
@@ -295,8 +295,10 @@ export class MailServer {
     };
     this.#ctx.print('smtp.relayStart', { domain, to: to.join(', ') });
     this.host.resolver.resolve(domain, 'MX', (mx) => {
-      if (!mx.ok) return bounce(`no MX record for ${domain}`);
-      const mailHost = mx.records[0]!.value;
+      // Der MX mit dem kleinsten Vorrang zuerst (Antwort ist danach sortiert).
+      const best = mx.ok ? mx.records.find((r) => r.type === 'MX') : undefined;
+      if (!best) return bounce(`no MX record for ${domain}`);
+      const mailHost = best.value;
       resolveHost(
         this.host,
         mailHost,

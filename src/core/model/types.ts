@@ -320,20 +320,32 @@ export interface CliConfig {
   banner?: string;
 }
 
-export type DnsType = 'A' | 'MX';
+/** Eintragstypen nach RFC 1035 (A, NS, CNAME, PTR, MX, TXT) und RFC 3596 (AAAA). */
+export type DnsType = 'A' | 'AAAA' | 'CNAME' | 'MX' | 'TXT' | 'NS' | 'PTR';
+export const DNS_TYPES: readonly DnsType[] = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'PTR'];
 
 export interface DnsRecord {
-  /** Name in Kleinbuchstaben, z.B. "webserver1" oder "www.schule.example". */
+  /** Name in Kleinbuchstaben, z.B. "webserver1" oder "www.schule.example"; bei PTR z.B. "10.1.168.192.in-addr.arpa". */
   name: string;
   type: DnsType;
-  /** Bei A eine IPv4-Adresse, bei MX der Name des Mailservers. */
+  /**
+   * A: IPv4-Adresse, AAAA: IPv6-Adresse, CNAME/NS/PTR/MX: ein Name,
+   * TXT: freier Text (höchstens 255 Zeichen).
+   */
   value: string;
+  /** Nur MX: Vorrang, kleiner = bevorzugt (Standard 10). */
+  priority?: number;
   /** Gültigkeit im Cache der Clients in Sekunden. */
   ttl: number;
 }
 
 export interface DnsServerConfig {
   records: DnsRecord[];
+  /**
+   * Weiterleitung: Namen, die nicht in der eigenen Zone stehen, fragt der Server
+   * bei diesem DNS-Server nach (rekursive Auflösung, z.B. Schul-DNS → Provider).
+   */
+  forwarder?: string;
 }
 
 export interface WebFile {

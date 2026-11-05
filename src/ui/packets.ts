@@ -130,7 +130,10 @@ export function infoOf(frame: EthernetFrame): string {
   if (msg.kind === 'dns') {
     if (!msg.response) return access + t('packets.dns.query', { type: msg.question.type, name: msg.question.name });
     if (msg.rcode === 'nxdomain') return access + t('packets.dns.nxdomain', { name: msg.question.name });
-    return access + t('packets.dns.answer', { type: msg.question.type, name: msg.question.name, value: msg.answers.map((a) => a.value).join(', ') });
+    if (msg.rcode === 'servfail') return access + t('packets.dns.servfail', { name: msg.question.name });
+    if (!msg.answers.some((a) => a.type === msg.question.type)) return access + t('packets.dns.nodata', { type: msg.question.type, name: msg.question.name });
+    const value = msg.answers.map((a) => (a.type === 'CNAME' && msg.question.type !== 'CNAME' ? `${a.value} (CNAME)` : a.type === 'MX' ? `${a.priority ?? 10} ${a.value}` : a.value)).join(', ');
+    return access + t('packets.dns.answer', { type: msg.question.type, name: msg.question.name, value });
   }
   if (msg.kind === 'rip') {
     return access + t(msg.command === 'request' ? 'packets.rip.request' : 'packets.rip.response', { routes: msg.entries.map((e) => `${e.network}/${e.metric}`).join(', ') });

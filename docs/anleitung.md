@@ -52,6 +52,19 @@ Oben in der Werkzeugleiste stellst du die **IP-Version** ein: **IPv4**, **v4 + v
 - Statt ARP fragen die Geräte per **Neighbor Discovery** nach der MAC. `ping 2001:db8:2::20`, `tracert`, `ipconfig` und `netsh interface ipv6 show neighbors` funktionieren in der Eingabeaufforderung.
 - **DS-Lite:** Die Internet-Box tunnelt IPv4 durch das IPv6-Netz des Providers; der Provider übersetzt per CGNAT. Siehe Demo «DS-Lite».
 
+## DNS
+
+Ein Rechner wird unter **Erweitert → Dienste** zum DNS-Server. In seine Zone kommen Einträge wie `web.schule.example A 192.168.0.3`, Aliase (`www CNAME web`), Mailserver (`MX` mit Vorrang), Text (`TXT`), Nameserver (`NS`) und Rückwärtseinträge (`PTR`: als Name einfach die Adresse eintragen). Mit **Weiterleitung an** fragt der Server für alle anderen Namen einen weiteren DNS-Server, z.B. den des Providers.
+
+Testen in der Eingabeaufforderung:
+
+- `nslookup intranet.schule.example`: Adresse, mit allen Aliasen der Kette
+- `nslookup -type=MX schule.example` (auch `AAAA`, `CNAME`, `TXT`, `NS`, `PTR`)
+- `nslookup 192.168.0.3`: Rückwärtsauflösung (PTR)
+- `nslookup www.provider.example 203.0.113.53`: einen bestimmten Server fragen
+
+Antworten aus der eigenen Zone sind «autorisierend», weitergeleitete «nicht autorisierend». Siehe Demo «DNS mit Weiterleitung».
+
 ## Firewall
 
 Im Fenster **Erweitert … → Firewall** (Router, Internet-Box und Endgeräte, ab Profil 3) schaltest du die Firewall ein. Sicher ist der Start mit **«alles verbieten, was nicht erlaubt ist»**. Dann trägst du Regeln ein:

@@ -27,7 +27,7 @@ Der Simulator sendet Pakete, die den Standards folgen. Jeder Rahmen lässt sich 
 | 4 | TCP | RFC 9293 | Drei-Wege-Handshake, Sequenznummern in Bytes, MSS 1460, Wiederholung nach 1 s (höchstens dreimal), FIN/RST; feste Fenstergrösse, keine Staukontrolle |
 | 7 | DHCP | RFC 2131, RFC 2132 | Discover/Offer/Request/Ack, Relay (giaddr); Erneuerung nach halber Lease-Dauer; feste Zuweisungen (Reservierung nach MAC-Adresse, auch ausserhalb des Bereichs) |
 | 7 | DHCPv6 | RFC 9915 | Solicit/Advertise/Request/Reply mit IA_NA, DUID-LL aus der MAC; Server im Router (M-Flag im Router Advertisement), Adressen ab ::100; kein Relay, keine Präfix-Delegation |
-| 7 | DNS | RFC 1035 | A- und MX-Einträge, keine Rekursion; Cache nach TTL |
+| 7 | DNS | RFC 1034, RFC 1035, RFC 3596 | Einträge A, AAAA, CNAME (auch Ketten), MX mit Vorrang, TXT, NS, PTR (in-addr.arpa, ip6.arpa); autorisierende Antworten aus der Zone, Weiterleitung an einen anderen DNS-Server mit Cache («nicht autorisierend»), NXDOMAIN, NODATA und SERVFAIL; Client-Cache nach TTL; `nslookup -type=…`. Keine Zonenübertragung, kein DNSSEC, keine eigene Rekursion über die Root-Server |
 | 7 | HTTP/1.1 | RFC 9112 | GET, Content-Length in Bytes (UTF-8), Bilder als Binärdaten; kein HTTPS |
 | 7 | SMTP, POP3, IMAP | RFC 5321, RFC 1939, RFC 9051 | Kleiner Befehlsumfang, keine Authentisierung per TLS |
 | 7 | SSH | RFC 4253 | Versionsaustausch im Klartext, danach nur verschlüsselte Bytes |

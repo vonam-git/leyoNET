@@ -111,10 +111,10 @@ export class HttpClient {
 
     if (parseIp(url.host) !== null) return connect(url.host);
     this.#step('browser.resolve', { host: url.host });
-    this.host.resolver.resolve(url.host, 'A', (result) => {
+    this.host.resolver.resolveAddress(url.host, (result) => {
       if (!current()) return;
-      if (!result.ok) return this.#fail(`browser.dns.${result.error}`, { host: url.host, server: result.server });
-      const ip = result.records[0]!.value;
+      if (!result.ok) return this.#fail(`browser.dns.${result.error === 'nodata' ? 'nxdomain' : result.error}`, { host: url.host, server: result.server });
+      const ip = result.ip;
       this.#step(result.cached ? 'browser.resolvedCached' : 'browser.resolved', { host: url.host, ip, server: result.server });
       connect(ip);
     });

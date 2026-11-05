@@ -14,6 +14,7 @@ import {
   setInterfaceRelay,
   addDevice,
   addDnsRecord,
+  setDnsForwarder,
   addMailbox,
   addStaticRoute,
   removeDnsRecord,
@@ -564,6 +565,10 @@ class Editor {
 
   addDnsRecord(id: string, record: DnsRecord): TopologyError | null {
     return this.#applyForm(addDnsRecord(this.topology, id, record));
+  }
+
+  setDnsForwarder(id: string, address: string): TopologyError | null {
+    return this.#applyForm(setDnsForwarder(this.topology, id, address));
   }
 
   removeDnsRecord(id: string, index: number) {

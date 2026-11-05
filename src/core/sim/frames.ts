@@ -62,8 +62,10 @@ export interface DnsMessage {
   response: boolean;
   question: { name: string; type: DnsType };
   answers: DnsRecord[];
-  /** "nxdomain": Name unbekannt. */
-  rcode: 'ok' | 'nxdomain';
+  /** "nxdomain": Name unbekannt; "servfail": Server konnte nicht antworten (z.B. Weiterleitung ohne Antwort). */
+  rcode: 'ok' | 'nxdomain' | 'servfail';
+  /** Antwort aus der eigenen Zone (AA-Bit); sonst weitergeleitet («nicht autorisierend»). */
+  authoritative?: boolean;
 }
 
 /** RIP Version 2 (RFC 2453), UDP-Port 520. */

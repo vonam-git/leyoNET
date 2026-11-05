@@ -24,7 +24,7 @@ import {
   setEncapsulation,
   type Result,
 } from '../model/topology';
-import type { DeviceType, DhcpScope, DhcpServerConfig, Medium, Topology } from '../model/types';
+import type { DeviceType, DhcpScope, DhcpServerConfig, DnsType, Medium, Topology } from '../model/types';
 import type { PacketLogEntry } from './simulation';
 
 export function unwrap<T>(r: Result<T>): T {
@@ -124,9 +124,9 @@ export class NetBuilder {
     };
   }
 
-  dnsRecord(id: string, name: string, type: 'A' | 'MX', value: string) {
+  dnsRecord(id: string, name: string, type: DnsType, value: string, extra: { priority?: number; ttl?: number } = {}) {
     if (!getDevice(this.topology, id)?.dnsServer) this.topology = unwrap(setDnsServerEnabled(this.topology, id, true));
-    this.topology = unwrap(addDnsRecord(this.topology, id, { name, type, value, ttl: 60 }));
+    this.topology = unwrap(addDnsRecord(this.topology, id, { name, type, value, ttl: extra.ttl ?? 60, ...(extra.priority !== undefined ? { priority: extra.priority } : {}) }));
   }
 
   mailServer(id: string, domain: string, users: string[]) {

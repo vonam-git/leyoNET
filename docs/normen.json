@@ -18,6 +18,10 @@
       "titel": "An Ethernet Address Resolution Protocol",
       "verwendung": "ARP"
     },
+    "1034": {
+      "titel": "Domain Names – Concepts and Facilities",
+      "verwendung": "DNS: Zonen, CNAME-Regeln, Auflösung, Weiterleitung"
+    },
     "1035": {
       "titel": "Domain Names – Implementation and Specification",
       "verwendung": "DNS-Nachrichten"
@@ -89,6 +93,10 @@
     "3022": {
       "titel": "Traditional IP Network Address Translator",
       "verwendung": "NAT"
+    },
+    "3596": {
+      "titel": "DNS Extensions to Support IP Version 6",
+      "verwendung": "AAAA-Einträge, Rückwärtsauflösung unter ip6.arpa"
     },
     "3849": {
       "titel": "IPv6 Address Prefix Reserved for Documentation",

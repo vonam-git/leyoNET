@@ -154,8 +154,11 @@ export class HostNode extends IpNode {
   protected override onUdp(packet: Ipv4Packet, datagram: UdpDatagram, index: number, srcMac: string) {
     const msg = datagram.payload;
     if (msg.kind === 'dns') {
-      if (datagram.dstPort === DNS_PORT) this.dnsService.onQuery(packet, datagram);
-      else if (datagram.srcPort === DNS_PORT) this.resolver.onResponse(msg);
+      if (datagram.dstPort === DNS_PORT) {
+        // Antwort eines Weiterleiters an diesen DNS-Server, sonst eine Anfrage.
+        if (msg.response) this.dnsService.onForwardResponse(msg);
+        else this.dnsService.onQuery(packet, datagram);
+      } else if (datagram.srcPort === DNS_PORT) this.resolver.onResponse(msg);
       return;
     }
     if (msg.kind !== 'dhcp') return;
@@ -291,12 +294,12 @@ export class HostNode extends IpNode {
       return;
     }
     if (/^[\d.]+$/.test(target)) return this.ctx.print('ping.invalidTarget', { target });
-    this.resolver.resolve(target, 'A', (result) => {
+    this.resolver.resolveAddress(target, (result) => {
       if (!result.ok) {
-        const code = result.error === 'nxdomain' || result.error === 'invalidName' ? 'unknownHost' : `dns.${result.error}`;
+        const code = result.error === 'nxdomain' || result.error === 'nodata' || result.error === 'invalidName' ? 'unknownHost' : `dns.${result.error}`;
         return this.ctx.print(`${command}.${code}`, { name: target, server: result.server });
       }
-      const resolved = parseIp(result.records[0]!.value);
+      const resolved = parseIp(result.ip);
       if (resolved !== null && this.#reachable(resolved)) start(formatIp(resolved), target);
     });
   }

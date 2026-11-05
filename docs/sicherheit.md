@@ -42,6 +42,7 @@ Diese Seite beschreibt, wie man leyoNET angreifen könnte, was dagegen getan ist
 |---|---|
 | Skript in einer Projektdatei (Gerätenamen, Notizen, Webseiten eines simulierten Webservers) – z.B. eine Abgabe, die die Lehrperson öffnet | Svelte gibt Texte immer maskiert aus. Simulierte Webseiten laufen in einem `iframe` mit `sandbox` ohne Skripte, Formulare und Popups; die CSP der Seite (`default-src 'none'`, `script-src 'self'`) gilt auch dort. Bilder nur als `data:`. |
 | Die Seite in einen fremden Rahmen einbetten (Clickjacking) | `frame-ancestors 'none'` und `X-Frame-Options: DENY`. |
+| DNS-Weiterleitung im Kreis (Server A → B → A) oder sehr viele Anfragen in der Simulation | Anfragen des eigenen Weiterleiters werden nicht nochmals weitergeleitet, höchstens 50 offene Weiterleitungen, CNAME-Ketten höchstens 8 Schritte; sonst SERVFAIL. Die Simulation bleibt bedienbar. |
 | Ungültige Eingaben in Formularen (z.B. MAC-Adressen, Grössen der Bereiche) | Eingaben werden geprüft und vereinheitlicht (MAC nur als 6 Bytes, keine Gruppenadressen); gespeicherte Grössen im Browser werden auf feste Grenzen beschränkt. |
 | Formeln in der CSV-Auswertung (Dateinamen, Bemerkungen wie `=HYPERLINK(…)`) | Zellen, die mit `= + - @` beginnen, erhalten ein `'` davor. |
 | Skripte in heruntergeladenen Berichten, Platzkarten, Aufgabenblättern | Alle Werte HTML-maskiert, zusätzlich eine CSP ohne Skripte im Dokument. |

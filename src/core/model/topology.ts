@@ -132,6 +132,13 @@ export type ErrorCode =
   | 'invalidMac'
   | 'macGroup'
   | 'macZero'
+  | 'dnsForwarderSelf'
+  | 'invalidAaaa'
+  | 'dnsTxt'
+  | 'dnsPriority'
+  | 'dnsType'
+  | 'cnameConflict'
+  | 'cnameLoop'
   | 'noSfpModule'
   | 'notAnSfpSlot'
   | 'noFreeSfpSlot'
@@ -1024,14 +1031,32 @@ export function addDnsRecord(t: Topology, id: string, record: DnsRecord): Result
   if (!config) return fail('serviceDisabled');
   const issue = checkDnsRecord(config, record);
   if (issue) return { ok: false, error: { code: issue.code as ErrorCode, params: issue.params, field: issue.field } };
-  return ok(updateDevice(t, id, (d) => ({ ...d, dnsServer: { records: [...config.records, normalizeRecord(record)] } })));
+  return ok(updateDevice(t, id, (d) => ({ ...d, dnsServer: { ...config, records: [...config.records, normalizeRecord(record)] } })));
 }
 
 export function removeDnsRecord(t: Topology, id: string, index: number): Result<Topology> {
   const device = getDevice(t, id);
   if (!device?.dnsServer?.records[index]) return fail('unknownRecord');
   const records = device.dnsServer.records.filter((_, i) => i !== index);
-  return ok(updateDevice(t, id, (d) => ({ ...d, dnsServer: { records } })));
+  return ok(updateDevice(t, id, (d) => ({ ...d, dnsServer: { ...device.dnsServer!, records } })));
+}
+
+/** Weiterleitung für Namen ausserhalb der eigenen Zone (leer = keine). */
+export function setDnsForwarder(t: Topology, id: string, address: string): Result<Topology> {
+  const device = serverDevice(t, id);
+  if (!device.ok) return device;
+  const config = device.value.dnsServer;
+  if (!config) return fail('serviceDisabled');
+  const value = address.trim();
+  if (value && parseIp(value) === null && parseIp6(value) === null) return { ok: false, error: { code: 'invalidIp', params: { value }, field: 'forwarder' } };
+  const own = device.value.interfaces.some((i) => i.ip === value) || device.value.interfaces.some((i) => i.ipv6?.split('/')[0] === value);
+  if (value && own) return { ok: false, error: { code: 'dnsForwarderSelf', field: 'forwarder' } };
+  return ok(
+    updateDevice(t, id, (d) => {
+      const { forwarder: _f, ...rest } = config;
+      return { ...d, dnsServer: value ? { ...rest, forwarder: value } : rest };
+    }),
+  );
 }
 
 /** Beim Einschalten erhält der Webserver eine Startseite, damit sofort etwas abrufbar ist. */

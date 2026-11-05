@@ -90,21 +90,45 @@ function labels(name: string): number[] {
   return out;
 }
 
+/** Typ-Codes nach RFC 1035 (A 1, NS 2, CNAME 5, PTR 12, MX 15, TXT 16) und RFC 3596 (AAAA 28). */
+const DNS_TYPE_CODES: Record<DnsMessage['question']['type'], number> = { A: 1, NS: 2, CNAME: 5, PTR: 12, MX: 15, TXT: 16, AAAA: 28 };
+
+function dnsRdata(a: DnsMessage['answers'][number]): number[] {
+  switch (a.type) {
+    case 'A':
+      return ipBytes(a.value);
+    case 'AAAA':
+      return ip6Bytes(a.value);
+    case 'MX':
+      return [...u16(a.priority ?? 10), ...labels(a.value)];
+    case 'TXT': {
+      const text = utf8(a.value).slice(0, 255);
+      return [text.length, ...text];
+    }
+    default:
+      return labels(a.value);
+  }
+}
+
 function dns(m: DnsMessage): Part {
   const p = new Part();
   p.u16('dns.id', m.id, hex(m.id, 4));
-  const flags = m.response ? (m.rcode === 'nxdomain' ? 0x8183 : 0x8180) : 0x0100;
-  p.u16('dns.flags', flags, `${hex(flags, 4)} (${m.response ? (m.rcode === 'nxdomain' ? 'Response, NXDOMAIN' : 'Response, No error') : 'Standard query'})`);
+  // QR, AA, RD (Rekursion gewünscht) und RA (Rekursion verfügbar); RCODE 3 = NXDOMAIN, 2 = SERVFAIL.
+  const rcode = m.rcode === 'nxdomain' ? 3 : m.rcode === 'servfail' ? 2 : 0;
+  const flags = m.response ? 0x8000 | (m.authoritative ? 0x0400 : 0) | 0x0100 | 0x0080 | rcode : 0x0100;
+  const meaning = m.response ? `Response${m.authoritative ? ', Authoritative' : ''}, ${rcode === 3 ? 'NXDOMAIN' : rcode === 2 ? 'SERVFAIL' : 'No error'}` : 'Standard query';
+  p.u16('dns.flags', flags, `${hex(flags, 4)} (${meaning})`);
   p.u16('dns.qdcount', 1);
   p.u16('dns.ancount', m.answers.length);
   p.u16('dns.nscount', 0);
   p.u16('dns.arcount', 0);
-  const qtype = m.question.type === 'MX' ? 15 : 1;
+  const qtype = DNS_TYPE_CODES[m.question.type] ?? 1;
   p.field('dns.question', `${m.question.name} ${m.question.type} IN`, [...labels(m.question.name), ...u16(qtype), ...u16(1)]);
   for (const a of m.answers) {
-    const type = a.type === 'MX' ? 15 : 1;
-    const rdata = a.type === 'MX' ? [...u16(10), ...labels(a.value)] : ipBytes(a.value);
-    p.field('dns.answer', `${a.name} ${a.type} ${a.value} TTL ${a.ttl}`, [0xc0, 0x0c, ...u16(type), ...u16(1), ...u32(a.ttl), ...u16(rdata.length), ...rdata]);
+    const rdata = dnsRdata(a);
+    const shown = a.type === 'MX' ? `${a.priority ?? 10} ${a.value}` : a.type === 'TXT' ? `"${a.value}"` : a.value;
+    // Der Name wird voll geschrieben (bei Aliasen weicht er von der Frage ab).
+    p.field('dns.answer', `${a.name} ${a.type} ${shown} TTL ${a.ttl}`, [...labels(a.name), ...u16(DNS_TYPE_CODES[a.type] ?? 1), ...u16(1), ...u32(a.ttl), ...u16(rdata.length), ...rdata]);
   }
   p.close(7, 'DNS', 0);
   return p;

@@ -28,9 +28,9 @@ import type {
   RoutedNetwork,
   VlanDef,
 } from '../model/types';
-import { IP_MODES, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type IpMode, type RoutingMode } from '../model/types';
+import { DNS_TYPES, IP_MODES, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type DnsType, type IpMode, type RoutingMode } from '../model/types';
 import { formatCidr6, formatIp6, isLinkLocal6, isMulticast6, parseCidr6, parseIp6 } from '../net/ipv6';
-import { isValidName, normalizeName } from '../net/dns';
+import { checkDnsRecord, isValidName, normalizeName, normalizeRecord } from '../net/dns';
 import { normalizeMac } from '../model/mac';
 import { isValidPath } from '../net/http';
 import { checkMailAccount } from '../net/mail';
@@ -448,23 +448,31 @@ function readDevice(v: unknown, path: string): Device {
   }
   if (o.dnsServer !== undefined) {
     const p = `${path}.dnsServer`;
-    const records = arr(obj(o.dnsServer, p).records, `${p}.records`).map((raw, i): DnsRecord => {
+    const dns = obj(o.dnsServer, p);
+    const records: DnsRecord[] = [];
+    arr(dns.records, `${p}.records`).forEach((raw, i) => {
       const rp = `${p}.records[${i}]`;
       const r = obj(raw, rp);
       const type = r.type;
-      if (type !== 'A' && type !== 'MX') throw new Invalid(`${rp}.type`);
+      if (typeof type !== 'string' || !(DNS_TYPES as readonly string[]).includes(type)) throw new Invalid(`${rp}.type`);
       const record: DnsRecord = {
-        name: normalizeName(str(r.name, `${rp}.name`)),
-        type,
-        value: str(r.value, `${rp}.value`).trim(),
+        name: str(r.name, `${rp}.name`),
+        type: type as DnsType,
+        value: str(r.value, `${rp}.value`),
         ttl: int(r.ttl, `${rp}.ttl`),
+        ...(r.priority !== undefined ? { priority: int(r.priority, `${rp}.priority`) } : {}),
       };
-      if (!isValidName(record.name)) throw new Invalid(`${rp}.name`);
-      if (type === 'A' ? parseIp(record.value) === null : !isValidName(record.value)) throw new Invalid(`${rp}.value`);
-      if (record.ttl < 0) throw new Invalid(`${rp}.ttl`);
-      return record;
+      // Dieselben Regeln wie beim Eintragen (Typen, Namen, CNAME allein am Namen).
+      const issue = checkDnsRecord({ records }, record);
+      if (issue) throw new Invalid(`${rp}.${issue.field}`);
+      records.push(normalizeRecord(record));
     });
     device.dnsServer = { records };
+    if (dns.forwarder !== undefined) {
+      const forwarder = str(dns.forwarder, `${p}.forwarder`).trim();
+      if (parseIp(forwarder) === null && parseIp6(forwarder) === null) throw new Invalid(`${p}.forwarder`);
+      device.dnsServer.forwarder = forwarder;
+    }
   }
   if (o.webServer !== undefined) {
     const p = `${path}.webServer`;
