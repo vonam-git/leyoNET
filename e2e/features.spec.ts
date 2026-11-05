@@ -569,3 +569,29 @@ test('Grosse Aufgabe: eigenes Fenster mit Gliederung', async ({ page }) => {
   await page.locator('.tasks').getByRole('button', { name: /Gross anzeigen/ }).click();
   await expect(win).toBeVisible();
 });
+
+test('Firewall als Gerät und ACL am Switch im Formular', async ({ page }) => {
+  await page.getByRole('button', { name: 'P2' }).click();
+  await page.getByRole('dialog', { name: 'Funktionsumfang' }).getByRole('radio', { name: /Profi/ }).click();
+  await page.keyboard.press('Escape');
+  await shop(page, 'Router', /^Firewall 4 Port/);
+  await page.keyboard.press('e');
+  const fw = page.getByRole('dialog', { name: 'Firewall' });
+  await fw.getByRole('tab', { name: 'Firewall' }).click();
+  await expect(fw.locator('tr.rule').filter({ hasText: 'eth1 (LAN)' })).toBeVisible();
+  await expect(fw.getByRole('radio', { name: 'Verbieten' })).toBeChecked();
+  await fw.getByRole('button', { name: /Schliessen/ }).first().click();
+
+  await shop(page, 'Switches', /^Switch 8/);
+  await page.keyboard.press('e');
+  const sw = page.getByRole('dialog', { name: 'Switch' });
+  await sw.getByRole('tab', { name: 'ACL' }).click();
+  await sw.getByLabel('Neue Zugriffsliste').fill('GAESTE');
+  await sw.getByRole('button', { name: 'Anlegen' }).click();
+  await sw.getByLabel('Ziel', { exact: true }).fill('192.168.10.80');
+  await sw.getByRole('button', { name: 'Regel zu GAESTE hinzufügen' }).click();
+  await expect(sw.locator('tr.rule').filter({ hasText: '192.168.10.80' })).toContainText('Erlauben (permit)');
+  await sw.getByRole('combobox', { name: 'Port 1' }).selectOption('GAESTE');
+  await expect(sw).toContainText('an Port 1');
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+});

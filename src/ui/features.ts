@@ -29,6 +29,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('device.pc', 'devices', 1),
   f('device.switch', 'devices', 1),
   f('device.router', 'devices', 1),
+  f('device.firewall', 'devices', 3),
   f('device.server', 'devices', 1),
   f('device.accesspoint', 'devices', 2),
   f('device.internet', 'devices', 2),
@@ -59,6 +60,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('net.staticNat', 'network', 4),
   f('net.cgnat', 'network', 4),
   f('net.firewall', 'network', 3),
+  f('net.acl', 'network', 4),
   f('net.vpn', 'network', 4),
   f('net.ipv6', 'network', 4),
   f('net.dsLite', 'network', 4),
@@ -136,7 +138,8 @@ export function usedFeatures(t: Topology): string[] {
     if (d.routingMode === 'auto') used.add('routing.auto');
     if (d.ipv6Auto || d.gateway6 || d.routes6?.length) used.add('net.ipv6');
     if (d.dsLite || d.aftr) used.add('net.dsLite');
-    if (d.firewall) used.add('net.firewall');
+    if (d.firewall && d.type !== 'firewall') used.add('net.firewall');
+    if (d.acls?.length) used.add('net.acl');
     if (d.vpn?.length) used.add('net.vpn');
     if (d.vlanNames?.length) used.add('net.vlan');
     if (d.wlan?.mesh) used.add('net.wlanMesh');
@@ -147,6 +150,7 @@ export function usedFeatures(t: Topology): string[] {
       if (i.trunk || (i.vlan && i.vlan !== 1)) used.add('net.vlan');
       if (i.nat) used.add('net.nat');
       if (i.dhcpRelay) used.add('net.dhcpRelay');
+      if (i.aclIn) used.add('net.acl');
       if (i.serial) used.add('medium.serial');
       if (i.cgnat) used.add('net.cgnat');
       if (i.sfp) used.add('medium.fiber');

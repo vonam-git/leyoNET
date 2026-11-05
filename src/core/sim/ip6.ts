@@ -287,7 +287,7 @@ export class Ip6Stack {
     if (this.#isEndpoint(device)) return routes;
 
     const mode = routingModeOf(device);
-    const auto = mode === 'auto' && (device.type === 'router' || device.type === 'l3switch');
+    const auto = mode === 'auto' && (device.type === 'router' || device.type === 'firewall' || device.type === 'l3switch');
     if (device.type === 'internet' || auto) {
       routes.push(...autoRoutes6(this.#ctx.topology(), device.id));
     }

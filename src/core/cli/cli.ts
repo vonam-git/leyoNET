@@ -47,7 +47,13 @@ import {
   setInterfaceIpv6,
   setOspf6,
   setRipng,
+  setAccessList,
+  setPortAccessList,
+  setFirewall,
+  firewallZone,
 } from '../model/topology';
+import { formatAclRule, formatFirewallRule, parseRule } from './rules';
+import type { FirewallConfig } from '../model/security';
 import { ipv6Links } from '../sim/ip6';
 import type { BgpConfig, CliConfig, Device, DeviceType, Ospf6Config, RipngConfig, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, Topology } from '../model/types';
 import { formatIp, maskToText, networkOf, parseIp, parseMask } from '../net/ipv4';
@@ -56,7 +62,7 @@ import { buildRoutes, decodeIface, logicalInterfaces, type Route } from '../net/
 import type { DeviceState } from '../sim/simulation';
 import { cliIfaceName, ifaceIdOf, parseIfaceName, usesPortNames } from './names';
 
-export type CliMode = 'user' | 'enable' | 'config' | 'if' | 'vlan' | 'line' | 'router-ospf' | 'router-rip' | 'router-bgp' | 'router-ospf6' | 'router-ripng';
+export type CliMode = 'user' | 'enable' | 'config' | 'if' | 'vlan' | 'line' | 'router-ospf' | 'router-rip' | 'router-bgp' | 'router-ospf6' | 'router-ripng' | 'acl';
 
 export interface CliSession {
   device: string;
@@ -65,6 +71,8 @@ export interface CliSession {
   targets?: number[];
   /** VLAN im VLAN-Modus. */
   vlan?: number;
+  /** Name der Zugriffsliste im ACL-Modus. */
+  acl?: string;
   /** Nächste Eingabe ist ein Passwort (verdeckt eingeben). */
   awaiting?: 'enable-password';
   /** Über SSH angemeldet (sonst Konsole). */
@@ -92,7 +100,7 @@ export interface CliOutput {
 
 /** Gerätetypen mit Befehlszeile. */
 export function hasCli(type: DeviceType): boolean {
-  return type === 'router' || type === 'switch' || type === 'l3switch';
+  return type === 'router' || type === 'firewall' || type === 'switch' || type === 'l3switch';
 }
 
 export function startSession(device: Device, remote = false): { session: CliSession; lines: string[] } {
@@ -130,6 +138,8 @@ export function prompt(topology: Topology, session: CliSession): string {
       return `${name}(config-ospf6)#`;
     case 'router-ripng':
       return `${name}(config-router)#`;
+    case 'acl':
+      return `${name}(config-ext-nacl)#`;
   }
 }
 
@@ -155,14 +165,14 @@ interface Command {
   run: Handler;
 }
 
-const ROUTERS: DeviceType[] = ['router'];
+const ROUTERS: DeviceType[] = ['router', 'firewall'];
 /** IPv6-Befehle: Router und Layer-3-Switch (dort auf den VLAN-Interfaces). */
-const ROUTERS6: DeviceType[] = ['router', 'l3switch'];
+const ROUTERS6: DeviceType[] = ['router', 'firewall', 'l3switch'];
 const SWITCHES: DeviceType[] = ['switch', 'l3switch'];
-const L3: DeviceType[] = ['router', 'l3switch'];
+const L3: DeviceType[] = ['router', 'firewall', 'l3switch'];
 const EXEC: CliMode[] = ['user', 'enable'];
 const ROUTER_MODES: CliMode[] = ['router-ospf', 'router-rip', 'router-bgp', 'router-ospf6', 'router-ripng'];
-const CONFIG_ALL: CliMode[] = ['config', 'if', 'vlan', 'line', ...ROUTER_MODES];
+const CONFIG_ALL: CliMode[] = ['config', 'if', 'vlan', 'line', 'acl', ...ROUTER_MODES];
 
 /** Kurze Erklärungen für Schlüsselwörter mitten in einem Befehl (für «?»). */
 const KEYWORD_HELP: Record<string, string> = {
@@ -238,6 +248,17 @@ const KEYWORD_HELP: Record<string, string> = {
   hdlc: 'Cisco HDLC',
   'address-family': 'Address family configuration',
   'exit-address-family': 'Leave the address family',
+  'access-list': 'Access list (ACL)',
+  'access-lists': 'Access lists (ACL) with hit counters',
+  'access-group': 'Apply an access list to this port',
+  extended: 'Extended access list (protocol, source, destination, port)',
+  permit: 'Let matching packets through',
+  deny: 'Drop matching packets',
+  remark: 'Comment',
+  firewall: 'Packet filter (firewall)',
+  rule: 'Firewall rule',
+  default: 'Action when no rule matches',
+  stateful: 'Let replies to allowed connections back in',
 };
 
 function ok(lines: string[] = []): Partial<CliOutput> {
@@ -276,6 +297,12 @@ function errorLine(error: TopologyError): string {
       return `% Invalid user name: ${p.name ?? ''}`;
     case 'passwordRequired':
       return '% Password required';
+    case 'invalidAclName':
+      return `% Invalid access list name: ${p.value ?? ''} (letters, digits, - and _)`;
+    case 'unknownAcl':
+      return `% Access list ${p.name ?? ''} not found`;
+    case 'tooMany':
+      return `% Too many entries (max. ${p.max ?? ''})`;
     default:
       return `% Error: ${error.code}`;
   }
@@ -352,6 +379,7 @@ function exitMode(session: CliSession): Partial<CliOutput> {
     case 'router-bgp':
     case 'router-ospf6':
     case 'router-ripng':
+    case 'acl':
       return { session: { device: session.device, mode: 'config', ...(session.remote ? { remote: true } : {}) } };
     case 'config':
       return { session: { device: session.device, mode: 'enable', ...(session.remote ? { remote: true } : {}) } };
@@ -442,7 +470,7 @@ const COMMANDS: Command[] = [
   },
   {
     modes: ['config'],
-    types: ['router'],
+    types: ROUTERS,
     syntax: 'no interface <iface>',
     help: 'Delete a subinterface',
     run: ({ args, device, env }) => {
@@ -717,7 +745,144 @@ const COMMANDS: Command[] = [
   { modes: ['if'], types: SWITCHES, syntax: 'switchport access vlan <vlan>', help: 'VLAN of this access port', run: (call) => forPorts(call, (t, p) => setPortVlan(t, call.device.id, p, Number(call.args[0]))) },
   { modes: ['if'], types: SWITCHES, syntax: 'no switchport access vlan', help: 'Back to VLAN 1', run: (call) => forPorts(call, (t, p) => setPortVlan(t, call.device.id, p, 1)) },
   { modes: ['if'], types: SWITCHES, syntax: 'spanning-tree portfast', help: 'Ports with end devices forward at once (always on here)', run: () => ok() },
+  // --- Zugriffslisten (Switches) ---------------------------------------------
+  { modes: EXEC, types: SWITCHES, syntax: 'show access-lists', help: 'Access lists with hit counters', run: ({ device, env }) => ok(showAccessLists(device, env)) },
+  { modes: EXEC, types: SWITCHES, syntax: 'show ip access-lists', help: 'Access lists with hit counters', run: ({ device, env }) => ok(showAccessLists(device, env)) },
+  { modes: ['config', 'acl'], types: SWITCHES, syntax: 'ip access-list extended <word>', help: 'Create or edit a named access list', run: (call) => enterAcl(call, call.args[0]!) },
+  {
+    modes: ['config'],
+    types: SWITCHES,
+    syntax: 'no ip access-list extended <word>',
+    help: 'Delete an access list',
+    run: ({ device, env, args }) => apply(setAccessList(env.topology, device.id, args[0]!, null)),
+  },
+  { modes: ['acl'], syntax: 'permit <text>', help: 'permit <ip|tcp|udp|icmp> <src> <dst> [eq <port>]', run: (call) => aclRule(call, `permit ${call.args[0]!}`) },
+  { modes: ['acl'], syntax: 'deny <text>', help: 'deny <ip|tcp|udp|icmp> <src> <dst> [eq <port>]', run: (call) => aclRule(call, `deny ${call.args[0]!}`) },
+  { modes: ['acl'], syntax: 'no <num>', help: 'Remove the entry with this sequence number', run: (call) => removeAclRule(call, Number(call.args[0])) },
+  { modes: ['acl'], syntax: 'remark <text>', help: 'Comment (not stored)', run: () => ok() },
+  { modes: ['if'], types: SWITCHES, syntax: 'ip access-group <word> in', help: 'Filter incoming packets on this port', run: (call) => forPorts(call, (t, p) => setPortAccessList(t, call.device.id, p, call.args[0]!)) },
+  { modes: ['if'], types: SWITCHES, syntax: 'no ip access-group <word> in', help: 'No access list on this port', run: (call) => forPorts(call, (t, p) => setPortAccessList(t, call.device.id, p, null)) },
+  { modes: ['if'], types: SWITCHES, syntax: 'no ip access-group', help: 'No access list on this port', run: (call) => forPorts(call, (t, p) => setPortAccessList(t, call.device.id, p, null)) },
+  // --- Firewall (Router und Firewall) -----------------------------------------
+  { modes: EXEC, types: ROUTERS, syntax: 'show firewall', help: 'Firewall rules with hit counters', run: ({ device, env }) => ok(showFirewall(device, env)) },
+  { modes: ['config'], types: ROUTERS, syntax: 'firewall default <word>', help: 'allow | deny when no rule matches', run: (call) => firewallDefault(call, call.args[0]!) },
+  { modes: ['config'], types: ROUTERS, syntax: 'firewall stateful', help: 'Replies to allowed connections come back by themselves', run: (call) => editFirewall(call, ({ stateful: _s, ...c }) => c) },
+  { modes: ['config'], types: ROUTERS, syntax: 'no firewall stateful', help: 'Stateless: replies need their own rule', run: (call) => editFirewall(call, (c) => ({ ...c, stateful: false })) },
+  {
+    modes: ['config'],
+    types: ROUTERS,
+    syntax: 'firewall rule <text>',
+    help: 'firewall rule [<pos>] allow|deny <ip|tcp|udp|icmp> <src> <dst> [port <n>] [in <iface>]',
+    run: (call) => firewallRule(call, call.args[0]!),
+  },
+  { modes: ['config'], types: ROUTERS, syntax: 'no firewall rule <num>', help: 'Remove rule number …', run: (call) => removeFirewallRule(call, Number(call.args[0])) },
+  { modes: ['config'], types: ROUTERS, syntax: 'no firewall', help: 'Remove the firewall (let everything through)', run: ({ device, env }) => apply(setFirewall(env.topology, device.id, null)) },
 ];
+
+// --- Zugriffslisten und Firewall ---------------------------------------------------
+
+function enterAcl(call: Call, name: string): Partial<CliOutput> {
+  const { device, env, session } = call;
+  const next: CliSession = { device: session.device, mode: 'acl', acl: name, ...(session.remote ? { remote: true } : {}) };
+  if (device.acls?.some((a) => a.name === name)) return { session: next };
+  const created = setAccessList(env.topology, device.id, name, []);
+  return created.ok ? { topology: created.value, session: next } : { lines: [errorLine(created.error)] };
+}
+
+function aclRule(call: Call, text: string): Partial<CliOutput> {
+  const { device, env, session } = call;
+  const acl = device.acls?.find((a) => a.name === session.acl);
+  if (!acl) return ok(['% Access list no longer exists']);
+  const parsed = parseRule(tokenize(text));
+  if (!parsed.ok) return ok([parsed.error]);
+  return apply(setAccessList(env.topology, device.id, acl.name, [...acl.rules, parsed.rule]));
+}
+
+function removeAclRule(call: Call, sequence: number): Partial<CliOutput> {
+  const { device, env, session } = call;
+  const acl = device.acls?.find((a) => a.name === session.acl);
+  if (!acl) return ok(['% Access list no longer exists']);
+  const index = sequence / 10 - 1;
+  if (!Number.isInteger(index) || !acl.rules[index]) return ok([`% No entry with sequence number ${sequence}`]);
+  return apply(setAccessList(env.topology, device.id, acl.name, acl.rules.filter((_, i) => i !== index)));
+}
+
+function showAccessLists(device: Device, env: CliEnv): string[] {
+  const acls = device.acls ?? [];
+  if (acls.length === 0) return ['(no access lists)'];
+  const lines: string[] = [];
+  for (const acl of acls) {
+    const live = env.state?.acls?.find((a) => a.name === acl.name);
+    const ports = device.interfaces.filter((i) => i.aclIn === acl.name).map((i) => cliIfaceName(device, i.index));
+    lines.push(`Extended IP access list ${acl.name}${ports.length ? `  (in: ${ports.join(', ')})` : ''}`);
+    acl.rules.forEach((rule, i) => lines.push(`    ${(i + 1) * 10} ${formatAclRule(rule)}${live ? ` (${live.hits[i] ?? 0} matches)` : ''}`));
+    lines.push(`    (implicit deny ip any any${live ? `, ${live.implicitDeny} matches` : ''})`);
+  }
+  const dangling = [...new Set(device.interfaces.map((i) => i.aclIn).filter((n): n is string => !!n && !acls.some((a) => a.name === n)))];
+  for (const name of dangling) lines.push(`% Access list ${name} is applied but does not exist (everything passes)`);
+  return lines;
+}
+
+/** Name nach «in»: Anschlussname (eth0, port1) oder bei der Firewall auch die Zone (wan, lan, dmz, opt1). */
+function ruleIface(device: Device) {
+  return (name: string): number | null => {
+    if (device.type === 'firewall') {
+      const zone = device.interfaces.find((i) => !i.sfpSlot && firewallZone(i.index).toLowerCase() === name.toLowerCase());
+      if (zone) return zone.index;
+    }
+    const ref = parseIfaceName(device, name);
+    return ref?.kind === 'port' ? ref.port : null;
+  };
+}
+
+function editFirewall(call: Call, change: (config: FirewallConfig) => FirewallConfig): Partial<CliOutput> {
+  const current = call.device.firewall ?? { rules: [], defaultAction: 'allow' as const };
+  return apply(setFirewall(call.env.topology, call.device.id, change(current)));
+}
+
+function firewallDefault(call: Call, word: string): Partial<CliOutput> {
+  const action = word.toLowerCase();
+  if (action !== 'allow' && action !== 'deny' && action !== 'permit') return ok(['% Expected allow or deny']);
+  return editFirewall(call, (c) => ({ ...c, defaultAction: action === 'deny' ? 'deny' : 'allow' }));
+}
+
+function firewallRule(call: Call, text: string): Partial<CliOutput> {
+  const tokens = tokenize(text);
+  // Optional zuerst die Position, an der die Regel eingefügt wird (1 = zuoberst).
+  const position = /^\d+$/.test(tokens[0] ?? '') ? Number(tokens.shift()) : null;
+  const parsed = parseRule(tokens, ruleIface(call.device));
+  if (!parsed.ok) return ok([parsed.error]);
+  return editFirewall(call, (c) => {
+    const at = position === null ? c.rules.length : Math.max(0, Math.min(c.rules.length, position - 1));
+    return { ...c, rules: [...c.rules.slice(0, at), parsed.rule, ...c.rules.slice(at)] };
+  });
+}
+
+function removeFirewallRule(call: Call, number: number): Partial<CliOutput> {
+  const rules = call.device.firewall?.rules ?? [];
+  if (!rules[number - 1]) return ok([`% No firewall rule ${number}`]);
+  return editFirewall(call, (c) => ({ ...c, rules: c.rules.filter((_, i) => i !== number - 1) }));
+}
+
+function firewallIfaceName(device: Device) {
+  return (index: number) => (device.type === 'firewall' ? `${cliIfaceName(device, index)} (${firewallZone(index)})` : cliIfaceName(device, index));
+}
+
+function showFirewall(device: Device, env: CliEnv): string[] {
+  const fw = device.firewall;
+  if (!fw) return ['Firewall: off (everything passes)'];
+  const live = env.state?.firewall;
+  const lines = [`Firewall: ${fw.stateful === false ? 'stateless' : 'stateful'}, default ${fw.defaultAction}`];
+  const name = firewallIfaceName(device);
+  lines.push(
+    ...table(
+      ['No', 'Action', 'Proto', 'Source', 'Destination', 'Port', 'In', ...(live ? ['Hits'] : [])],
+      fw.rules.map((r, i) => [String(i + 1), r.action, r.protocol, r.src, r.dst, r.port !== undefined ? String(r.port) : '-', r.iface !== undefined ? name(r.iface) : 'any', ...(live ? [String(live.hits[i] ?? 0)] : [])]),
+    ),
+  );
+  if (live) lines.push(`Default hits: ${live.defaultHits}  Blocked: ${live.blocked}  Connections: ${live.connections}`);
+  return lines;
+}
 
 // --- Hilfen für Routingprotokolle ------------------------------------------------
 
@@ -1448,6 +1613,7 @@ export function runningConfig(device: Device): string[] {
       if (device.stpPriority !== undefined) lines.push(`spanning-tree priority ${device.stpPriority}`);
     }
     for (const v of device.vlanNames ?? []) lines.push('!', `vlan ${v.vlan}`, ` name ${v.name}`);
+    for (const acl of device.acls ?? []) lines.push('!', `ip access-list extended ${acl.name}`, ...acl.rules.map((r) => ` ${formatAclRule(r)}`));
   }
   lines.push('!');
   for (const p of device.interfaces) {
@@ -1456,6 +1622,7 @@ export function runningConfig(device: Device): string[] {
     if (usesPortNames(device)) {
       if (p.trunk) lines.push(' switchport mode trunk');
       else if (p.vlan && p.vlan !== 1) lines.push(' switchport mode access', ` switchport access vlan ${p.vlan}`);
+      if (p.aclIn) lines.push(` ip access-group ${p.aclIn} in`);
     } else {
       if (p.ip && p.mask) lines.push(` ip address ${p.ip}/${parseMask(p.mask)}`);
       if (p.dhcpRelay) lines.push(` ip helper-address ${p.dhcpRelay}`);
@@ -1498,6 +1665,12 @@ export function runningConfig(device: Device): string[] {
   // Nur 1:1-NAT hat eine Entsprechung in der Befehlszeile; reines SNAT/DNAT wird im Formular eingestellt.
   for (const r of device.staticNat ?? []) lines.push(r.kind ? `! ${r.kind.toUpperCase()} ${r.inside} <-> ${r.outside} (Formular)` : `ip nat inside source static ${r.inside} ${r.outside}`);
   if (device.staticNat?.length) lines.push('!');
+  if (device.firewall && (device.type === 'router' || device.type === 'firewall')) {
+    lines.push(`firewall default ${device.firewall.defaultAction}`);
+    if (device.firewall.stateful === false) lines.push('no firewall stateful');
+    const name = (index: number) => cliIfaceName(device, index);
+    lines.push(...device.firewall.rules.map((r) => `firewall rule ${formatFirewallRule(r, name)}`), '!');
+  }
   const prefixOf = (n: RoutedNetwork) => `${n.network}/${parseMask(n.mask)}`;
   const common = (c: { passive?: number[]; defaultOriginate?: boolean; redistribute?: RedistributeSource[] }) => [
     ...(c.passive ?? []).map((i) => ` passive-interface ${cliIfaceName(device, i)}`),

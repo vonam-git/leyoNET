@@ -17,7 +17,7 @@
     dialog.showModal();
   });
 
-  const RACK_TYPES = new Set(['switch', 'l3switch', 'router', 'modem']);
+  const RACK_TYPES = new Set(['switch', 'l3switch', 'router', 'firewall', 'modem']);
   const floors = $derived(floorsOf(editor.topology));
   const byY = (a: Device, b: Device) => a.position.y - b.position.y || a.position.x - b.position.x;
   // Echte Racks von der Karte; nicht eingebaute Geräte pro Stockwerk in einem «freien» Rack.

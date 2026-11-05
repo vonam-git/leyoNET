@@ -50,6 +50,10 @@
       class="line"
       d="M-5 -5 L-12 -12 M-12 -7 V-12 H-7 M5 5 L12 12 M12 7 V12 H7 M5 -5 L12 -12 M7 -12 H12 V-7 M-5 5 L-12 12 M-7 12 H-12 V7"
     />
+  {:else if type === 'firewall'}
+    <!-- Firewall: Mauer aus versetzten Ziegeln, eigene Zeichnung. -->
+    <rect x="-21" y="-16" width="42" height="32" rx="3" />
+    <path class="line" d="M-21 -5.3 H21 M-21 5.3 H21 M-7 -16 V-5.3 M7 -16 V-5.3 M-14 -5.3 V5.3 M0 -5.3 V5.3 M14 -5.3 V5.3 M-7 5.3 V16 M7 5.3 V16" />
   {:else if type === 'cpe'}
     <!-- Internet-Box: Gehäuse in Hausform (Heimanschluss), Zugang oben, vier LAN-Buchsen unten. -->
     <path d="M-22 13 V-3 L0 -17 L22 -3 V13 Z" />

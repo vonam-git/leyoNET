@@ -78,6 +78,35 @@ Im Fenster **Erweitert … → Firewall** (Router, Internet-Box und Endgeräte, 
 
 **Zustandsbehaftet** (Standard): Antworten auf erlaubte Verbindungen kommen ohne eigene Regel zurück. Ein Router filtert, was er weiterleitet; ein Endgerät filtert, was bei ihm ankommt. In der Simulation zeigt der Reiter, wie oft jede Regel gegriffen hat, und die Konsole des Geräts meldet blockierte Pakete. Siehe Demo «Firewall mit DMZ».
 
+**Firewall als Gerät** (Shop → Router, ab Profil 3): Statt den Router filtern zu lassen, setzt du eine eigene Firewall zwischen Provider und Netz. Ihre Anschlüsse heissen nach Zonen: **eth0 (WAN)**, **eth1 (LAN)**, **eth2 (DMZ)**, ab eth3 **OPT**. Ab Werk ist sie zustandsbehaftet, lässt alles von innen nach aussen durch und sperrt neue Verbindungen vom WAN. Mit denselben Regeln schützt sie auch sich selbst: Vom WAN antwortet sie nicht auf Ping oder SSH. Für einen Webserver in der DMZ ergänzt du z.B. «Erlauben TCP 80 zum Webserver, Eingang WAN» zuoberst. Sonst kann sie alles, was ein Router kann (NAT, Portweiterleitung, VPN, Routing). Demo «Firewall-Gerät und ACL».
+
+Auf der **Befehlszeile** von Router und Firewall:
+
+```
+firewall default deny
+firewall rule 1 allow tcp any 192.168.2.80 port 80 in wan
+firewall rule deny icmp any any in dmz
+no firewall rule 3
+no firewall stateful        ! zustandslos
+show firewall               ! Regeln mit Trefferzählern
+```
+
+## Zugriffslisten (ACL) auf Switches
+
+Ab Profil 4 (oder einzeln «Zugriffslisten (ACL)») hat jeder Switch im Fenster **Erweitert … → ACL** benannte Zugriffslisten. Eine Liste wirkt erst, wenn sie einem Port zugewiesen ist; dann prüft der Switch jedes IP-Paket, das an diesem Port **hereinkommt**. Die erste passende Regel gilt, am Ende steht ein **implizites Verweigern**. Anders als die Firewall ist die ACL **zustandslos**: Antworten prüft der Switch am Port, über den sie hereinkommen. ARP, Spanning Tree und IPv6 Neighbor Discovery gehen immer durch. In der Simulation zählt der Reiter die Treffer, die Konsole des Switches meldet verworfene Pakete.
+
+```
+ip access-list extended GAESTE
+ permit udp any any eq 53
+ permit tcp 192.168.10.0 0.0.0.255 host 192.168.10.80 eq 80
+ deny ip any any
+!
+interface port1
+ ip access-group GAESTE in
+```
+
+Adressen: `any`, `host 192.168.10.80`, Netz mit Wildcard-Maske (`192.168.10.0 0.0.0.255`) oder Präfix (`192.168.10.0/24`). `no 20` löscht im ACL-Modus den Eintrag 20, `show access-lists` zeigt Listen, Ports und Treffer.
+
 ## VPN zwischen zwei Standorten
 
 Ein **Site-to-Site-VPN** (ab Profil 4) verbindet zwei private Netze über das Internet. Im Fenster **Erweitert … → VPN** beider Router trägst du je einen Tunnel ein:
@@ -111,6 +140,7 @@ Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routi
 | Server | DHCP, DNS, Web und Mail. Im Shop auch fertig eingerichtet erhältlich. |
 | Switch, L3-Switch | Verbinden Geräte im selben Netz; der L3-Switch routet zusätzlich zwischen VLANs. |
 | Router | Verbindet Netze. Ports wahlweise Ethernet oder seriell. NAT, OSPF, RIP, BGP; für IPv6 OSPFv3 und RIPng. |
+| Firewall | Routet wie ein Router, filtert ab Werk: Zonen WAN, LAN, DMZ, OPT; von innen nach aussen offen, vom WAN gesperrt. |
 | Access Point | WLAN-Funkzelle. |
 | Modem | Kabel, Glasfaser, Mobilfunk, ADSL oder VDSL zum Provider. |
 | Internet-Box (CPE) | Wie zu Hause: Modem, Router mit NAT, DHCP-Server und vier LAN-Buchsen in einem Gerät. Ab Werk LAN 192.168.1.1/24; einzutragen sind nur WAN-Adresse und Gateway des Providers. |

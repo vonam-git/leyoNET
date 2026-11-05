@@ -22,7 +22,7 @@ import type { FirewallState } from './firewall';
 import type { VpnState } from './vpn';
 import { EventQueue } from './queue';
 import { L3SwitchNode } from './l3switch';
-import { ModemNode, SwitchNode, type MacEntry, type ModemState, type StormState, type StpState } from './switch';
+import { ModemNode, SwitchNode, type AclState, type MacEntry, type ModemState, type StormState, type StpState } from './switch';
 import { CpeNode } from './cpe';
 
 /** Übertragungszeit pro Kabel in Millisekunden (virtuelle Zeit). */
@@ -84,6 +84,8 @@ export interface DeviceState {
   stp?: StpState;
   /** Switch im Broadcast-Sturm (Schleife ohne Spanning Tree). */
   storm?: StormState;
+  /** Switch: Treffer der Zugriffslisten (ACL). */
+  acls?: AclState[];
   /** Client-Gruppe: Adressen der einzelnen Rechner. */
   group?: GroupMemberState[];
   /** Modem: Zustand der Zugangsleitung. */
@@ -339,7 +341,7 @@ export class Simulation {
           ? new ModemNode(ctx)
           : device.type === 'cpe'
             ? new CpeNode(ctx)
-          : device.type === 'router'
+          : device.type === 'router' || device.type === 'firewall'
             ? new RouterNode(ctx)
             : device.type === 'internet'
               ? new InternetNode(ctx)

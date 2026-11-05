@@ -4,10 +4,10 @@ import { isValidPath } from '../net/http';
 import { checkMailAccount, checkMailbox } from '../net/mail';
 import { checkHostConfig, maskToText, parseIp, parseMask, type HostConfigInput } from '../net/ipv4';
 import { checkStaticRoute, decodeIface, normalizeRoute } from '../net/routing';
-import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
+import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, isRouterLike, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
 import { MIN_SIGNAL, portMedium, signalBetween } from './links';
 import { macFor, normalizeMac } from './mac';
-import { MAX_VPN_TUNNELS, checkFirewall, checkVpnTunnel, type FirewallConfig, type VpnTunnel } from './security';
+import { MAX_ACLS, MAX_VPN_TUNNELS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type VpnTunnel } from './security';
 import { formatCidr6, formatIp6, isLinkLocal6, isLoopback6, isMulticast6, isUnspecified6, networkOf6, parseCidr6, parseIp6 } from '../net/ipv6';
 import type {
   Cable,
@@ -89,6 +89,9 @@ export type ErrorCode =
   | 'tooMany'
   | 'vpnKeyLength'
   | 'notFirewallCapable'
+  | 'invalidAclName'
+  | 'notAclCapable'
+  | 'unknownAcl'
   | 'ipv6Link'
   | 'unknownRoute'
   | 'networkHasHostBits'
@@ -271,7 +274,7 @@ export interface DeviceOptions {
 
 /** Router und CPE können Adressen übersetzen (NAT, Portweiterleitung). */
 export function natCapable(device: Device): boolean {
-  return device.type === 'router' || device.type === 'cpe';
+  return isRouterLike(device.type) || device.type === 'cpe';
 }
 
 /**
@@ -284,6 +287,21 @@ function cpeDefaults(device: Device): Partial<Device> {
     interfaces: device.interfaces.map((i) => (i.index === 0 ? { ...i, nat: true } : i.index === 1 ? { ...i, ip: '192.168.1.1', mask: '255.255.255.0' } : i)),
     dhcpServer: { start: '192.168.1.100', end: '192.168.1.199', gateway: '192.168.1.1', dns: '192.168.1.1', leaseTime: 3600 },
   };
+}
+
+/**
+ * Firewall ab Werk: zustandsbehaftet, von innen (LAN, DMZ, OPT) nach aussen
+ * erlaubt, alles andere gesperrt. Antworten kommen dank Zustand zurück; neue
+ * Verbindungen vom WAN brauchen eine eigene Regel.
+ */
+export function firewallDefaults(device: Pick<Device, 'interfaces'>): FirewallConfig {
+  const inside = device.interfaces.filter((i) => i.index > 0 && !i.sfpSlot && !i.serial);
+  return { rules: inside.map((i) => ({ action: 'allow', protocol: 'any', src: 'any', dst: 'any', iface: i.index })), defaultAction: 'deny' };
+}
+
+/** Zone eines Firewall-Anschlusses: 0 WAN, 1 LAN, 2 DMZ, weitere OPT1, OPT2 … */
+export function firewallZone(index: number): string {
+  return index === 0 ? 'WAN' : index === 1 ? 'LAN' : index === 2 ? 'DMZ' : `OPT${index - 2}`;
 }
 
 /**
@@ -332,6 +350,7 @@ export function addDevice(
   }
   if ((type === 'modem' || type === 'cpe') && options.modem) device.modem = { kind: options.modem };
   if (type === 'cpe') Object.assign(device, cpeDefaults(device));
+  if (type === 'firewall') device.firewall = firewallDefaults(device);
   return ok({ topology: { ...t, devices: [...t.devices, device], nextId: seq + 1 }, id: device.id });
 }
 
@@ -717,6 +736,11 @@ function remapPorts(t: Topology, id: string, interfaces: NetInterface[], mapping
       const next: Device = { ...d, interfaces };
       if (d.subinterfaces) next.subinterfaces = d.subinterfaces.map((si) => ({ ...si, parent: map(si.parent) }));
       if (d.routes) next.routes = d.routes.map((r) => (r.iface !== undefined && decodeIface(r.iface).kind === 'port' ? { ...r, iface: map(r.iface) } : r));
+      // Firewall-Regeln für einen Anschluss folgen ihm; fällt er weg, fällt auch die Regel weg.
+      if (d.firewall) {
+        const rules = d.firewall.rules.filter((r) => r.iface === undefined || mapping.has(r.iface)).map((r) => (r.iface === undefined ? r : { ...r, iface: map(r.iface) }));
+        next.firewall = { ...d.firewall, rules };
+      }
       return next;
     }),
     cables: t.cables.map((c) => ({
@@ -878,7 +902,7 @@ const validVlan = (vlan: number) => Number.isInteger(vlan) && vlan >= 1 && vlan 
 export function setSubinterface(t: Topology, id: string, parent: number, vlan: number, ip: string, mask: string): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  if (device.type !== 'router') return fail('notARouter');
+  if (!isRouterLike(device.type)) return fail('notARouter');
   if (!device.interfaces[parent]) return fail('unknownInterface');
   if (!validVlan(vlan)) return { ok: false, error: { code: 'invalidVlan', field: 'vlan' } };
   const issue = checkAddress(ip, mask);
@@ -1761,7 +1785,7 @@ export function setAftr(t: Topology, id: string, enabled: boolean): Result<Topol
 
 /** Geräte mit Firewall: Router, Internet-Box und Endgeräte (ausser Client-Gruppen). */
 export function canFirewall(type: DeviceType): boolean {
-  return type === 'router' || type === 'cpe' || (DEVICE_SPECS[type].role === 'endpoint' && type !== 'clientgroup');
+  return isRouterLike(type) || type === 'cpe' || (DEVICE_SPECS[type].role === 'endpoint' && type !== 'clientgroup');
 }
 
 /** Firewall eines Geräts setzen (ganze Konfiguration); null = keine Firewall. */
@@ -1775,10 +1799,48 @@ export function setFirewall(t: Topology, id: string, config: FirewallConfig | nu
   return ok(updateDevice(t, id, (d) => ({ ...d, firewall: checked.value })));
 }
 
+/** Geräte mit Zugriffslisten (ACL) an den Ports: Switches. */
+export function canAccessList(type: DeviceType): boolean {
+  return isSwitchType(type);
+}
+
+/** Zugriffsliste anlegen oder ersetzen (gleicher Name); `rules: null` löscht sie. Zuweisungen an Ports bleiben stehen. */
+export function setAccessList(t: Topology, id: string, name: string, rules: AccessList['rules'] | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canAccessList(device.type)) return fail('notAclCapable');
+  const others = (device.acls ?? []).filter((a) => a.name !== name);
+  if (rules === null) {
+    if (others.length === (device.acls ?? []).length) return fail('unknownAcl', { name });
+    return ok(updateDevice(t, id, (d) => (others.length ? { ...d, acls: others } : without(d, 'acls'))));
+  }
+  const checked = checkAccessList({ name, rules });
+  if (!checked.ok) return { ok: false, error: checked.error };
+  const exists = others.length !== (device.acls ?? []).length;
+  if (!exists && others.length >= MAX_ACLS) return fail('tooMany', { max: MAX_ACLS });
+  const acls = exists ? (device.acls ?? []).map((a) => (a.name === name ? checked.value : a)) : [...others, checked.value];
+  return ok(updateDevice(t, id, (d) => ({ ...d, acls })));
+}
+
+/** Zugriffsliste einem Port für eingehende Pakete zuweisen; null entfernt die Zuweisung. */
+export function setPortAccessList(t: Topology, id: string, iface: number, name: string | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canAccessList(device.type)) return fail('notAclCapable');
+  if (!device.interfaces[iface]) return fail('unknownInterface');
+  if (name !== null && !/^[A-Za-z0-9_-]{1,32}$/.test(name)) return { ok: false, error: { code: 'invalidAclName', field: 'name', params: { value: name.slice(0, 40) } } };
+  return ok(
+    updateDevice(t, id, (d) => ({
+      ...d,
+      interfaces: d.interfaces.map((i) => (i.index !== iface ? i : name === null ? without(i, 'aclIn') : { ...i, aclIn: name })),
+    })),
+  );
+}
+
 export function addVpnTunnel(t: Topology, id: string, tunnel: VpnTunnel): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  if (device.type !== 'router') return fail('notARouter');
+  if (!isRouterLike(device.type)) return fail('notARouter');
   if ((device.vpn?.length ?? 0) >= MAX_VPN_TUNNELS) return fail('tooMany', { max: MAX_VPN_TUNNELS });
   const checked = checkVpnTunnel(tunnel, device.vpn ?? []);
   if (!checked.ok) return { ok: false, error: checked.error };

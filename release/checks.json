@@ -1,6 +1,6 @@
 {
   "version": "1.1.0",
-  "date": "2026-11-05T20:17:18.904Z",
+  "date": "2026-11-05T20:35:29.479Z",
   "checks": [
     {
       "id": "privacy.noExternal",
@@ -120,7 +120,7 @@
       "id": "standards.prices",
       "category": "standards",
       "status": "pass",
-      "detail": "35 Richtpreise im plausiblen Bereich, zuletzt am 2026-11-01 mit dem Markt verglichen."
+      "detail": "37 Richtpreise im plausiblen Bereich, zuletzt am 2026-11-01 mit dem Markt verglichen."
     }
   ]
 }

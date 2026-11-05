@@ -1,5 +1,5 @@
-import { matchesAddress, type FirewallConfig, type FirewallRule } from '../model/security';
-import type { Ipv4Packet } from './frames';
+import { matchesAddress, type AccessList, type FirewallConfig, type FirewallRule } from '../model/security';
+import type { EthernetFrame, Ipv4Packet } from './frames';
 import type { NodeContext } from './simulation';
 
 /**
@@ -90,7 +90,9 @@ export class Firewall {
     const flow = flowOf(packet);
     const now = this.ctx.now;
     if (config.stateful !== false) {
-      const reply = this.#connections.get(reverseKey(flow));
+      // Ein Echo Request ist nie die Antwort auf eine Verbindung (gleiche ICMP-Kennung in Gegenrichtung).
+      const request = packet.payload.kind === 'icmp' && packet.payload.type === 'echoRequest';
+      const reply = request ? undefined : this.#connections.get(reverseKey(flow));
       if (reply !== undefined && reply > now) {
         this.#connections.set(reverseKey(flow), now + CONNECTION_TIMEOUT);
         return true;
@@ -128,4 +130,28 @@ export class Firewall {
     const now = this.ctx.now;
     return { hits: [...this.#hits], defaultHits: this.#defaultHits, blocked: this.#blocked, connections: [...this.#connections.values()].filter((e) => e > now).length };
   }
+}
+
+/**
+ * Zugriffsliste (ACL) eines Switch-Ports: zustandslos, erste passende Regel
+ * gilt, sonst implizites «deny». Liefert null, wenn der Rahmen nicht der ACL
+ * unterliegt (kein IP, ARP, Spanning Tree, IPv6 Neighbor Discovery, RA, DHCPv6-Steuerung
+ * über ICMPv6), sonst die Nummer der passenden Regel (-1 = implizites deny) und das Ergebnis.
+ */
+export function aclVerdict(acl: AccessList, frame: EthernetFrame): { allowed: boolean; rule: number; what: string; src: string } | null {
+  const p = frame.payload;
+  let flow: Flow;
+  if (p.kind === 'ipv4') flow = flowOf(p);
+  else if (p.kind === 'ipv6') {
+    const q = p.payload;
+    if (q.kind === 'icmpv6') {
+      if (q.type !== 'echoRequest' && q.type !== 'echoReply' && q.type !== 'destUnreachable' && q.type !== 'timeExceeded') return null;
+      flow = { protocol: 'icmp', src: p.src, dst: p.dst, srcPort: q.id, dstPort: q.id };
+    } else if (q.kind === 'tcp' || q.kind === 'udp') flow = { protocol: q.kind, src: p.src, dst: p.dst, srcPort: q.srcPort, dstPort: q.dstPort };
+    else flow = { protocol: 'other', src: p.src, dst: p.dst, srcPort: 0, dstPort: 0 };
+  } else return null;
+  const rule = acl.rules.findIndex((r) => ruleMatches(r, flow, -1));
+  const allowed = rule >= 0 && acl.rules[rule]!.action === 'allow';
+  const what = flow.protocol === 'tcp' || flow.protocol === 'udp' ? `${flow.protocol.toUpperCase()} ${flow.dst}:${flow.dstPort}` : `${flow.protocol.toUpperCase()} ${flow.dst}`;
+  return { allowed, rule, what, src: flow.src };
 }

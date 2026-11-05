@@ -23,6 +23,9 @@ export const PRICES = {
   routerEth: 60,
   routerSerial: 250,
   routerSfp: 50,
+  /** Firewall-Appliance für KMU/Schule (Grundpreis, ohne Lizenzabo), dazu je Ethernet-Port. */
+  firewallBase: 650,
+  firewallPort: 40,
   accesspoint: 320,
   rack: 900,
   modem: { cable: 180, fiber: 120, mobile: 280, adsl: 60, vdsl: 110 } as Record<ModemKind, number>,
@@ -61,6 +64,8 @@ export function devicePrice(device: Pick<Device, 'type' | 'interfaces' | 'varian
       return PRICES.l3Base + copper * PRICES.l3Port + slots * PRICES.l3Sfp;
     case 'router':
       return PRICES.routerBase + copper * PRICES.routerEth + serial * PRICES.routerSerial + slots * PRICES.routerSfp;
+    case 'firewall':
+      return PRICES.firewallBase + copper * PRICES.firewallPort;
     case 'accesspoint':
       return PRICES.accesspoint;
     case 'modem':

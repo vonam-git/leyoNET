@@ -1,0 +1,317 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "pc",
+        "name": "Aussen",
+        "position": {
+          "x": 120,
+          "y": 120
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "ip": "203.0.113.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "203.0.113.1"
+      },
+      {
+        "id": "d2",
+        "type": "firewall",
+        "name": "Firewall",
+        "position": {
+          "x": 380,
+          "y": 120
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "203.0.113.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:02:01",
+            "ip": "192.168.10.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:02:02",
+            "ip": "192.168.20.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:02:03"
+          }
+        ],
+        "firewall": {
+          "rules": [
+            {
+              "action": "allow",
+              "protocol": "tcp",
+              "src": "any",
+              "dst": "192.168.20.80",
+              "port": 80,
+              "iface": 0
+            },
+            {
+              "action": "allow",
+              "protocol": "any",
+              "src": "any",
+              "dst": "any",
+              "iface": 1
+            },
+            {
+              "action": "allow",
+              "protocol": "any",
+              "src": "any",
+              "dst": "any",
+              "iface": 2
+            },
+            {
+              "action": "allow",
+              "protocol": "any",
+              "src": "any",
+              "dst": "any",
+              "iface": 3
+            }
+          ],
+          "defaultAction": "deny"
+        }
+      },
+      {
+        "id": "d3",
+        "type": "switch",
+        "name": "Switch LAN",
+        "position": {
+          "x": 380,
+          "y": 320
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:03:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:03:02",
+            "aclIn": "GAESTE",
+            "description": "Gaeste"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:03:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:03:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:03:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:03:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:03:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:03:08",
+            "sfpSlot": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:03:09",
+            "sfpSlot": true
+          }
+        ],
+        "acls": [
+          {
+            "name": "GAESTE",
+            "rules": [
+              {
+                "action": "allow",
+                "protocol": "tcp",
+                "src": "192.168.10.0/24",
+                "dst": "192.168.20.80",
+                "port": 80
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "d4",
+        "type": "pc",
+        "name": "Büro-PC",
+        "position": {
+          "x": 220,
+          "y": 470
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ip": "192.168.10.11",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.10.1"
+      },
+      {
+        "id": "d5",
+        "type": "pc",
+        "name": "Gast-Notebook",
+        "position": {
+          "x": 540,
+          "y": 470
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ip": "192.168.10.50",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.10.1"
+      },
+      {
+        "id": "d6",
+        "type": "pc",
+        "name": "Webserver",
+        "position": {
+          "x": 640,
+          "y": 120
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:06:00",
+            "ip": "192.168.20.80",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.20.1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Webserver in der DMZ</h1><p>Erreichbar von aussen und für Gäste, nur über HTTP.</p>"
+            }
+          ]
+        }
+      }
+    ],
+    "cables": [
+      {
+        "id": "c7",
+        "a": {
+          "device": "d2",
+          "iface": 0
+        },
+        "b": {
+          "device": "d1",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c8",
+        "a": {
+          "device": "d2",
+          "iface": 1
+        },
+        "b": {
+          "device": "d3",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c9",
+        "a": {
+          "device": "d2",
+          "iface": 2
+        },
+        "b": {
+          "device": "d6",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c10",
+        "a": {
+          "device": "d4",
+          "iface": 0
+        },
+        "b": {
+          "device": "d3",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c11",
+        "a": {
+          "device": "d5",
+          "iface": 0
+        },
+        "b": {
+          "device": "d3",
+          "iface": 2
+        }
+      }
+    ],
+    "nextId": 15,
+    "areas": [
+      {
+        "id": "a12",
+        "title": "WAN 203.0.113.0/24",
+        "color": "blue",
+        "x": 40,
+        "y": 40,
+        "width": 180,
+        "height": 170,
+        "network": "203.0.113.0/24"
+      },
+      {
+        "id": "a13",
+        "title": "DMZ 192.168.20.0/24",
+        "color": "orange",
+        "x": 560,
+        "y": 40,
+        "width": 180,
+        "height": 170,
+        "network": "192.168.20.0/24"
+      },
+      {
+        "id": "a14",
+        "title": "LAN 192.168.10.0/24",
+        "color": "green",
+        "x": 140,
+        "y": 250,
+        "width": 500,
+        "height": 300,
+        "network": "192.168.10.0/24"
+      }
+    ]
+  },
+  "configuration": {}
+}

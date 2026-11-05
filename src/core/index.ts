@@ -34,6 +34,7 @@ export { COMMANDS } from './sim/commands';
 export { MAC_TTL, type MacEntry, type StpState } from './sim/switch';
 export * from './cli/cli';
 export * from './cli/names';
+export * from './cli/rules';
 export { NAT_TIMEOUT, type NatEntry } from './sim/ip';
 export * from './model/costs';
 export * from './net/dynamic';

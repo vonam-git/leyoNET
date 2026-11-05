@@ -5,6 +5,14 @@ import { ACCESS_PROFILES, nextSteps, stepIndex } from './access';
 import { toLink, wlanRun, wlanStepIndex, wlanSteps } from './wlan';
 import { BROADCAST_MAC, STP_MAC, type EthernetFrame, type LinkControl, type StpBpdu } from './frames';
 import type { NodeContext, SimNode } from './simulation';
+import { aclVerdict } from './firewall';
+
+/** Zähler einer Zugriffsliste: Treffer je Regel, implizites deny. */
+export interface AclState {
+  name: string;
+  hits: number[];
+  implicitDeny: number;
+}
 
 /** Lebensdauer eines gelernten Eintrags (5 Minuten virtuelle Zeit). */
 export const MAC_TTL = 300_000;
@@ -112,6 +120,7 @@ export class SwitchNode implements SimNode {
   #stormSince: number | null = null;
   #lastLoop = 0;
   #seen = new WeakMap<object, number>();
+  #aclHits = new Map<string, { rules: object; hits: number[]; implicitDeny: number }>();
 
   constructor(private readonly ctx: NodeContext) {}
 
@@ -312,6 +321,7 @@ export class SwitchNode implements SimNode {
     }
     this.#table.set(`${vlan}|${frame.src}`, { mac: frame.src, port: inPort, vlan, expires: now + MAC_TTL });
     if (inState === 'learning') return;
+    if (!this.#aclAllows(inPort, frame)) return;
 
     // Layer-3-Switch: Rahmen an die eigene SVI gehen nach oben, Broadcasts und
     // Multicasts (z.B. IPv6 Neighbor Discovery, DHCPv6) zusätzlich; die SVI prüft selbst, ob sie die Gruppe hört.
@@ -331,6 +341,35 @@ export class SwitchNode implements SimNode {
       if (port.index === inPort || !this.#member(port.index, vlan) || this.#state(port.index) !== 'forwarding') continue;
       this.#send(port.index, frame, vlan);
     }
+  }
+
+  /** Zugriffsliste am Eingangsport prüfen («ip access-group NAME in»). Fehlt die Liste, geht alles durch. */
+  #aclAllows(inPort: number, frame: EthernetFrame): boolean {
+    const device = this.#device;
+    const name = device?.interfaces[inPort]?.aclIn;
+    if (!name) return true;
+    const acl = device?.acls?.find((a) => a.name === name);
+    if (!acl) return true;
+    const verdict = aclVerdict(acl, frame);
+    if (!verdict) return true;
+    let counter = this.#aclHits.get(name);
+    if (!counter || counter.rules !== acl.rules) {
+      counter = { rules: acl.rules, hits: acl.rules.map(() => 0), implicitDeny: 0 };
+      this.#aclHits.set(name, counter);
+    }
+    if (verdict.rule >= 0) counter.hits[verdict.rule] = (counter.hits[verdict.rule] ?? 0) + 1;
+    else counter.implicitDeny++;
+    if (!verdict.allowed) this.ctx.print('acl.denied', { acl: name, port: inPort + 1, what: verdict.what, src: verdict.src, rule: verdict.rule >= 0 ? String(verdict.rule + 1) : 'deny' });
+    return verdict.allowed;
+  }
+
+  #aclState(): AclState[] {
+    const device = this.#device;
+    return (device?.acls ?? []).map((acl) => {
+      const c = this.#aclHits.get(acl.name);
+      const fresh = c && c.rules === acl.rules;
+      return { name: acl.name, hits: fresh ? [...c.hits] : acl.rules.map(() => 0), implicitDeny: fresh ? c.implicitDeny : 0 };
+    });
   }
 
   /** Access Point: Anmeldung eines Clients beantworten (Probe, Authentication, Association, 4-Way-Handshake). */
@@ -373,13 +412,15 @@ export class SwitchNode implements SimNode {
       .filter((e) => e.expires > now && this.ctx.isConnected(e.port))
       .sort((a, b) => a.vlan - b.vlan || a.port - b.port || a.mac.localeCompare(b.mac));
     const storm = this.storm;
-    if (!this.#stp) return { macTable, ...(storm ? { storm } : {}) };
+    const acls = this.#aclState();
+    const extra = { ...(storm ? { storm } : {}), ...(acls.length ? { acls } : {}) };
+    if (!this.#stp) return { macTable, ...extra };
     const device = this.#device;
     const ports = (device?.interfaces ?? [])
       .filter((p) => this.ctx.isConnected(p.index))
       .map((p) => ({ port: p.index, role: this.#roles.get(p.index) ?? 'designated', state: this.#state(p.index) }));
     const stp: StpState = { bridgeId: this.#bridgeId(), rootId: this.#rootId || this.#bridgeId(), rootPort: this.#rootPort, rootCost: this.#rootCost, ports };
-    return { macTable, stp, ...(storm ? { storm } : {}) };
+    return { macTable, stp, ...extra };
   }
 }
 

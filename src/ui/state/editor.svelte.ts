@@ -79,6 +79,9 @@ import {
   setProjectTitle,
   setIpMode,
   setFirewall,
+  setAccessList,
+  setPortAccessList,
+  type FirewallRule,
   addVpnTunnel,
   removeVpnTunnel,
   type FirewallConfig,
@@ -985,6 +988,15 @@ class Editor {
 
   setFirewall(id: string, config: FirewallConfig | null): TopologyError | null {
     return this.#applyForm(setFirewall(this.topology, id, config));
+  }
+
+  /** Zugriffsliste eines Switches anlegen/ersetzen; `rules: null` löscht sie. */
+  setAccessList(id: string, name: string, rules: FirewallRule[] | null): TopologyError | null {
+    return this.#applyForm(setAccessList(this.topology, id, name, rules));
+  }
+
+  setPortAccessList(id: string, iface: number, name: string | null): TopologyError | null {
+    return this.#applyForm(setPortAccessList(this.topology, id, iface, name));
   }
 
   addVpnTunnel(id: string, tunnel: VpnTunnel): TopologyError | null {

@@ -69,7 +69,7 @@ export function parseIfaceName(device: Device, raw: string): ParsedIface | null 
   if (n === null || device.interfaces[n]?.serial) return null;
   if (m[2] === undefined) return { kind: 'port', port: n };
   const v = Number(m[2]);
-  return device.type === 'router' && v >= 1 && v <= 4094 ? { kind: 'sub', port: n, vlan: v } : null;
+  return (device.type === 'router' || device.type === 'firewall') && v >= 1 && v <= 4094 ? { kind: 'sub', port: n, vlan: v } : null;
 }
 
 export function ifaceIdOf(ref: ParsedIface): number {

@@ -17,6 +17,7 @@ export const DEVICE_TYPES: readonly DeviceType[] = [
   'switch',
   'l3switch',
   'router',
+  'firewall',
   'accesspoint',
   'modem',
   'cpe',
@@ -35,6 +36,8 @@ export const DEVICE_SPECS: Record<DeviceType, DeviceSpec> = {
   switch: { role: 'distribution', sfpSlots: 2, defaultInterfaces: 8, minInterfaces: 2, maxInterfaces: 24 },
   l3switch: { role: 'distribution', sfpSlots: 4, defaultInterfaces: 8, minInterfaces: 2, maxInterfaces: 48 },
   router: { role: 'routing', sfpSlots: 1, defaultInterfaces: 2, minInterfaces: 2, maxInterfaces: 8 },
+  // Firewall: Anschluss 0 ist WAN, 1 LAN, 2 DMZ, weitere OPT. Routet wie ein Router, filtert standardmässig.
+  firewall: { role: 'routing', defaultInterfaces: 4, minInterfaces: 2, maxInterfaces: 8 },
   // Anschluss 0 ist der LAN-Port (Kabel), alle weiteren sind Funkverbindungen.
   accesspoint: { role: 'distribution', defaultInterfaces: 9, minInterfaces: 3, maxInterfaces: 33 },
   modem: { role: 'routing', defaultInterfaces: 2, minInterfaces: 2, maxInterfaces: 2 },
@@ -47,9 +50,14 @@ export function isDeviceType(value: unknown): value is DeviceType {
   return typeof value === 'string' && (DEVICE_TYPES as readonly string[]).includes(value);
 }
 
-/** Router und Internet leiten IP-Pakete weiter und haben Routen, Interfaces mit Adressen usw. */
+/** Router, Firewall und Internet leiten IP-Pakete weiter und haben Routen, Interfaces mit Adressen usw. */
 export function isRouterType(type: DeviceType): boolean {
-  return type === 'router' || type === 'internet';
+  return type === 'router' || type === 'firewall' || type === 'internet';
+}
+
+/** Router und Firewall: voller Funktionsumfang eines Routers (NAT, VPN, Relay, Subinterfaces, Befehlszeile). */
+export function isRouterLike(type: DeviceType): boolean {
+  return type === 'router' || type === 'firewall';
 }
 
 /** Switches im engeren Sinn: lernen MAC-Adressen, kennen VLANs und Spanning Tree. */
@@ -64,7 +72,7 @@ export function hasRoutingTable(type: DeviceType): boolean {
 
 /** Geräte mit wählbarer Routing-Art (automatisch, statisch, dynamisch). */
 export function canAutoRoute(type: DeviceType): boolean {
-  return type === 'router' || type === 'l3switch';
+  return isRouterLike(type) || type === 'l3switch';
 }
 
 /** Wirksame Routing-Art; ohne Angabe wie bisher: dynamisch, sobald ein Protokoll eingerichtet ist. */
@@ -76,7 +84,7 @@ export function routingModeOf(device: Device): RoutingMode {
 
 /** Geräte, die in ein Rack eingebaut werden können. */
 export function isRackable(type: DeviceType): boolean {
-  return type === 'switch' || type === 'l3switch' || type === 'router' || type === 'modem' || type === 'server';
+  return type === 'switch' || type === 'l3switch' || isRouterLike(type) || type === 'modem' || type === 'server';
 }
 
 /** Endgeräte mit Diensten (DHCP, DNS, Web, Mail): Server, und Rechner als Kompromiss für einfache Netze. */
@@ -91,5 +99,5 @@ export function isWifiCapable(type: DeviceType): boolean {
 
 /** Geräte mit dynamischem Routing (OSPF, BGP, RIP). */
 export function canRouteDynamically(type: DeviceType): boolean {
-  return type === 'router' || type === 'l3switch' || type === 'internet';
+  return isRouterLike(type) || type === 'l3switch' || type === 'internet';
 }

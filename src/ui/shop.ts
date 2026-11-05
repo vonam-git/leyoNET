@@ -125,6 +125,8 @@ export const SHOP: readonly ShopItem[] = [
   device('router4', 'routers', 'router', { options: { ports: 4, sfpSlots: 1 } }),
   device('routerSerial', 'routers', 'router', { options: { ports: 2, serialPorts: 2, sfpSlots: 0 }, features: ['medium.serial'] }),
   device('routerWan', 'routers', 'router', { options: { ports: 4, serialPorts: 2, sfpSlots: 2 }, features: ['medium.serial'] }),
+  device('firewall4', 'routers', 'firewall', { options: { ports: 4 } }),
+  device('firewall8', 'routers', 'firewall', { options: { ports: 8 } }),
 
   device('accesspoint', 'wireless', 'accesspoint'),
 
@@ -156,7 +158,7 @@ export function priceOf(item: ShopItem): number {
   if (item.kind === 'sfp') return PRICES.sfp[item.module];
   if (item.kind === 'area') return item.preset.key === 'rack' ? PRICES.rack : 0;
   const o = item.options ?? {};
-  const ports = o.ports ?? (item.type === 'switch' || item.type === 'l3switch' ? 8 : item.type === 'router' ? 2 : 1);
+  const ports = o.ports ?? (item.type === 'switch' || item.type === 'l3switch' ? 8 : item.type === 'router' ? 2 : item.type === 'firewall' ? 4 : 1);
   const interfaces: NetInterface[] = [
     ...Array.from({ length: ports }, (_, i) => ({ index: i, mac: '' })),
     ...Array.from({ length: o.serialPorts ?? 0 }, (_, i) => ({ index: ports + i, mac: '', serial: true })),

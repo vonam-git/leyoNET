@@ -218,7 +218,7 @@ const sameIp = (a: string | undefined, b: string) => a !== undefined && parseIp(
 
 /** «@router» in einem Gateway-Feld: die Adresse eines Routers im selben Netz (Folgefehler zählen nur einmal). */
 export const ROUTER_REF = '@router';
-const ROUTING_TYPES = new Set(['router', 'l3switch', 'cpe', 'internet']);
+const ROUTING_TYPES = new Set(['router', 'firewall', 'l3switch', 'cpe', 'internet']);
 
 /** Adressen von Routern im Netz der Adresse `ip`/`prefix`. */
 function routerAddresses(topology: Topology, ip: number, prefix: number): string[] {

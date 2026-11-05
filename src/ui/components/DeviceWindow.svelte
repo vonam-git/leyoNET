@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_SPECS, canAutoRoute, canFirewall, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterType, isSwitchType } from '../../core';
+  import { DEVICE_SPECS, canAccessList, canAutoRoute, canFirewall, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterLike, isRouterType, isSwitchType } from '../../core';
   import { t } from '../../i18n';
   import { typeLabel } from '../labels';
   import { dialogs, type DeviceWindowState } from '../state/dialogs.svelte';
@@ -9,6 +9,7 @@
   import DeviceBasics from './DeviceBasics.svelte';
   import DhcpServerForm from './DhcpServerForm.svelte';
   import FirewallConfig from './FirewallConfig.svelte';
+  import AclConfig from './AclConfig.svelte';
   import DeviceIcon from './DeviceIcon.svelte';
   import GroupConfig from './GroupConfig.svelte';
   import HostConfigForm from './HostConfigForm.svelte';
@@ -58,7 +59,7 @@
   );
   const position = $derived(device ? order.findIndex((d) => d.id === device.id) : -1);
 
-  type TabId = 'general' | 'addresses' | 'ports' | 'routing' | 'nat' | 'relay' | 'dhcp' | 'switching' | 'wlan' | 'mail' | 'services' | 'modem' | 'group' | 'state' | 'firewall' | 'vpn';
+  type TabId = 'general' | 'addresses' | 'ports' | 'routing' | 'nat' | 'relay' | 'dhcp' | 'switching' | 'wlan' | 'mail' | 'services' | 'modem' | 'group' | 'state' | 'firewall' | 'acl' | 'vpn';
 
   const tabs = $derived.by((): TabId[] => {
     if (!device) return [];
@@ -72,10 +73,11 @@
     list.push('ports');
     if (hasRoutingTable(d.type) && role !== 'endpoint') list.push('routing');
     if (d.type === 'cpe') list.push('dhcp');
-    if (((d.type === 'router' || d.type === 'cpe') && ui.has('net.nat')) || (d.type === 'internet' && ui.has('net.cgnat'))) list.push('nat');
-    if (d.type === 'router' && ui.has('net.dhcpRelay')) list.push('relay');
-    if (canFirewall(d.type) && ui.has('net.firewall')) list.push('firewall');
-    if (d.type === 'router' && ui.has('net.vpn')) list.push('vpn');
+    if (((isRouterLike(d.type) || d.type === 'cpe') && ui.has('net.nat')) || (d.type === 'internet' && ui.has('net.cgnat'))) list.push('nat');
+    if (isRouterLike(d.type) && ui.has('net.dhcpRelay')) list.push('relay');
+    if (canFirewall(d.type) && (ui.has('net.firewall') || d.type === 'firewall')) list.push('firewall');
+    if (canAccessList(d.type) && ui.has('net.acl')) list.push('acl');
+    if (isRouterLike(d.type) && ui.has('net.vpn')) list.push('vpn');
     if (isSwitchType(d.type)) list.push('switching');
     if (d.type === 'accesspoint' || (role === 'endpoint' && canUseWifi(d) && ui.has('medium.wireless'))) list.push('wlan');
     if (role === 'endpoint' && ui.has('service.mail') && d.type !== 'clientgroup') list.push('mail');
@@ -89,7 +91,7 @@
     return wanted && tabs.includes(wanted) ? wanted : (tabs[0] ?? 'general');
   });
 
-  const HELP: Partial<Record<TabId, string>> = { routing: 'routing', nat: 'nat', relay: 'dhcp', dhcp: 'dhcp', wlan: 'wlan', mail: 'mail', switching: 'vlan', services: 'dhcp', firewall: 'firewall', vpn: 'vpn' };
+  const HELP: Partial<Record<TabId, string>> = { routing: 'routing', nat: 'nat', relay: 'dhcp', dhcp: 'dhcp', wlan: 'wlan', mail: 'mail', switching: 'vlan', services: 'dhcp', firewall: 'firewall', acl: 'acl', vpn: 'vpn' };
 
   // Gerät gelöscht oder Projekt gewechselt: schliessen.
   $effect(() => {
@@ -242,7 +244,7 @@
         {:else if tab === 'group'}
           <GroupConfig {device} />
         {:else if tab === 'ports'}
-          {#if isSwitchType(device.type) || device.type === 'router'}
+          {#if isSwitchType(device.type) || isRouterLike(device.type)}
             <h3>{t('panel.title')}</h3>
             <PortPanel {device} />
           {/if}
@@ -263,6 +265,8 @@
           <DhcpServerForm {device} />
         {:else if tab === 'firewall'}
           <FirewallConfig {device} />
+        {:else if tab === 'acl'}
+          <AclConfig {device} />
         {:else if tab === 'vpn'}
           <VpnConfig {device} />
         {:else if tab === 'relay'}

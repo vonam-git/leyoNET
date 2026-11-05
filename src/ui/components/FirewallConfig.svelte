@@ -55,7 +55,7 @@
 
 <section class="firewall" data-help="firewall">
   <h3>{t('firewall.title')}</h3>
-  <p class="muted">{t(isEndpoint ? 'firewall.scopeHost' : 'firewall.scopeRouter')}</p>
+  <p class="muted">{t(isEndpoint ? 'firewall.scopeHost' : device.type === 'firewall' ? 'firewall.scopeDevice' : 'firewall.scopeRouter')}</p>
 
   {#if !config}
     <p class="muted">{t('firewall.off')}</p>

@@ -69,6 +69,16 @@
       "max": 120,
       "beschreibung": "pro Ethernet-Port"
     },
+    "firewallBase": {
+      "min": 300,
+      "max": 2000,
+      "beschreibung": "Firewall-Appliance KMU/Schule, Grundpreis ohne Lizenzabo"
+    },
+    "firewallPort": {
+      "min": 20,
+      "max": 120,
+      "beschreibung": "pro Ethernet-Port der Firewall"
+    },
     "routerSerial": {
       "min": 120,
       "max": 450,

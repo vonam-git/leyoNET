@@ -6,6 +6,7 @@ export type DeviceType =
   | 'switch'
   | 'l3switch'
   | 'router'
+  | 'firewall'
   | 'accesspoint'
   | 'modem'
   | 'cpe'
@@ -32,7 +33,7 @@ export interface StaticRoute6 {
   iface?: number;
 }
 
-import type { FirewallConfig, VpnTunnel } from './security';
+import type { AccessList, FirewallConfig, VpnTunnel } from './security';
 export type { FirewallConfig, FirewallRule, FirewallAction, FirewallProtocol, VpnTunnel } from './security';
 
 export type RoutingMode = 'auto' | 'static' | 'dynamic';
@@ -74,6 +75,8 @@ export interface NetInterface {
   vlan?: number;
   /** Nur Switch: Trunk-Port, überträgt alle VLANs mit 802.1Q-Tag (VLAN 1 ohne Tag). */
   trunk?: boolean;
+  /** Nur Switch: Name der Zugriffsliste für eingehende Pakete («ip access-group NAME in»). */
+  aclIn?: string;
   /** Administrativ abgeschaltet («shutdown»): Link ist aus, nichts wird gesendet oder empfangen. */
   shutdown?: boolean;
   /** Farbmarkierung des Anschlusses (z.B. für Patchfelder und Dokumentation). */
@@ -199,6 +202,8 @@ export interface Device {
   staticNat?: StaticNat[];
   /** Router, Internet-Box, Endgeräte: Paketfilter (Router: weitergeleitete Pakete, Endgerät: eingehende). */
   firewall?: FirewallConfig;
+  /** Nur Switches: benannte Zugriffslisten (ACL), zugewiesen über `aclIn` am Port. */
+  acls?: AccessList[];
   /** Nur Router: IPsec-Tunnel zu anderen Standorten (Site-to-Site-VPN). */
   vpn?: VpnTunnel[];
   /** Nur Internet (Provider): öffentliche Adresse, hinter der CGNAT-Kunden erscheinen. */

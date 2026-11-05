@@ -1,8 +1,8 @@
-import { DEVICE_SPECS, canAutoRoute, isDeviceType } from '../model/devices';
+import { DEVICE_SPECS, canAutoRoute, isDeviceType, isSwitchType } from '../model/devices';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
 import { MAC_PATTERN } from '../model/mac';
 import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
-import { checkFirewall, checkVpnTunnel, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
+import { ACL_NAME, MAX_ACLS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
 import { MAX_GROUP_SIZE } from '../model/devices';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
 import { logicalInterfaces, sviId } from '../net/routing';
@@ -371,6 +371,11 @@ function readDevice(v: unknown, path: string): Device {
       if (typeof io.trunk !== 'boolean') throw new Invalid(`${p}.trunk`);
       if (io.trunk) iface.trunk = true;
     }
+    if (io.aclIn !== undefined) {
+      const name = str(io.aclIn, `${p}.aclIn`);
+      if (!ACL_NAME.test(name)) throw new Invalid(`${p}.aclIn`);
+      iface.aclIn = name;
+    }
     if (io.shutdown !== undefined && bool(io.shutdown, `${p}.shutdown`)) iface.shutdown = true;
     if (io.color !== undefined) iface.color = color(io.color, `${p}.color`);
     if (io.description !== undefined) iface.description = text(io.description, `${p}.description`, 80);
@@ -661,7 +666,7 @@ function readDevice(v: unknown, path: string): Device {
     device.variant = variant;
   }
   if (o.staticNat !== undefined) {
-    if (type !== 'router' && type !== 'cpe') throw new Invalid(`${path}.staticNat`);
+    if (type !== 'router' && type !== 'firewall' && type !== 'cpe') throw new Invalid(`${path}.staticNat`);
     device.staticNat = arr(o.staticNat, `${path}.staticNat`).map((raw, i) => {
       const r = obj(raw, `${path}.staticNat[${i}]`);
       if (r.kind !== undefined && r.kind !== 'snat' && r.kind !== 'dnat') throw new Invalid(`${path}.staticNat[${i}].kind`);
@@ -695,8 +700,35 @@ function readDevice(v: unknown, path: string): Device {
     if (!checked.ok) throw new Invalid(`${p}.${checked.error.field ?? 'rules'}`);
     device.firewall = checked.value;
   }
+  if (o.acls !== undefined) {
+    if (!isSwitchType(type)) throw new Invalid(`${path}.acls`);
+    const list = arr(o.acls, `${path}.acls`);
+    if (list.length > MAX_ACLS) throw new Invalid(`${path}.acls`);
+    const names = new Set<string>();
+    device.acls = list.map((raw, n) => {
+      const p = `${path}.acls[${n}]`;
+      const a = obj(raw, p);
+      const acl: AccessList = {
+        name: str(a.name, `${p}.name`),
+        rules: arr(a.rules, `${p}.rules`).map((rr, i) => {
+          const r = obj(rr, `${p}.rules[${i}]`);
+          return {
+            action: str(r.action, `${p}.rules[${i}].action`) as FirewallRule['action'],
+            protocol: str(r.protocol, `${p}.rules[${i}].protocol`) as FirewallRule['protocol'],
+            src: str(r.src, `${p}.rules[${i}].src`),
+            dst: str(r.dst, `${p}.rules[${i}].dst`),
+            ...(r.port !== undefined ? { port: int(r.port, `${p}.rules[${i}].port`) } : {}),
+          };
+        }),
+      };
+      const checked = checkAccessList(acl);
+      if (!checked.ok || names.has(acl.name)) throw new Invalid(`${p}.${checked.ok ? 'name' : (checked.error.field ?? 'rules')}`);
+      names.add(acl.name);
+      return checked.value;
+    });
+  }
   if (o.vpn !== undefined) {
-    if (type !== 'router') throw new Invalid(`${path}.vpn`);
+    if (type !== 'router' && type !== 'firewall') throw new Invalid(`${path}.vpn`);
     const tunnels: VpnTunnel[] = [];
     arr(o.vpn, `${path}.vpn`).forEach((raw, i) => {
       const p = `${path}.vpn[${i}]`;

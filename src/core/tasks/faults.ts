@@ -33,7 +33,7 @@ export interface Fault {
 }
 
 const ENDPOINT = new Set(['pc', 'notebook', 'server']);
-const ROUTERS = new Set(['router', 'l3switch']);
+const ROUTERS = new Set(['router', 'firewall', 'l3switch']);
 
 /** Zufallsgenerator mit Startwert (wiederholbar). */
 export function seeded(seed: number) {

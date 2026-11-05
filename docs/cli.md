@@ -1,6 +1,6 @@
 # Befehlszeile (CLI) für Router und Switches
 
-Router, Switches und Layer-3-Switches lassen sich zusätzlich zu den Formularen über eine Befehlszeile konfigurieren. Die Syntax ist an **FRRouting (vtysh)** angelehnt, mit den aus dem Unterricht bekannten Modi. Es ist eine eigene, vereinfachte Nachbildung (siehe [Lizenzen](#lizenzen)).
+Router, Firewalls, Switches und Layer-3-Switches lassen sich zusätzlich zu den Formularen über eine Befehlszeile konfigurieren. Die Syntax ist an **FRRouting (vtysh)** angelehnt, mit den aus dem Unterricht bekannten Modi. Es ist eine eigene, vereinfachte Nachbildung (siehe [Lizenzen](#lizenzen)).
 
 ## Zugang
 
@@ -27,6 +27,8 @@ Router>                    enable
 Router#                    configure terminal
 Router(config)#            interface eth0          vlan 10          line vty               router ospf | rip | bgp 65001 | ospf6 | ripng
 Router(config-if)#         Router(config-vlan)#    Router(config-line)#   Router(config-router)#
+Switch(config)#            ip access-list extended NAME
+Switch(config-ext-nacl)#
 ```
 
 `exit` geht eine Stufe zurück, `end` direkt zu `Router#`, `disable` zurück zu `Router>`.
@@ -35,6 +37,7 @@ Router(config-if)#         Router(config-vlan)#    Router(config-line)#   Router
 
 | Gerät | Namen |
 |---|---|
+| Firewall | wie Router; in Firewall-Regeln nach `in` auch die Zone: `wan`, `lan`, `dmz`, `opt1` … |
 | Router | `eth0`, `eth1` …; Subinterfaces `eth0.10` (VLAN 10); serielle Ports `serial0`, `serial1` … (auch `se0`, `s0/0/0`) |
 | Switch | `port1`, `port2` … (wie auf der Frontplatte); auch `gi0/1` oder `fa0/1`. SFP-Einschübe für Glasfaser zählen separat: `sfp1`, `sfp2` … (auch `te0/1`) |
 | Layer-3-Switch | wie Switch, dazu `vlan10` bzw. `interface vlan 10` |
@@ -63,6 +66,8 @@ Router(config-if)#         Router(config-vlan)#    Router(config-line)#   Router
 | `show vlan brief` | VLANs mit ihren Ports (Switch) |
 | `show interfaces status` | Ports mit Status und VLAN (Switch) |
 | `show spanning-tree` | Root-Bridge, Port-Rollen und -Zustände (Switch) |
+| `show access-lists` (auch `show ip access-lists`) | Zugriffslisten mit Ports und Treffern (Switch) |
+| `show firewall` | Firewall-Regeln mit Trefferzählern, blockierte Pakete, gemerkte Verbindungen (Router, Firewall) |
 | `ping 192.168.1.10` | vier Echo-Anfragen vom Gerät aus (Simulation) |
 | `write memory` | «speichert» (die Konfiguration gilt ohnehin sofort) |
 
@@ -195,6 +200,43 @@ interface port24
  switchport mode trunk
  description Uplink zum Router
 ```
+
+### Zugriffslisten (Switch und Layer-3-Switch)
+
+Benannte, erweiterte ACLs wie bei Cisco. Zustandslos, erste passende Regel gilt, am Ende implizit `deny ip any any`; ARP, STP und IPv6 Neighbor Discovery gehen immer durch.
+
+```
+ip access-list extended GAESTE        ! anlegen oder bearbeiten
+ remark nur DNS und Web               ! Kommentar (wird nicht gespeichert)
+ permit udp any any eq 53
+ permit tcp 192.168.10.0 0.0.0.255 host 192.168.10.80 eq 80
+ deny icmp any any
+ no 30                                ! Eintrag 30 löschen (Nummern 10, 20, 30 …)
+!
+no ip access-list extended GAESTE     ! Liste löschen (Zuweisungen bleiben, lassen dann alles durch)
+interface port1
+ ip access-group GAESTE in            ! eingehend am Port prüfen
+ no ip access-group GAESTE in
+```
+
+| Teil | Möglichkeiten |
+|---|---|
+| Protokoll | `ip` (alle), `tcp`, `udp`, `icmp` |
+| Adresse | `any`, `host 192.168.10.80`, `192.168.10.0 0.0.0.255` (Wildcard-Maske), `192.168.10.0/24`, IPv6 `host 2001:db8::1` oder `2001:db8:1::/64` |
+| Port | `eq 80` (nur TCP/UDP, Zielport) |
+
+### Firewall (Router und Firewall)
+
+```
+firewall default deny                          ! Standardregel: allow | deny
+firewall rule allow tcp any 192.168.2.80 port 80 in eth0
+firewall rule 1 deny icmp any any in dmz       ! Zahl zuerst: an dieser Stelle einfügen
+no firewall rule 2                             ! Regel 2 löschen
+no firewall stateful                           ! zustandslos (firewall stateful = wieder zustandsbehaftet)
+no firewall                                    ! Firewall entfernen, alles geht durch
+```
+
+Eine Regel: `allow|deny <ip|tcp|udp|icmp> <Quelle> <Ziel> [port <n>] [in <Anschluss>]`. Adressen wie bei den ACLs (`any`, `host A`, Wildcard, Präfix oder einfach eine Adresse). Ohne `in` gilt die Regel für alle Eingänge. Auf einem Router ohne Firewall legt der erste Befehl eine an (Standard `allow`). Die Firewall als Gerät hat ab Werk `default deny` und je eine Regel «von innen erlaubt» für LAN, DMZ und OPT.
 
 ### Layer-3-Switch
 

@@ -91,6 +91,18 @@ export class IpNode implements SimNode {
   /** Paketfilter (nur aktiv, wenn das Gerät eine Firewall hat). */
   readonly firewall: Firewall;
 
+  /**
+   * Prüft die Firewall auch Pakete an das Gerät selbst? Endgeräte immer, die
+   * Firewall als Gerät ebenfalls (schützt ihre eigenen Adressen, z.B. SSH vom WAN);
+   * Router nur weitergeleitete Pakete. Ausnahme: Pakete der eigenen VPN-Gegenstellen (IKE, ESP).
+   */
+  protected guardsSelf(src?: string): boolean {
+    if (!this.forwarding) return true;
+    const device = this.ctx.device();
+    if (device?.type !== 'firewall') return false;
+    return !src || !device.vpn?.some((v) => v.peer === src);
+  }
+
   constructor(readonly ctx: NodeContext) {
     const self = this;
     this.firewall = new Firewall(ctx, () => ctx.device()?.firewall);
@@ -110,7 +122,7 @@ export class IpNode implements SimNode {
         dynamicRoutes6: () => this.dynamicRoutes6(),
         // Dieselbe Firewall wie für IPv4: Endgeräte prüfen eingehende, Router weitergeleitete Pakete.
         filter6: (packet, inIndex, forwarded) => {
-          if (forwarded !== this.forwarding || packet.payload.kind === 'icmpv6' || packet.payload.kind === 'ipv4') return true;
+          if ((forwarded ? !this.forwarding : !this.guardsSelf(packet.src)) || packet.payload.kind === 'icmpv6' || packet.payload.kind === 'ipv4') return true;
           return this.firewall.allows(asIpv4View(packet, packet.payload), inIndex);
         },
         onTunnel: (packet, inner, index) => this.onTunnel(packet, inner, index),
@@ -404,7 +416,7 @@ export class IpNode implements SimNode {
     else if (this.isOwn(dst) || broadcast) {
       // Endgerät mit Firewall: eingehende Pakete prüfen (Broadcasts und DHCP-Antworten sind immer erlaubt).
       const dhcpReply = packet.payload.kind === 'udp' && packet.payload.dstPort === DHCP_CLIENT_PORT;
-      if (!this.forwarding && !broadcast && !dhcpReply && !this.firewall.allows(packet, index)) return;
+      if (this.guardsSelf(packet.src) && !broadcast && !dhcpReply && !this.firewall.allows(packet, index)) return;
       this.#deliver(packet, broadcast, index, srcMac);
     }
     else if (this.forwarding && iface) this.#forward(iface, packet);
@@ -556,7 +568,7 @@ export class IpNode implements SimNode {
       if ((payload.kind === 'udp' || payload.kind === 'tcp') && parseIp6(dstText) !== null && this.v6.enabled()) {
         // Eigene Verbindung merken, damit die Antworten durch die Firewall dürfen.
         const local = options.src ?? this.localIpFor(dstText);
-        if (!this.forwarding && local) this.firewall.track({ kind: 'ipv4', src: local, dst: normalizeIp6(dstText) ?? dstText, ttl: 0, id: 0, payload });
+        if (this.guardsSelf() && local) this.firewall.track({ kind: 'ipv4', src: local, dst: normalizeIp6(dstText) ?? dstText, ttl: 0, id: 0, payload });
         this.v6.send(dstText, payload, { ...(options.src ? { src: options.src } : {}), ...(options.ttl !== undefined ? { hopLimit: options.ttl } : {}) }, onError);
       } else if (parseIp6(dstText) !== null) onError?.('noRoute');
       return;
@@ -564,7 +576,7 @@ export class IpNode implements SimNode {
     const build = (src: string): Ipv4Packet => {
       const packet: Ipv4Packet = { kind: 'ipv4', src: options.src ?? src, dst: dstText, ttl: options.ttl ?? DEFAULT_TTL, id: ++this.#ipId, payload };
       // Endgerät mit Firewall: eigene Verbindungen merken, damit die Antworten herein dürfen.
-      if (!this.forwarding) this.firewall.track(packet);
+      if (this.guardsSelf()) this.firewall.track(packet);
       return packet;
     };
 

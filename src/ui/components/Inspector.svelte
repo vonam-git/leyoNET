@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_SPECS, canAutoRoute, isRouterType, isSwitchType } from '../../core';
+  import { DEVICE_SPECS, canAutoRoute, isRouterLike, isRouterType, isSwitchType } from '../../core';
   import { t } from '../../i18n';
   import { dialogs } from '../state/dialogs.svelte';
   import { editor } from '../state/editor.svelte';
@@ -71,7 +71,7 @@
       <RoutingModeForm {device} compact />
     {/if}
 
-    {#if isSwitchType(device.type) || device.type === 'router'}
+    {#if isSwitchType(device.type) || isRouterLike(device.type)}
       <h3>{t('panel.title')}</h3>
       <PortPanel {device} />
     {/if}

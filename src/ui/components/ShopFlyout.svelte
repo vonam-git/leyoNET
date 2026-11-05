@@ -51,7 +51,7 @@
           >
             <span class="thumb">
               {#if item.kind === 'device'}
-                <svg viewBox="-28 -24 56 48" width="44" height="38" aria-hidden="true" class="role-{item.type === 'router' || item.type === 'internet' || item.type === 'modem' || item.type === 'cpe' ? 'routing' : item.type === 'switch' || item.type === 'l3switch' || item.type === 'accesspoint' ? 'distribution' : 'endpoint'}"><DeviceIcon type={item.type} variant={item.options?.variant} /></svg>
+                <svg viewBox="-28 -24 56 48" width="44" height="38" aria-hidden="true" class="role-{item.type === 'router' || item.type === 'firewall' || item.type === 'internet' || item.type === 'modem' || item.type === 'cpe' ? 'routing' : item.type === 'switch' || item.type === 'l3switch' || item.type === 'accesspoint' ? 'distribution' : 'endpoint'}"><DeviceIcon type={item.type} variant={item.options?.variant} /></svg>
               {:else if item.kind === 'medium'}
                 <svg viewBox="0 0 44 20" width="44" height="20" aria-hidden="true"><line class={mediumClass(item.medium)} x1="4" y1="10" x2="40" y2="10" /></svg>
               {:else if item.kind === 'sfp'}
