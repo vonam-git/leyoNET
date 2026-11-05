@@ -23,17 +23,21 @@ import type { NodeContext, SimNode } from './simulation';
 import { cableAt, deviceSeq, getDevice, otherEnd } from '../model/topology';
 import { isModemWan } from '../model/links';
 import type { ModemKind } from '../model/types';
-import { BGP_PORT, IKE_PORT, OSPF_ALL_ROUTERS, RIP_MULTICAST, RIP_PORT } from './frames';
+import { BGP_PORT, IKE_PORT, OSPF6_ALL_ROUTERS, OSPF_ALL_ROUTERS, RIPNG_MULTICAST, RIPNG_PORT, RIP_MULTICAST, RIP_PORT } from './frames';
 import { ACCESS_PROFILES, nextSteps, stepIndex } from './access';
-import { PingRun, type IcmpApp } from './apps';
+import { PingRun, icmpView, type IcmpApp, type IcmpHost } from './apps';
 import { SSH_PORT, startSshServer } from './ssh';
 import { TcpStack } from './tcp';
 import { PppLinks } from './ppp';
 import { Ospf } from './ospf';
 import { Rip } from './rip';
+import { Ospf6, Ripng, type Routing6Host, type Source6 } from './routing6';
 import { Bgp } from './bgp';
 import type { RoutingHost } from './routing-host';
-import { IPV4_ENABLED, Ip6Stack } from './ip6';
+import { IPV4_ENABLED, Ip6Stack, type Route6 } from './ip6';
+import { formatIp6, normalizeIp6, parseIp6 } from '../net/ipv6';
+import { asIpv4View } from './frames';
+export { asIpv4View };
 import { Firewall } from './firewall';
 import { Vpn, type VpnState } from './vpn';
 import { matchesAddress } from '../model/security';
@@ -99,6 +103,16 @@ export class IpNode implements SimNode {
         sendFrame: (index, frame) => this.sendFrame(index, frame),
         onIcmp6: (packet) => this.onIcmp6(packet),
         onUdp6: (packet, datagram, index) => this.onUdp6(packet, datagram, index),
+        onTcp6: (packet, segment) => this.onTcp6(packet, segment),
+        linkUp: (index) => this.linkUp6(index),
+        groups6: (index) => this.groups6(index),
+        onOspf6: (packet, ospf, index) => this.onOspf6(packet, ospf, index),
+        dynamicRoutes6: () => this.dynamicRoutes6(),
+        // Dieselbe Firewall wie für IPv4: Endgeräte prüfen eingehende, Router weitergeleitete Pakete.
+        filter6: (packet, inIndex, forwarded) => {
+          if (forwarded !== this.forwarding || packet.payload.kind === 'icmpv6' || packet.payload.kind === 'ipv4') return true;
+          return this.firewall.allows(asIpv4View(packet, packet.payload), inIndex);
+        },
         onTunnel: (packet, inner, index) => this.onTunnel(packet, inner, index),
       },
       () => this.effectiveDevice(),
@@ -114,6 +128,31 @@ export class IpNode implements SimNode {
   protected onIcmp6(_packet: Ipv6Packet) {}
 
   protected onUdp6(_packet: Ipv6Packet, _datagram: UdpDatagram, _index: number) {}
+
+  /** Zusätzliche IPv6-Multicast-Gruppen (Routingprotokolle). */
+  protected groups6(_index: number): string[] {
+    return [];
+  }
+
+  protected onOspf6(_packet: Ipv6Packet, _ospf: OspfPacket, _index: number) {}
+
+  /** Routen aus OSPFv3 und RIPng. */
+  protected dynamicRoutes6(): Route6[] {
+    return [];
+  }
+
+  /** Anschluss verbunden (für IPv6)? Router und Layer-3-Switches: VLAN-Interfaces immer. */
+  protected linkUp6(index: number): boolean {
+    return this.ctx.isConnected(index);
+  }
+
+  /**
+   * TCP über IPv6: dieselben Dienste wie über IPv4 (Web, Mail, SSH, BGP). Der
+   * TCP-Stack braucht nur Absender und Ziel, darum dieselbe Verteilung wie bei IPv4.
+   */
+  protected onTcp6(packet: Ipv6Packet, segment: TcpSegment) {
+    this.onTcp(asIpv4View(packet, segment), segment);
+  }
 
   /** DS-Lite: getunneltes IPv4-Paket. true = erledigt. */
   protected onTunnel(_packet: Ipv6Packet, _inner: Ipv4Packet, _index: number): boolean {
@@ -494,7 +533,12 @@ export class IpNode implements SimNode {
   /** Eigene Adresse, über die `remote` erreicht wird (oder null). */
   localIpFor(remote: string): string | null {
     const dst = parseIp(remote);
-    if (dst === null) return null;
+    if (dst === null) {
+      // IPv6-Ziel: eigene IPv6-Adresse über die passende Route.
+      const dst6 = parseIp6(remote);
+      const local = dst6 === null || !this.v6.enabled() ? null : this.v6.localFor(dst6);
+      return local === null ? null : formatIp6(local);
+    }
     if (this.isOwn(dst)) return remote;
     const route = lookupRoute(this.routes(), dst);
     const iface = route && this.interfaces().find((i) => i.index === route.iface);
@@ -507,7 +551,16 @@ export class IpNode implements SimNode {
    */
   sendIp(dstText: string, payload: Ipv4Packet['payload'], options: SendOptions = {}, onError?: (e: SendError) => void) {
     const dst = parseIp(dstText);
-    if (dst === null) return;
+    if (dst === null) {
+      // Anwendungen (DNS, TCP) sind adressunabhängig: IPv6-Ziele gehen über den IPv6-Stack.
+      if ((payload.kind === 'udp' || payload.kind === 'tcp') && parseIp6(dstText) !== null && this.v6.enabled()) {
+        // Eigene Verbindung merken, damit die Antworten durch die Firewall dürfen.
+        const local = options.src ?? this.localIpFor(dstText);
+        if (!this.forwarding && local) this.firewall.track({ kind: 'ipv4', src: local, dst: normalizeIp6(dstText) ?? dstText, ttl: 0, id: 0, payload });
+        this.v6.send(dstText, payload, { ...(options.src ? { src: options.src } : {}), ...(options.ttl !== undefined ? { hopLimit: options.ttl } : {}) }, onError);
+      } else if (parseIp6(dstText) !== null) onError?.('noRoute');
+      return;
+    }
     const build = (src: string): Ipv4Packet => {
       const packet: Ipv4Packet = { kind: 'ipv4', src: options.src ?? src, dst: dstText, ttl: options.ttl ?? DEFAULT_TTL, id: ++this.#ipId, payload };
       // Endgerät mit Firewall: eigene Verbindungen merken, damit die Antworten herein dürfen.
@@ -701,6 +754,8 @@ export class ForwardingNode extends IpNode {
   readonly tcp: TcpStack;
   readonly ospf: Ospf;
   readonly rip: Rip;
+  readonly ospf6: Ospf6;
+  readonly ripng: Ripng;
   readonly bgp: Bgp;
   #version = 0;
   #cache: { device: Device | undefined; topology: Topology; version: number; routes: Route[] } | null = null;
@@ -723,6 +778,19 @@ export class ForwardingNode extends IpNode {
     };
     this.ospf = new Ospf(host);
     this.rip = new Rip(host);
+    const host6: Routing6Host = {
+      ctx,
+      v6: this.v6,
+      device: () => this.routingDevice(),
+      ipv4Interfaces: () => (this.ipv4On() ? this.interfaces() : []),
+      ifaceUp: (index) => this.ifaceUp(index),
+      sources6: (source) => this.#sources6(source),
+      routesChanged: () => {
+        this.#version++;
+      },
+    };
+    this.ospf6 = new Ospf6(host6);
+    this.ripng = new Ripng(host6);
     this.bgp = new Bgp(host);
   }
 
@@ -732,9 +800,15 @@ export class ForwardingNode extends IpNode {
     return ref.kind === 'svi' ? true : this.ctx.isConnected(ref.port);
   }
 
+  protected override linkUp6(index: number): boolean {
+    return this.ifaceUp(index);
+  }
+
   boot() {
     this.ospf.boot();
     this.rip.boot();
+    this.ospf6.boot();
+    this.ripng.boot();
     this.bgp.boot();
     this.v6.boot();
   }
@@ -745,10 +819,10 @@ export class ForwardingNode extends IpNode {
    */
   protected routingDevice(): Device | undefined {
     const device = this.ctx.device();
-    if (!device || (!device.ospf && !device.rip && !device.bgp) || routingModeOf(device) === 'dynamic') return device;
+    if (!device || (!device.ospf && !device.rip && !device.bgp && !device.ospf6 && !device.ripng) || routingModeOf(device) === 'dynamic') return device;
     let quiet = QUIET.get(device);
     if (!quiet) {
-      const { ospf: _o, rip: _r, bgp: _b, ...rest } = device;
+      const { ospf: _o, rip: _r, bgp: _b, ospf6: _o6, ripng: _r6, ...rest } = device;
       quiet = rest;
       QUIET.set(device, quiet);
     }
@@ -786,6 +860,34 @@ export class ForwardingNode extends IpNode {
     this.ospf.receive(packet, ospf, index);
   }
 
+  protected override groups6(index: number): string[] {
+    const device = this.routingDevice();
+    const groups: string[] = [];
+    if (device?.ospf6?.interfaces.some((e) => e.iface === index)) groups.push(OSPF6_ALL_ROUTERS);
+    if (device?.ripng?.interfaces.includes(index)) groups.push(RIPNG_MULTICAST);
+    return groups;
+  }
+
+  protected override onOspf6(packet: Ipv6Packet, ospf: OspfPacket, index: number) {
+    this.ospf6.receive(packet, ospf, index);
+  }
+
+  protected override onUdp6(packet: Ipv6Packet, datagram: UdpDatagram, index: number) {
+    if (datagram.payload.kind === 'ripng' && datagram.dstPort === RIPNG_PORT) this.ripng.receive(packet, datagram.payload, index);
+  }
+
+  protected override dynamicRoutes6(): Route6[] {
+    return [...this.ospf6.routes(), ...this.ripng.routes()];
+  }
+
+  /** IPv6-Routen einer Quelle (für die Redistribution in OSPFv3 und RIPng). */
+  #sources6(source: Source6): { network: bigint; prefix: number; iface: number }[] {
+    if (source === 'ospf') return this.ospf6.routes();
+    if (source === 'rip') return this.ripng.routes();
+    if (source === 'connected') return this.v6.routes().filter((r) => r.kind === 'connected');
+    return this.v6.routes().filter((r) => r.kind === 'static' || r.kind === 'default');
+  }
+
   protected override onUdp(packet: Ipv4Packet, datagram: UdpDatagram, index: number, _srcMac: string) {
     if (datagram.payload.kind === 'rip' && datagram.dstPort === RIP_PORT) this.rip.receive(packet, datagram.payload, index);
   }
@@ -800,6 +902,7 @@ export class ForwardingNode extends IpNode {
       ...super.state(),
       routes: this.routes(),
       ...(device?.ospf ? { ospf: this.ospf.state() } : {}),
+      ...(device?.ospf6 ? { ospf6: this.ospf6.state() } : {}),
       ...(device?.bgp ? { bgp: this.bgp.peers() } : {}),
     };
   }
@@ -889,13 +992,28 @@ export class RouterNode extends ForwardingNode {
   /** «ping» aus der Befehlszeile des Routers. */
   ping(target: string) {
     this.#ping?.cancel();
-    const run = new PingRun(this, target, ++this.#pingId, '');
+    // IPv6-Ziel: Echo als ICMPv6 über den IPv6-Stack.
+    const v6 = parseIp(target) === null && parseIp6(target) !== null;
+    const via: IcmpHost = v6
+      ? {
+          ctx: this.ctx,
+          sendIp: (dst, payload, options, onError) => {
+            if (payload.kind === 'icmp') this.v6.send(dst, { ...payload, kind: 'icmpv6' }, options?.ttl !== undefined ? { hopLimit: options.ttl } : {}, onError);
+          },
+        }
+      : this;
+    const run = new PingRun(via, v6 ? (normalizeIp6(target) ?? target) : target, ++this.#pingId, '');
     this.#ping = run;
     run.start();
   }
 
   protected override onIcmp(packet: Ipv4Packet) {
     this.#ping?.onIcmp(packet);
+  }
+
+  protected override onIcmp6(packet: Ipv6Packet) {
+    const view = icmpView(packet);
+    if (view) this.#ping?.onIcmp(view);
   }
 
   /** Verwaltung per SSH (Port 22) und BGP (179); alles andere an den Router selbst verwirft er still, wie Heimrouter. */

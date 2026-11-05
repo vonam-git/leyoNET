@@ -64,7 +64,7 @@
     {:else if device.type === 'accesspoint'}
       <WlanConfig {device} />
     {/if}
-    {#if !editor.acting && editor.ipMode !== 'ipv4' && (isRouterType(device.type) || device.type === 'cpe')}
+    {#if !editor.acting && editor.ipMode !== 'ipv4' && (isRouterType(device.type) || device.type === 'cpe' || device.type === 'l3switch')}
       <Ipv6Interfaces {device} compact />
     {/if}
     {#if editor.editable && canAutoRoute(device.type)}

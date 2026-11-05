@@ -1,0 +1,419 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "title": "DNS mit Weiterleitung",
+    "devices": [
+      {
+        "id": "d1",
+        "type": "pc",
+        "name": "PC 1",
+        "position": {
+          "x": -420,
+          "y": 140
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "ip": "192.168.10.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.10.1",
+        "dns": "192.168.10.2"
+      },
+      {
+        "id": "d2",
+        "type": "pc",
+        "name": "Schul-DNS",
+        "position": {
+          "x": -420,
+          "y": -120
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "192.168.10.2",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.10.1",
+        "dnsServer": {
+          "records": [
+            {
+              "name": "web.schule.example",
+              "type": "A",
+              "value": "192.168.10.3",
+              "ttl": 60
+            },
+            {
+              "name": "www.schule.example",
+              "type": "CNAME",
+              "value": "web.schule.example",
+              "ttl": 60
+            },
+            {
+              "name": "intranet.schule.example",
+              "type": "CNAME",
+              "value": "www.schule.example",
+              "ttl": 60
+            },
+            {
+              "name": "schule.example",
+              "type": "MX",
+              "value": "mail.schule.example",
+              "priority": 10,
+              "ttl": 60
+            },
+            {
+              "name": "mail.schule.example",
+              "type": "A",
+              "value": "192.168.10.3",
+              "ttl": 60
+            },
+            {
+              "name": "schule.example",
+              "type": "TXT",
+              "value": "v=spf1 mx -all",
+              "ttl": 60
+            },
+            {
+              "name": "schule.example",
+              "type": "NS",
+              "value": "dns.schule.example",
+              "ttl": 60
+            },
+            {
+              "name": "3.10.168.192.in-addr.arpa",
+              "type": "PTR",
+              "value": "web.schule.example",
+              "ttl": 60
+            }
+          ],
+          "forwarder": "203.0.113.53"
+        }
+      },
+      {
+        "id": "d3",
+        "type": "pc",
+        "name": "Webserver",
+        "position": {
+          "x": -200,
+          "y": -160
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ip": "192.168.10.3",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.10.1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Schule</h1><p>Intranet der Schule.</p>"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d4",
+        "type": "switch",
+        "name": "Switch 1",
+        "position": {
+          "x": -200,
+          "y": 20
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:04:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:04:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:04:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:04:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:04:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:04:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:04:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:04:08",
+            "sfpSlot": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:04:09",
+            "sfpSlot": true
+          }
+        ]
+      },
+      {
+        "id": "d5",
+        "type": "router",
+        "name": "Router 1",
+        "position": {
+          "x": 40,
+          "y": 20
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ip": "192.168.10.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:05:01",
+            "ip": "203.0.113.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:05:02",
+            "sfpSlot": true
+          }
+        ]
+      },
+      {
+        "id": "d6",
+        "type": "switch",
+        "name": "Switch 2",
+        "position": {
+          "x": 260,
+          "y": 20
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:06:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:06:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:06:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:06:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:06:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:06:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:06:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:06:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:06:08",
+            "sfpSlot": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:06:09",
+            "sfpSlot": true
+          }
+        ]
+      },
+      {
+        "id": "d7",
+        "type": "pc",
+        "name": "Provider-DNS",
+        "position": {
+          "x": 460,
+          "y": -100
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:07:00",
+            "ip": "203.0.113.53",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "203.0.113.1",
+        "dnsServer": {
+          "records": [
+            {
+              "name": "www.provider.example",
+              "type": "A",
+              "value": "203.0.113.80",
+              "ttl": 600
+            }
+          ]
+        }
+      },
+      {
+        "id": "d8",
+        "type": "pc",
+        "name": "Provider-Web",
+        "position": {
+          "x": 460,
+          "y": 140
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:08:00",
+            "ip": "203.0.113.80",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "203.0.113.1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Provider</h1><p>Willkommen beim Provider.</p>"
+            }
+          ]
+        }
+      }
+    ],
+    "cables": [
+      {
+        "id": "c9",
+        "a": {
+          "device": "d1",
+          "iface": 0
+        },
+        "b": {
+          "device": "d4",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c10",
+        "a": {
+          "device": "d2",
+          "iface": 0
+        },
+        "b": {
+          "device": "d4",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c11",
+        "a": {
+          "device": "d3",
+          "iface": 0
+        },
+        "b": {
+          "device": "d4",
+          "iface": 2
+        }
+      },
+      {
+        "id": "c12",
+        "a": {
+          "device": "d5",
+          "iface": 0
+        },
+        "b": {
+          "device": "d4",
+          "iface": 3
+        }
+      },
+      {
+        "id": "c13",
+        "a": {
+          "device": "d5",
+          "iface": 1
+        },
+        "b": {
+          "device": "d6",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c14",
+        "a": {
+          "device": "d7",
+          "iface": 0
+        },
+        "b": {
+          "device": "d6",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c15",
+        "a": {
+          "device": "d8",
+          "iface": 0
+        },
+        "b": {
+          "device": "d6",
+          "iface": 2
+        }
+      }
+    ],
+    "nextId": 18,
+    "areas": [
+      {
+        "id": "a16",
+        "title": "Schule",
+        "color": "green",
+        "x": -500,
+        "y": -240,
+        "width": 400,
+        "height": 460,
+        "network": "192.168.10.0/24"
+      },
+      {
+        "id": "a17",
+        "title": "Provider",
+        "color": "purple",
+        "x": 380,
+        "y": -200,
+        "width": 180,
+        "height": 420,
+        "network": "203.0.113.0/24"
+      }
+    ]
+  },
+  "configuration": {}
+}

@@ -25,7 +25,7 @@ Router, Switches und Layer-3-Switches lassen sich zusätzlich zu den Formularen 
 ```
 Router>                    enable
 Router#                    configure terminal
-Router(config)#            interface eth0          vlan 10          line vty               router ospf | rip | bgp 65001
+Router(config)#            interface eth0          vlan 10          line vty               router ospf | rip | bgp 65001 | ospf6 | ripng
 Router(config-if)#         Router(config-vlan)#    Router(config-line)#   Router(config-router)#
 ```
 
@@ -46,7 +46,8 @@ Router(config-if)#         Router(config-vlan)#    Router(config-line)#   Router
 | Befehl | Zeigt |
 |---|---|
 | `show running-config` | aktuelle Konfiguration (nur `#`) |
-| `show ipv6 route`, `show ipv6 neighbors`, `show ipv6 interface brief` | IPv6-Routingtabelle (A = automatisch), Nachbartabelle aus Neighbor Discovery, IPv6-Adressen je Anschluss (nur Router) |
+| `show ipv6 route`, `show ipv6 neighbors`, `show ipv6 interface brief` | IPv6-Routingtabelle (O = OSPFv3, R = RIPng, A = automatisch), Nachbartabelle aus Neighbor Discovery, IPv6-Adressen je Anschluss (Router und Layer-3-Switch) |
+| `show ipv6 ospf6 neighbor`, `show ipv6 ospf6 database`, `show ipv6 ripng` | OSPFv3-Nachbarn und -Datenbank, per RIPng gelernte Routen (Simulation) |
 | `show ip route` | Routingtabelle (C = direkt verbunden, S = statisch, O = OSPF, R = RIP, B = BGP, A = automatisches Routing; in Klammern Distanz/Metrik) |
 | `show ip protocols` | aktive Routingprotokolle mit Netzen |
 | `show ip ospf neighbor` | OSPF-Nachbarn und ihr Zustand (Simulation) |
@@ -141,6 +142,29 @@ router rip
  redistribute connected
 ```
 
+### OSPFv3 und RIPng (IPv6, Schreibweise wie FRRouting)
+
+```
+interface eth0
+ ipv6 address 2001:db8:1::1/64
+ ipv6 nd managed-config-flag   ! Adressen per DHCPv6 statt SLAAC
+ ipv6 nd ra dns server 2001:db8:1::53
+ ipv6 ospf6 area 0             ! OSPFv3 auf diesem Anschluss
+!
+router ospf6
+ ospf6 router-id 1.1.1.1       ! empfohlen, wenn der Router keine IPv4-Adresse hat
+ interface eth1 area 0         ! gleichwertig zu «ipv6 ospf6 area 0» am Interface
+ passive-interface eth0
+ redistribute connected        ! connected | static | ripng
+!
+router ripng
+ network eth1                  ! Anschluss statt Netz
+ default-information originate
+ redistribute ospf6
+!
+ipv6 route 2001:db8:99::/48 2001:db8:1::fe
+```
+
 ### BGP
 
 ```
@@ -182,6 +206,9 @@ interface vlan 10
 !
 no interface vlan 10
 ip route 0.0.0.0/0 10.99.0.254
+interface vlan 20
+ ipv6 address 2001:db8:20::1/64  ! IPv6 auf dem VLAN-Interface (Router Advertisements ins VLAN)
+ ipv6 ospf6 area 0
 ```
 
 ## Lizenzen

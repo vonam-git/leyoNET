@@ -161,6 +161,65 @@ group('CLI Switch', () => {
     ]);
   });
 
+  it('richtet IPv6 auf den SVIs ein (Adresse, DHCPv6, DNS-Server) und zeigt sie in der Konfiguration', () => {
+    const net = new NetBuilder();
+    const sw = net.add('l3switch', 'L3');
+    const { topology, output } = run(net.topology, sw, [
+      'en',
+      'conf t',
+      'interface vlan 10',
+      'ipv6 address 2001:db8:10::1/64',
+      'ipv6 nd ra dns server 2001:db8:10::53',
+      'exit',
+      'int vlan20',
+      'ipv6 address 2001:DB8:20::1/64',
+      'ipv6 nd managed-config-flag',
+      'exit',
+      'ipv6 route 2001:db8:99::/48 2001:db8:10::fe',
+      'end',
+      'show ipv6 interface brief',
+    ]);
+    expect(getDevice(topology, sw)!.svis).toEqual([
+      { vlan: 10, ipv6: '2001:db8:10::1/64', dns6: '2001:db8:10::53' },
+      { vlan: 20, ipv6: '2001:db8:20::1/64', dhcp6: true },
+    ]);
+    expect(output.join('\n')).toMatch(/Vlan20\s+2001:db8:20::1\/64/i);
+    const config = runningConfig(getDevice(topology, sw)!).join('\n');
+    expect(config).toContain('interface vlan10\n ipv6 address 2001:db8:10::1/64\n ipv6 nd ra dns server 2001:db8:10::53');
+    expect(config).toContain('ipv6 route 2001:db8:99::/48 2001:db8:10::fe');
+  });
+
+  it('richtet OSPFv3 und RIPng im FRRouting-Stil ein', () => {
+    const net = new NetBuilder();
+    const r = net.add('router', 'R1');
+    const { topology, output } = run(net.topology, r, [
+      'en',
+      'conf t',
+      'router ospf6',
+      'ospf6 router-id 1.1.1.1',
+      'interface eth0 area 0',
+      'passive-interface eth0',
+      'redistribute connected',
+      'exit',
+      'interface eth1',
+      'ipv6 ospf6 area 0',
+      'exit',
+      'router ripng',
+      'network eth1',
+      'redistribute ospf6',
+      'default-information originate',
+      'end',
+    ]);
+    expect(output).toEqual([]);
+    const device = getDevice(topology, r)!;
+    expect(device.ospf6).toEqual({ routerId: '1.1.1.1', interfaces: [{ iface: 0, area: 0 }, { iface: 1, area: 0 }], passive: [0], redistribute: ['connected'] });
+    expect(device.ripng).toEqual({ interfaces: [1], defaultOriginate: true, redistribute: ['ospf'] });
+    const config = runningConfig(device).join('\n');
+    expect(config).toContain('router ospf6\n ospf6 router-id 1.1.1.1\n interface eth0 area 0\n interface eth1 area 0\n passive-interface eth0\n redistribute connected');
+    expect(config).toContain('router ripng\n network eth1\n default-information originate\n redistribute ospf6');
+    expect(run(topology, r, ['en', 'show ipv6 ospf6 neighbor']).output.join('\n')).toMatch(/simulation/i);
+  });
+
   it('kennt keine IP-Befehle am Layer-2-Switch', () => {
     const net = new NetBuilder();
     const sw = net.add('switch', 'S1');

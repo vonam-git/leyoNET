@@ -38,6 +38,8 @@ import type {
   WebFile,
   BgpConfig,
   OspfConfig,
+  Ospf6Config,
+  RipngConfig,
   RipConfig,
   RoutingMode,
   IpMode,
@@ -46,7 +48,7 @@ import type {
   StaticNat,
   VlanDef,
 } from './types';
-import { checkBgp, checkOspf, checkRip, normalizeBgp, normalizeOspf, normalizeRip } from '../net/dynamic';
+import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
 
 export const MAX_NAME_LENGTH = 32;
 /** Grösse einer Webserver-Datei in Zeichen (Bilder als data:-URL, also etwa 4/3 der Bytes). */
@@ -132,6 +134,13 @@ export type ErrorCode =
   | 'invalidMac'
   | 'macGroup'
   | 'macZero'
+  | 'dnsForwarderSelf'
+  | 'invalidAaaa'
+  | 'dnsTxt'
+  | 'dnsPriority'
+  | 'dnsType'
+  | 'cnameConflict'
+  | 'cnameLoop'
   | 'noSfpModule'
   | 'notAnSfpSlot'
   | 'noFreeSfpSlot'
@@ -1024,14 +1033,32 @@ export function addDnsRecord(t: Topology, id: string, record: DnsRecord): Result
   if (!config) return fail('serviceDisabled');
   const issue = checkDnsRecord(config, record);
   if (issue) return { ok: false, error: { code: issue.code as ErrorCode, params: issue.params, field: issue.field } };
-  return ok(updateDevice(t, id, (d) => ({ ...d, dnsServer: { records: [...config.records, normalizeRecord(record)] } })));
+  return ok(updateDevice(t, id, (d) => ({ ...d, dnsServer: { ...config, records: [...config.records, normalizeRecord(record)] } })));
 }
 
 export function removeDnsRecord(t: Topology, id: string, index: number): Result<Topology> {
   const device = getDevice(t, id);
   if (!device?.dnsServer?.records[index]) return fail('unknownRecord');
   const records = device.dnsServer.records.filter((_, i) => i !== index);
-  return ok(updateDevice(t, id, (d) => ({ ...d, dnsServer: { records } })));
+  return ok(updateDevice(t, id, (d) => ({ ...d, dnsServer: { ...device.dnsServer!, records } })));
+}
+
+/** Weiterleitung für Namen ausserhalb der eigenen Zone (leer = keine). */
+export function setDnsForwarder(t: Topology, id: string, address: string): Result<Topology> {
+  const device = serverDevice(t, id);
+  if (!device.ok) return device;
+  const config = device.value.dnsServer;
+  if (!config) return fail('serviceDisabled');
+  const value = address.trim();
+  if (value && parseIp(value) === null && parseIp6(value) === null) return { ok: false, error: { code: 'invalidIp', params: { value }, field: 'forwarder' } };
+  const own = device.value.interfaces.some((i) => i.ip === value) || device.value.interfaces.some((i) => i.ipv6?.split('/')[0] === value);
+  if (value && own) return { ok: false, error: { code: 'dnsForwarderSelf', field: 'forwarder' } };
+  return ok(
+    updateDevice(t, id, (d) => {
+      const { forwarder: _f, ...rest } = config;
+      return { ...d, dnsServer: value ? { ...rest, forwarder: value } : rest };
+    }),
+  );
 }
 
 /** Beim Einschalten erhält der Webserver eine Startseite, damit sofort etwas abrufbar ist. */
@@ -1571,18 +1598,29 @@ function checkUnicast6(text: string, field: string): Result<{ address: bigint; p
 export function setInterfaceIpv6(t: Topology, id: string, index: number, text: string): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  if (!device.interfaces[index]) return fail('unknownInterface');
+  if (!hasLink6(device, index)) return fail('unknownInterface');
   let value = '';
   if (text.trim()) {
     const checked = checkUnicast6(text, 'ipv6');
     if (!checked.ok) return checked;
     value = formatCidr6(checked.value.address, checked.value.prefix);
   }
-  return ok(
-    updateDevice(t, id, (d) => ({
-      ...d,
-      interfaces: d.interfaces.map((i) => (i.index !== index ? i : value ? { ...i, ipv6: value } : without(i, 'ipv6'))),
-    })),
+  return ok(updateLink6(t, id, index, 'ipv6', value || undefined));
+}
+
+/** Gibt es diesen IPv6-Anschluss? Physischer Port oder (Layer-3-Switch) VLAN-Interface. */
+function hasLink6(device: Device, index: number): boolean {
+  const ref = decodeIface(index);
+  if (ref.kind === 'svi') return device.type === 'l3switch' && !!device.svis?.some((s) => s.vlan === ref.vlan);
+  return ref.kind === 'port' && !!device.interfaces[index];
+}
+
+/** Ein IPv6-Feld eines Ports oder SVIs setzen (undefined = entfernen). */
+function updateLink6<K extends 'ipv6' | 'dhcp6' | 'dns6'>(t: Topology, id: string, index: number, key: K, value: (K extends 'dhcp6' ? true : string) | undefined): Topology {
+  const ref = decodeIface(index);
+  const apply = <T extends Partial<Record<'ipv6' | 'dhcp6' | 'dns6', unknown>>>(item: T): T => (value === undefined ? (without(item, key) as T) : { ...item, [key]: value });
+  return updateDevice(t, id, (d) =>
+    ref.kind === 'svi' ? { ...d, svis: (d.svis ?? []).map((s) => (s.vlan === ref.vlan ? apply(s) : s)) } : { ...d, interfaces: d.interfaces.map((i) => (i.index === index ? apply(i) : i)) },
   );
 }
 
@@ -1591,13 +1629,8 @@ export function setInterfaceDhcp6(t: Topology, id: string, index: number, enable
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
   if (!hasRoutingTable(device.type)) return fail('notARouter');
-  if (!device.interfaces[index]) return fail('unknownInterface');
-  return ok(
-    updateDevice(t, id, (d) => ({
-      ...d,
-      interfaces: d.interfaces.map((i) => (i.index !== index ? i : enabled ? { ...i, dhcp6: true } : without(i, 'dhcp6'))),
-    })),
-  );
+  if (!hasLink6(device, index)) return fail('unknownInterface');
+  return ok(updateLink6(t, id, index, 'dhcp6', enabled ? true : undefined));
 }
 
 export interface Host6Input {
@@ -1605,6 +1638,27 @@ export interface Host6Input {
   auto: boolean;
   address?: string;
   gateway?: string;
+  /** DNS-Server über IPv6 (nur bei fester Adresse; automatisch kommt er vom Router). */
+  dns?: string;
+}
+
+/** Unicast-Adresse eines DNS-Servers (IPv6), vereinheitlicht; null bei leerer Eingabe. */
+function checkDns6(text: string | undefined, field: string): Result<string | null> {
+  if (!text?.trim()) return ok(null);
+  const value = parseIp6(text);
+  if (value === null || isMulticast6(value) || isUnspecified6(value)) return { ok: false, error: { code: 'invalidIp6', params: { value: text.trim() }, field } };
+  return ok(formatIp6(value));
+}
+
+/** Router: IPv6-DNS-Server, den ein Netz im Router Advertisement (RDNSS) und per DHCPv6 erhält. */
+export function setInterfaceDns6(t: Topology, id: string, index: number, dns: string): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!hasRoutingTable(device.type)) return fail('notARouter');
+  if (!hasLink6(device, index)) return fail('unknownInterface');
+  const checked = checkDns6(dns, 'dns6');
+  if (!checked.ok) return checked;
+  return ok(updateLink6(t, id, index, 'dns6', checked.value ?? undefined));
 }
 
 /** IPv6 eines Endgeräts: automatisch oder feste Adresse mit Standardgateway. */
@@ -1614,7 +1668,11 @@ export function configureHost6(t: Topology, id: string, input: Host6Input): Resu
   if (DEVICE_SPECS[device.type].role !== 'endpoint') return fail('notAnEndpoint');
   let address = '';
   let gateway = '';
+  let dns = '';
   if (!input.auto) {
+    const checkedDns = checkDns6(input.dns, 'dns6');
+    if (!checkedDns.ok) return checkedDns;
+    dns = checkedDns.value ?? '';
     if (input.address?.trim()) {
       const checked = checkUnicast6(input.address, 'ipv6');
       if (!checked.ok) return checked;
@@ -1628,12 +1686,13 @@ export function configureHost6(t: Topology, id: string, input: Host6Input): Resu
   }
   return ok(
     updateDevice(t, id, (d) => {
-      const { ipv6Auto: _a, gateway6: _g, ...rest } = d;
+      const { ipv6Auto: _a, gateway6: _g, dns6: _d, ...rest } = d;
       return {
         ...rest,
         interfaces: d.interfaces.map((i, n) => (n !== 0 ? i : address ? { ...i, ipv6: address } : without(i, 'ipv6'))),
         ...(input.auto ? { ipv6Auto: true } : {}),
         ...(gateway ? { gateway6: gateway } : {}),
+        ...(dns ? { dns6: dns } : {}),
       };
     }),
   );
@@ -1652,7 +1711,7 @@ export function checkStaticRoute6(device: Device, route: StaticRoute6): Result<S
     gateway = formatIp6(g);
   }
   if (!gateway && route.iface === undefined) return { ok: false, error: { code: 'routeNeedsTarget', field: 'gateway' } };
-  if (route.iface !== undefined && !device.interfaces[route.iface]) return fail('unknownInterface');
+  if (route.iface !== undefined && !hasLink6(device, route.iface)) return fail('unknownInterface');
   const network = formatCidr6(net.address, net.prefix);
   if ((device.routes6 ?? []).some((r) => r.network === network)) return { ok: false, error: { code: 'duplicateRoute', params: { net: network }, field: 'network' } };
   return ok({ network, ...(gateway ? { gateway } : {}), ...(route.iface !== undefined ? { iface: route.iface } : {}) });
@@ -1868,6 +1927,27 @@ export function setRip(t: Topology, id: string, config: RipConfig | null): Resul
     if (issue) return { ok: false, error: issue };
   }
   return ok(updateDevice(t, id, (d) => (config ? { ...d, rip: normalizeRip(config) } : without(d, 'rip'))));
+}
+
+/** OSPFv3 einrichten (null = aus). Anschlüsse: Ports oder, beim Layer-3-Switch, VLAN-Interfaces. */
+export function setOspf6(t: Topology, id: string, config: Ospf6Config | null): Result<Topology> {
+  const device = routingDevice(t, id);
+  if (!device.ok) return device;
+  if (config) {
+    const issue = checkOspf6(config, (index) => hasLink6(device.value, index));
+    if (issue) return { ok: false, error: issue };
+  }
+  return ok(updateDevice(t, id, (d) => (config ? { ...d, ospf6: normalizeOspf6(config) } : without(d, 'ospf6'))));
+}
+
+export function setRipng(t: Topology, id: string, config: RipngConfig | null): Result<Topology> {
+  const device = routingDevice(t, id);
+  if (!device.ok) return device;
+  if (config) {
+    const issue = checkRipng(config, (index) => hasLink6(device.value, index));
+    if (issue) return { ok: false, error: issue };
+  }
+  return ok(updateDevice(t, id, (d) => (config ? { ...d, ripng: normalizeRipng(config) } : without(d, 'ripng'))));
 }
 
 /** Dokumentiertes VLAN mit Farbe anlegen oder ändern; die Farbe erscheint an allen Switch-Ports dieses VLANs. */

@@ -49,8 +49,24 @@ Oben in der Werkzeugleiste stellst du die **IP-Version** ein: **IPv4**, **v4 + v
 
 - **Endgeräte:** «IPv6 automatisch» (der Router kündigt sein Präfix an, das Gerät bildet seine Adresse selbst = SLAAC, oder holt sie per DHCPv6) oder eine feste Adresse wie `2001:db8:1::10/64` mit Standardgateway.
 - **Router:** je Anschluss eine Adresse mit `/64`, z.B. `2001:db8:1::1/64`. Mit «Adressen per DHCPv6 vergeben» verteilt der Router die Adressen selbst.
+- **Layer-3-Switch:** Jedes VLAN-Interface (SVI) erhält eine IPv6-Adresse, der Switch kündigt das Präfix im VLAN an und routet zwischen den VLANs, wie mit IPv4. Auf der Befehlszeile: `interface vlan 10`, `ipv6 address 2001:db8:10::1/64`, `ipv6 nd managed-config-flag`, `ipv6 nd ra dns server 2001:db8:99::10`. Siehe Demo «IPv6 auf dem Layer-3-Switch».
 - Statt ARP fragen die Geräte per **Neighbor Discovery** nach der MAC. `ping 2001:db8:2::20`, `tracert`, `ipconfig` und `netsh interface ipv6 show neighbors` funktionieren in der Eingabeaufforderung.
+- **DNS über IPv6:** Beim Router-Anschluss trägst du einen IPv6-**DNS-Server** ein; automatisch konfigurierte Geräte erhalten ihn im Router Advertisement (RDNSS) oder per DHCPv6. Geräte mit fester Adresse haben ein eigenes Feld «IPv6-DNS-Server». Im DNS-Server ordnen **AAAA**-Einträge einem Namen eine IPv6-Adresse zu.
+- **Web, Mail und SSH über IPv6:** `ping www.schule.example`, der Browser, E-Mail und `ssh admin@router.schule.example` funktionieren auch über IPv6. Im Browser steht eine Adresse in eckigen Klammern: `http://[2001:db8:b::80]/`. Siehe Demo «Web, Mail und SSH über IPv6».
 - **DS-Lite:** Die Internet-Box tunnelt IPv4 durch das IPv6-Netz des Providers; der Provider übersetzt per CGNAT. Siehe Demo «DS-Lite».
+
+## DNS
+
+Ein Rechner wird unter **Erweitert → Dienste** zum DNS-Server. In seine Zone kommen Einträge wie `web.schule.example A 192.168.0.3`, Aliase (`www CNAME web`), Mailserver (`MX` mit Vorrang), Text (`TXT`), Nameserver (`NS`) und Rückwärtseinträge (`PTR`: als Name einfach die Adresse eintragen). Mit **Weiterleitung an** fragt der Server für alle anderen Namen einen weiteren DNS-Server, z.B. den des Providers.
+
+Testen in der Eingabeaufforderung:
+
+- `nslookup intranet.schule.example`: Adresse, mit allen Aliasen der Kette
+- `nslookup -type=MX schule.example` (auch `AAAA`, `CNAME`, `TXT`, `NS`, `PTR`)
+- `nslookup 192.168.0.3`: Rückwärtsauflösung (PTR)
+- `nslookup www.provider.example 203.0.113.53`: einen bestimmten Server fragen
+
+Antworten aus der eigenen Zone sind «autorisierend», weitergeleitete «nicht autorisierend». Siehe Demo «DNS mit Weiterleitung».
 
 ## Firewall
 
@@ -77,7 +93,7 @@ Das erste Paket ins entfernte Netz startet den Aufbau (IKEv2), danach laufen die
 
 ## Router: automatisches Routing
 
-Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routing**. Er findet dann alle Netze im Plan selbst, ohne dass du Routen eintragen musst. Jeder Router auf dem Weg braucht das Häkchen. Ohne Häkchen wählst du **statisch** (Routen von Hand) oder **dynamisch** (OSPF, RIP, BGP), im Fenster **Erweitert … → Routing**.
+Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routing**. Er findet dann alle Netze im Plan selbst, ohne dass du Routen eintragen musst. Jeder Router auf dem Weg braucht das Häkchen. Ohne Häkchen wählst du **statisch** (Routen von Hand) oder **dynamisch** (OSPF, RIP, BGP; mit IPv6 OSPFv3 und RIPng), im Fenster **Erweitert … → Routing**. OSPFv3 und RIPng nehmen Anschlüsse auf statt Netze; siehe Demos «OSPFv3 für IPv6» und «RIPng für IPv6».
 
 ## Mehrere Geräte auf einmal
 
@@ -94,7 +110,7 @@ Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routi
 | Client-Gruppe | 10, 25 oder 50 gleiche PCs als ein Symbol; alle holen ihre Adresse per DHCP. |
 | Server | DHCP, DNS, Web und Mail. Im Shop auch fertig eingerichtet erhältlich. |
 | Switch, L3-Switch | Verbinden Geräte im selben Netz; der L3-Switch routet zusätzlich zwischen VLANs. |
-| Router | Verbindet Netze. Ports wahlweise Ethernet oder seriell. NAT, OSPF, RIP, BGP. |
+| Router | Verbindet Netze. Ports wahlweise Ethernet oder seriell. NAT, OSPF, RIP, BGP; für IPv6 OSPFv3 und RIPng. |
 | Access Point | WLAN-Funkzelle. |
 | Modem | Kabel, Glasfaser, Mobilfunk, ADSL oder VDSL zum Provider. |
 | Internet-Box (CPE) | Wie zu Hause: Modem, Router mit NAT, DHCP-Server und vier LAN-Buchsen in einem Gerät. Ab Werk LAN 192.168.1.1/24; einzutragen sind nur WAN-Adresse und Gateway des Providers. |

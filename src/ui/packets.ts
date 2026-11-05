@@ -1,4 +1,4 @@
-import { BROADCAST_MAC, TCP_APPS, decodeBgp, getDevice, normalizeIp6, protocolOf, type EthernetFrame, type Ipv4Packet, type Ipv6Packet, type PacketLogEntry, type Topology } from '../core';
+import { BROADCAST_MAC, TCP_APPS, asIpv4View, type TcpSegment, type UdpDatagram, decodeBgp, getDevice, normalizeIp6, protocolOf, type EthernetFrame, type Ipv4Packet, type Ipv6Packet, type PacketLogEntry, type Topology } from '../core';
 import { t } from '../i18n';
 import { interfaceLabel } from './labels';
 
@@ -23,7 +23,7 @@ export { protocolOf };
 export const protocolClass = (protocol: string) => protocol.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
 function portLabel(port: number): string {
-  const names: Record<number, string> = { 53: 'DNS', 67: 'DHCP-Server', 68: 'DHCP-Client', 520: 'RIP', ...TCP_APPS };
+  const names: Record<number, string> = { 53: 'DNS', 67: 'DHCP-Server', 68: 'DHCP-Client', 520: 'RIP', 521: 'RIPng', ...TCP_APPS };
   return names[port] ? `${port} (${names[port]})` : String(port);
 }
 
@@ -46,11 +46,12 @@ export function ipv4Of(frame: EthernetFrame): Ipv4Packet | null {
 function infoOf6(frame: EthernetFrame, p: Ipv6Packet): string {
   const inner = p.payload;
   if (inner.kind === 'ipv4') return `${t('packets.dslite', { src: p.src, dst: p.dst })} ${infoOf({ ...frame, payload: inner })}`;
-  if (inner.kind === 'udp') {
+  if (inner.kind === 'udp' && inner.payload.kind === 'dhcpv6') {
     const m = inner.payload;
-    if (m.kind === 'dhcpv6') return t(`packets.dhcp6.${m.type}`, { address: m.address ?? '', xid: `0x${m.xid.toString(16).padStart(6, '0')}` });
-    return `UDP ${inner.srcPort} → ${inner.dstPort}`;
+    return t(`packets.dhcp6.${m.type}`, { address: m.address ?? '', xid: `0x${m.xid.toString(16).padStart(6, '0')}` });
   }
+  // TCP und DNS über IPv6: dieselbe Beschreibung wie über IPv4.
+  if (inner.kind === 'udp' || inner.kind === 'tcp' || inner.kind === 'ospf') return infoOf({ ...frame, payload: asIpv4View(p, inner) });
   switch (inner.type) {
     case 'neighborSolicitation':
       return p.src === '::' ? t('packets.icmp6.dad', { target: inner.target ?? '' }) : t('packets.icmp6.neighborSolicitation', { target: inner.target ?? '' });
@@ -130,10 +131,16 @@ export function infoOf(frame: EthernetFrame): string {
   if (msg.kind === 'dns') {
     if (!msg.response) return access + t('packets.dns.query', { type: msg.question.type, name: msg.question.name });
     if (msg.rcode === 'nxdomain') return access + t('packets.dns.nxdomain', { name: msg.question.name });
-    return access + t('packets.dns.answer', { type: msg.question.type, name: msg.question.name, value: msg.answers.map((a) => a.value).join(', ') });
+    if (msg.rcode === 'servfail') return access + t('packets.dns.servfail', { name: msg.question.name });
+    if (!msg.answers.some((a) => a.type === msg.question.type)) return access + t('packets.dns.nodata', { type: msg.question.type, name: msg.question.name });
+    const value = msg.answers.map((a) => (a.type === 'CNAME' && msg.question.type !== 'CNAME' ? `${a.value} (CNAME)` : a.type === 'MX' ? `${a.priority ?? 10} ${a.value}` : a.value)).join(', ');
+    return access + t('packets.dns.answer', { type: msg.question.type, name: msg.question.name, value });
   }
   if (msg.kind === 'rip') {
     return access + t(msg.command === 'request' ? 'packets.rip.request' : 'packets.rip.response', { routes: msg.entries.map((e) => `${e.network}/${e.metric}`).join(', ') });
+  }
+  if (msg.kind === 'ripng') {
+    return access + t(msg.command === 'request' ? 'packets.rip.request' : 'packets.rip.response', { routes: msg.entries.map((e) => `${e.prefix}/${e.length} (${e.metric})`).join(', ') });
   }
   if (msg.kind === 'dhcpv6') return access + t(`packets.dhcp6.${msg.type}`, { address: msg.address ?? '', xid: hex(msg.xid) });
   return access + t(`packets.dhcp.${msg.op}`, { ip: msg.yourIp ?? msg.requestedIp ?? '', xid: hex(msg.xid) });
@@ -192,8 +199,8 @@ const PROTOCOL_WORDS: Record<string, (proto: string, frame: EthernetFrame) => bo
   ike: (p) => p === 'IKEv2',
   isakmp: (p) => p === 'IKEv2',
   vpn: (p) => p === 'ESP' || p === 'IKEv2',
-  tcp: (_p, f) => ipv4Of(f)?.payload.kind === 'tcp',
-  udp: (_p, f) => ipv4Of(f)?.payload.kind === 'udp' || (f.payload.kind === 'ipv6' && f.payload.payload.kind === 'udp'),
+  tcp: (_p, f) => transportOf(f)?.kind === 'tcp',
+  udp: (_p, f) => transportOf(f)?.kind === 'udp',
   dhcp: (p) => p === 'DHCP',
   dns: (p) => p === 'DNS',
   http: (p) => p === 'HTTP',
@@ -204,8 +211,11 @@ const PROTOCOL_WORDS: Record<string, (proto: string, frame: EthernetFrame) => bo
   mail: (p) => p === 'SMTP' || p === 'POP3' || p === 'IMAP',
   ssh: (p) => p === 'SSH',
   bgp: (p) => p === 'BGP',
-  ospf: (p) => p === 'OSPF',
-  rip: (p) => p === 'RIP',
+  ospf: (p) => p === 'OSPF' || p === 'OSPFv3',
+  ospfv3: (p) => p === 'OSPFv3',
+  ospf6: (p) => p === 'OSPFv3',
+  rip: (p) => p === 'RIP' || p === 'RIPng',
+  ripng: (p) => p === 'RIPng',
   stp: (p) => p === 'STP',
   ppp: (p) => p.startsWith('PPP'),
   wlan: (p) => p === '802.11',
@@ -219,11 +229,16 @@ const PROTOCOL_WORDS: Record<string, (proto: string, frame: EthernetFrame) => bo
   broadcast: (_p, f) => f.dst === BROADCAST_MAC || (f.payload.kind === 'ipv4' && f.payload.dst === '255.255.255.255'),
 };
 
-function ports(frame: EthernetFrame): number[] {
+/** TCP- oder UDP-Teil eines Rahmens, über IPv4, IPv6 oder getunnelt. */
+function transportOf(frame: EthernetFrame): TcpSegment | UdpDatagram | null {
   const p = frame.payload;
-  const inner = ipv4Of(frame)?.payload ?? (p.kind === 'ipv6' && p.payload.kind === 'udp' ? p.payload : null);
-  if (!inner) return [];
-  return inner.kind === 'tcp' || inner.kind === 'udp' ? [inner.srcPort, inner.dstPort] : [];
+  const inner = ipv4Of(frame)?.payload ?? (p.kind === 'ipv6' ? p.payload : null);
+  return inner && (inner.kind === 'tcp' || inner.kind === 'udp') ? inner : null;
+}
+
+function ports(frame: EthernetFrame): number[] {
+  const inner = transportOf(frame);
+  return inner ? [inner.srcPort, inner.dstPort] : [];
 }
 
 /**
@@ -298,7 +313,7 @@ export function parseFilter(text: string): FilterResult {
           const n = Number(value);
           const kind = field.split('.')[0];
           return compare((e) => {
-            const p = ipv4Of(e.frame)?.payload ?? (e.frame.payload.kind === 'ipv6' ? e.frame.payload.payload : null);
+            const p = transportOf(e.frame);
             if (!p) return false;
             if (kind !== 'port' && p.kind !== kind) return false;
             return ports(e.frame).includes(n);

@@ -4,8 +4,8 @@ import { MAC_PATTERN } from '../model/mac';
 import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
 import { checkFirewall, checkVpnTunnel, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
 import { MAX_GROUP_SIZE } from '../model/devices';
-import { checkBgp, checkOspf, checkRip, normalizeBgp, normalizeOspf, normalizeRip } from '../net/dynamic';
-import { logicalInterfaces } from '../net/routing';
+import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
+import { logicalInterfaces, sviId } from '../net/routing';
 import type {
   Cable,
   Device,
@@ -28,9 +28,9 @@ import type {
   RoutedNetwork,
   VlanDef,
 } from '../model/types';
-import { IP_MODES, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type IpMode, type RoutingMode } from '../model/types';
+import { DNS_TYPES, IP_MODES, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type DnsType, type IpMode, type Svi, type RoutingMode } from '../model/types';
 import { formatCidr6, formatIp6, isLinkLocal6, isMulticast6, parseCidr6, parseIp6 } from '../net/ipv6';
-import { isValidName, normalizeName } from '../net/dns';
+import { checkDnsRecord, isValidName, normalizeName, normalizeRecord } from '../net/dns';
 import { normalizeMac } from '../model/mac';
 import { isValidPath } from '../net/http';
 import { checkMailAccount } from '../net/mail';
@@ -402,6 +402,7 @@ function readDevice(v: unknown, path: string): Device {
       iface.ipv6 = formatCidr6(c.address, c.prefix);
     }
     if (io.dhcp6 !== undefined && bool(io.dhcp6, `${p}.dhcp6`)) iface.dhcp6 = true;
+    if (io.dns6 !== undefined) iface.dns6 = ip6(io.dns6, `${p}.dns6`);
     return iface;
   });
 
@@ -448,23 +449,31 @@ function readDevice(v: unknown, path: string): Device {
   }
   if (o.dnsServer !== undefined) {
     const p = `${path}.dnsServer`;
-    const records = arr(obj(o.dnsServer, p).records, `${p}.records`).map((raw, i): DnsRecord => {
+    const dns = obj(o.dnsServer, p);
+    const records: DnsRecord[] = [];
+    arr(dns.records, `${p}.records`).forEach((raw, i) => {
       const rp = `${p}.records[${i}]`;
       const r = obj(raw, rp);
       const type = r.type;
-      if (type !== 'A' && type !== 'MX') throw new Invalid(`${rp}.type`);
+      if (typeof type !== 'string' || !(DNS_TYPES as readonly string[]).includes(type)) throw new Invalid(`${rp}.type`);
       const record: DnsRecord = {
-        name: normalizeName(str(r.name, `${rp}.name`)),
-        type,
-        value: str(r.value, `${rp}.value`).trim(),
+        name: str(r.name, `${rp}.name`),
+        type: type as DnsType,
+        value: str(r.value, `${rp}.value`),
         ttl: int(r.ttl, `${rp}.ttl`),
+        ...(r.priority !== undefined ? { priority: int(r.priority, `${rp}.priority`) } : {}),
       };
-      if (!isValidName(record.name)) throw new Invalid(`${rp}.name`);
-      if (type === 'A' ? parseIp(record.value) === null : !isValidName(record.value)) throw new Invalid(`${rp}.value`);
-      if (record.ttl < 0) throw new Invalid(`${rp}.ttl`);
-      return record;
+      // Dieselben Regeln wie beim Eintragen (Typen, Namen, CNAME allein am Namen).
+      const issue = checkDnsRecord({ records }, record);
+      if (issue) throw new Invalid(`${rp}.${issue.field}`);
+      records.push(normalizeRecord(record));
     });
     device.dnsServer = { records };
+    if (dns.forwarder !== undefined) {
+      const forwarder = str(dns.forwarder, `${p}.forwarder`).trim();
+      if (parseIp(forwarder) === null && parseIp6(forwarder) === null) throw new Invalid(`${p}.forwarder`);
+      device.dnsServer.forwarder = forwarder;
+    }
   }
   if (o.webServer !== undefined) {
     const p = `${path}.webServer`;
@@ -564,7 +573,15 @@ function readDevice(v: unknown, path: string): Device {
       const vlan = vlanNumber(si.vlan, `${p}.vlan`);
       if (seen.has(vlan)) throw new Invalid(`${p}.vlan`);
       seen.add(vlan);
-      return { vlan, ...readAddress(si, p) };
+      const svi: Svi = { vlan, ...readAddress(si, p) };
+      if (si.ipv6 !== undefined) {
+        const c = parseCidr6(str(si.ipv6, `${p}.ipv6`));
+        if (!c || isMulticast6(c.address) || isLinkLocal6(c.address) || c.address === 0n) throw new Invalid(`${p}.ipv6`);
+        svi.ipv6 = formatCidr6(c.address, c.prefix);
+      }
+      if (si.dhcp6 !== undefined && bool(si.dhcp6, `${p}.dhcp6`)) svi.dhcp6 = true;
+      if (si.dns6 !== undefined) svi.dns6 = ip6(si.dns6, `${p}.dns6`);
+      return svi;
     });
   }
   if (o.ipRouting !== undefined && !bool(o.ipRouting, `${path}.ipRouting`)) device.ipRouting = false;
@@ -692,6 +709,7 @@ function readDevice(v: unknown, path: string): Device {
   }
   if (o.ipv6Auto !== undefined && bool(o.ipv6Auto, `${path}.ipv6Auto`)) device.ipv6Auto = true;
   if (o.gateway6 !== undefined) device.gateway6 = ip6(o.gateway6, `${path}.gateway6`);
+  if (o.dns6 !== undefined) device.dns6 = ip6(o.dns6, `${path}.dns6`);
   if (o.routes6 !== undefined) {
     device.routes6 = arr(o.routes6, `${path}.routes6`).map((raw, i) => {
       const r = obj(raw, `${path}.routes6[${i}]`);
@@ -753,6 +771,37 @@ function readDevice(v: unknown, path: string): Device {
     };
     if (checkRip(config)) throw new Invalid(p);
     device.rip = normalizeRip(config);
+  }
+  // IPv6: Ports oder (Layer-3-Switch) VLAN-Interfaces.
+  const link6 = (index: number) => (device.type === 'l3switch' ? !!device.svis?.some((sv) => sviId(sv.vlan) === index) : !!device.interfaces[index]);
+  const ifaceList = (v: unknown, p: string) => arr(v, p).map((x, i) => int(x, `${p}[${i}]`));
+  if (o.ospf6 !== undefined) {
+    const p = `${path}.ospf6`;
+    const c = obj(o.ospf6, p);
+    const config = {
+      ...(c.routerId !== undefined ? { routerId: ip(c.routerId, `${p}.routerId`) } : {}),
+      interfaces: arr(c.interfaces, `${p}.interfaces`).map((raw, i) => {
+        const e = obj(raw, `${p}.interfaces[${i}]`);
+        return { iface: int(e.iface, `${p}.interfaces[${i}].iface`), area: int(e.area, `${p}.interfaces[${i}].area`) };
+      }),
+      ...(c.passive !== undefined ? { passive: ifaceList(c.passive, `${p}.passive`) } : {}),
+      ...(c.defaultOriginate !== undefined && bool(c.defaultOriginate, `${p}.defaultOriginate`) ? { defaultOriginate: true } : {}),
+      ...(c.redistribute !== undefined ? { redistribute: readRedistribute(c.redistribute, `${p}.redistribute`) } : {}),
+    };
+    if (checkOspf6(config, link6)) throw new Invalid(p);
+    device.ospf6 = normalizeOspf6(config);
+  }
+  if (o.ripng !== undefined) {
+    const p = `${path}.ripng`;
+    const c = obj(o.ripng, p);
+    const config = {
+      interfaces: ifaceList(c.interfaces, `${p}.interfaces`),
+      ...(c.passive !== undefined ? { passive: ifaceList(c.passive, `${p}.passive`) } : {}),
+      ...(c.defaultOriginate !== undefined && bool(c.defaultOriginate, `${p}.defaultOriginate`) ? { defaultOriginate: true } : {}),
+      ...(c.redistribute !== undefined ? { redistribute: readRedistribute(c.redistribute, `${p}.redistribute`) } : {}),
+    };
+    if (checkRipng(config, link6)) throw new Invalid(p);
+    device.ripng = normalizeRipng(config);
   }
   // Routen dürfen auch auf Subinterfaces und SVIs zeigen.
   if (device.routes) {

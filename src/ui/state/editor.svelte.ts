@@ -14,6 +14,7 @@ import {
   setInterfaceRelay,
   addDevice,
   addDnsRecord,
+  setDnsForwarder,
   addMailbox,
   addStaticRoute,
   removeDnsRecord,
@@ -84,6 +85,7 @@ import {
   type VpnTunnel,
   setInterfaceIpv6,
   setInterfaceDhcp6,
+  setInterfaceDns6,
   configureHost6,
   addStaticRoute6,
   removeStaticRoute6,
@@ -128,6 +130,8 @@ import {
   setOspfCost,
   setPortSerial,
   setRip,
+  setOspf6,
+  setRipng,
   setVlanDef,
   wouldLoopWithoutStp,
   noPortError,
@@ -141,6 +145,8 @@ import {
   type ModemKind,
   type OspfConfig,
   type RipConfig,
+  type Ospf6Config,
+  type RipngConfig,
   type SerialEncapsulation,
   type StaticNat,
   type VlanDef,
@@ -566,6 +572,10 @@ class Editor {
     return this.#applyForm(addDnsRecord(this.topology, id, record));
   }
 
+  setDnsForwarder(id: string, address: string): TopologyError | null {
+    return this.#applyForm(setDnsForwarder(this.topology, id, address));
+  }
+
   removeDnsRecord(id: string, index: number) {
     if (!this.editable) return;
     const next = this.#check(removeDnsRecord(this.topology, id, index));
@@ -926,6 +936,14 @@ class Editor {
     return this.#applyForm(setRip(this.topology, id, config));
   }
 
+  setOspf6(id: string, config: Ospf6Config | null): TopologyError | null {
+    return this.#applyForm(setOspf6(this.topology, id, config));
+  }
+
+  setRipng(id: string, config: RipngConfig | null): TopologyError | null {
+    return this.#applyForm(setRipng(this.topology, id, config));
+  }
+
   setVlanDef(vlan: VlanDef): TopologyError | null {
     return this.#applyForm(setVlanDef(this.topology, vlan));
   }
@@ -990,6 +1008,10 @@ class Editor {
 
   setInterfaceDhcp6(id: string, index: number, enabled: boolean) {
     this.#edit(setInterfaceDhcp6(this.topology, id, index, enabled));
+  }
+
+  setInterfaceDns6(id: string, index: number, dns: string): TopologyError | null {
+    return this.#applyForm(setInterfaceDns6(this.topology, id, index, dns));
   }
 
   configureHost6(id: string, input: Host6Input): TopologyError | null {

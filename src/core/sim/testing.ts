@@ -24,8 +24,9 @@ import {
   setEncapsulation,
   type Result,
 } from '../model/topology';
-import type { DeviceType, DhcpScope, DhcpServerConfig, Medium, Topology } from '../model/types';
+import type { DeviceType, DhcpScope, DhcpServerConfig, DnsType, Medium, Topology } from '../model/types';
 import type { PacketLogEntry } from './simulation';
+import { asIpv4View } from './frames';
 
 export function unwrap<T>(r: Result<T>): T {
   if (!r.ok) throw new Error(`Unerwarteter Fehler: ${r.error.code}`);
@@ -124,9 +125,9 @@ export class NetBuilder {
     };
   }
 
-  dnsRecord(id: string, name: string, type: 'A' | 'MX', value: string) {
+  dnsRecord(id: string, name: string, type: DnsType, value: string, extra: { priority?: number; ttl?: number } = {}) {
     if (!getDevice(this.topology, id)?.dnsServer) this.topology = unwrap(setDnsServerEnabled(this.topology, id, true));
-    this.topology = unwrap(addDnsRecord(this.topology, id, { name, type, value, ttl: 60 }));
+    this.topology = unwrap(addDnsRecord(this.topology, id, { name, type, value, ttl: extra.ttl ?? 60, ...(extra.priority !== undefined ? { priority: extra.priority } : {}) }));
   }
 
   mailServer(id: string, domain: string, users: string[]) {
@@ -158,8 +159,10 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
     const v6 = p.payload;
     if (v6.kind === 'icmpv6') return `${route} ICMPv6 ${v6.type}${v6.target ? ` ${v6.target}` : ''} ${p.src}>${p.dst}`;
     if (v6.kind === 'ipv4') return `${route} DS-Lite ${p.src}>${p.dst} [${describe(topology, { ...entry, frame: { ...entry.frame, payload: v6 } }).slice(route.length + 1)}]`;
+    if (v6.kind === 'ospf') return `${route} OSPFv3 ${v6.type} ${v6.routerId} ${p.src}>${p.dst}`;
+    if (v6.kind === 'tcp' || v6.payload.kind !== 'dhcpv6') return `${describe(topology, { ...entry, frame: { ...entry.frame, payload: asIpv4View(p, v6) } })} (IPv6)`;
     const m = v6.payload;
-    return `${route} ${m.kind === 'dhcpv6' ? `DHCPv6 ${m.type}${m.address ? ` ${m.address}` : ''}` : m.kind.toUpperCase()} ${p.src}>${p.dst}`;
+    return `${route} DHCPv6 ${m.type}${m.address ? ` ${m.address}` : ''} ${p.src}>${p.dst}`;
   }
   const inner = p.payload;
   if (inner.kind === 'ospf') return `${route} OSPF ${inner.type} ${inner.routerId}`;
@@ -175,6 +178,7 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
       return `${route} DNS ${msg.response ? 'response' : 'query'} ${msg.question.name}${answer}`;
     }
     if (msg.kind === 'rip') return `${route} RIP ${msg.command} ${msg.entries.map((e) => `${e.network}/${e.metric}`).join(',')}`;
+    if (msg.kind === 'ripng') return `${route} RIPng ${msg.command} ${msg.entries.map((e) => `${e.prefix}/${e.length}:${e.metric}`).join(',')}`;
     if (msg.kind === 'dhcpv6') return `${route} DHCPv6 ${msg.type}`;
     if (msg.kind === 'ike') return `${route} IKEv2 ${msg.exchange}${msg.response ? ' response' : ''}${msg.notify ? ` ${msg.notify}` : ''}`;
     return `${route} DHCP ${msg.op} ${p.src}>${p.dst}`;

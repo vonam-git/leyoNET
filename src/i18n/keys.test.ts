@@ -54,6 +54,8 @@ describe('Sprachdatei', () => {
       'console.browser.httpsUnsupported',
       ...dnsErrors.concat('invalidName', 'nxdomain').map((e) => `console.mail.dns.${e}`),
       ...['refused', 'timeout', 'reset', ...sendErrors].map((e) => `console.mail.tcp.${e}`),
+      // OSPFv2 und OSPFv3 teilen den Ablauf: ospf.* bzw. ospf6.*
+      ...['ospf', 'ospf6'].flatMap((p) => ['down', 'areaMismatch', 'helloMismatch', 'init', 'full'].map((e) => `console.${p}.${e}`)),
     ];
     // Gründe der Aufgabenprüfung
     const reasons = readFileSync(join(__dirname, '../core/tasks/tasks.ts'), 'utf8').matchAll(/fail\(id, '([a-zA-Z]+)'/g);

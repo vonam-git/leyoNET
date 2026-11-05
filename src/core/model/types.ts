@@ -96,6 +96,8 @@ export interface NetInterface {
   ipv6?: string;
   /** Nur Router/Internet-Box: in diesem Netz Adressen per DHCPv6 vergeben (Router Advertisement mit M-Flag). */
   dhcp6?: boolean;
+  /** Nur Router/Internet-Box: IPv6-DNS-Server, den dieses Netz im Router Advertisement (RDNSS) und per DHCPv6 erhält. */
+  dns6?: string;
 }
 
 /**
@@ -124,6 +126,12 @@ export interface Svi {
   ip?: string;
   mask?: string;
   dhcpRelay?: string;
+  /** IPv6-Adresse mit Präfix, z.B. "2001:db8:10::1/64"; der Switch kündigt das Präfix im VLAN an. */
+  ipv6?: string;
+  /** In diesem VLAN IPv6-Adressen per DHCPv6 vergeben. */
+  dhcp6?: boolean;
+  /** IPv6-DNS-Server für dieses VLAN (RDNSS, DHCPv6). */
+  dns6?: string;
 }
 
 export interface PortForward {
@@ -206,12 +214,17 @@ export interface Device {
   ipv6Auto?: boolean;
   /** Endgeräte: IPv6-Standardgateway bei fester Adresse (globale oder Link-Local-Adresse des Routers). */
   gateway6?: string;
+  /** Endgeräte: IPv6-DNS-Server bei fester Adresse (bei automatischer Konfiguration vom Router). */
+  dns6?: string;
   /** Router, Internet-Box, Internet: statische IPv6-Routen. */
   routes6?: StaticRoute6[];
   /** Internet-Box: DS-Lite (RFC 6333). IPv4 aus dem Heimnetz geht im IPv6-Tunnel zum AFTR des Providers. */
   dsLite?: { aftr: string };
   /** Internet (Provider): arbeitet als AFTR für DS-Lite und übersetzt die getunnelten IPv4-Pakete per CGNAT. */
   aftr?: boolean;
+  /** IPv6: OSPFv3 und RIPng (Router und Layer-3-Switches). */
+  ospf6?: Ospf6Config;
+  ripng?: RipngConfig;
   /** Dynamisches Routing (Router und Layer-3-Switches). */
   ospf?: OspfConfig;
   bgp?: BgpConfig;
@@ -249,6 +262,29 @@ export interface OspfConfig {
   /** Diese Anschlüsse senden keine Hellos (Netz wird trotzdem bekanntgegeben). */
   passive?: number[];
   /** Standardroute an alle OSPF-Nachbarn verteilen («default-information originate»). */
+  defaultOriginate?: boolean;
+  redistribute?: RedistributeSource[];
+}
+
+/**
+ * OSPFv3 (RFC 5340) für IPv6: anders als bei OSPFv2 nimmt man Anschlüsse auf,
+ * nicht Netze («ipv6 ospf6 area 0» am Interface in FRRouting).
+ */
+export interface Ospf6Config {
+  /** Router-ID (32 Bit, als IPv4-Adresse geschrieben); fehlt = höchste IPv4-Adresse, sonst aus der MAC. */
+  routerId?: string;
+  /** Anschlüsse (bei Layer-3-Switches VLAN-Interfaces) mit OSPFv3 und ihre Area. */
+  interfaces: { iface: number; area: number }[];
+  passive?: number[];
+  defaultOriginate?: boolean;
+  /** «ospf»/«rip» meinen hier die IPv6-Protokolle (OSPFv3, RIPng). */
+  redistribute?: RedistributeSource[];
+}
+
+/** RIPng (RFC 2080) für IPv6: Anschlüsse mit RIPng. */
+export interface RipngConfig {
+  interfaces: number[];
+  passive?: number[];
   defaultOriginate?: boolean;
   redistribute?: RedistributeSource[];
 }
@@ -320,20 +356,32 @@ export interface CliConfig {
   banner?: string;
 }
 
-export type DnsType = 'A' | 'MX';
+/** Eintragstypen nach RFC 1035 (A, NS, CNAME, PTR, MX, TXT) und RFC 3596 (AAAA). */
+export type DnsType = 'A' | 'AAAA' | 'CNAME' | 'MX' | 'TXT' | 'NS' | 'PTR';
+export const DNS_TYPES: readonly DnsType[] = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'PTR'];
 
 export interface DnsRecord {
-  /** Name in Kleinbuchstaben, z.B. "webserver1" oder "www.schule.example". */
+  /** Name in Kleinbuchstaben, z.B. "webserver1" oder "www.schule.example"; bei PTR z.B. "10.1.168.192.in-addr.arpa". */
   name: string;
   type: DnsType;
-  /** Bei A eine IPv4-Adresse, bei MX der Name des Mailservers. */
+  /**
+   * A: IPv4-Adresse, AAAA: IPv6-Adresse, CNAME/NS/PTR/MX: ein Name,
+   * TXT: freier Text (höchstens 255 Zeichen).
+   */
   value: string;
+  /** Nur MX: Vorrang, kleiner = bevorzugt (Standard 10). */
+  priority?: number;
   /** Gültigkeit im Cache der Clients in Sekunden. */
   ttl: number;
 }
 
 export interface DnsServerConfig {
   records: DnsRecord[];
+  /**
+   * Weiterleitung: Namen, die nicht in der eigenen Zone stehen, fragt der Server
+   * bei diesem DNS-Server nach (rekursive Auflösung, z.B. Schul-DNS → Provider).
+   */
+  forwarder?: string;
 }
 
 export interface WebFile {

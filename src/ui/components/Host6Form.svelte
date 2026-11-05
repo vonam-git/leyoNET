@@ -11,8 +11,8 @@
    */
   let { device }: { device: Device } = $props();
 
-  const saved = $derived({ address: device.interfaces[0]?.ipv6 ?? '', gateway: device.gateway6 ?? '' });
-  let draft = $state({ address: '', gateway: '' });
+  const saved = $derived({ address: device.interfaces[0]?.ipv6 ?? '', gateway: device.gateway6 ?? '', dns: device.dns6 ?? '' });
+  let draft = $state({ address: '', gateway: '', dns: '' });
   let auto = $state(false);
   let error = $state<{ field?: string; text: string } | null>(null);
 
@@ -24,7 +24,7 @@
 
   const mac = $derived(device.interfaces[0]?.mac ?? '');
   const lla = $derived(mac ? formatIp6(linkLocal(mac)) : '');
-  const dirty = $derived(auto !== !!device.ipv6Auto || (!auto && (draft.address.trim() !== saved.address || draft.gateway.trim() !== saved.gateway)));
+  const dirty = $derived(auto !== !!device.ipv6Auto || (!auto && (draft.address.trim() !== saved.address || draft.gateway.trim() !== saved.gateway || draft.dns.trim() !== saved.dns)));
 
   /** Kurze Einordnung der Adresse: Netz, Dokumentationsbereich oder ULA. */
   const info = $derived.by(() => {
@@ -36,7 +36,7 @@
 
   function save(quiet: boolean): boolean {
     if (!dirty) return true;
-    const failure = editor.configureHost6(device.id, { auto, address: draft.address, gateway: draft.gateway });
+    const failure = editor.configureHost6(device.id, { auto, address: draft.address, gateway: draft.gateway, dns: draft.dns });
     if (failure) {
       if (!quiet) error = { field: failure.field, text: t(`error.${failure.code}`, failure.params) };
       return false;
@@ -66,6 +66,11 @@
       <input id="config6-gateway" type="text" autocomplete="off" spellcheck="false" placeholder="2001:db8:1::1" bind:value={draft.gateway} aria-invalid={error?.field === 'gateway6'} />
     </label>
     {#if error?.field === 'gateway6'}<p class="error" role="alert">{error.text}</p>{/if}
+    <label class="field">
+      <span>{t('ipv6.dns')}</span>
+      <input id="config6-dns" type="text" autocomplete="off" spellcheck="false" placeholder="2001:db8:1::53" bind:value={draft.dns} aria-invalid={error?.field === 'dns6'} />
+    </label>
+    {#if error?.field === 'dns6'}<p class="error" role="alert">{error.text}</p>{/if}
     {#if info}<p class="muted">{info}</p>{/if}
   {/if}
   {#if error && !error.field}<p class="error" role="alert">{error.text}</p>{/if}

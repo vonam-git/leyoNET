@@ -4,6 +4,7 @@
 import type { WebFile } from '../model/types';
 import { isValidName, normalizeName } from './dns';
 import { parseIp } from './ipv4';
+import { normalizeIp6 } from './ipv6';
 
 export interface Url {
   host: string;
@@ -25,17 +26,35 @@ export function parseUrl(text: string): Url | UrlError {
   const slash = rest.indexOf('/');
   const authority = slash < 0 ? rest : rest.slice(0, slash);
   const path = slash < 0 ? '/' : rest.slice(slash);
-  const [hostText = '', portText] = authority.split(':');
-  const host = normalizeName(hostText);
-  if (!host || (parseIp(host) === null && !isValidName(host))) return 'invalidUrl';
+  // IPv6-Adressen stehen in eckigen Klammern (RFC 3986, 3.2.2): http://[2001:db8::80]:8080/
+  const bracket = /^\[([0-9a-fA-F:.]+)\](?::(\d*))?$/.exec(authority);
+  let host: string;
+  let portText: string | undefined;
+  if (bracket) {
+    const v6 = normalizeIp6(bracket[1]!);
+    if (!v6) return 'invalidUrl';
+    host = v6;
+    portText = bracket[2];
+  } else {
+    const parts = authority.split(':');
+    if (parts.length > 2) return 'invalidUrl';
+    host = normalizeName(parts[0] ?? '');
+    portText = parts[1];
+    if (!host || (parseIp(host) === null && !isValidName(host))) return 'invalidUrl';
+  }
   const port = portText === undefined ? 80 : Number(portText);
   if (!Number.isInteger(port) || port < 1 || port > 65535) return 'invalidUrl';
   if (!/^\/[\x21-\x7e]*$/.test(path)) return 'invalidUrl';
   return { host, port, path };
 }
 
+/** Host für URL und Host-Kopf: IPv6 in eckigen Klammern. */
+export function urlHost(host: string): string {
+  return host.includes(':') ? `[${host}]` : host;
+}
+
 export function formatUrl(url: Url): string {
-  return `http://${url.host}${url.port === 80 ? '' : `:${url.port}`}${url.path}`;
+  return `http://${urlHost(url.host)}${url.port === 80 ? '' : `:${url.port}`}${url.path}`;
 }
 
 /** Relativer Link (z.B. aus einer Seite) zur absoluten URL, ausgehend von `base`. */
@@ -49,7 +68,7 @@ export function resolveLink(base: Url, href: string): Url | UrlError {
 const CRLF = '\r\n';
 
 export function buildRequest(url: Url): string {
-  return [`GET ${url.path} HTTP/1.1`, `Host: ${url.host}`, 'User-Agent: leyoNET', 'Connection: close', '', ''].join(CRLF);
+  return [`GET ${url.path} HTTP/1.1`, `Host: ${urlHost(url.host)}`, 'User-Agent: leyoNET', 'Connection: close', '', ''].join(CRLF);
 }
 
 export interface HttpRequest {

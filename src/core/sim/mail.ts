@@ -3,6 +3,7 @@
 // TCP, damit der Dialog in der Paketliste mitgelesen werden kann.
 
 import { parseIp } from '../net/ipv4';
+import { normalizeIp6 } from '../net/ipv6';
 import { dotStuff, dotUnstuff, formatAddress, formatMessage, parseAddress, parseMessage, type MailMessage } from '../net/mail';
 import type { DnsResolver } from './dns';
 import { IMAP_PORT, POP3_PORT, SMTP_PORT } from './frames';
@@ -61,13 +62,15 @@ class Lines {
 /** Name oder IP des Servers auflösen; bei Fehlern meldet `report`, und `next` wird nicht aufgerufen. */
 function resolveHost(host: MailHost, name: string, report: Report, next: (ip: string) => void, fail: () => void) {
   if (parseIp(name) !== null) return next(name);
+  const v6 = normalizeIp6(name.replace(/^\[|\]$/g, ''));
+  if (v6) return next(v6);
   report('mail.resolve', { host: name });
-  host.resolver.resolve(name, 'A', (result) => {
+  host.resolver.resolveAddress(name, (result) => {
     if (!result.ok) {
-      report(`mail.dns.${result.error}`, { host: name, server: result.server });
+      report(`mail.dns.${result.error === 'nodata' ? 'nxdomain' : result.error}`, { host: name, server: result.server });
       return fail();
     }
-    const ip = result.records[0]!.value;
+    const ip = result.ip;
     report('mail.resolved', { host: name, ip });
     next(ip);
   });
@@ -295,8 +298,10 @@ export class MailServer {
     };
     this.#ctx.print('smtp.relayStart', { domain, to: to.join(', ') });
     this.host.resolver.resolve(domain, 'MX', (mx) => {
-      if (!mx.ok) return bounce(`no MX record for ${domain}`);
-      const mailHost = mx.records[0]!.value;
+      // Der MX mit dem kleinsten Vorrang zuerst (Antwort ist danach sortiert).
+      const best = mx.ok ? mx.records.find((r) => r.type === 'MX') : undefined;
+      if (!best) return bounce(`no MX record for ${domain}`);
+      const mailHost = best.value;
       resolveHost(
         this.host,
         mailHost,

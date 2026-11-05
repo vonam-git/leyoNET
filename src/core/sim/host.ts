@@ -12,7 +12,7 @@ import { DhcpClient, DhcpServer, type LeaseRecord } from './dhcp';
 import { DnsResolver, DnsServer, type DnsCacheEntry } from './dns';
 import { DHCP_CLIENT_PORT, DHCP_SERVER_PORT, DNS_PORT, type Ipv4Packet, type Ipv6Packet, type TcpSegment, type UdpDatagram } from './frames';
 import { HttpClient, HttpServer, type BrowserState } from './http';
-import { IpNode, type ArpEntry } from './ip';
+import { IpNode, asIpv4View, type ArpEntry } from './ip';
 import { MailClient, MailServer, type MailClientState } from './mail';
 import type { NodeContext } from './simulation';
 import { SshClient } from './ssh';
@@ -85,7 +85,7 @@ export class HostNode extends IpNode {
     new HttpServer(this);
     this.mailServer = new MailServer(this);
     this.mail = new MailClient(this);
-    this.ssh = new SshClient(this.tcp, ctx);
+    this.ssh = new SshClient(this.tcp, ctx, (name, done) => this.resolver.resolveAddress(name, (r) => done(r.ok ? r.ip : null)));
   }
 
   /** Im DHCP-Modus gelten Adresse, Gateway und DNS aus der Lease (oder gar keine). */
@@ -106,8 +106,27 @@ export class HostNode extends IpNode {
     };
   }
 
+  /** DNS-Server über IPv4; im Modus «nur IPv6» gibt es keinen. */
   dnsServer(): string | undefined {
-    return this.effectiveDevice()?.dns;
+    return this.ipv4On() ? this.effectiveDevice()?.dns : undefined;
+  }
+
+  /** DNS-Server über IPv6: fest eingetragen oder aus dem Router Advertisement (RDNSS) bzw. DHCPv6. */
+  dnsServer6(): string | undefined {
+    const device = this.ctx.device();
+    if (!device || !this.v6.enabled()) return undefined;
+    return device.ipv6Auto ? this.v6.state()?.dns : device.dns6;
+  }
+
+  /**
+   * Welche Adressen ein Name liefern soll: nur IPv4 → A; nur IPv6 → AAAA;
+   * Dual Stack mit globaler IPv6-Adresse → zuerst AAAA, dann A (RFC 6724, IPv6 bevorzugt).
+   */
+  addressTypes(): ('A' | 'AAAA')[] {
+    if (!this.v6.enabled()) return ['A'];
+    if (!this.ipv4On()) return ['AAAA'];
+    const global = this.v6.state()?.addresses.some((a) => a.origin !== 'link-local');
+    return global ? ['AAAA', 'A'] : ['A'];
   }
 
   protected override onIcmp(packet: Ipv4Packet) {
@@ -154,8 +173,11 @@ export class HostNode extends IpNode {
   protected override onUdp(packet: Ipv4Packet, datagram: UdpDatagram, index: number, srcMac: string) {
     const msg = datagram.payload;
     if (msg.kind === 'dns') {
-      if (datagram.dstPort === DNS_PORT) this.dnsService.onQuery(packet, datagram);
-      else if (datagram.srcPort === DNS_PORT) this.resolver.onResponse(msg);
+      if (datagram.dstPort === DNS_PORT) {
+        // Antwort eines Weiterleiters an diesen DNS-Server, sonst eine Anfrage.
+        if (msg.response) this.dnsService.onForwardResponse(msg);
+        else this.dnsService.onQuery(packet, datagram);
+      } else if (datagram.srcPort === DNS_PORT) this.resolver.onResponse(msg);
       return;
     }
     if (msg.kind !== 'dhcp') return;
@@ -171,6 +193,11 @@ export class HostNode extends IpNode {
 
   protected override onTcp(packet: Ipv4Packet, segment: TcpSegment) {
     this.tcp.receive(packet.src, packet.dst, segment);
+  }
+
+  /** DNS über IPv6 (Anfragen an den eigenen Server und Antworten an den Resolver). */
+  protected override onUdp6(packet: Ipv6Packet, datagram: UdpDatagram, index: number) {
+    if (datagram.payload.kind === 'dns') this.onUdp(asIpv4View(packet, datagram), datagram, index, '');
   }
 
   #wlan: WlanSession | null = null;
@@ -290,46 +317,43 @@ export class HostNode extends IpNode {
       if (this.#reachable(ip)) start(formatIp(ip));
       return;
     }
-    if (/^[\d.]+$/.test(target)) return this.ctx.print('ping.invalidTarget', { target });
-    this.resolver.resolve(target, 'A', (result) => {
+    const ip6 = parseIp6(target);
+    if (ip6 !== null) {
+      if (this.#reachable6(ip6)) start(formatIp6(ip6));
+      return;
+    }
+    if (/^[\d.]+$/.test(target) || target.includes(':')) return this.ctx.print('ping.invalidTarget', { target });
+    this.resolver.resolveAddress(target, (result) => {
       if (!result.ok) {
-        const code = result.error === 'nxdomain' || result.error === 'invalidName' ? 'unknownHost' : `dns.${result.error}`;
+        const code = result.error === 'nxdomain' || result.error === 'nodata' || result.error === 'invalidName' ? 'unknownHost' : `dns.${result.error}`;
         return this.ctx.print(`${command}.${code}`, { name: target, server: result.server });
       }
-      const resolved = parseIp(result.records[0]!.value);
+      if (result.type === 'AAAA') {
+        const resolved6 = parseIp6(result.ip);
+        if (resolved6 !== null && this.#reachable6(resolved6)) start(formatIp6(resolved6), target);
+        return;
+      }
+      const resolved = parseIp(result.ip);
       if (resolved !== null && this.#reachable(resolved)) start(formatIp(resolved), target);
     });
   }
 
   ping(target: string) {
-    const v6 = parseIp6(target);
-    if (v6 !== null) {
-      if (!this.#reachable6(v6)) return;
-      this.#ping?.cancel();
-      const run = new PingRun(this.#icmp6, formatIp6(v6), ++this.#icmpId, this.v6.state()?.gateway ?? '');
-      this.#ping = run;
-      return run.start();
-    }
     this.#withTarget(target, 'ping', (ip, name) => {
       this.#ping?.cancel();
-      const run = new PingRun(this, ip, ++this.#icmpId, this.effectiveDevice()?.gateway ?? '', name);
+      const v6 = parseIp(ip) === null;
+      const run = v6
+        ? new PingRun(this.#icmp6, ip, ++this.#icmpId, this.v6.state()?.gateway ?? '', name)
+        : new PingRun(this, ip, ++this.#icmpId, this.effectiveDevice()?.gateway ?? '', name);
       this.#ping = run;
       run.start();
     });
   }
 
   traceroute(target: string) {
-    const v6 = parseIp6(target);
-    if (v6 !== null) {
-      if (!this.#reachable6(v6)) return;
-      this.#trace?.cancel();
-      const run = new TracerouteRun(this.#icmp6, formatIp6(v6), ++this.#icmpId);
-      this.#trace = run;
-      return run.start();
-    }
     this.#withTarget(target, 'tracert', (ip, name) => {
       this.#trace?.cancel();
-      const run = new TracerouteRun(this, ip, ++this.#icmpId, name);
+      const run = new TracerouteRun(parseIp(ip) === null ? this.#icmp6 : this, ip, ++this.#icmpId, name);
       this.#trace = run;
       run.start();
     });
@@ -356,9 +380,11 @@ export class HostNode extends IpNode {
   }
 
   connections(): ConnectionInfo[] {
+    // IPv6 mit Port in eckigen Klammern (RFC 3986): [2001:db8::1]:80.
+    const at = (ip: string, port: number) => (ip.includes(':') ? `[${ip}]:${port}` : `${ip}:${port}`);
     return this.tcp.connections().map((c) => ({
-      local: `${c.local.ip}:${c.local.port}`,
-      remote: `${c.remote.ip}:${c.remote.port}`,
+      local: at(c.local.ip, c.local.port),
+      remote: at(c.remote.ip, c.remote.port),
       state: c.state,
     }));
   }

@@ -515,3 +515,28 @@ test('Doppelte MAC: Warnung, MAC ändern behebt sie; Schritt zurück und Zurück
   await expect(page.locator('.controls')).toContainText('0.000');
   await expect(rows).toHaveCount(0);
 });
+
+test('IPv6 auf dem Layer-3-Switch: SVIs mit IPv6-Adresse, DHCPv6 und DNS-Server', async ({ page }) => {
+  await page.getByRole('button', { name: 'Demo-Netze …' }).click();
+  await page.locator('li').filter({ hasText: 'IPv6 auf dem Layer-3-Switch' }).getByRole('button', { name: /Schritt für Schritt/ }).click();
+  const tour = page.getByRole('dialog', { name: 'IPv6 auf dem Layer-3-Switch' });
+  await expect(tour).toContainText('Schritt 1 von 6');
+  const core = page.getByRole('dialog', { name: 'Core' });
+  await expect(core.getByLabel('IPv6-Adresse von VLAN 20')).toHaveValue('2001:db8:20::1/64');
+  await expect(core.getByLabel(/IPv6-DNS-Server für das Netz an VLAN 10/)).toHaveValue('2001:db8:99::10');
+  await expect(core).toContainText('2001:db8:99::1/64');
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  await tour.getByRole('button', { name: 'Führung beenden' }).click();
+});
+
+test('OSPFv3: Anschlüsse statt Netze im Reiter Routing', async ({ page }) => {
+  await page.getByRole('button', { name: 'Demo-Netze …' }).click();
+  await page.locator('li').filter({ hasText: 'OSPFv3 für IPv6' }).getByRole('button', { name: /Schritt für Schritt/ }).click();
+  const tour = page.getByRole('dialog', { name: 'OSPFv3 für IPv6' });
+  const r1 = page.getByRole('dialog', { name: 'R1' });
+  await expect(r1.getByText('OSPFv3 (IPv6)')).toBeVisible();
+  await expect(r1.getByLabel('OSPFv3 auf eth1')).toBeChecked();
+  await expect(r1.getByLabel('Area von eth1')).toHaveValue('0');
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  await tour.getByRole('button', { name: 'Führung beenden' }).click();
+});

@@ -89,6 +89,7 @@ export interface DeviceState {
   /** Modem: Zustand der Zugangsleitung. */
   modem?: ModemState;
   ospf?: OspfState;
+  ospf6?: OspfState;
   bgp?: BgpPeerInfo[];
   /** Wirksame Routingtabelle (Router, Layer-3-Switches), inklusive gelernter Routen. */
   routes?: Route[];

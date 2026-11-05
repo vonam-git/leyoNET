@@ -111,6 +111,25 @@ export const DEMOS: readonly Demo[] = [
       { highlight: 'Webserver' },
       { pause: false, highlight: 'Notebook 1' },
     ] },
+  { id: 'dns', file: 'dns.json', topic: 'services', layers: [7], actions: [{ at: 600, device: 'PC 1', command: 'nslookup intranet.schule.example' }, { at: 1500, device: 'PC 1', command: 'nslookup -type=MX schule.example' }, { at: 2500, device: 'PC 1', browse: 'http://www.provider.example/' }], check: { kind: 'browser', device: 'PC 1', contains: 'Provider' }, until: 8000,
+    tour: [
+      { sim: false, highlight: 'Schul-DNS', window: { device: 'Schul-DNS', tab: 'services' } },
+      { sim: true, pause: false, action: { at: 0, device: 'PC 1', command: 'nslookup intranet.schule.example' }, highlight: 'PC 1' },
+      { action: { at: 0, device: 'PC 1', command: 'nslookup -type=MX schule.example' }, highlight: 'PC 1' },
+      { action: { at: 0, device: 'PC 1', command: 'nslookup 192.168.10.3' }, highlight: 'Webserver' },
+      { action: { at: 0, device: 'PC 1', browse: 'http://www.provider.example/' }, highlight: 'Provider-DNS' },
+      { highlight: 'Schul-DNS', window: { device: 'Schul-DNS', tab: 'state' } },
+    ] },
+  { id: 'ipv6Services', file: 'ipv6-dienste.json', topic: 'services', layers: [3, 4, 7], actions: [{ at: 3000, device: 'PC 1', command: 'nslookup www.schule.example' }, { at: 4000, device: 'PC 1', browse: 'http://www.schule.example/' }, { at: 6000, device: 'PC 1', mail: { to: ['ben@schule.example'], subject: 'Hallo über IPv6', body: 'Diese Mail kam ohne IPv4 an.' } }], check: { kind: 'browser', device: 'PC 1', contains: 'IPv6' }, until: 12_000,
+    tour: [
+      { sim: false, highlight: 'Router', window: { device: 'Router', tab: 'addresses' } },
+      { highlight: 'Schul-DNS', window: { device: 'Schul-DNS', tab: 'services' } },
+      { sim: true, pause: false, highlight: 'PC 1', window: { device: 'PC 1', tab: 'state' } },
+      { action: { at: 0, device: 'PC 1', command: 'nslookup www.schule.example' }, highlight: 'PC 1' },
+      { action: { at: 0, device: 'PC 1', browse: 'http://www.schule.example/' }, highlight: 'Web- und Mailserver' },
+      { action: { at: 0, device: 'PC 1', mail: { to: ['ben@schule.example'], subject: 'Hallo über IPv6', body: 'Diese Mail kam ohne IPv4 an.' } }, highlight: 'Web- und Mailserver' },
+      { highlight: 'Router' },
+    ] },
   {
     id: 'mail',
     file: 'mail.json',
@@ -136,6 +155,15 @@ export const DEMOS: readonly Demo[] = [
   { id: 'storm', file: 'broadcast-sturm.json', topic: 'switching', layers: [2], actions: [{ at: 600, device: 'PC 1', command: 'ping 192.168.1.11' }], check: { kind: 'storm' }, until: 3000 },
   { id: 'routerOnAStick', file: 'router-on-a-stick.json', topic: 'switching', layers: [2, 3], actions: [{ at: 600, device: 'PC Verwaltung', command: 'ping 192.168.20.11' }], check: { kind: 'ping', device: 'PC Verwaltung' }, until: 8000 },
   { id: 'l3switch', file: 'layer3-switch.json', topic: 'switching', layers: [2, 3], actions: [{ at: 5000, device: 'Notebook 1', command: 'ping 10.99.0.10' }], check: { kind: 'ping', device: 'Notebook 1' }, until: 15_000 },
+  { id: 'l3switchIpv6', file: 'layer3-switch-ipv6.json', topic: 'switching', layers: [2, 3], actions: [{ at: 4000, device: 'Notebook 2', command: 'ping 2001:db8:10::ff:fe00:500' }, { at: 9000, device: 'Notebook 1', browse: 'http://intranet.schule.example/' }], check: { kind: 'browser', device: 'Notebook 1', contains: 'Intranet' }, until: 14_000,
+    tour: [
+      { sim: false, highlight: 'Core', window: { device: 'Core', tab: 'addresses' } },
+      { sim: true, pause: false, highlight: 'Notebook 1', window: { device: 'Notebook 1', tab: 'state' } },
+      { highlight: 'Notebook 2', window: { device: 'Notebook 2', tab: 'state' } },
+      { action: { at: 0, device: 'Notebook 2', command: 'ping 2001:db8:10::ff:fe00:500' }, highlight: 'Core' },
+      { action: { at: 0, device: 'Notebook 1', browse: 'http://intranet.schule.example/' }, highlight: 'Server' },
+      { highlight: 'Core', window: { device: 'Core', tab: 'state' } },
+    ] },
   // Routing
   { id: 'autoRouting', file: 'automatisches-routing.json', topic: 'routing', layers: [3], actions: [{ at: 600, device: 'PC A', command: 'tracert 192.168.30.10' }], check: { kind: 'trace', device: 'PC A' }, until: 10_000,
     tour: [
@@ -148,6 +176,15 @@ export const DEMOS: readonly Demo[] = [
   { id: 'static', file: 'statische-routen.json', topic: 'routing', layers: [3], actions: [{ at: 600, device: 'PC A', command: 'tracert 192.168.20.10' }], check: { kind: 'trace', device: 'PC A' }, until: 10_000 },
   { id: 'ospf', file: 'ospf.json', topic: 'routing', layers: [3], actions: [{ at: 9000, device: 'PC 1', command: 'tracert 192.168.2.10' }], check: { kind: 'trace', device: 'PC 1' }, until: 20_000 },
   { id: 'rip', file: 'rip.json', topic: 'routing', layers: [3, 4], actions: [{ at: 9000, device: 'PC 1', command: 'tracert 192.168.2.10' }], check: { kind: 'trace', device: 'PC 1' }, until: 20_000 },
+  { id: 'ospfv3', file: 'ospfv3.json', topic: 'routing', layers: [3], actions: [{ at: 9000, device: 'PC 1', command: 'tracert 2001:db8:2::10' }], check: { kind: 'trace', device: 'PC 1' }, until: 20_000,
+    tour: [
+      { sim: false, highlight: 'R1', window: { device: 'R1', tab: 'routing' } },
+      { sim: true, pause: false, highlight: 'R1' },
+      { highlight: 'R2', window: { device: 'R2', tab: 'state' } },
+      { action: { at: 0, device: 'PC 1', command: 'tracert 2001:db8:2::10' }, highlight: 'PC 1' },
+      { highlight: 'R3' },
+    ] },
+  { id: 'ripng', file: 'ripng.json', topic: 'routing', layers: [3, 4], actions: [{ at: 12_000, device: 'PC 1', command: 'tracert 2001:db8:2::10' }], check: { kind: 'trace', device: 'PC 1' }, until: 22_000 },
   { id: 'bgp', file: 'bgp.json', topic: 'routing', layers: [4, 7], actions: [{ at: 12_000, device: 'PC AS 65001', command: 'ping 10.3.0.10' }], check: { kind: 'ping', device: 'PC AS 65001' }, until: 25_000 },
   // Zugang ins Internet
   { id: 'nat', file: 'heimnetz-nat.json', topic: 'access', layers: [3, 4], actions: [{ at: 600, device: 'PC', browse: 'http://198.51.100.10/' }], check: { kind: 'browser', device: 'PC', contains: 'Öffentlicher Webserver' }, until: 6000 },

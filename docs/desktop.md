@@ -27,6 +27,7 @@ Die Installer sind **nicht signiert** (Signaturzertifikate kosten Geld). Darum:
 
 - **Windows**: SmartScreen meldet «Der Computer wurde durch Windows geschützt» → *Weitere Informationen* → *Trotzdem ausführen*.
 - **macOS**: «kann nicht geöffnet werden, da der Entwickler nicht verifiziert werden kann» → im Finder Rechtsklick auf die App → *Öffnen* → *Öffnen*. Bei neueren macOS-Versionen: *Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen*.
+- **macOS: «leyoNET ist beschädigt und kann nicht geöffnet werden»**: Das meldet macOS bei Programmen aus dem Internet ohne Apple-Zertifikat. Die App ist seit 1.0 ad hoc signiert, das reicht meist für «Dennoch öffnen». Hilft das nicht: App in den Ordner *Programme* ziehen und im Terminal `xattr -cr /Applications/leyoNET.app` ausführen, dann normal öffnen.
 
 Für eine Verteilung an viele Schulgeräte lohnt sich später ein Zertifikat (Windows: Code-Signing-Zertifikat; macOS: Apple Developer Program). Tauri unterstützt beides über GitHub-Secrets.
 

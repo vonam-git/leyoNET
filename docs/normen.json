@@ -18,6 +18,10 @@
       "titel": "An Ethernet Address Resolution Protocol",
       "verwendung": "ARP"
     },
+    "1034": {
+      "titel": "Domain Names – Concepts and Facilities",
+      "verwendung": "DNS: Zonen, CNAME-Regeln, Auflösung, Weiterleitung"
+    },
     "1035": {
       "titel": "Domain Names – Implementation and Specification",
       "verwendung": "DNS-Nachrichten"
@@ -53,6 +57,10 @@
     "1939": {
       "titel": "Post Office Protocol – Version 3",
       "verwendung": "POP3 im Mailserver"
+    },
+    "2080": {
+      "titel": "RIPng for IPv6",
+      "verwendung": "RIPng: UDP 521, ff02::9, Hop-Anzahl"
     },
     "2131": {
       "titel": "Dynamic Host Configuration Protocol",
@@ -90,9 +98,17 @@
       "titel": "Traditional IP Network Address Translator",
       "verwendung": "NAT"
     },
+    "3596": {
+      "titel": "DNS Extensions to Support IP Version 6",
+      "verwendung": "AAAA-Einträge, Rückwärtsauflösung unter ip6.arpa"
+    },
     "3849": {
       "titel": "IPv6 Address Prefix Reserved for Documentation",
       "verwendung": "Beispieladressen 2001:db8::/32"
+    },
+    "3986": {
+      "titel": "Uniform Resource Identifier (URI): Generic Syntax",
+      "verwendung": "URLs im Browser, IPv6-Adressen in eckigen Klammern"
     },
     "4193": {
       "titel": "Unique Local IPv6 Unicast Addresses",
@@ -138,6 +154,10 @@
       "titel": "Simple Mail Transfer Protocol",
       "verwendung": "SMTP im Mailserver"
     },
+    "5340": {
+      "titel": "OSPF for IPv6",
+      "verwendung": "OSPFv3: Hellos über Link-Local, Intra-Area-Prefix-LSA"
+    },
     "5737": {
       "titel": "IPv4 Address Blocks Reserved for Documentation",
       "verwendung": "Beispieladressen"
@@ -154,6 +174,10 @@
       "titel": "IANA-Reserved IPv4 Prefix for Shared Address Space",
       "verwendung": "CGNAT 100.64.0.0/10"
     },
+    "6724": {
+      "titel": "Default Address Selection for Internet Protocol Version 6 (IPv6)",
+      "verwendung": "Dual Stack: AAAA vor A, wenn eine globale IPv6-Adresse vorhanden ist"
+    },
     "6793": {
       "titel": "BGP Support for Four-Octet Autonomous System (AS) Number Space",
       "verwendung": "4-Byte-AS-Nummern"
@@ -161,6 +185,10 @@
     "7296": {
       "titel": "Internet Key Exchange Protocol Version 2 (IKEv2)",
       "verwendung": "Tunnelaufbau des VPN (UDP 500)"
+    },
+    "8106": {
+      "titel": "IPv6 Router Advertisement Options for DNS Configuration",
+      "verwendung": "RDNSS: DNS-Server im Router Advertisement"
     },
     "8200": {
       "titel": "Internet Protocol, Version 6 (IPv6) Specification",

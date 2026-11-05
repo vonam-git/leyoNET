@@ -9,7 +9,7 @@ export * from './model/security';
 export * from './io/project';
 export * from './net/ipv4';
 export * from './net/ipv6';
-export { IPV4_ENABLED, IPV6_ENABLED, ipv6Ports, type Ip6State, type Route6, type Neighbor6 } from './sim/ip6';
+export { IPV4_ENABLED, IPV6_ENABLED, ipv6Links, ipv6Ports, type Link6, type Ip6State, type Route6, type Neighbor6 } from './sim/ip6';
 export * from './sim/frames';
 export * from './sim/simulation';
 export * from './net/routing';

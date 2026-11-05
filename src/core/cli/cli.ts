@@ -43,16 +43,20 @@ import {
   addStaticRoute6,
   removeStaticRoute6,
   setInterfaceDhcp6,
+  setInterfaceDns6,
   setInterfaceIpv6,
+  setOspf6,
+  setRipng,
 } from '../model/topology';
-import type { BgpConfig, CliConfig, Device, DeviceType, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, Topology } from '../model/types';
+import { ipv6Links } from '../sim/ip6';
+import type { BgpConfig, CliConfig, Device, DeviceType, Ospf6Config, RipngConfig, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, Topology } from '../model/types';
 import { formatIp, maskToText, networkOf, parseIp, parseMask } from '../net/ipv4';
 import { formatCidr6, formatIp6, parseCidr6, parseIp6 } from '../net/ipv6';
 import { buildRoutes, decodeIface, logicalInterfaces, type Route } from '../net/routing';
 import type { DeviceState } from '../sim/simulation';
 import { cliIfaceName, ifaceIdOf, parseIfaceName, usesPortNames } from './names';
 
-export type CliMode = 'user' | 'enable' | 'config' | 'if' | 'vlan' | 'line' | 'router-ospf' | 'router-rip' | 'router-bgp';
+export type CliMode = 'user' | 'enable' | 'config' | 'if' | 'vlan' | 'line' | 'router-ospf' | 'router-rip' | 'router-bgp' | 'router-ospf6' | 'router-ripng';
 
 export interface CliSession {
   device: string;
@@ -122,6 +126,10 @@ export function prompt(topology: Topology, session: CliSession): string {
     case 'router-rip':
     case 'router-bgp':
       return `${name}(config-router)#`;
+    case 'router-ospf6':
+      return `${name}(config-ospf6)#`;
+    case 'router-ripng':
+      return `${name}(config-router)#`;
   }
 }
 
@@ -148,10 +156,12 @@ interface Command {
 }
 
 const ROUTERS: DeviceType[] = ['router'];
+/** IPv6-Befehle: Router und Layer-3-Switch (dort auf den VLAN-Interfaces). */
+const ROUTERS6: DeviceType[] = ['router', 'l3switch'];
 const SWITCHES: DeviceType[] = ['switch', 'l3switch'];
 const L3: DeviceType[] = ['router', 'l3switch'];
 const EXEC: CliMode[] = ['user', 'enable'];
-const ROUTER_MODES: CliMode[] = ['router-ospf', 'router-rip', 'router-bgp'];
+const ROUTER_MODES: CliMode[] = ['router-ospf', 'router-rip', 'router-bgp', 'router-ospf6', 'router-ripng'];
 const CONFIG_ALL: CliMode[] = ['config', 'if', 'vlan', 'line', ...ROUTER_MODES];
 
 /** Kurze Erklärungen für Schlüsselwörter mitten in einem Befehl (für «?»). */
@@ -322,6 +332,16 @@ function forPorts(call: Call, step: (t: Topology, port: number) => Result<Topolo
   );
 }
 
+/** IPv6 auf Ports (Router) und VLAN-Interfaces (Layer-3-Switch); Subinterfaces sprechen nur IPv4. */
+function forLinks6(call: Call, step: (t: Topology, id: number) => Result<Topology>): Partial<CliOutput> {
+  const targets = call.session.targets ?? [];
+  if (targets.some((id) => decodeIface(id).kind === 'sub')) return ok(['% IPv6 is not supported on subinterfaces']);
+  return applyAll(
+    call.env.topology,
+    targets.map((id) => (t: Topology) => step(t, id)),
+  );
+}
+
 function exitMode(session: CliSession): Partial<CliOutput> {
   switch (session.mode) {
     case 'if':
@@ -330,6 +350,8 @@ function exitMode(session: CliSession): Partial<CliOutput> {
     case 'router-ospf':
     case 'router-rip':
     case 'router-bgp':
+    case 'router-ospf6':
+    case 'router-ripng':
       return { session: { device: session.device, mode: 'config', ...(session.remote ? { remote: true } : {}) } };
     case 'config':
       return { session: { device: session.device, mode: 'enable', ...(session.remote ? { remote: true } : {}) } };
@@ -368,14 +390,17 @@ const COMMANDS: Command[] = [
   { modes: EXEC, syntax: 'show version', help: 'Software version', run: ({ device }) => ok(showVersion(device)) },
   { modes: ['enable'], syntax: 'show running-config', help: 'Current operating configuration', run: ({ device }) => ok(runningConfig(device)) },
   { modes: EXEC, types: L3, syntax: 'show ip route', help: 'IP routing table', run: ({ device, env }) => ok(showIpRoute(device, env)) },
-  { modes: EXEC, types: ROUTERS, syntax: 'show ipv6 route', help: 'IPv6 routing table', run: ({ device, env }) => ok(showIpv6Route(device, env)) },
-  { modes: EXEC, types: ROUTERS, syntax: 'show ipv6 neighbors', help: 'IPv6 neighbour cache (Neighbor Discovery)', run: ({ device, env }) => ok(showIpv6Neighbors(device, env)) },
-  { modes: EXEC, types: ROUTERS, syntax: 'show ipv6 interface brief', help: 'IPv6 addresses per interface', run: ({ device, env }) => ok(showIpv6Brief(device, env)) },
+  { modes: EXEC, types: ROUTERS6, syntax: 'show ipv6 route', help: 'IPv6 routing table', run: ({ device, env }) => ok(showIpv6Route(device, env)) },
+  { modes: EXEC, types: ROUTERS6, syntax: 'show ipv6 neighbors', help: 'IPv6 neighbour cache (Neighbor Discovery)', run: ({ device, env }) => ok(showIpv6Neighbors(device, env)) },
+  { modes: EXEC, types: ROUTERS6, syntax: 'show ipv6 interface brief', help: 'IPv6 addresses per interface', run: ({ device, env }) => ok(showIpv6Brief(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip ospf neighbor', help: 'OSPF neighbours', run: ({ device, env }) => ok(showOspfNeighbors(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip ospf database', help: 'OSPF link-state database', run: ({ device, env }) => ok(showOspfDatabase(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip bgp summary', help: 'BGP neighbours', run: ({ device, env }) => ok(showBgpSummary(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip bgp', help: 'BGP routes', run: ({ device, env }) => ok(showBgpRoutes(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip rip', help: 'RIP routes', run: ({ device, env }) => ok(showProtocolRoutes(device, env, 'rip')) },
+  { modes: EXEC, types: L3, syntax: 'show ipv6 ospf6 neighbor', help: 'OSPFv3 neighbours', run: ({ device, env }) => ok(showOspf6Neighbors(device, env)) },
+  { modes: EXEC, types: L3, syntax: 'show ipv6 ospf6 database', help: 'OSPFv3 link-state database', run: ({ device, env }) => ok(showOspf6Database(device, env)) },
+  { modes: EXEC, types: L3, syntax: 'show ipv6 ripng', help: 'RIPng routes', run: ({ device, env }) => ok(showRipng(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip protocols', help: 'Active routing protocols', run: ({ device }) => ok(showProtocols(device)) },
   { modes: EXEC, types: L3, syntax: 'show ip interface brief', help: 'Interface addresses and status', run: ({ device, env }) => ok(showIpInterfaceBrief(device, env)) },
   { modes: EXEC, syntax: 'show interface brief', help: 'Interface status summary', run: ({ device, env }) => ok(usesPortNames(device) ? showInterfacesStatus(device, env) : showIpInterfaceBrief(device, env)) },
@@ -433,9 +458,9 @@ const COMMANDS: Command[] = [
     help: 'Delete a VLAN interface',
     run: ({ args, device, env }) => apply(removeSvi(env.topology, device.id, Number(args[0]))),
   },
-  { modes: ['config'], types: ROUTERS, syntax: 'ipv6 route <cidr6> <word>', help: 'Static IPv6 route: prefix, next hop or interface', run: (call) => addRoute6(call, call.args[0]!, call.args[1]!) },
-  { modes: ['config'], types: ROUTERS, syntax: 'ipv6 route <cidr6> <ip6> <iface>', help: 'Static IPv6 route via a link-local next hop', run: (call) => addRoute6(call, call.args[0]!, call.args[1]!, call.args[2]) },
-  { modes: ['config'], types: ROUTERS, syntax: 'no ipv6 route <cidr6>', help: 'Remove a static IPv6 route', run: (call) => removeRoute6(call, call.args[0]!) },
+  { modes: ['config'], types: ROUTERS6, syntax: 'ipv6 route <cidr6> <word>', help: 'Static IPv6 route: prefix, next hop or interface', run: (call) => addRoute6(call, call.args[0]!, call.args[1]!) },
+  { modes: ['config'], types: ROUTERS6, syntax: 'ipv6 route <cidr6> <ip6> <iface>', help: 'Static IPv6 route via a link-local next hop', run: (call) => addRoute6(call, call.args[0]!, call.args[1]!, call.args[2]) },
+  { modes: ['config'], types: ROUTERS6, syntax: 'no ipv6 route <cidr6>', help: 'Remove a static IPv6 route', run: (call) => removeRoute6(call, call.args[0]!) },
   { modes: ['config'], types: L3, syntax: 'ip route <cidr> <word>', help: 'Static route: prefix, next hop or interface', run: (call) => addRoute(call, call.args[0]!, call.args[1]!) },
   { modes: ['config'], types: L3, syntax: 'ip route <ip> <mask> <word>', help: 'Static route: network, mask, next hop or interface', run: (call) => addRoute(call, `${call.args[0]}/${call.args[1]}`, call.args[2]!) },
   { modes: ['config'], types: L3, syntax: 'no ip route <cidr> <word>', help: 'Remove a static route', run: (call) => removeRoute(call, call.args[0]!) },
@@ -502,6 +527,10 @@ const COMMANDS: Command[] = [
   { modes: ['config'], types: L3, syntax: 'no router ospf', help: 'Disable OSPF', run: ({ device, env }) => apply(setOspf(env.topology, device.id, null)) },
   { modes: ['config'], types: L3, syntax: 'router rip', help: 'Enable RIP', run: (call) => routerMode(call, 'router-rip') },
   { modes: ['config'], types: L3, syntax: 'no router rip', help: 'Disable RIP', run: ({ device, env }) => apply(setRip(env.topology, device.id, null)) },
+  { modes: ['config'], types: L3, syntax: 'router ospf6', help: 'Enable OSPFv3 (IPv6)', run: (call) => routerMode6(call, 'router-ospf6') },
+  { modes: ['config'], types: L3, syntax: 'no router ospf6', help: 'Disable OSPFv3', run: ({ device, env }) => apply(setOspf6(env.topology, device.id, null)) },
+  { modes: ['config'], types: L3, syntax: 'router ripng', help: 'Enable RIPng (IPv6)', run: (call) => routerMode6(call, 'router-ripng') },
+  { modes: ['config'], types: L3, syntax: 'no router ripng', help: 'Disable RIPng', run: ({ device, env }) => apply(setRipng(env.topology, device.id, null)) },
   { modes: ['config'], types: L3, syntax: 'router bgp <num>', help: 'Enable BGP with this AS number', run: (call) => routerMode(call, 'router-bgp', Number(call.args[0])) },
   { modes: ['config'], types: L3, syntax: 'no router bgp', help: 'Disable BGP', run: ({ device, env }) => apply(setBgp(env.topology, device.id, null)) },
   { modes: ['config'], types: L3, syntax: 'no router bgp <num>', help: 'Disable BGP', run: ({ device, env }) => apply(setBgp(env.topology, device.id, null)) },
@@ -560,6 +589,27 @@ const COMMANDS: Command[] = [
   { modes: ['router-rip'], syntax: 'no default-information originate', help: 'Stop announcing a default route', run: (call) => editRip(call, ({ defaultOriginate: _d, ...c }) => c) },
   { modes: ['router-rip'], syntax: 'redistribute <word>', help: 'connected | static | ospf | bgp', run: (call) => redistribute(call, 'rip', true) },
   { modes: ['router-rip'], syntax: 'no redistribute <word>', help: 'Stop importing routes', run: (call) => redistribute(call, 'rip', false) },
+  { modes: ['router-ospf6'], syntax: 'ospf6 router-id <ip>', help: 'Router ID (32 bits, written like an IPv4 address)', run: (call) => editOspf6(call, (c) => ({ ...c, routerId: call.args[0]! })) },
+  { modes: ['router-ospf6'], syntax: 'router-id <ip>', help: 'Router ID', run: (call) => editOspf6(call, (c) => ({ ...c, routerId: call.args[0]! })) },
+  { modes: ['router-ospf6'], syntax: 'no ospf6 router-id', help: 'Router ID from the highest IPv4 address or the MAC', run: (call) => editOspf6(call, ({ routerId: _r, ...c }) => c) },
+  { modes: ['router-ospf6'], syntax: 'interface <iface> area <num>', help: 'This interface takes part in area …', run: (call) => ospf6Interface(call, call.args[0]!, Number(call.args[1])) },
+  { modes: ['router-ospf6'], syntax: 'no interface <iface>', help: 'Interface no longer takes part', run: (call) => ospf6Interface(call, call.args[0]!, null) },
+  { modes: ['router-ospf6'], syntax: 'passive-interface <iface>', help: 'No hellos on this interface', run: (call) => passive6(call, true, 'ospf6') },
+  { modes: ['router-ospf6'], syntax: 'no passive-interface <iface>', help: 'Send hellos again', run: (call) => passive6(call, false, 'ospf6') },
+  { modes: ['router-ospf6'], syntax: 'default-information originate', help: 'Announce a default route', run: (call) => editOspf6(call, (c) => ({ ...c, defaultOriginate: true })) },
+  { modes: ['router-ospf6'], syntax: 'no default-information originate', help: 'Stop announcing a default route', run: (call) => editOspf6(call, ({ defaultOriginate: _d, ...c }) => c) },
+  { modes: ['router-ospf6'], syntax: 'redistribute <word>', help: 'connected | static | ripng', run: (call) => redistribute6(call, 'ospf6', true) },
+  { modes: ['router-ospf6'], syntax: 'no redistribute <word>', help: 'Stop importing routes', run: (call) => redistribute6(call, 'ospf6', false) },
+  { modes: ['router-ripng'], syntax: 'network <iface>', help: 'RIPng on this interface', run: (call) => ripngInterface(call, call.args[0]!, true) },
+  { modes: ['router-ripng'], syntax: 'no network <iface>', help: 'No RIPng on this interface', run: (call) => ripngInterface(call, call.args[0]!, false) },
+  { modes: ['router-ripng'], syntax: 'passive-interface <iface>', help: 'No updates on this interface', run: (call) => passive6(call, true, 'ripng') },
+  { modes: ['router-ripng'], syntax: 'no passive-interface <iface>', help: 'Send updates again', run: (call) => passive6(call, false, 'ripng') },
+  { modes: ['router-ripng'], syntax: 'default-information originate', help: 'Announce a default route', run: (call) => editRipng(call, (c) => ({ ...c, defaultOriginate: true })) },
+  { modes: ['router-ripng'], syntax: 'no default-information originate', help: 'Stop announcing a default route', run: (call) => editRipng(call, ({ defaultOriginate: _d, ...c }) => c) },
+  { modes: ['router-ripng'], syntax: 'redistribute <word>', help: 'connected | static | ospf6', run: (call) => redistribute6(call, 'ripng', true) },
+  { modes: ['router-ripng'], syntax: 'no redistribute <word>', help: 'Stop importing routes', run: (call) => redistribute6(call, 'ripng', false) },
+  { modes: ['if'], types: L3, syntax: 'ipv6 ospf6 area <num>', help: 'OSPFv3 on this interface (FRRouting)', run: (call) => forLinks6Edit(call, (c, id) => ospf6Interface(c, id, Number(call.args[0]))) },
+  { modes: ['if'], types: L3, syntax: 'no ipv6 ospf6 area', help: 'No OSPFv3 on this interface', run: (call) => forLinks6Edit(call, (c, id) => ospf6Interface(c, id, null)) },
 
   { modes: ['router-bgp'], syntax: 'bgp router-id <ip>', help: 'Router ID', run: (call) => editBgp(call, (c) => ({ ...c, routerId: call.args[0]! })) },
   {
@@ -604,10 +654,12 @@ const COMMANDS: Command[] = [
   },
 
   // --- interface -------------------------------------------------------------
-  { modes: ['if'], types: ROUTERS, syntax: 'ipv6 address <cidr6>', help: 'IPv6 address with prefix, e.g. 2001:db8:1::1/64', run: (call) => forPorts(call, (t, port) => setInterfaceIpv6(t, call.device.id, port, call.args[0]!)) },
-  { modes: ['if'], types: ROUTERS, syntax: 'no ipv6 address', help: 'Remove the IPv6 address', run: (call) => forPorts(call, (t, port) => setInterfaceIpv6(t, call.device.id, port, '')) },
-  { modes: ['if'], types: ROUTERS, syntax: 'ipv6 nd managed-config-flag', help: 'Hand out addresses by DHCPv6 (M flag in router advertisements)', run: (call) => forPorts(call, (t, port) => setInterfaceDhcp6(t, call.device.id, port, true)) },
-  { modes: ['if'], types: ROUTERS, syntax: 'no ipv6 nd managed-config-flag', help: 'Addresses by SLAAC (no M flag)', run: (call) => forPorts(call, (t, port) => setInterfaceDhcp6(t, call.device.id, port, false)) },
+  { modes: ['if'], types: ROUTERS6, syntax: 'ipv6 address <cidr6>', help: 'IPv6 address with prefix, e.g. 2001:db8:1::1/64', run: (call) => forLinks6(call, (t, id) => setInterfaceIpv6(t, call.device.id, id, call.args[0]!)) },
+  { modes: ['if'], types: ROUTERS6, syntax: 'no ipv6 address', help: 'Remove the IPv6 address', run: (call) => forLinks6(call, (t, id) => setInterfaceIpv6(t, call.device.id, id, '')) },
+  { modes: ['if'], types: ROUTERS6, syntax: 'ipv6 nd managed-config-flag', help: 'Hand out addresses by DHCPv6 (M flag in router advertisements)', run: (call) => forLinks6(call, (t, id) => setInterfaceDhcp6(t, call.device.id, id, true)) },
+  { modes: ['if'], types: ROUTERS6, syntax: 'no ipv6 nd managed-config-flag', help: 'Addresses by SLAAC (no M flag)', run: (call) => forLinks6(call, (t, id) => setInterfaceDhcp6(t, call.device.id, id, false)) },
+  { modes: ['if'], types: ROUTERS6, syntax: 'ipv6 nd ra dns server <ip6>', help: 'DNS server in router advertisements (RDNSS) and DHCPv6', run: (call) => forLinks6(call, (t, id) => setInterfaceDns6(t, call.device.id, id, call.args[0]!)) },
+  { modes: ['if'], types: ROUTERS6, syntax: 'no ipv6 nd ra dns server', help: 'No DNS server in router advertisements', run: (call) => forLinks6(call, (t, id) => setInterfaceDns6(t, call.device.id, id, '')) },
   { modes: ['if'], types: L3, syntax: 'ip address <cidr>', help: 'Address with prefix length, e.g. 192.168.1.1/24', run: (call) => addressOn(call, ...splitCidr(call.args[0]!)) },
   { modes: ['if'], types: L3, syntax: 'ip address <ip> <mask>', help: 'Address and netmask', run: (call) => addressOn(call, call.args[0]!, call.args[1]!) },
   { modes: ['if'], types: L3, syntax: 'no ip address', help: 'Remove the IP address', run: (call) => addressOn(call, '', '') },
@@ -702,6 +754,81 @@ function routerMode(call: Call, mode: 'router-ospf' | 'router-rip' | 'router-bgp
     }
   }
   return { session: next };
+}
+
+function routerMode6(call: Call, mode: 'router-ospf6' | 'router-ripng'): Partial<CliOutput> {
+  const { device, env, session } = call;
+  const next = { ...session, mode };
+  if (mode === 'router-ospf6' && !device.ospf6) return { ...apply(setOspf6(env.topology, device.id, { interfaces: [] })), session: next };
+  if (mode === 'router-ripng' && !device.ripng) return { ...apply(setRipng(env.topology, device.id, { interfaces: [] })), session: next };
+  return { session: next };
+}
+
+function editOspf6(call: Call, change: (c: Ospf6Config) => Ospf6Config): Partial<CliOutput> {
+  return apply(setOspf6(call.env.topology, call.device.id, change(call.device.ospf6 ?? { interfaces: [] })));
+}
+
+function editRipng(call: Call, change: (c: RipngConfig) => RipngConfig): Partial<CliOutput> {
+  return apply(setRipng(call.env.topology, call.device.id, change(call.device.ripng ?? { interfaces: [] })));
+}
+
+/** Anschluss als Name (eth0, vlan10) oder schon als Kennung (aus dem Interface-Modus). */
+function ifaceArg(device: Device, name: string | number): number | null {
+  if (typeof name === 'number') return name;
+  const ref = parseIfaceName(device, name);
+  return ref ? ifaceIdOf(ref) : null;
+}
+
+function ospf6Interface(call: Call, name: string | number, area: number | null): Partial<CliOutput> {
+  const id = ifaceArg(call.device, name);
+  if (id === null) return ok(['% Unknown interface']);
+  if (area !== null && (!Number.isInteger(area) || area < 0)) return ok(['% Invalid area']);
+  return editOspf6(call, (c) => ({ ...c, interfaces: [...c.interfaces.filter((e) => e.iface !== id), ...(area === null ? [] : [{ iface: id, area }])] }));
+}
+
+function ripngInterface(call: Call, name: string, on: boolean): Partial<CliOutput> {
+  const id = ifaceArg(call.device, name);
+  if (id === null) return ok(['% Unknown interface']);
+  return editRipng(call, (c) => ({ ...c, interfaces: on ? [...c.interfaces.filter((i) => i !== id), id] : c.interfaces.filter((i) => i !== id) }));
+}
+
+/** Im Interface-Modus: für jedes gewählte Interface (Ports, VLAN-Interfaces) nacheinander. */
+function forLinks6Edit(call: Call, step: (call: Call, id: number) => Partial<CliOutput>): Partial<CliOutput> {
+  let current = call;
+  let changed = false;
+  for (const id of call.session.targets ?? []) {
+    const result = step(current, id);
+    if (!result.topology) return result;
+    changed = true;
+    current = { ...current, env: { ...current.env, topology: result.topology }, device: getDevice(result.topology, call.device.id)! };
+  }
+  return changed ? { topology: current.env.topology } : {};
+}
+
+function passive6(call: Call, on: boolean, protocol: 'ospf6' | 'ripng'): Partial<CliOutput> {
+  const id = ifaceArg(call.device, call.args[0]!);
+  if (id === null) return ok(['% Unknown interface']);
+  const update = <T extends { passive?: number[] }>(c: T): T => {
+    const list = new Set(c.passive ?? []);
+    if (on) list.add(id);
+    else list.delete(id);
+    return { ...c, passive: [...list] };
+  };
+  return protocol === 'ospf6' ? editOspf6(call, update) : editRipng(call, update);
+}
+
+/** IPv6: «ospf6» und «ripng» heissen im Modell «ospf» und «rip». */
+function redistribute6(call: Call, protocol: 'ospf6' | 'ripng', on: boolean): Partial<CliOutput> {
+  const word = call.args[0]!.toLowerCase();
+  const source = ({ connected: 'connected', static: 'static', ospf6: 'ospf', ripng: 'rip' } as Record<string, RedistributeSource>)[word];
+  if (!source || (protocol === 'ospf6' && source === 'ospf') || (protocol === 'ripng' && source === 'rip')) return ok([`% Use connected, static or ${protocol === 'ospf6' ? 'ripng' : 'ospf6'}`]);
+  const update = <T extends { redistribute?: RedistributeSource[] }>(c: T): T => {
+    const list = new Set(c.redistribute ?? []);
+    if (on) list.add(source);
+    else list.delete(source);
+    return { ...c, redistribute: [...list] };
+  };
+  return protocol === 'ospf6' ? editOspf6(call, update) : editRipng(call, update);
 }
 
 function editOspf(call: Call, change: (c: OspfConfig) => OspfConfig): Partial<CliOutput> {
@@ -818,8 +945,8 @@ function removeRoute6(call: Call, prefixText: string): Partial<CliOutput> {
 function showIpv6Route(device: Device, env: CliEnv): string[] {
   const routes = env.state?.ipv6?.routes6;
   if (!routes) return [env.topology.ipMode === 'dual' || env.topology.ipMode === 'ipv6' ? '% IPv6 routes appear while the simulation runs' : '% IPv6 is off in this project (IP version: IPv4 only)'];
-  const codes: Record<string, string> = { connected: 'C', static: 'S', default: 'S', auto: 'A' };
-  const lines = ['Codes: C - connected, S - static, A - automatic (leyoNET)', ''];
+  const codes: Record<string, string> = { connected: 'C', static: 'S', default: 'S', auto: 'A', ospf: 'O', rip: 'R' };
+  const lines = ['Codes: C - connected, S - static, O - OSPFv3, R - RIPng, A - automatic (leyoNET)', ''];
   for (const r of [...routes].sort((a, b) => (a.network < b.network ? -1 : a.network > b.network ? 1 : a.prefix - b.prefix))) {
     const net = `${formatIp6(r.network)}/${r.prefix}`;
     const name = cliIfaceName(device, r.iface);
@@ -840,7 +967,9 @@ function showIpv6Brief(device: Device, env: CliEnv): string[] {
   const live = env.state?.ipv6?.addresses;
   const rows = live
     ? live.map((a) => [cliIfaceName(device, a.iface), `${a.address}/${a.prefix}`, a.origin])
-    : device.interfaces.filter((i) => i.ipv6).map((i) => [cliIfaceName(device, i.index), i.ipv6!, 'manual']);
+    : ipv6Links(device)
+        .filter((i) => i.ipv6)
+        .map((i) => [cliIfaceName(device, i.index), i.ipv6!, 'manual']);
   if (rows.length === 0) return ['(no IPv6 addresses)'];
   return table(['Interface', 'IPv6-Address', 'Origin'], rows);
 }
@@ -1093,6 +1222,37 @@ function showOspfNeighbors(device: Device, env: CliEnv): string[] {
   );
 }
 
+function showOspf6Neighbors(device: Device, env: CliEnv): string[] {
+  if (!device.ospf6) return ['% OSPFv3 is not enabled ("router ospf6")'];
+  const ospf = env.state?.ospf6;
+  if (!ospf) return needsSim(env) ?? [];
+  const now = env.now ?? 0;
+  return table(
+    ['Neighbor ID', 'State', 'Dead Time', 'Address', 'Interface'],
+    ospf.neighbors.map((n) => [n.routerId, { init: 'Init', '2way': '2-Way', exchange: 'Exchange', full: 'Full' }[n.state], `${Math.max(0, Math.round((n.lastHello + 8000 - now) / 1000))}s`, n.ip, cliIfaceName(device, n.iface)]),
+  );
+}
+
+function showOspf6Database(device: Device, env: CliEnv): string[] {
+  if (!device.ospf6) return ['% OSPFv3 is not enabled ("router ospf6")'];
+  const ospf = env.state?.ospf6;
+  if (!ospf) return needsSim(env) ?? [];
+  const names = { router: 'Router', intraAreaPrefix: 'Intra-Prefix', external: 'AS-External' };
+  return [`OSPFv3 Router with ID (${ospf.routerId})`, '', ...table(['Type', 'Adv Router', 'Seq#', 'Entries'], ospf.lsdb.map((l) => [names[l.type], l.advertisingRouter, `0x${(l.seq >>> 0).toString(16)}`, String(l.links)]))];
+}
+
+function showRipng(device: Device, env: CliEnv): string[] {
+  if (!device.ripng) return ['% RIPng is not enabled ("router ripng")'];
+  const routes = env.state?.ipv6?.routes6;
+  if (!routes) return needsSim(env) ?? [];
+  const own = routes.filter((r) => r.kind === 'rip');
+  if (!own.length) return ['(no routes learned yet)'];
+  return table(
+    ['Network', 'Next Hop', 'Metric', 'Interface'],
+    own.map((r) => [`${formatIp6(r.network)}/${r.prefix}`, r.via !== null ? formatIp6(r.via) : '::', String(r.metric ?? 0), cliIfaceName(device, r.iface)]),
+  );
+}
+
 function showOspfDatabase(device: Device, env: CliEnv): string[] {
   if (!device.ospf) return ['% OSPF is not enabled ("router ospf")'];
   const ospf = env.state?.ospf;
@@ -1143,6 +1303,8 @@ function showProtocols(device: Device): string[] {
   if (device.ospf) lines.push(`Routing Protocol is "ospf"`, ...device.ospf.networks.map((n) => `  network ${n.network}/${parseMask(n.mask)} area ${n.area}`));
   if (device.rip) lines.push(`Routing Protocol is "rip" (version 2)`, ...device.rip.networks.map((n) => `  network ${n.network}/${parseMask(n.mask)}`));
   if (device.bgp) lines.push(`Routing Protocol is "bgp ${device.bgp.asn}"`, ...device.bgp.neighbors.map((n) => `  neighbor ${n.ip} remote-as ${n.remoteAs}`));
+  if (device.ospf6) lines.push('Routing Protocol is "ospf6" (IPv6)', ...device.ospf6.interfaces.map((e) => `  interface ${cliIfaceName(device, e.iface)} area ${e.area}`));
+  if (device.ripng) lines.push('Routing Protocol is "ripng" (IPv6)', ...device.ripng.interfaces.map((i) => `  network ${cliIfaceName(device, i)}`));
   return lines.length ? lines : ['(no dynamic routing protocol is running)'];
 }
 
@@ -1302,6 +1464,7 @@ export function runningConfig(device: Device): string[] {
       if (p.ospfCost) lines.push(` ip ospf cost ${p.ospfCost}`);
       if (p.ipv6) lines.push(` ipv6 address ${p.ipv6}`);
       if (p.dhcp6) lines.push(' ipv6 nd managed-config-flag');
+      if (p.dns6) lines.push(` ipv6 nd ra dns server ${p.dns6}`);
     }
     if (p.shutdown) lines.push(' shutdown');
     lines.push('!');
@@ -1316,6 +1479,9 @@ export function runningConfig(device: Device): string[] {
     lines.push(`interface vlan${s.vlan}`);
     if (s.ip && s.mask) lines.push(` ip address ${s.ip}/${parseMask(s.mask)}`);
     if (s.dhcpRelay) lines.push(` ip helper-address ${s.dhcpRelay}`);
+    if (s.ipv6) lines.push(` ipv6 address ${s.ipv6}`);
+    if (s.dhcp6) lines.push(' ipv6 nd managed-config-flag');
+    if (s.dns6) lines.push(` ipv6 nd ra dns server ${s.dns6}`);
     lines.push('!');
   }
   for (const r of device.routes ?? []) {
@@ -1344,6 +1510,14 @@ export function runningConfig(device: Device): string[] {
     lines.push(...device.ospf.networks.map((n) => ` network ${prefixOf(n)} area ${n.area}`), ...common(device.ospf), '!');
   }
   if (device.rip) lines.push('router rip', ' version 2', ...device.rip.networks.map((n) => ` network ${prefixOf(n)}`), ...common(device.rip), '!');
+  const six = (c: { passive?: number[]; defaultOriginate?: boolean; redistribute?: RedistributeSource[] }) =>
+    common(c).map((l) => l.replace(/^ redistribute ospf$/, ' redistribute ospf6').replace(/^ redistribute rip$/, ' redistribute ripng'));
+  if (device.ospf6) {
+    lines.push('router ospf6');
+    if (device.ospf6.routerId) lines.push(` ospf6 router-id ${device.ospf6.routerId}`);
+    lines.push(...device.ospf6.interfaces.map((e) => ` interface ${cliIfaceName(device, e.iface)} area ${e.area}`), ...six(device.ospf6), '!');
+  }
+  if (device.ripng) lines.push('router ripng', ...device.ripng.interfaces.map((i) => ` network ${cliIfaceName(device, i)}`), ...six(device.ripng), '!');
   if (device.bgp) {
     lines.push(`router bgp ${device.bgp.asn}`);
     if (device.bgp.routerId) lines.push(` bgp router-id ${device.bgp.routerId}`);

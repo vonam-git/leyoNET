@@ -1,4 +1,7 @@
-import { parseMask } from '../net/ipv4';
+import { DNS_TYPES, type DnsRecord, type DnsType } from '../model/types';
+import { reverseName } from '../net/dns';
+import { parseIp, parseMask } from '../net/ipv4';
+import { parseIp6 } from '../net/ipv6';
 import type { HostNode } from './host';
 
 /** Befehle der simulierten Befehlszeile, angelehnt an Windows ("ipconfig", "tracert"). */
@@ -23,8 +26,7 @@ export function runCommand(host: HostNode, line: string) {
       else ctx.print('cmd.usage.tracert');
       return;
     case 'nslookup':
-      if (args[0]) nslookup(host, args[0]);
-      else ctx.print('cmd.usage.nslookup');
+      nslookup(host, args);
       return;
     case 'ipconfig':
       if (!arg || arg === '/all') printIpconfig(host);
@@ -70,20 +72,87 @@ export function runCommand(host: HostNode, line: string) {
 }
 
 /** Fragt den DNS-Server direkt, am eigenen Cache vorbei. */
-function nslookup(host: HostNode, name: string) {
+/**
+ * nslookup wie unter Windows: «nslookup [-type=A|AAAA|CNAME|MX|TXT|NS|PTR] <Name|Adresse> [Server]».
+ * Eine Adresse statt eines Namens fragt nach dem PTR-Eintrag (Rückwärtsauflösung).
+ * Ohne Typ: Adressen (A, bei IPv6 zusätzlich AAAA).
+ */
+function nslookup(host: HostNode, args: string[]) {
   const ctx = host.ctx;
-  const server = host.dnsServer();
+  let type: DnsType | null = null;
+  const rest: string[] = [];
+  for (const arg of args) {
+    const option = /^-(?:type|q|querytype)=(\w+)$/i.exec(arg);
+    if (option) {
+      const wanted = option[1]!.toUpperCase();
+      if (!(DNS_TYPES as readonly string[]).includes(wanted)) return ctx.print('nslookup.badType', { type: wanted, types: DNS_TYPES.join(', ') });
+      type = wanted as DnsType;
+    } else rest.push(arg);
+  }
+  const [target, serverArg] = rest;
+  if (!target) return ctx.print('cmd.usage.nslookup');
+  if (serverArg && parseIp(serverArg) === null && parseIp6(serverArg) === null) return ctx.print('nslookup.badServer', { server: serverArg });
+  const server = serverArg ?? host.resolver.defaultServer();
   if (!server) return ctx.print('nslookup.noServer');
   ctx.print('nslookup.server', { server });
-  host.resolver.resolve(
-    name,
-    'A',
-    (result) => {
-      if (result.ok) for (const record of result.records) ctx.print('nslookup.answer', { name: record.name, ip: record.value });
-      else ctx.print(`nslookup.${result.error === 'nxdomain' || result.error === 'invalidName' ? 'nxdomain' : 'failed'}`, { name, server });
-    },
-    { useCache: false },
-  );
+
+  // Adresse statt Name: PTR-Eintrag unter in-addr.arpa bzw. ip6.arpa.
+  const reverse = reverseName(target);
+  const name = reverse && (!type || type === 'PTR') ? reverse : target;
+  const mode = ctx.topology().ipMode;
+  const types: DnsType[] = reverse && (!type || type === 'PTR') ? ['PTR'] : type ? [type] : !host.v6.enabled() || mode === 'ipv4' ? ['A'] : mode === 'ipv6' ? ['AAAA'] : ['A', 'AAAA'];
+  if (reverse && name === reverse) ctx.print('nslookup.reverse', { address: target, name });
+
+  let nonAuthorityNoted = false;
+  let anything = false;
+  const next = (i: number) => {
+    const current = types[i];
+    if (!current) return;
+    host.resolver.resolve(
+      name,
+      current,
+      (result) => {
+        if (result.ok) {
+          anything = true;
+          if (!result.authoritative && !nonAuthorityNoted) {
+            nonAuthorityNoted = true;
+            ctx.print('nslookup.nonAuthoritative');
+          }
+          printRecords(host, result.records, current);
+        } else if (result.error === 'nodata') {
+          // Ohne Typ angefragt: fehlendes AAAA nur melden, wenn gar nichts gefunden wurde.
+          if (type || (i === types.length - 1 && !anything)) ctx.print('nslookup.nodata', { name, type: current, server: result.server });
+        } else {
+          const code = result.error === 'nxdomain' || result.error === 'invalidName' ? 'nxdomain' : result.error === 'servfail' ? 'servfail' : 'failed';
+          ctx.print(`nslookup.${code}`, { name, server: result.server });
+          return;
+        }
+        next(i + 1);
+      },
+      { useCache: false, ...(serverArg ? { server: serverArg } : {}) },
+    );
+  };
+  next(0);
+}
+
+function printRecords(host: HostNode, records: readonly DnsRecord[], type: DnsType) {
+  const ctx = host.ctx;
+  const aliases = records.filter((r) => r.type === 'CNAME' && type !== 'CNAME');
+  for (const r of records) {
+    if (r.type !== type) continue;
+    switch (r.type) {
+      case 'A':
+      case 'AAAA':
+        ctx.print('nslookup.answer', { name: r.name, ip: r.value });
+        break;
+      case 'MX':
+        ctx.print('nslookup.mx', { name: r.name, priority: r.priority ?? 10, value: r.value });
+        break;
+      default:
+        ctx.print(`nslookup.${r.type.toLowerCase()}`, { name: r.name, value: r.value });
+    }
+  }
+  if (aliases.length) ctx.print('nslookup.aliases', { names: aliases.map((a) => a.name).join(', ') });
 }
 
 function printIpconfig(host: HostNode) {
@@ -99,6 +168,7 @@ function printIpconfig(host: HostNode) {
     else ctx.print('ipconfig.ipv6', { address: a.address, prefix: a.prefix, origin: a.origin });
   }
   ctx.print('ipconfig.gateway6', { gateway: v6.gateway ?? '–' });
+  ctx.print('ipconfig.dns6', { dns: host.dnsServer6() ?? '–' });
 }
 
 function printIpv4(host: HostNode) {

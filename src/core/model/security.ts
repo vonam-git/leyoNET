@@ -1,4 +1,5 @@
 import { formatIp, networkOf, parseIp, parseMask } from '../net/ipv4';
+import { formatCidr6, formatIp6, networkOf6, parseIp6 } from '../net/ipv6';
 import type { TopologyError } from './topology';
 
 /**
@@ -57,6 +58,13 @@ export function normalizeMatch(text: string): string | null {
   const value = text.trim().toLowerCase();
   if (value === '' || value === 'any' || value === '*') return 'any';
   const [ipText = '', prefixText] = value.split('/');
+  // IPv6-Adresse oder -Netz, z.B. «2001:db8:1::/64».
+  const ip6 = parseIp6(ipText);
+  if (ip6 !== null) {
+    const prefix6 = prefixText === undefined ? 128 : /^\d{1,3}$/.test(prefixText) ? Number(prefixText) : NaN;
+    if (!(prefix6 >= 0 && prefix6 <= 128)) return null;
+    return prefix6 === 128 ? formatIp6(ip6) : formatCidr6(networkOf6(ip6, prefix6), prefix6);
+  }
   const ip = parseIp(ipText);
   const prefix = prefixText === undefined ? 32 : parseMask(prefixText);
   if (ip === null || prefix === null) return null;
@@ -66,6 +74,13 @@ export function normalizeMatch(text: string): string | null {
 /** Liegt `ip` im Bereich (`any`, Adresse oder Netz)? */
 export function matchesAddress(range: string, ip: string): boolean {
   if (range === 'any') return true;
+  const value6 = parseIp6(ip);
+  if (value6 !== null) {
+    const [net6 = '', p6] = range.split('/');
+    const n6 = parseIp6(net6);
+    const prefix6 = p6 === undefined ? 128 : Number(p6);
+    return n6 !== null && networkOf6(value6, prefix6) === networkOf6(n6, prefix6);
+  }
   const value = parseIp(ip);
   if (value === null) return false;
   const [net = '', prefixText] = range.split('/');

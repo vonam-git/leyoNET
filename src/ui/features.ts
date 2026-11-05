@@ -129,8 +129,8 @@ export function usedFeatures(t: Topology): string[] {
     if (d.portForwards?.length) used.add('net.nat');
     if (d.staticNat?.length) used.add('net.staticNat');
     if (d.cgnatAddress) used.add('net.cgnat');
-    if (d.ospf) used.add('routing.ospf');
-    if (d.rip) used.add('routing.rip');
+    if (d.ospf || d.ospf6) used.add('routing.ospf');
+    if (d.rip || d.ripng) used.add('routing.rip');
     if (d.bgp) used.add('routing.bgp');
     if (d.routes?.length) used.add('routing.static');
     if (d.routingMode === 'auto') used.add('routing.auto');

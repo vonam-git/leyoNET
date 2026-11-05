@@ -8,6 +8,8 @@
  * Oberfläche mit der Befehlszeile des Zielgeräts aus; über das Netz gehen
  * die (verschlüsselten) Daten mit echten TCP-Segmenten.
  */
+import { parseIp } from '../net/ipv4';
+import { parseIp6 } from '../net/ipv6';
 import type { IpNode } from './ip';
 import type { NodeContext } from './simulation';
 import type { TcpConnection, TcpStack } from './tcp';
@@ -92,17 +94,32 @@ export class SshClient {
   constructor(
     private readonly tcp: TcpStack,
     private readonly ctx: NodeContext,
+    /** Namen per DNS auflösen (A bzw. AAAA); fehlt = nur Adressen. */
+    private readonly resolve?: (name: string, done: (ip: string | null) => void) => void,
   ) {}
 
   get active(): boolean {
     return this.#conn !== null;
   }
 
-  connect(target: string, user: string, password: string) {
+  connect(targetText: string, user: string, password: string) {
     if (this.#conn) this.close();
-    this.ctx.print('ssh.connecting', { target, user });
+    const target = targetText.replace(/^\[|\]$/g, '');
+    if (parseIp(target) === null && parseIp6(target) === null && this.resolve) {
+      this.ctx.print('ssh.resolve', { target });
+      this.resolve(target, (ip) => {
+        if (ip) this.#connectTo(ip, target, user, password);
+        else this.ctx.print('ssh.unknownHost', { target });
+      });
+      return;
+    }
+    this.#connectTo(target, target, user, password);
+  }
+
+  #connectTo(ip: string, target: string, user: string, password: string) {
+    this.ctx.print('ssh.connecting', { target: ip === target ? target : `${target} [${ip}]`, user });
     const reader = new LineReader();
-    const conn = this.tcp.connect(target, SSH_PORT, {
+    const conn = this.tcp.connect(ip, SSH_PORT, {
       onOpen: (c) => {
         c.write(`${VERSION_CLIENT}\r\n`);
         c.write(seal(`AUTH ${user} ${password}`) + '\r\n');
