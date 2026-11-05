@@ -85,6 +85,7 @@ import {
   type VpnTunnel,
   setInterfaceIpv6,
   setInterfaceDhcp6,
+  setInterfaceDns6,
   configureHost6,
   addStaticRoute6,
   removeStaticRoute6,
@@ -995,6 +996,10 @@ class Editor {
 
   setInterfaceDhcp6(id: string, index: number, enabled: boolean) {
     this.#edit(setInterfaceDhcp6(this.topology, id, index, enabled));
+  }
+
+  setInterfaceDns6(id: string, index: number, dns: string): TopologyError | null {
+    return this.#applyForm(setInterfaceDns6(this.topology, id, index, dns));
   }
 
   configureHost6(id: string, input: Host6Input): TopologyError | null {

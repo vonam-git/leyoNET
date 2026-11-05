@@ -1,0 +1,264 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "title": "Web, Mail und SSH über IPv6",
+    "devices": [
+      {
+        "id": "d1",
+        "type": "pc",
+        "name": "PC 1",
+        "position": {
+          "x": -420,
+          "y": 140
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00"
+          }
+        ],
+        "ipv6Auto": true,
+        "mailAccount": {
+          "address": "anna@schule.example",
+          "password": "geheim",
+          "smtpServer": "mail.schule.example",
+          "incomingServer": "mail.schule.example",
+          "protocol": "imap"
+        }
+      },
+      {
+        "id": "d2",
+        "type": "server",
+        "name": "Schul-DNS",
+        "position": {
+          "x": -420,
+          "y": -120
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ipv6": "2001:db8:a::53/64"
+          }
+        ],
+        "gateway6": "2001:db8:a::1",
+        "dns6": "2001:db8:a::53",
+        "dnsServer": {
+          "records": [
+            {
+              "name": "www.schule.example",
+              "type": "AAAA",
+              "value": "2001:db8:b::80",
+              "ttl": 60
+            },
+            {
+              "name": "mail.schule.example",
+              "type": "AAAA",
+              "value": "2001:db8:b::80",
+              "ttl": 60
+            },
+            {
+              "name": "schule.example",
+              "type": "MX",
+              "value": "mail.schule.example",
+              "priority": 10,
+              "ttl": 60
+            },
+            {
+              "name": "router.schule.example",
+              "type": "AAAA",
+              "value": "2001:db8:a::1",
+              "ttl": 60
+            },
+            {
+              "name": "0.8.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.b.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa",
+              "type": "PTR",
+              "value": "www.schule.example",
+              "ttl": 60
+            }
+          ]
+        }
+      },
+      {
+        "id": "d3",
+        "type": "router",
+        "name": "Router",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ipv6": "2001:db8:a::1/64",
+            "dns6": "2001:db8:a::53"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:03:01",
+            "ipv6": "2001:db8:b::1/64"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:03:02",
+            "sfpSlot": true
+          }
+        ],
+        "cli": {
+          "ssh": true,
+          "users": [
+            {
+              "name": "admin",
+              "password": "Netz2026"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d4",
+        "type": "switch",
+        "name": "Switch",
+        "position": {
+          "x": -220,
+          "y": 0
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:04:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:04:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:04:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:04:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:04:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:04:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:04:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:04:08",
+            "sfpSlot": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:04:09",
+            "sfpSlot": true
+          }
+        ]
+      },
+      {
+        "id": "d5",
+        "type": "server",
+        "name": "Web- und Mailserver",
+        "position": {
+          "x": 260,
+          "y": 0
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ipv6": "2001:db8:b::80/64"
+          }
+        ],
+        "gateway6": "2001:db8:b::1",
+        "dns6": "2001:db8:a::53",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Willkommen über IPv6</h1>\n<p>Diese Seite kam über IPv6 vom Server 2001:db8:b::80. Der Name www.schule.example wurde per AAAA-Eintrag aufgelöst.</p>"
+            }
+          ]
+        },
+        "mailServer": {
+          "domain": "schule.example",
+          "mailboxes": [
+            {
+              "user": "anna",
+              "password": "geheim"
+            },
+            {
+              "user": "ben",
+              "password": "geheim"
+            }
+          ]
+        }
+      }
+    ],
+    "cables": [
+      {
+        "id": "c6",
+        "a": {
+          "device": "d1",
+          "iface": 0
+        },
+        "b": {
+          "device": "d4",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c7",
+        "a": {
+          "device": "d2",
+          "iface": 0
+        },
+        "b": {
+          "device": "d4",
+          "iface": 2
+        }
+      },
+      {
+        "id": "c8",
+        "a": {
+          "device": "d4",
+          "iface": 0
+        },
+        "b": {
+          "device": "d3",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c9",
+        "a": {
+          "device": "d3",
+          "iface": 1
+        },
+        "b": {
+          "device": "d5",
+          "iface": 0
+        }
+      }
+    ],
+    "nextId": 10,
+    "ipMode": "ipv6"
+  },
+  "configuration": {}
+}

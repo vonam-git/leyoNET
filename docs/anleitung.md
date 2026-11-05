@@ -50,6 +50,8 @@ Oben in der Werkzeugleiste stellst du die **IP-Version** ein: **IPv4**, **v4 + v
 - **Endgeräte:** «IPv6 automatisch» (der Router kündigt sein Präfix an, das Gerät bildet seine Adresse selbst = SLAAC, oder holt sie per DHCPv6) oder eine feste Adresse wie `2001:db8:1::10/64` mit Standardgateway.
 - **Router:** je Anschluss eine Adresse mit `/64`, z.B. `2001:db8:1::1/64`. Mit «Adressen per DHCPv6 vergeben» verteilt der Router die Adressen selbst.
 - Statt ARP fragen die Geräte per **Neighbor Discovery** nach der MAC. `ping 2001:db8:2::20`, `tracert`, `ipconfig` und `netsh interface ipv6 show neighbors` funktionieren in der Eingabeaufforderung.
+- **DNS über IPv6:** Beim Router-Anschluss trägst du einen IPv6-**DNS-Server** ein; automatisch konfigurierte Geräte erhalten ihn im Router Advertisement (RDNSS) oder per DHCPv6. Geräte mit fester Adresse haben ein eigenes Feld «IPv6-DNS-Server». Im DNS-Server ordnen **AAAA**-Einträge einem Namen eine IPv6-Adresse zu.
+- **Web, Mail und SSH über IPv6:** `ping www.schule.example`, der Browser, E-Mail und `ssh admin@router.schule.example` funktionieren auch über IPv6. Im Browser steht eine Adresse in eckigen Klammern: `http://[2001:db8:b::80]/`. Siehe Demo «Web, Mail und SSH über IPv6».
 - **DS-Lite:** Die Internet-Box tunnelt IPv4 durch das IPv6-Netz des Providers; der Provider übersetzt per CGNAT. Siehe Demo «DS-Lite».
 
 ## DNS

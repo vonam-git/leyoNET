@@ -17,7 +17,7 @@ import {
 } from '../net/ipv6';
 import { autoRoutes6 } from '../net/autoroute';
 import { ADMIN_DISTANCE, type RouteKind } from '../net/routing';
-import { DHCP6_CLIENT_PORT, DHCP6_SERVER_PORT, type Dhcpv6Message, type EthernetFrame, type Icmpv6Message, type Ipv4Packet, type Ipv6Packet, type UdpDatagram } from './frames';
+import { DHCP6_CLIENT_PORT, DHCP6_SERVER_PORT, type Dhcpv6Message, type EthernetFrame, type Icmpv6Message, type Ipv4Packet, type Ipv6Packet, type TcpSegment, type UdpDatagram } from './frames';
 import type { NodeContext } from './simulation';
 
 /**
@@ -85,6 +85,8 @@ export interface Ip6State {
   gateway?: string;
   /** Wie die Adresse entsteht: «manual», «slaac», «dhcpv6» oder «waiting» (noch kein Router Advertisement). */
   config?: 'manual' | 'slaac' | 'dhcpv6' | 'waiting';
+  /** Endgeräte mit automatischer Konfiguration: DNS-Server aus RDNSS bzw. DHCPv6. */
+  dns?: string;
 }
 
 export type Send6Error = 'noRoute' | 'hostUnreachable' | 'gatewayUnreachable';
@@ -98,6 +100,10 @@ export interface Ip6Host {
   onIcmp6(packet: Ipv6Packet): void;
   /** UDP-Datagramme ausser DHCPv6. */
   onUdp6?(packet: Ipv6Packet, datagram: UdpDatagram, index: number): void;
+  /** TCP-Segmente an eine eigene Adresse (Web, Mail, SSH über IPv6). */
+  onTcp6?(packet: Ipv6Packet, segment: TcpSegment): void;
+  /** Paketfilter für TCP und UDP (Firewall); false = verwerfen. `forwarded`: Paket wird weitergeleitet. */
+  filter6?(packet: Ipv6Packet, inIndex: number, forwarded: boolean): boolean;
   /** DS-Lite: getunneltes IPv4-Paket an eine eigene Adresse. true = erledigt. */
   onTunnel?(packet: Ipv6Packet, inner: Ipv4Packet, index: number): boolean;
 }
@@ -138,6 +144,8 @@ export class Ip6Stack {
   #pending = new Map<string, Pending>();
   /** Per SLAAC oder DHCPv6 bezogene Adressen je Anschluss. */
   #learned = new Map<number, Address6>();
+  /** Gelernter IPv6-DNS-Server (RDNSS oder DHCPv6). */
+  #dns6: string | undefined;
   /** Standardrouter aus Router Advertisements je Anschluss. */
   #routers = new Map<number, { address: bigint; expires: number }>();
   /** On-Link-Präfixe aus Router Advertisements. */
@@ -313,6 +321,7 @@ export class Ip6Stack {
       flags: { managed, other: managed },
       // SLAAC funktioniert nur mit /64; bei DHCPv6 dient das Präfix nur als On-Link-Angabe.
       prefix: { network: formatIp6(networkOf6(global.address, global.prefix)), length: global.prefix, autonomous: !managed && global.prefix === 64, valid: PREFIX_VALID, preferred: PREFIX_VALID / 2 },
+      ...(device.interfaces[index]?.dns6 ? { rdnss: device.interfaces[index]!.dns6! } : {}),
     };
     this.#sendRaw(index, formatIp6(iface.addresses[0]!.address), ALL_NODES, message, 255);
   }
@@ -334,10 +343,16 @@ export class Ip6Stack {
 
   #deliver(index: number, packet: Ipv6Packet, srcMac: string, multicast: boolean) {
     const payload = packet.payload;
+    const application = payload.kind === 'tcp' || (payload.kind === 'udp' && payload.payload.kind !== 'dhcpv6');
+    if (application && srcMac && this.host.filter6 && !this.host.filter6(packet, index, false)) return;
     if (payload.kind === 'icmpv6') return this.#onIcmp(index, packet, payload, srcMac, multicast);
     if (payload.kind === 'udp') {
       if (payload.payload.kind === 'dhcpv6') return this.#onDhcp(index, packet, payload.payload, srcMac);
       return this.host.onUdp6?.(packet, payload, index);
+    }
+    if (payload.kind === 'tcp') {
+      if (!multicast) this.host.onTcp6?.(packet, payload);
+      return;
     }
     if (payload.kind === 'ipv4') this.host.onTunnel?.(packet, payload, index);
   }
@@ -398,6 +413,10 @@ export class Ip6Stack {
     if (!p || net === null) return;
     this.#onLink.set(index, { network: net, prefix: p.length, managed: !!m.flags?.managed });
     if (!auto) return;
+    if (m.rdnss && m.rdnss !== this.#dns6) {
+      this.#dns6 = m.rdnss;
+      this.#ctx.print('ipv6.rdnss', { dns: m.rdnss });
+    }
     if (m.flags?.managed) {
       if (this.#dhcpState === 'idle') this.#solicit(index);
       return;
@@ -496,7 +515,8 @@ export class Ip6Stack {
     if (this.isOwn(remote)) return remote;
     const route = lookupRoute6(this.routes(), remote);
     const iface = route && this.interfaces().find((i) => i.index === route.iface);
-    return iface ? this.#sourceFor(iface, route.via ?? remote) : null;
+    // Quelle nach dem Ziel wählen (nicht nach dem Gateway, das oft eine Link-Local-Adresse hat).
+    return iface ? this.#sourceFor(iface, remote) : null;
   }
 
   hasRoute(dst: bigint): boolean {
@@ -528,6 +548,7 @@ export class Ip6Stack {
     const src = parseIp6(packet.src);
     if (src === null || isLinkLocal6(src) || isLinkLocal6(parseIp6(packet.dst) ?? 0n)) return;
     if (packet.hopLimit <= 1) return this.#error(inIface, packet, 'timeExceeded');
+    if ((packet.payload.kind === 'tcp' || packet.payload.kind === 'udp') && this.host.filter6 && !this.host.filter6(packet, inIface.index, true)) return;
     const dst = parseIp6(packet.dst)!;
     const route = lookupRoute6(this.routes(), dst);
     const out = route && this.interfaces().find((i) => i.index === route.iface);
@@ -586,7 +607,8 @@ export class Ip6Stack {
         address = networkOf6(global.address, global.prefix) + 0x100n + BigInt(this.#leases.size);
         this.#leases.set(m.clientMac, address);
       }
-      const reply: Dhcpv6Message = { kind: 'dhcpv6', type: m.type === 'solicit' ? 'advertise' : 'reply', xid: m.xid, clientMac: m.clientMac, serverMac: iface.mac, address: formatIp6(address), lifetime: PREFIX_VALID };
+      const dns = device.interfaces[index]?.dns6;
+      const reply: Dhcpv6Message = { kind: 'dhcpv6', type: m.type === 'solicit' ? 'advertise' : 'reply', xid: m.xid, clientMac: m.clientMac, serverMac: iface.mac, address: formatIp6(address), lifetime: PREFIX_VALID, ...(dns ? { dns } : {}) };
       this.#learn(packet.src, srcMac, index, false);
       this.#sendDhcp(index, packet.src, reply, DHCP6_SERVER_PORT, DHCP6_CLIENT_PORT, srcMac);
       return;
@@ -602,6 +624,7 @@ export class Ip6Stack {
       this.#dhcpState = 'bound';
       const prefix = this.#onLink.get(index)?.prefix ?? 64;
       this.#learned.set(index, { address, prefix, origin: 'dhcpv6' });
+      if (m.dns) this.#dns6 = m.dns;
       this.#ctx.print('ipv6.dhcpv6', { address: m.address, server: packet.src });
     }
   }
@@ -633,6 +656,7 @@ export class Ip6Stack {
       routes6,
       ...(gateway !== undefined && gateway !== null ? { gateway: formatIp6(gateway) } : {}),
       ...(config ? { config } : {}),
+      ...(this.#dns6 && config !== 'manual' ? { dns: this.#dns6 } : {}),
     };
   }
 }

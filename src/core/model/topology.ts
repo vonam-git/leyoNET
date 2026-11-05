@@ -1630,6 +1630,28 @@ export interface Host6Input {
   auto: boolean;
   address?: string;
   gateway?: string;
+  /** DNS-Server über IPv6 (nur bei fester Adresse; automatisch kommt er vom Router). */
+  dns?: string;
+}
+
+/** Unicast-Adresse eines DNS-Servers (IPv6), vereinheitlicht; null bei leerer Eingabe. */
+function checkDns6(text: string | undefined, field: string): Result<string | null> {
+  if (!text?.trim()) return ok(null);
+  const value = parseIp6(text);
+  if (value === null || isMulticast6(value) || isUnspecified6(value)) return { ok: false, error: { code: 'invalidIp6', params: { value: text.trim() }, field } };
+  return ok(formatIp6(value));
+}
+
+/** Router: IPv6-DNS-Server, den ein Netz im Router Advertisement (RDNSS) und per DHCPv6 erhält. */
+export function setInterfaceDns6(t: Topology, id: string, index: number, dns: string): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!hasRoutingTable(device.type)) return fail('notARouter');
+  if (!device.interfaces[index]) return fail('unknownInterface');
+  const checked = checkDns6(dns, 'dns6');
+  if (!checked.ok) return checked;
+  const value = checked.value;
+  return ok(updateDevice(t, id, (d) => ({ ...d, interfaces: d.interfaces.map((i) => (i.index !== index ? i : value ? { ...i, dns6: value } : without(i, 'dns6'))) })));
 }
 
 /** IPv6 eines Endgeräts: automatisch oder feste Adresse mit Standardgateway. */
@@ -1639,7 +1661,11 @@ export function configureHost6(t: Topology, id: string, input: Host6Input): Resu
   if (DEVICE_SPECS[device.type].role !== 'endpoint') return fail('notAnEndpoint');
   let address = '';
   let gateway = '';
+  let dns = '';
   if (!input.auto) {
+    const checkedDns = checkDns6(input.dns, 'dns6');
+    if (!checkedDns.ok) return checkedDns;
+    dns = checkedDns.value ?? '';
     if (input.address?.trim()) {
       const checked = checkUnicast6(input.address, 'ipv6');
       if (!checked.ok) return checked;
@@ -1653,12 +1679,13 @@ export function configureHost6(t: Topology, id: string, input: Host6Input): Resu
   }
   return ok(
     updateDevice(t, id, (d) => {
-      const { ipv6Auto: _a, gateway6: _g, ...rest } = d;
+      const { ipv6Auto: _a, gateway6: _g, dns6: _d, ...rest } = d;
       return {
         ...rest,
         interfaces: d.interfaces.map((i, n) => (n !== 0 ? i : address ? { ...i, ipv6: address } : without(i, 'ipv6'))),
         ...(input.auto ? { ipv6Auto: true } : {}),
         ...(gateway ? { gateway6: gateway } : {}),
+        ...(dns ? { dns6: dns } : {}),
       };
     }),
   );

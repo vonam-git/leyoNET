@@ -102,6 +102,10 @@
       "titel": "IPv6 Address Prefix Reserved for Documentation",
       "verwendung": "Beispieladressen 2001:db8::/32"
     },
+    "3986": {
+      "titel": "Uniform Resource Identifier (URI): Generic Syntax",
+      "verwendung": "URLs im Browser, IPv6-Adressen in eckigen Klammern"
+    },
     "4193": {
       "titel": "Unique Local IPv6 Unicast Addresses",
       "verwendung": "Private IPv6-Adressen fd00::/8"
@@ -162,6 +166,10 @@
       "titel": "IANA-Reserved IPv4 Prefix for Shared Address Space",
       "verwendung": "CGNAT 100.64.0.0/10"
     },
+    "6724": {
+      "titel": "Default Address Selection for Internet Protocol Version 6 (IPv6)",
+      "verwendung": "Dual Stack: AAAA vor A, wenn eine globale IPv6-Adresse vorhanden ist"
+    },
     "6793": {
       "titel": "BGP Support for Four-Octet Autonomous System (AS) Number Space",
       "verwendung": "4-Byte-AS-Nummern"
@@ -169,6 +177,10 @@
     "7296": {
       "titel": "Internet Key Exchange Protocol Version 2 (IKEv2)",
       "verwendung": "Tunnelaufbau des VPN (UDP 500)"
+    },
+    "8106": {
+      "titel": "IPv6 Router Advertisement Options for DNS Configuration",
+      "verwendung": "RDNSS: DNS-Server im Router Advertisement"
     },
     "8200": {
       "titel": "Internet Protocol, Version 6 (IPv6) Specification",

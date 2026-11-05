@@ -218,10 +218,12 @@ export interface Icmpv6Message {
   /** RA: Gültigkeit als Standardrouter in Sekunden (0 = kein Standardrouter). */
   routerLifetime?: number;
   mtu?: number;
+  /** RA: DNS-Server (Option «Recursive DNS Server», RFC 8106). */
+  rdnss?: string;
 }
 
 /**
- * IPv6-Paket (RFC 8200). Nutzlast: ICMPv6, UDP oder – bei DS-Lite – ein
+ * IPv6-Paket (RFC 8200). Nutzlast: ICMPv6, UDP, TCP oder – bei DS-Lite – ein
  * ganzes IPv4-Paket (Next Header 4, RFC 2473).
  */
 export interface Ipv6Packet {
@@ -229,7 +231,15 @@ export interface Ipv6Packet {
   src: string;
   dst: string;
   hopLimit: number;
-  payload: Icmpv6Message | UdpDatagram | Ipv4Packet;
+  payload: Icmpv6Message | UdpDatagram | TcpSegment | Ipv4Packet;
+}
+
+/**
+ * IPv6-Paket mit TCP oder UDP so darstellen, dass Anwendungen und Anzeige es wie
+ * ein IPv4-Paket behandeln können (es zählen nur Absender, Ziel und Nutzlast).
+ */
+export function asIpv4View(packet: Ipv6Packet, payload: Ipv4Packet['payload']): Ipv4Packet {
+  return { kind: 'ipv4', src: packet.src, dst: packet.dst, ttl: packet.hopLimit, id: 0, payload };
 }
 
 /** Bridge Protocol Data Unit des Spanning Tree (vereinfacht). */

@@ -1,4 +1,5 @@
 import { parseIp } from '../net/ipv4';
+import { parseIp6 } from '../net/ipv6';
 import { buildRequest, buildResponse, decodeUtf8, formatUrl, imagePaths, parseRequest, parseResponse, parseUrl, serve, type HttpResponse, type Url as ParsedUrl } from '../net/http';
 import type { DnsResolver } from './dns';
 import { HTTP_PORT } from './frames';
@@ -109,7 +110,7 @@ export class HttpClient {
       if (!conn) this.#fail('browser.noAddress');
     };
 
-    if (parseIp(url.host) !== null) return connect(url.host);
+    if (parseIp(url.host) !== null || parseIp6(url.host) !== null) return connect(url.host);
     this.#step('browser.resolve', { host: url.host });
     this.host.resolver.resolveAddress(url.host, (result) => {
       if (!current()) return;

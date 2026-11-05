@@ -20,12 +20,16 @@
   const announces = $derived(device.type !== 'internet');
 
   let drafts = $state<string[]>([]);
+  let dnsDrafts = $state<string[]>([]);
+  let dnsError = $state<{ index: number; text: string } | null>(null);
   let error = $state<{ index: number; text: string } | null>(null);
   let aftr = $state('');
   let aftrError = $state<string | null>(null);
 
   $effect(() => {
     drafts = device.interfaces.map((i) => i.ipv6 ?? '');
+    dnsDrafts = device.interfaces.map((i) => i.dns6 ?? '');
+    dnsError = null;
     aftr = device.dsLite?.aftr ?? '';
     error = null;
     aftrError = null;
@@ -40,6 +44,19 @@
       return false;
     }
     if (error?.index === index) error = null;
+    return true;
+  }
+
+  /** DNS-Server, den das Netz im Router Advertisement (RDNSS) und per DHCPv6 erhält. */
+  function saveDns(index: number, quiet: boolean): boolean {
+    const draft = (dnsDrafts[index] ?? '').trim();
+    if (draft === (device.interfaces[index]?.dns6 ?? '')) return true;
+    const failure = editor.setInterfaceDns6(device.id, index, draft);
+    if (failure) {
+      if (!quiet) dnsError = { index, text: t(`error.${failure.code}`, failure.params) };
+      return false;
+    }
+    if (dnsError?.index === index) dnsError = null;
     return true;
   }
 
@@ -79,6 +96,11 @@
           <input type="checkbox" checked={!!iface.dhcp6} disabled={!editor.editable} onchange={(e) => editor.setInterfaceDhcp6(device.id, iface.index, e.currentTarget.checked)} />
           {t('ipv6.dhcp6')}
         </label>
+        <form class="iface" use:autosave={(quiet) => saveDns(iface.index, quiet)} onsubmit={(e) => (e.preventDefault(), saveDns(iface.index, false))}>
+          <span class="label">DNS</span>
+          <input bind:value={dnsDrafts[iface.index]} placeholder="2001:db8:1::53" disabled={!editor.editable} aria-label={t('ipv6.dnsOf', { iface: interfaceLabel(device, iface.index) })} aria-invalid={dnsError?.index === iface.index} spellcheck="false" autocomplete="off" />
+        </form>
+        {#if dnsError?.index === iface.index}<p class="error" role="alert">{dnsError.text}</p>{/if}
       {/if}
     {/if}
   {/each}

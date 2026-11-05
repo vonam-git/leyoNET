@@ -96,6 +96,8 @@ export interface NetInterface {
   ipv6?: string;
   /** Nur Router/Internet-Box: in diesem Netz Adressen per DHCPv6 vergeben (Router Advertisement mit M-Flag). */
   dhcp6?: boolean;
+  /** Nur Router/Internet-Box: IPv6-DNS-Server, den dieses Netz im Router Advertisement (RDNSS) und per DHCPv6 erhält. */
+  dns6?: string;
 }
 
 /**
@@ -206,6 +208,8 @@ export interface Device {
   ipv6Auto?: boolean;
   /** Endgeräte: IPv6-Standardgateway bei fester Adresse (globale oder Link-Local-Adresse des Routers). */
   gateway6?: string;
+  /** Endgeräte: IPv6-DNS-Server bei fester Adresse (bei automatischer Konfiguration vom Router). */
+  dns6?: string;
   /** Router, Internet-Box, Internet: statische IPv6-Routen. */
   routes6?: StaticRoute6[];
   /** Internet-Box: DS-Lite (RFC 6333). IPv4 aus dem Heimnetz geht im IPv6-Tunnel zum AFTR des Providers. */

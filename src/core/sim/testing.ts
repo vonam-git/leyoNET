@@ -26,6 +26,7 @@ import {
 } from '../model/topology';
 import type { DeviceType, DhcpScope, DhcpServerConfig, DnsType, Medium, Topology } from '../model/types';
 import type { PacketLogEntry } from './simulation';
+import { asIpv4View } from './frames';
 
 export function unwrap<T>(r: Result<T>): T {
   if (!r.ok) throw new Error(`Unerwarteter Fehler: ${r.error.code}`);
@@ -158,8 +159,9 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
     const v6 = p.payload;
     if (v6.kind === 'icmpv6') return `${route} ICMPv6 ${v6.type}${v6.target ? ` ${v6.target}` : ''} ${p.src}>${p.dst}`;
     if (v6.kind === 'ipv4') return `${route} DS-Lite ${p.src}>${p.dst} [${describe(topology, { ...entry, frame: { ...entry.frame, payload: v6 } }).slice(route.length + 1)}]`;
+    if (v6.kind === 'tcp' || v6.payload.kind !== 'dhcpv6') return `${describe(topology, { ...entry, frame: { ...entry.frame, payload: asIpv4View(p, v6) } })} (IPv6)`;
     const m = v6.payload;
-    return `${route} ${m.kind === 'dhcpv6' ? `DHCPv6 ${m.type}${m.address ? ` ${m.address}` : ''}` : m.kind.toUpperCase()} ${p.src}>${p.dst}`;
+    return `${route} DHCPv6 ${m.type}${m.address ? ` ${m.address}` : ''} ${p.src}>${p.dst}`;
   }
   const inner = p.payload;
   if (inner.kind === 'ospf') return `${route} OSPF ${inner.type} ${inner.routerId}`;

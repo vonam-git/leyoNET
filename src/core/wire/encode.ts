@@ -173,7 +173,7 @@ function bgp(data: string): Part {
 
 const APP_NAMES: Record<number, string> = { ...TCP_APPS };
 
-function tcp(segment: TcpSegment, srcIp: string, dstIp: string): Part {
+function tcp(segment: TcpSegment, srcIp: string, dstIp: string, v6 = false): Part {
   const p = new Part();
   const binary = isBgpData(segment.data);
   // TCP-Nutzdaten sind Bytes («Binärtext»); nur Zeichen über 255 (z.B. € in einer Mail) werden UTF-8-kodiert.
@@ -194,7 +194,7 @@ function tcp(segment: TcpSegment, srcIp: string, dstIp: string): Part {
   if (syn) p.field('tcp.options', 'MSS 1460', [2, 4, ...u16(1460)]);
   const app = segment.data ? (binary ? bgp(segment.data) : appText(segment, payload)) : null;
   if (app) p.append(app);
-  const sum = internetChecksum([...pseudoHeader(srcIp, dstIp, 6, p.length), ...p.bytes]);
+  const sum = internetChecksum([...(v6 ? pseudoHeader6(srcIp, dstIp, 6, p.length) : pseudoHeader(srcIp, dstIp, 6, p.length)), ...p.bytes]);
   p.patch(checksumAt, u16(sum));
   p.fields.find((f) => f.key === 'tcp.checksum')!.value = hex(sum, 4);
   p.close(4, 'TCP', 0, { note: 'note.tcpSeq' });
@@ -338,6 +338,8 @@ function icmpv6(m: Icmpv6Message, src: string, dst: string): Part {
         const pflags = 0x80 | (pf.autonomous ? 0x40 : 0);
         ndOption(p, 'nd.prefix', 3, [pf.length, pflags, ...u32(pf.valid), ...u32(pf.preferred), 0, 0, 0, 0, ...ip6Bytes(pf.network)], `${pf.network}/${pf.length} (L=1, A=${pf.autonomous ? 1 : 0})`);
       }
+      // RDNSS (RFC 8106): DNS-Server für SLAAC-Clients.
+      if (m.rdnss) ndOption(p, 'nd.rdnss', 25, [0, 0, ...u32(m.routerLifetime ?? 0), ...ip6Bytes(m.rdnss)], m.rdnss);
       break;
     }
     case 'neighborSolicitation':
@@ -361,15 +363,16 @@ function icmpv6(m: Icmpv6Message, src: string, dst: string): Part {
   return p;
 }
 
-/** IPv6-Kopf (RFC 8200): 40 Bytes, ohne Prüfsumme; Next Header 58 = ICMPv6, 17 = UDP, 4 = IPv4 (DS-Lite). */
+/** IPv6-Kopf (RFC 8200): 40 Bytes, ohne Prüfsumme; Next Header 58 = ICMPv6, 6 = TCP, 17 = UDP, 4 = IPv4 (DS-Lite). */
 function ipv6(packet: Ipv6Packet): Part {
   const inner = packet.payload;
-  const payload = inner.kind === 'icmpv6' ? icmpv6(inner, packet.src, packet.dst) : inner.kind === 'udp' ? udp(inner, packet.src, packet.dst, true) : ipv4(inner);
-  const nextHeader = inner.kind === 'icmpv6' ? 58 : inner.kind === 'udp' ? 17 : 4;
+  const payload =
+    inner.kind === 'icmpv6' ? icmpv6(inner, packet.src, packet.dst) : inner.kind === 'udp' ? udp(inner, packet.src, packet.dst, true) : inner.kind === 'tcp' ? tcp(inner, packet.src, packet.dst, true) : ipv4(inner);
+  const nextHeader = inner.kind === 'icmpv6' ? 58 : inner.kind === 'udp' ? 17 : inner.kind === 'tcp' ? 6 : 4;
   const p = new Part();
   p.field('ip6.version', '6, Traffic Class 0, Flow Label 0', [0x60, 0, 0, 0]);
   p.u16('ip6.payloadLength', payload.length);
-  p.u8('ip6.nextHeader', nextHeader, `${nextHeader} (${{ 58: 'ICMPv6', 17: 'UDP', 4: 'IPv4 (DS-Lite)' }[nextHeader]})`);
+  p.u8('ip6.nextHeader', nextHeader, `${nextHeader} (${{ 58: 'ICMPv6', 17: 'UDP', 6: 'TCP', 4: 'IPv4 (DS-Lite)' }[nextHeader]})`);
   p.u8('ip6.hopLimit', packet.hopLimit);
   p.field('ip6.src', packet.src, ip6Bytes(packet.src));
   p.field('ip6.dst', packet.dst, ip6Bytes(packet.dst));

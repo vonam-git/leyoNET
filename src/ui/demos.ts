@@ -120,6 +120,16 @@ export const DEMOS: readonly Demo[] = [
       { action: { at: 0, device: 'PC 1', browse: 'http://www.provider.example/' }, highlight: 'Provider-DNS' },
       { highlight: 'Schul-DNS', window: { device: 'Schul-DNS', tab: 'state' } },
     ] },
+  { id: 'ipv6Services', file: 'ipv6-dienste.json', topic: 'services', layers: [3, 4, 7], actions: [{ at: 3000, device: 'PC 1', command: 'nslookup www.schule.example' }, { at: 4000, device: 'PC 1', browse: 'http://www.schule.example/' }, { at: 6000, device: 'PC 1', mail: { to: ['ben@schule.example'], subject: 'Hallo über IPv6', body: 'Diese Mail kam ohne IPv4 an.' } }], check: { kind: 'browser', device: 'PC 1', contains: 'IPv6' }, until: 12_000,
+    tour: [
+      { sim: false, highlight: 'Router', window: { device: 'Router', tab: 'addresses' } },
+      { highlight: 'Schul-DNS', window: { device: 'Schul-DNS', tab: 'services' } },
+      { sim: true, pause: false, highlight: 'PC 1', window: { device: 'PC 1', tab: 'state' } },
+      { action: { at: 0, device: 'PC 1', command: 'nslookup www.schule.example' }, highlight: 'PC 1' },
+      { action: { at: 0, device: 'PC 1', browse: 'http://www.schule.example/' }, highlight: 'Web- und Mailserver' },
+      { action: { at: 0, device: 'PC 1', mail: { to: ['ben@schule.example'], subject: 'Hallo über IPv6', body: 'Diese Mail kam ohne IPv4 an.' } }, highlight: 'Web- und Mailserver' },
+      { highlight: 'Router' },
+    ] },
   {
     id: 'mail',
     file: 'mail.json',

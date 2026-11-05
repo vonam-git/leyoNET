@@ -1,3 +1,4 @@
+import { normalizeIp6 } from '../net/ipv6';
 import type { TcpFlag, TcpSegment } from './frames';
 import type { SendError, SendOptions } from './ip';
 import type { NodeContext } from './simulation';
@@ -254,7 +255,9 @@ export class TcpStack {
     this.#listeners.set(port, accept);
   }
 
-  connect(remoteIp: string, remotePort: number, handlers: TcpHandlers): TcpConnection | null {
+  connect(remoteText: string, remotePort: number, handlers: TcpHandlers): TcpConnection | null {
+    // IPv6 in Kurzform (RFC 5952), damit die Antworten zur Verbindung passen.
+    const remoteIp = normalizeIp6(remoteText) ?? remoteText;
     const localIp = this.host.localIpFor(remoteIp);
     if (!localIp) return null;
     const port = this.#nextPort++;

@@ -3,6 +3,7 @@
 // TCP, damit der Dialog in der Paketliste mitgelesen werden kann.
 
 import { parseIp } from '../net/ipv4';
+import { normalizeIp6 } from '../net/ipv6';
 import { dotStuff, dotUnstuff, formatAddress, formatMessage, parseAddress, parseMessage, type MailMessage } from '../net/mail';
 import type { DnsResolver } from './dns';
 import { IMAP_PORT, POP3_PORT, SMTP_PORT } from './frames';
@@ -61,6 +62,8 @@ class Lines {
 /** Name oder IP des Servers auflösen; bei Fehlern meldet `report`, und `next` wird nicht aufgerufen. */
 function resolveHost(host: MailHost, name: string, report: Report, next: (ip: string) => void, fail: () => void) {
   if (parseIp(name) !== null) return next(name);
+  const v6 = normalizeIp6(name.replace(/^\[|\]$/g, ''));
+  if (v6) return next(v6);
   report('mail.resolve', { host: name });
   host.resolver.resolveAddress(name, (result) => {
     if (!result.ok) {

@@ -34,6 +34,9 @@ import { Rip } from './rip';
 import { Bgp } from './bgp';
 import type { RoutingHost } from './routing-host';
 import { IPV4_ENABLED, Ip6Stack } from './ip6';
+import { formatIp6, normalizeIp6, parseIp6 } from '../net/ipv6';
+import { asIpv4View } from './frames';
+export { asIpv4View };
 import { Firewall } from './firewall';
 import { Vpn, type VpnState } from './vpn';
 import { matchesAddress } from '../model/security';
@@ -99,6 +102,12 @@ export class IpNode implements SimNode {
         sendFrame: (index, frame) => this.sendFrame(index, frame),
         onIcmp6: (packet) => this.onIcmp6(packet),
         onUdp6: (packet, datagram, index) => this.onUdp6(packet, datagram, index),
+        onTcp6: (packet, segment) => this.onTcp6(packet, segment),
+        // Dieselbe Firewall wie für IPv4: Endgeräte prüfen eingehende, Router weitergeleitete Pakete.
+        filter6: (packet, inIndex, forwarded) => {
+          if (forwarded !== this.forwarding || packet.payload.kind === 'icmpv6' || packet.payload.kind === 'ipv4') return true;
+          return this.firewall.allows(asIpv4View(packet, packet.payload), inIndex);
+        },
         onTunnel: (packet, inner, index) => this.onTunnel(packet, inner, index),
       },
       () => this.effectiveDevice(),
@@ -114,6 +123,14 @@ export class IpNode implements SimNode {
   protected onIcmp6(_packet: Ipv6Packet) {}
 
   protected onUdp6(_packet: Ipv6Packet, _datagram: UdpDatagram, _index: number) {}
+
+  /**
+   * TCP über IPv6: dieselben Dienste wie über IPv4 (Web, Mail, SSH, BGP). Der
+   * TCP-Stack braucht nur Absender und Ziel, darum dieselbe Verteilung wie bei IPv4.
+   */
+  protected onTcp6(packet: Ipv6Packet, segment: TcpSegment) {
+    this.onTcp(asIpv4View(packet, segment), segment);
+  }
 
   /** DS-Lite: getunneltes IPv4-Paket. true = erledigt. */
   protected onTunnel(_packet: Ipv6Packet, _inner: Ipv4Packet, _index: number): boolean {
@@ -494,7 +511,12 @@ export class IpNode implements SimNode {
   /** Eigene Adresse, über die `remote` erreicht wird (oder null). */
   localIpFor(remote: string): string | null {
     const dst = parseIp(remote);
-    if (dst === null) return null;
+    if (dst === null) {
+      // IPv6-Ziel: eigene IPv6-Adresse über die passende Route.
+      const dst6 = parseIp6(remote);
+      const local = dst6 === null || !this.v6.enabled() ? null : this.v6.localFor(dst6);
+      return local === null ? null : formatIp6(local);
+    }
     if (this.isOwn(dst)) return remote;
     const route = lookupRoute(this.routes(), dst);
     const iface = route && this.interfaces().find((i) => i.index === route.iface);
@@ -507,7 +529,16 @@ export class IpNode implements SimNode {
    */
   sendIp(dstText: string, payload: Ipv4Packet['payload'], options: SendOptions = {}, onError?: (e: SendError) => void) {
     const dst = parseIp(dstText);
-    if (dst === null) return;
+    if (dst === null) {
+      // Anwendungen (DNS, TCP) sind adressunabhängig: IPv6-Ziele gehen über den IPv6-Stack.
+      if ((payload.kind === 'udp' || payload.kind === 'tcp') && parseIp6(dstText) !== null && this.v6.enabled()) {
+        // Eigene Verbindung merken, damit die Antworten durch die Firewall dürfen.
+        const local = options.src ?? this.localIpFor(dstText);
+        if (!this.forwarding && local) this.firewall.track({ kind: 'ipv4', src: local, dst: normalizeIp6(dstText) ?? dstText, ttl: 0, id: 0, payload });
+        this.v6.send(dstText, payload, { ...(options.src ? { src: options.src } : {}), ...(options.ttl !== undefined ? { hopLimit: options.ttl } : {}) }, onError);
+      } else if (parseIp6(dstText) !== null) onError?.('noRoute');
+      return;
+    }
     const build = (src: string): Ipv4Packet => {
       const packet: Ipv4Packet = { kind: 'ipv4', src: options.src ?? src, dst: dstText, ttl: options.ttl ?? DEFAULT_TTL, id: ++this.#ipId, payload };
       // Endgerät mit Firewall: eigene Verbindungen merken, damit die Antworten herein dürfen.

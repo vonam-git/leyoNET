@@ -1,4 +1,4 @@
-import type { EthernetFrame } from './frames';
+import { asIpv4View, type EthernetFrame } from './frames';
 
 /** Bekannte TCP-Ports und ihr Anwendungsprotokoll. */
 export const TCP_APPS: Record<number, string> = { 22: 'SSH', 80: 'HTTP', 25: 'SMTP', 110: 'POP3', 143: 'IMAP', 179: 'BGP' };
@@ -17,7 +17,9 @@ export function protocolOf(frame: EthernetFrame): string {
     if (v6.kind === 'icmpv6') return 'ICMPv6';
     // DS-Lite: Ein Analysator zeigt das innerste Protokoll des getunnelten IPv4-Pakets.
     if (v6.kind === 'ipv4') return protocolOf({ ...frame, payload: v6 });
-    return v6.payload.kind === 'dhcpv6' ? 'DHCPv6' : v6.payload.kind.toUpperCase();
+    if (v6.kind === 'udp' && v6.payload.kind === 'dhcpv6') return 'DHCPv6';
+    // TCP (HTTP, SMTP, SSH …) und DNS über IPv6: Anwendung wie bei IPv4 bestimmen.
+    return protocolOf({ ...frame, payload: asIpv4View(p, v6) });
   }
   const inner = p.payload;
   if (inner.kind === 'icmp') return 'ICMP';

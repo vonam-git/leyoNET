@@ -402,6 +402,7 @@ function readDevice(v: unknown, path: string): Device {
       iface.ipv6 = formatCidr6(c.address, c.prefix);
     }
     if (io.dhcp6 !== undefined && bool(io.dhcp6, `${p}.dhcp6`)) iface.dhcp6 = true;
+    if (io.dns6 !== undefined) iface.dns6 = ip6(io.dns6, `${p}.dns6`);
     return iface;
   });
 
@@ -700,6 +701,7 @@ function readDevice(v: unknown, path: string): Device {
   }
   if (o.ipv6Auto !== undefined && bool(o.ipv6Auto, `${path}.ipv6Auto`)) device.ipv6Auto = true;
   if (o.gateway6 !== undefined) device.gateway6 = ip6(o.gateway6, `${path}.gateway6`);
+  if (o.dns6 !== undefined) device.dns6 = ip6(o.dns6, `${path}.dns6`);
   if (o.routes6 !== undefined) {
     device.routes6 = arr(o.routes6, `${path}.routes6`).map((raw, i) => {
       const r = obj(raw, `${path}.routes6[${i}]`);

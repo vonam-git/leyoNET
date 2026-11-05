@@ -99,7 +99,8 @@ function nslookup(host: HostNode, args: string[]) {
   // Adresse statt Name: PTR-Eintrag unter in-addr.arpa bzw. ip6.arpa.
   const reverse = reverseName(target);
   const name = reverse && (!type || type === 'PTR') ? reverse : target;
-  const types: DnsType[] = reverse && (!type || type === 'PTR') ? ['PTR'] : type ? [type] : host.v6.enabled() && ctx.topology().ipMode !== 'ipv4' ? ['A', 'AAAA'] : ['A'];
+  const mode = ctx.topology().ipMode;
+  const types: DnsType[] = reverse && (!type || type === 'PTR') ? ['PTR'] : type ? [type] : !host.v6.enabled() || mode === 'ipv4' ? ['A'] : mode === 'ipv6' ? ['AAAA'] : ['A', 'AAAA'];
   if (reverse && name === reverse) ctx.print('nslookup.reverse', { address: target, name });
 
   let nonAuthorityNoted = false;
@@ -167,6 +168,7 @@ function printIpconfig(host: HostNode) {
     else ctx.print('ipconfig.ipv6', { address: a.address, prefix: a.prefix, origin: a.origin });
   }
   ctx.print('ipconfig.gateway6', { gateway: v6.gateway ?? '–' });
+  ctx.print('ipconfig.dns6', { dns: host.dnsServer6() ?? '–' });
 }
 
 function printIpv4(host: HostNode) {
