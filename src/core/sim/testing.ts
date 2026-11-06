@@ -181,6 +181,7 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
     if (msg.kind === 'rip') return `${route} RIP ${msg.command} ${msg.entries.map((e) => `${e.network}/${e.metric}`).join(',')}`;
     if (msg.kind === 'ripng') return `${route} RIPng ${msg.command} ${msg.entries.map((e) => `${e.prefix}/${e.length}:${e.metric}`).join(',')}`;
     if (msg.kind === 'dhcpv6') return `${route} DHCPv6 ${msg.type}`;
+    if (msg.kind === 'vxlan') return `${route} VXLAN vni=${msg.vni} ${p.src}>${p.dst} [${describe(topology, { ...entry, frame: msg.frame }).slice(route.length + 1)}]`;
     if (msg.kind === 'ike') return `${route} IKEv2 ${msg.exchange}${msg.response ? ' response' : ''}${msg.notify ? ` ${msg.notify}` : ''}`;
     return `${route} DHCP ${msg.op} ${p.src}>${p.dst}`;
   }

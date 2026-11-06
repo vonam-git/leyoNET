@@ -52,9 +52,25 @@ export interface ChannelState {
 
 export interface MacEntry {
   mac: string;
+  /** Port; OVERLAY_PORT = hinter einem anderen VTEP (VXLAN). */
   port: number;
   vlan: number;
   expires: number;
+  /** VXLAN: Adresse des VTEPs, hinter dem die MAC liegt. */
+  vtep?: string;
+}
+
+/** «Port» für Adressen, die über VXLAN hinter einem anderen VTEP liegen. */
+export const OVERLAY_PORT = -1;
+
+/** VXLAN-Verlängerung eines VLANs über das geroutete Netz (vom Layer-3-Switch bereitgestellt). */
+export interface Overlay {
+  /** Wird dieses VLAN über VXLAN verlängert? */
+  carries(vlan: number): boolean;
+  /** An alle anderen VTEPs der VNI (Broadcast, unbekannte Ziele). */
+  flood(vlan: number, frame: EthernetFrame): void;
+  /** An einen bekannten VTEP. */
+  unicast(vtep: string, vlan: number, frame: EthernetFrame): void;
 }
 
 /** Rolle eines Ports im Spanning Tree; "edge" = Endgerät angeschlossen (wie PortFast). */
@@ -118,6 +134,7 @@ export interface LocalPort {
 
 export class SwitchNode implements SimNode {
   protected local: LocalPort | null = null;
+  protected overlay: Overlay | null = null;
   #table = new Map<string, MacEntry>();
   /** Letzte Meldung «MAC springt» je Adresse (höchstens alle 5 s, sonst flutet eine Schleife die Konsole). */
   #flapNoted = new Map<string, number>();
@@ -141,7 +158,7 @@ export class SwitchNode implements SimNode {
   #channelNoted = new Map<number, string>();
   #lacpRunning = false;
 
-  constructor(private readonly ctx: NodeContext) {}
+  constructor(protected readonly ctx: NodeContext) {}
 
   /**
    * Schleifenerkennung: Kommt derselbe Rahmen (gleiche Nutzlast) ein zweites
@@ -374,8 +391,20 @@ export class SwitchNode implements SimNode {
       if (frame.dst === BROADCAST_MAC || (isGroupMac(frame.dst) && frame.dst !== STP_MAC)) this.local.deliver(vlan, frame);
     }
 
+    this.#forwardLocal(inPort, vlan, frame, true);
+  }
+
+  /** Weiterleiten im VLAN: bekannter Port, bekannter VTEP oder an alle (ohne den Eingang). */
+  #forwardLocal(inPort: number, vlan: number, frame: EthernetFrame, toOverlay: boolean) {
+    const device = this.#device;
+    if (!device) return;
+    const now = this.ctx.now;
     const flood = frame.dst === BROADCAST_MAC || frame.dst === STP_MAC;
     const known = flood ? undefined : this.#table.get(`${vlan}|${frame.dst}`);
+    if (known && known.expires > now && known.port === OVERLAY_PORT && known.vtep) {
+      if (toOverlay && this.overlay?.carries(vlan)) this.overlay.unicast(known.vtep, vlan, frame);
+      return;
+    }
     if (known && known.expires > now && this.ctx.isConnected(known.port) && this.#state(known.port) === 'forwarding' && this.#member(known.port, vlan)) {
       // Ziel hängt am selben Port wie der Absender: Der Rahmen hat sein Ziel schon erreicht.
       if (known.port !== inPort) this.#send(known.port, frame, vlan);
@@ -385,6 +414,19 @@ export class SwitchNode implements SimNode {
       if (port.index === inPort || !this.#isLogical(port.index) || !this.#member(port.index, vlan) || this.#state(port.index) !== 'forwarding') continue;
       this.#send(port.index, frame, vlan);
     }
+    // VXLAN: unbekannte Ziele und Broadcasts auch an die anderen VTEPs (nie zurück ins Overlay).
+    if (toOverlay && frame.dst !== STP_MAC && this.overlay?.carries(vlan)) this.overlay.flood(vlan, frame);
+  }
+
+  /** Rahmen aus dem VXLAN-Tunnel: Absender hinter dem VTEP lernen, lokal zustellen. */
+  receiveOverlay(vlan: number, frame: EthernetFrame, vtep: string) {
+    if (!this.#exists(vlan)) return this.#noteVlan(OVERLAY_PORT, vlan);
+    this.#table.set(`${vlan}|${frame.src}`, { mac: frame.src, port: OVERLAY_PORT, vlan, expires: this.ctx.now + MAC_TTL, vtep });
+    if (this.local?.has(vlan)) {
+      if (frame.dst === this.local.mac) return this.local.deliver(vlan, frame);
+      if (frame.dst === BROADCAST_MAC || (isGroupMac(frame.dst) && frame.dst !== STP_MAC)) this.local.deliver(vlan, frame);
+    }
+    this.#forwardLocal(OVERLAY_PORT, vlan, frame, false);
   }
 
   // --- Link Aggregation (Port-Channel, LACP nach IEEE 802.1AX) ----------------------
@@ -553,7 +595,7 @@ export class SwitchNode implements SimNode {
     const now = this.ctx.now;
     if (now - (this.#vlanNoted.get(key) ?? -Infinity) < 5000) return;
     this.#vlanNoted.set(key, now);
-    this.ctx.print(!this.#exists(vlan) ? 'switch.vlanMissing' : 'switch.vlanNotAllowed', { vlan, port: port + 1 });
+    this.ctx.print(!this.#exists(vlan) ? 'switch.vlanMissing' : 'switch.vlanNotAllowed', { vlan, port: port === OVERLAY_PORT ? 'VXLAN' : port + 1 });
   }
 
   /** Zugriffsliste am Eingangsport prüfen («ip access-group NAME in»). Fehlt die Liste, geht alles durch. */
@@ -605,24 +647,14 @@ export class SwitchNode implements SimNode {
 
   /** Rahmen vom Switch selbst (SVI) ins VLAN schicken: bekannter Port oder an alle. */
   injectLocal(vlan: number, frame: EthernetFrame) {
-    const device = this.#device;
-    if (!device) return;
-    const now = this.ctx.now;
-    const known = frame.dst === BROADCAST_MAC ? undefined : this.#table.get(`${vlan}|${frame.dst}`);
-    if (known && known.expires > now && this.ctx.isConnected(known.port) && this.#state(known.port) === 'forwarding') {
-      this.#send(known.port, frame, vlan);
-      return;
-    }
-    for (const port of device.interfaces) {
-      if (!this.#isLogical(port.index) || !this.#member(port.index, vlan) || this.#state(port.index) !== 'forwarding') continue;
-      this.#send(port.index, frame, vlan);
-    }
+    // Wie ein Rahmen von einem Port, den es nicht gibt: an alle Ports und ins Overlay.
+    this.#forwardLocal(-2, vlan, frame, true);
   }
 
   state(): object {
     const now = this.ctx.now;
     const macTable = [...this.#table.values()]
-      .filter((e) => e.expires > now && this.ctx.isConnected(e.port))
+      .filter((e) => e.expires > now && (e.port === OVERLAY_PORT || this.ctx.isConnected(e.port)))
       .sort((a, b) => a.vlan - b.vlan || a.port - b.port || a.mac.localeCompare(b.mac));
     const storm = this.storm;
     const acls = this.#aclState();
@@ -661,7 +693,7 @@ export class ModemNode implements SimNode {
   #progress = 0;
   #run = 0;
 
-  constructor(private readonly ctx: NodeContext) {}
+  constructor(protected readonly ctx: NodeContext) {}
 
   #kind(): ModemKind | undefined {
     return this.ctx.device()?.modem?.kind;

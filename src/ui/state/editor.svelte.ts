@@ -102,6 +102,10 @@ import {
   setSubinterface,
   setSvi,
   setVlanName,
+  setVxlanSource,
+  setVniVlan,
+  addVniPeer,
+  removeVniPeer,
   addVrf,
   removeVrf,
   setInterfaceVrf,
@@ -1083,6 +1087,22 @@ class Editor {
 
   setPortChannel(id: string, index: number, channel: number | null, mode: ChannelMode = 'active'): TopologyError | null {
     return this.#applyForm(setPortChannel(this.topology, id, index, channel, mode));
+  }
+
+  setVxlanSource(id: string, iface: number | null): TopologyError | null {
+    return this.#applyForm(setVxlanSource(this.topology, id, iface));
+  }
+
+  setVniVlan(id: string, vni: number, vlan: number | null): TopologyError | null {
+    return this.#applyForm(setVniVlan(this.topology, id, vni, vlan));
+  }
+
+  addVniPeer(id: string, vni: number, peer: string): TopologyError | null {
+    return this.#applyForm(addVniPeer(this.topology, id, vni, peer));
+  }
+
+  removeVniPeer(id: string, vni: number, peer?: string): TopologyError | null {
+    return this.#applyForm(removeVniPeer(this.topology, id, vni, peer));
   }
 
   addVrf(id: string, name: string): TopologyError | null {

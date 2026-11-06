@@ -122,7 +122,19 @@ export interface IkeMessage {
   notify?: 'AUTHENTICATION_FAILED' | 'TS_UNACCEPTABLE';
 }
 
-export type AppMessage = DhcpMessage | DnsMessage | RipMessage | RipngMessage | Dhcpv6Message | IkeMessage;
+/**
+ * VXLAN (RFC 7348): ein ganzer Ethernet-Rahmen in UDP (Port 4789). Die VNI
+ * (24 Bit) kennzeichnet das Layer-2-Segment, wie eine VLAN-Nummer, über ein geroutetes Netz hinweg.
+ */
+export interface VxlanMessage {
+  kind: 'vxlan';
+  vni: number;
+  frame: EthernetFrame;
+}
+
+export const VXLAN_PORT = 4789;
+
+export type AppMessage = DhcpMessage | DnsMessage | RipMessage | RipngMessage | Dhcpv6Message | IkeMessage | VxlanMessage;
 
 export interface UdpDatagram {
   kind: 'udp';

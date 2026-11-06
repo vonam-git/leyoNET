@@ -186,6 +186,10 @@
       "titel": "Internet Key Exchange Protocol Version 2 (IKEv2)",
       "verwendung": "Tunnelaufbau des VPN (UDP 500)"
     },
+    "7348": {
+      "titel": "Virtual eXtensible Local Area Network (VXLAN): A Framework for Overlaying Virtualized Layer 2 Networks over Layer 3 Networks",
+      "verwendung": "VXLAN (VTEP, UDP 4789, VNI)"
+    },
     "8106": {
       "titel": "IPv6 Router Advertisement Options for DNS Configuration",
       "verwendung": "RDNSS: DNS-Server im Router Advertisement"

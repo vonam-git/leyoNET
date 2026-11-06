@@ -11,6 +11,7 @@
   import FirewallConfig from './FirewallConfig.svelte';
   import AclConfig from './AclConfig.svelte';
   import VrfConfig from './VrfConfig.svelte';
+  import VxlanConfig from './VxlanConfig.svelte';
   import DeviceIcon from './DeviceIcon.svelte';
   import GroupConfig from './GroupConfig.svelte';
   import HostConfigForm from './HostConfigForm.svelte';
@@ -277,6 +278,7 @@
           <RouterConfig {device} part="relay" />
         {:else if tab === 'switching'}
           <SwitchConfig {device} />
+          {#if device.type === 'l3switch' && ui.has('net.vxlan')}<VxlanConfig {device} />{/if}
         {:else if tab === 'wlan'}
           {#if device.type === 'accesspoint'}<WlanConfig {device} />{:else}<h3>{t('wifi.title')}</h3><WifiClientForm {device} />{/if}
         {:else if tab === 'mail'}

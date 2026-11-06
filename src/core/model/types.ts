@@ -147,6 +147,24 @@ export interface Loopback {
   vrf?: string;
 }
 
+/** VXLAN-Segment: VNI, zugeordnetes VLAN und die anderen VTEPs (statische Liste, Ingress Replication). */
+export interface VxlanVni {
+  vni: number;
+  /** VLAN dieses Switches, das über die VNI verlängert wird («vn-segment» im VLAN). */
+  vlan?: number;
+  /** Adressen der anderen VTEPs («peer-ip»). */
+  peers: string[];
+}
+
+/** Layer-3-Switch als VTEP («interface nve1»). */
+export interface VxlanConfig {
+  /** Logisches Interface mit der Absenderadresse, meist ein Loopback («source-interface loopback0»). */
+  source?: number;
+  vnis: VxlanVni[];
+}
+
+export const MAX_VNI = 16_777_215;
+
 /**
  * VRF (Virtual Routing and Forwarding): eigene Routingtabelle auf demselben
  * Gerät, z.B. für zwei Kunden mit überlappenden Adressen. Anschlüsse werden
@@ -219,6 +237,8 @@ export interface Device {
   loopbacks?: Loopback[];
   /** Router, Firewall, Layer-3-Switch: VRFs (eigene Routingtabellen). */
   vrfs?: Vrf[];
+  /** Layer-3-Switch: VXLAN-Tunnelendpunkt (VTEP). */
+  vxlan?: VxlanConfig;
   /** Nur Layer-3-Switch: VLAN-Interfaces mit Adresse. */
   svis?: Svi[];
   /** Nur Layer-3-Switch: false = Routing zwischen VLANs ausgeschaltet («no ip routing»). */

@@ -26,6 +26,7 @@ Profile und Funktionsdateien: [funktionsprofile.md](funktionsprofile.md).
 | Switching | VLAN und Spanning Tree | blockierter Port, 802.1Q-Tag auf dem Trunk |
 | Switching | Broadcast-Sturm | Schleife ohne STP, Sturm-Warnung |
 | Switching | Port-Channel mit LACP | zwei Kabel gebündelt, LACPDUs, kein blockierter Port |
+| Switching | VXLAN zwischen zwei Standorten | ARP und Ping in UDP 4789, OSPF-Underlay mit Loopbacks |
 | Routing | VRF: zwei Kunden, gleiche Adressen | gleiche Adresse, verschiedene Server je nach VRF |
 | Switching | Router-on-a-Stick, Layer-3-Switch | Routing zwischen VLANs, DHCP-Relay |
 | Routing | Statische Routen, OSPF, RIP, BGP | `tracert` über die Router, Protokollmeldungen, gelernte Routen |

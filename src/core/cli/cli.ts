@@ -39,6 +39,10 @@ import {
   usedVlans,
   vlanExists,
   setDefaultGateway,
+  setVniVlan,
+  setVxlanSource,
+  addVniPeer,
+  removeVniPeer,
   addVrf,
   removeVrf,
   setInterfaceVrf,
@@ -79,7 +83,7 @@ import { buildRoutes, decodeIface, logicalInterfaces, vrfOfIface, type Route } f
 import type { DeviceState } from '../sim/simulation';
 import { cliIfaceName, ifaceIdOf, parseIfaceName, usesPortNames } from './names';
 
-export type CliMode = 'user' | 'enable' | 'config' | 'if' | 'vlan' | 'line' | 'router-ospf' | 'router-rip' | 'router-bgp' | 'router-ospf6' | 'router-ripng' | 'acl';
+export type CliMode = 'user' | 'enable' | 'config' | 'if' | 'vlan' | 'line' | 'router-ospf' | 'router-rip' | 'router-bgp' | 'router-ospf6' | 'router-ripng' | 'acl' | 'nve';
 
 export interface CliSession {
   device: string;
@@ -157,6 +161,8 @@ export function prompt(topology: Topology, session: CliSession): string {
       return `${name}(config-router)#`;
     case 'acl':
       return `${name}(config-ext-nacl)#`;
+    case 'nve':
+      return `${name}(config-if-nve)#`;
   }
 }
 
@@ -190,7 +196,7 @@ const L3: DeviceType[] = ['router', 'firewall', 'l3switch'];
 const L3_AND_SWITCH: DeviceType[] = [...L3, 'switch'];
 const EXEC: CliMode[] = ['user', 'enable'];
 const ROUTER_MODES: CliMode[] = ['router-ospf', 'router-rip', 'router-bgp', 'router-ospf6', 'router-ripng'];
-const CONFIG_ALL: CliMode[] = ['config', 'if', 'vlan', 'line', 'acl', ...ROUTER_MODES];
+const CONFIG_ALL: CliMode[] = ['config', 'if', 'vlan', 'line', 'acl', 'nve', ...ROUTER_MODES];
 
 /** Kurze Erklärungen für Schlüsselwörter mitten in einem Befehl (für «?»). */
 const KEYWORD_HELP: Record<string, string> = {
@@ -438,6 +444,7 @@ function exitMode(session: CliSession): Partial<CliOutput> {
     case 'router-ospf6':
     case 'router-ripng':
     case 'acl':
+    case 'nve':
       return { session: { device: session.device, mode: 'config', ...(session.remote ? { remote: true } : {}) } };
     case 'config':
       return { session: { device: session.device, mode: 'enable', ...(session.remote ? { remote: true } : {}) } };
@@ -524,6 +531,8 @@ const COMMANDS: Command[] = [
   { modes: EXEC, types: SWITCHES, syntax: 'show vlan brief', help: 'VLAN summary', run: ({ device }) => ok(showVlanBrief(device)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show vlan', help: 'VLAN summary', run: ({ device }) => ok(showVlanBrief(device)) },
   { modes: EXEC, types: ['switch', 'l3switch'], syntax: 'show etherchannel summary', help: 'Port-channels with the state of their ports', run: ({ device, env }) => ok(showEtherchannel(device, env)) },
+  { modes: EXEC, types: ['l3switch'], syntax: 'show nve vni', help: 'VXLAN segments (VNI, VLAN, VTEPs)', run: ({ device }) => ok(showNveVni(device)) },
+  { modes: EXEC, types: ['l3switch'], syntax: 'show nve peers', help: 'Other VTEPs and the MAC addresses learned behind them', run: ({ device, env }) => ok(showNvePeers(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show interfaces trunk', help: 'Trunk ports with allowed and native VLANs', run: ({ device, env }) => ok(showTrunks(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show interfaces status', help: 'Port status', run: ({ device, env }) => ok(showInterfacesStatus(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show spanning-tree', help: 'Spanning tree state', run: ({ device, env }) => ok(showSpanningTree(device, env)) },
@@ -780,6 +789,38 @@ const COMMANDS: Command[] = [
   },
 
   // --- vlan ------------------------------------------------------------------
+  {
+    modes: ['vlan'],
+    types: ['l3switch'],
+    syntax: 'vn-segment <num>',
+    help: 'Extend this VLAN over VXLAN with this VNI',
+    run: ({ args, device, env, session }) => apply(setVniVlan(env.topology, device.id, Number(args[0]), session.vlan ?? 1)),
+  },
+  {
+    modes: ['vlan'],
+    types: ['l3switch'],
+    syntax: 'no vn-segment',
+    help: 'Stop extending this VLAN over VXLAN',
+    run: ({ device, env, session }) => {
+      const vni = device.vxlan?.vnis.find((v) => v.vlan === (session.vlan ?? 1));
+      return vni ? apply(setVniVlan(env.topology, device.id, vni.vni, null)) : ok();
+    },
+  },
+  { modes: ['config'], types: ['l3switch'], syntax: 'interface nve1', help: 'VXLAN tunnel endpoint (VTEP)', run: ({ session }) => ({ session: { device: session.device, mode: 'nve', ...(session.remote ? { remote: true } : {}) } }) },
+  { modes: ['config'], types: ['l3switch'], syntax: 'no interface nve1', help: 'Remove the VXLAN configuration', run: ({ device, env }) => apply(clearVxlan(env.topology, device.id)) },
+  {
+    modes: ['nve'],
+    syntax: 'source-interface <iface>',
+    help: 'Source address of the tunnels, usually a loopback',
+    run: ({ args, device, env }) => {
+      const ref = parseIfaceName(device, args[0]!);
+      return ref ? apply(setVxlanSource(env.topology, device.id, ifaceIdOf(ref))) : ok([`% Unknown interface: ${args[0]}`]);
+    },
+  },
+  { modes: ['nve'], syntax: 'no source-interface', help: 'Remove the source interface', run: ({ device, env }) => apply(setVxlanSource(env.topology, device.id, null)) },
+  { modes: ['nve'], syntax: 'member vni <num> peer-ip <ip>', help: 'Another VTEP for this VNI (static ingress replication)', run: ({ args, device, env }) => apply(addVniPeer(env.topology, device.id, Number(args[0]), args[1]!)) },
+  { modes: ['nve'], syntax: 'no member vni <num> peer-ip <ip>', help: 'Remove a VTEP from this VNI', run: ({ args, device, env }) => apply(removeVniPeer(env.topology, device.id, Number(args[0]), args[1]!)) },
+  { modes: ['nve'], syntax: 'no member vni <num>', help: 'Remove all VTEPs of this VNI', run: ({ args, device, env }) => apply(removeVniPeer(env.topology, device.id, Number(args[0]))) },
   {
     modes: ['vlan'],
     syntax: 'name <word>',
@@ -1708,7 +1749,7 @@ function showNat(env: CliEnv): string[] {
 function showMacTable(device: Device, env: CliEnv): string[] {
   const table_ = env.state?.macTable;
   if (!table_) return ['% MAC table is only available while the simulation runs (action mode)'];
-  const rows = table_.map((e) => [String(e.vlan), e.mac.toLowerCase(), 'DYNAMIC', cliIfaceName(device, e.port)]);
+  const rows = table_.map((e) => [String(e.vlan), e.mac.toLowerCase(), 'DYNAMIC', e.port === -1 ? `nve1 (${e.vtep ?? '?'})` : cliIfaceName(device, e.port)]);
   return [...table(['Vlan', 'Mac Address', 'Type', 'Ports'], rows), `Total Mac Addresses: ${rows.length}`];
 }
 
@@ -1783,6 +1824,26 @@ function showEtherchannel(device: Device, env: CliEnv): string[] {
     '',
     ...table(['Group', 'Port-channel', 'Protocol', 'Ports'], rows),
   ];
+}
+
+function clearVxlan(t: Topology, id: string): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return { ok: false, error: { code: 'unknownDevice' } };
+  return { ok: true, value: { ...t, devices: t.devices.map((d) => (d.id === id ? (({ vxlan: _x, ...rest }) => rest)(d) : d)) } };
+}
+
+function showNveVni(device: Device): string[] {
+  const x = device.vxlan;
+  if (!x?.vnis.length) return ['(no VNIs; "vn-segment" in a VLAN and "member vni" under "interface nve1")'];
+  const source = x.source !== undefined ? cliIfaceName(device, x.source) : '(no source-interface)';
+  return [`Interface nve1, source ${source}`, '', ...table(['VNI', 'VLAN', 'Peers (ingress replication)'], x.vnis.map((v) => [String(v.vni), v.vlan !== undefined ? String(v.vlan) : '-', v.peers.join(', ') || '-']))];
+}
+
+function showNvePeers(device: Device, env: CliEnv): string[] {
+  const peers = [...new Set((device.vxlan?.vnis ?? []).flatMap((v) => v.peers))];
+  if (!peers.length) return ['(no VTEP peers)'];
+  const macs = env.state?.macTable?.filter((e) => e.port === -1) ?? [];
+  return table(['Peer', 'VNIs', 'Learned MACs'], peers.map((p) => [p, (device.vxlan?.vnis ?? []).filter((v) => v.peers.includes(p)).map((v) => v.vni).join(', '), env.state ? String(macs.filter((m) => m.vtep === p).length) : '-']));
 }
 
 function showTrunks(device: Device, env: CliEnv): string[] {
@@ -1867,7 +1928,8 @@ export function runningConfig(device: Device): string[] {
     }
     for (const v of vlansOf(device).slice(1)) {
       const name = device.vlanNames?.find((n) => n.vlan === v)?.name;
-      lines.push('!', `vlan ${v}`, ...(name ? [` name ${name}`] : []));
+      const vni = device.vxlan?.vnis.find((x) => x.vlan === v)?.vni;
+      lines.push('!', `vlan ${v}`, ...(name ? [` name ${name}`] : []), ...(vni ? [` vn-segment ${vni}`] : []));
     }
     for (const acl of device.acls ?? []) lines.push('!', `ip access-list extended ${acl.name}`, ...acl.rules.map((r) => ` ${formatAclRule(r)}`));
   }
@@ -1909,6 +1971,12 @@ export function runningConfig(device: Device): string[] {
     lines.push(`interface loopback${l.id}`);
     if (l.vrf) lines.push(` vrf forwarding ${l.vrf}`);
     if (l.ip && l.mask) lines.push(` ip address ${l.ip}/${parseMask(l.mask)}`);
+    lines.push('!');
+  }
+  if (device.vxlan) {
+    lines.push('interface nve1');
+    if (device.vxlan.source !== undefined) lines.push(` source-interface ${cliIfaceName(device, device.vxlan.source)}`);
+    for (const v of device.vxlan.vnis) for (const p of v.peers) lines.push(` member vni ${v.vni} peer-ip ${p}`);
     lines.push('!');
   }
   for (const s of device.svis ?? []) {

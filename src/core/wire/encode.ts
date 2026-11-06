@@ -23,6 +23,7 @@ import {
   type RipMessage,
   type StpBpdu,
   type LacpPdu,
+  type VxlanMessage,
   type TcpSegment,
   type UdpDatagram,
 } from '../sim/frames';
@@ -252,7 +253,7 @@ function pseudoHeader6(src: string, dst: string, nextHeader: number, length: num
 function udp(d: UdpDatagram, srcIp: string, dstIp: string, v6 = false): Part {
   const p = new Part();
   const m = d.payload;
-  const inner = m.kind === 'dhcp' ? dhcp(m) : m.kind === 'dns' ? dns(m) : m.kind === 'dhcpv6' ? dhcp6(m) : m.kind === 'ike' ? ike(m) : m.kind === 'ripng' ? ripng(m) : rip(m);
+  const inner = m.kind === 'dhcp' ? dhcp(m) : m.kind === 'dns' ? dns(m) : m.kind === 'dhcpv6' ? dhcp6(m) : m.kind === 'ike' ? ike(m) : m.kind === 'ripng' ? ripng(m) : m.kind === 'vxlan' ? vxlan(m) : rip(m);
   p.u16('udp.srcPort', d.srcPort, portName(d.srcPort));
   p.u16('udp.dstPort', d.dstPort, portName(d.dstPort));
   p.u16('udp.length', 8 + inner.length);
@@ -716,6 +717,19 @@ function stp(b: StpBpdu): Part {
   p.u16('stp.helloTime', 2 * 256, '2 s');
   p.u16('stp.forwardDelay', 15 * 256, '15 s');
   p.close(2, 'STP', 0, { note: 'note.stp' });
+  return p;
+}
+
+/** VXLAN-Kopf (RFC 7348): Flags (I = VNI gültig), VNI, danach der innere Ethernet-Rahmen. */
+function vxlan(m: VxlanMessage): Part {
+  const p = new Part();
+  p.u8('vxlan.flags', 0x08, '0x08 (I: VNI gültig)');
+  p.field('vxlan.reserved1', '0', [0, 0, 0]);
+  p.field('vxlan.vni', String(m.vni), [(m.vni >> 16) & 0xff, (m.vni >> 8) & 0xff, m.vni & 0xff]);
+  p.u8('vxlan.reserved2', 0);
+  p.close(4, 'VXLAN', 0, { note: 'note.vxlan' });
+  const { part, etherType } = payloadPart(m.frame);
+  p.append(ethernet(m.frame, part, etherType));
   return p;
 }
 

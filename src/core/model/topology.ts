@@ -2,8 +2,8 @@ import { checkDhcpScope, checkDhcpServer, normalizeDhcpServer, normalizeScope } 
 import { checkDnsRecord, isValidName, normalizeName, normalizeRecord } from '../net/dns';
 import { isValidPath } from '../net/http';
 import { checkMailAccount, checkMailbox } from '../net/mail';
-import { checkHostConfig, maskToText, parseIp, parseMask, type HostConfigInput } from '../net/ipv4';
-import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME, checkStaticRoute, decodeIface, normalizeRoute } from '../net/routing';
+import { checkHostConfig, formatIp, maskToText, parseIp, parseMask, type HostConfigInput } from '../net/ipv4';
+import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME, checkStaticRoute, decodeIface, logicalInterfaces, normalizeRoute } from '../net/routing';
 import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, isRouterLike, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
 import { MIN_SIGNAL, portMedium, signalBetween } from './links';
 import { macFor, normalizeMac } from './mac';
@@ -34,6 +34,7 @@ import type {
   StaticRoute,
   SubInterface,
   ChannelMode,
+  VxlanConfig,
   Loopback,
   Svi,
   Topology,
@@ -50,7 +51,7 @@ import type {
   StaticNat,
   VlanDef,
 } from './types';
-import { CHANNEL_MODES, MAX_CHANNEL } from './types';
+import { CHANNEL_MODES, MAX_CHANNEL, MAX_VNI } from './types';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
 
 export const MAX_NAME_LENGTH = 32;
@@ -77,6 +78,10 @@ export type ErrorCode =
   | 'invalidVlan'
   | 'invalidChannel'
   | 'invalidVrfName'
+  | 'notAVtep'
+  | 'invalidVni'
+  | 'unknownVni'
+  | 'vlanHasVni'
   | 'unknownVrf'
   | 'defaultVlan'
   | 'stpNeededForLoop'
@@ -1028,6 +1033,89 @@ export function setSubinterface(t: Topology, id: string, parent: number, vlan: n
     ? existing.map((s) => (s === old ? next : s))
     : [...existing, next].sort((a, b) => a.parent - b.parent || a.vlan - b.vlan);
   return ok(updateDevice(t, id, (d) => ({ ...d, subinterfaces: list })));
+}
+
+// --- VXLAN ------------------------------------------------------------------------
+
+export const MAX_VNIS = 32;
+export const MAX_VTEP_PEERS = 16;
+
+function vtepDevice(t: Topology, id: string): Result<Device> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (device.type !== 'l3switch') return fail('notAVtep');
+  return ok(device);
+}
+
+const validVni = (vni: number) => Number.isInteger(vni) && vni >= 1 && vni <= MAX_VNI;
+
+function withVxlan(d: Device, change: (c: VxlanConfig) => VxlanConfig): Device {
+  const next = change(d.vxlan ?? { vnis: [] });
+  const vnis = next.vnis.filter((v) => v.vlan !== undefined || v.peers.length).sort((a, b) => a.vni - b.vni);
+  return vnis.length || next.source !== undefined ? { ...d, vxlan: { ...next, vnis } } : without(d, 'vxlan');
+}
+
+/** Absender der Tunnel («source-interface loopback0»); null entfernt. */
+export function setVxlanSource(t: Topology, id: string, iface: number | null): Result<Topology> {
+  const device = vtepDevice(t, id);
+  if (!device.ok) return device;
+  if (iface !== null && !logicalInterfaces(device.value).includes(iface)) return fail('unknownInterface');
+  return ok(updateDevice(t, id, (d) => withVxlan(d, (c) => (iface === null ? without(c, 'source') : { ...c, source: iface }))));
+}
+
+/** VLAN einer VNI zuordnen («vn-segment 10010» im VLAN); null löst die Zuordnung. */
+export function setVniVlan(t: Topology, id: string, vni: number, vlan: number | null): Result<Topology> {
+  const device = vtepDevice(t, id);
+  if (!device.ok) return device;
+  if (!validVni(vni)) return fail('invalidVni', { max: MAX_VNI });
+  if (vlan !== null && !validVlanId(vlan)) return fail('invalidVlan');
+  const vnis = device.value.vxlan?.vnis ?? [];
+  if (vlan !== null && vnis.some((v) => v.vlan === vlan && v.vni !== vni)) return fail('vlanHasVni', { vlan });
+  if (!vnis.some((v) => v.vni === vni) && vnis.length >= MAX_VNIS) return fail('tooMany', { max: MAX_VNIS });
+  return ok(
+    updateDevice(t, id, (d) =>
+      withVxlan(d, (c) => {
+        const existing = c.vnis.find((v) => v.vni === vni) ?? { vni, peers: [] };
+        const next = vlan === null ? without(existing, 'vlan') : { ...existing, vlan };
+        return { ...c, vnis: [...c.vnis.filter((v) => v.vni !== vni), next] };
+      }),
+    ),
+  );
+}
+
+/** Anderen VTEP für eine VNI eintragen («member vni 10010» / «peer-ip 10.255.0.2»). */
+export function addVniPeer(t: Topology, id: string, vni: number, peer: string): Result<Topology> {
+  const device = vtepDevice(t, id);
+  if (!device.ok) return device;
+  if (!validVni(vni)) return fail('invalidVni', { max: MAX_VNI });
+  const ip = parseIp(peer.trim());
+  if (ip === null) return { ok: false, error: { code: 'invalidIp', params: { value: peer }, field: 'peer' } };
+  const vnis = device.value.vxlan?.vnis ?? [];
+  const existing = vnis.find((v) => v.vni === vni);
+  if (!existing && vnis.length >= MAX_VNIS) return fail('tooMany', { max: MAX_VNIS });
+  if (existing?.peers.includes(formatIp(ip))) return ok(t);
+  if ((existing?.peers.length ?? 0) >= MAX_VTEP_PEERS) return fail('tooMany', { max: MAX_VTEP_PEERS });
+  return ok(
+    updateDevice(t, id, (d) =>
+      withVxlan(d, (c) => {
+        const base = c.vnis.find((v) => v.vni === vni) ?? { vni, peers: [] };
+        return { ...c, vnis: [...c.vnis.filter((v) => v.vni !== vni), { ...base, peers: [...base.peers, formatIp(ip)] }] };
+      }),
+    ),
+  );
+}
+
+/** VTEP aus einer VNI entfernen; ohne Adresse alle («no member vni 10010»). */
+export function removeVniPeer(t: Topology, id: string, vni: number, peer?: string): Result<Topology> {
+  const device = vtepDevice(t, id);
+  if (!device.ok) return device;
+  const existing = device.value.vxlan?.vnis.find((v) => v.vni === vni);
+  if (!existing) return fail('unknownVni', { vni });
+  return ok(
+    updateDevice(t, id, (d) =>
+      withVxlan(d, (c) => ({ ...c, vnis: c.vnis.map((v) => (v.vni === vni ? { ...v, peers: peer === undefined ? [] : v.peers.filter((p) => p !== peer) } : v)) })),
+    ),
+  );
 }
 
 // --- VRF ----------------------------------------------------------------------------

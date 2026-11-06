@@ -125,6 +125,7 @@ export function infoOf(frame: EthernetFrame): string {
   }
   if (inner.kind === 'esp') return access + t('packets.esp', { spi: `0x${inner.spi.toString(16).padStart(8, '0')}`, seq: inner.seq });
   const msg = inner.payload;
+  if (msg.kind === 'vxlan') return `${access}${t('packets.vxlan', { vni: msg.vni })} ${protocolOf(msg.frame)}: ${infoOf(msg.frame)}`;
   if (msg.kind === 'ike') {
     const what = msg.notify ? t(`packets.ike.${msg.notify}`) : t(`packets.ike.${msg.exchange}.${msg.response ? 'response' : 'request'}`);
     return `${access}IKEv2 ${msg.exchange} · ${what}`;

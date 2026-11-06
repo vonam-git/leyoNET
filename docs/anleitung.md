@@ -91,6 +91,10 @@ no firewall stateful        ! zustandslos
 show firewall               ! Regeln mit Trefferzählern
 ```
 
+## VXLAN: VLAN über ein geroutetes Netz
+
+Ab Profil 4 (oder einzeln «VXLAN») kann ein Layer-3-Switch VTEP sein (Reiter **Switching**, Abschnitt VXLAN): Ein VLAN wird einer VNI zugeordnet, als Quelle dient meist ein Loopback, die anderen VTEPs stehen in einer festen Liste. Rahmen des VLANs reisen dann in UDP (Port 4789) per IP zu den anderen Switches; Geräte an verschiedenen Standorten liegen im selben Subnetz. Die Paketliste zeigt aussen IP von Loopback zu Loopback, innen den Ethernet-Rahmen. EVPN (BGP als Steuerung) ist nicht nachgebildet. Befehlszeile: `vn-segment`, `interface nve1`, `source-interface`, `member vni … peer-ip …`, `show nve peers`. Demo «VXLAN zwischen zwei Standorten».
+
 ## VRF: mehrere Routingtabellen
 
 Ab Profil 4 (oder einzeln «VRF») haben Router, Firewall und Layer-3-Switch den Reiter **VRF**. Eine VRF ist eine eigene Routingtabelle: Anschlüsse darin sehen nur die Netze und statischen Routen dieser VRF. So laufen zwei Kunden mit denselben Adressen (z.B. beide 10.0.0.0/24) über denselben Router, ohne sich zu sehen. Pakete bleiben in der VRF des Anschlusses, über den sie hereinkommen. OSPF, RIP, BGP, NAT und das automatische Routing gelten nur für die globale Tabelle. Befehlszeile: `vrf definition KUNDE-A`, am Interface `vrf forwarding KUNDE-A`, `ip route vrf …`, `show ip route vrf KUNDE-A`, `ping vrf KUNDE-A …`.

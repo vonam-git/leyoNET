@@ -278,6 +278,22 @@ export const DEMOS: readonly Demo[] = [
       { highlight: 'Firewall', window: { device: 'Firewall', tab: 'firewall' } },
     ] },
   {
+    id: 'vxlan',
+    file: 'vxlan.json',
+    topic: 'switching',
+    layers: [2, 3, 4],
+    actions: [{ at: 12_000, device: 'PC Zürich', command: 'ping 192.168.10.22' }],
+    check: { kind: 'ping', device: 'PC Zürich' },
+    until: 22_000,
+    tour: [
+      { sim: false, highlight: 'Spine' },
+      { highlight: 'Leaf Zürich', window: { device: 'Leaf Zürich', tab: 'switching' } },
+      { sim: true, pause: false, highlight: 'Spine' },
+      { action: { at: 0, device: 'PC Zürich', command: 'ping 192.168.10.22' }, highlight: 'Leaf Bern' },
+      { highlight: 'Leaf Zürich' },
+    ],
+  },
+  {
     id: 'portChannel',
     file: 'port-channel.json',
     topic: 'switching',

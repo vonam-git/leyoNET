@@ -29,7 +29,7 @@ import type {
   RoutedNetwork,
   VlanDef,
 } from '../model/types';
-import { CHANNEL_MODES, DNS_TYPES, IP_MODES, MAX_CHANNEL, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type ChannelMode, type DnsType, type IpMode, type Svi, type RoutingMode } from '../model/types';
+import { CHANNEL_MODES, DNS_TYPES, IP_MODES, MAX_CHANNEL, MAX_VNI, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type ChannelMode, type DnsType, type IpMode, type Svi, type RoutingMode } from '../model/types';
 import { formatCidr6, formatIp6, isLinkLocal6, isMulticast6, parseCidr6, parseIp6 } from '../net/ipv6';
 import { checkDnsRecord, isValidName, normalizeName, normalizeRecord } from '../net/dns';
 import { normalizeMac } from '../model/mac';
@@ -588,6 +588,33 @@ function readDevice(v: unknown, path: string): Device {
       return route;
     });
   if (o.routes !== undefined) device.routes = readRoutes(o.routes, `${path}.routes`);
+  if (o.vxlan !== undefined) {
+    if (type !== 'l3switch') throw new Invalid(`${path}.vxlan`);
+    const p = `${path}.vxlan`;
+    const x = obj(o.vxlan, p);
+    const list = arr(x.vnis, `${p}.vnis`);
+    if (list.length > 32) throw new Invalid(`${p}.vnis`);
+    const seenVni = new Set<number>();
+    const seenVlan = new Set<number>();
+    const vnis = list.map((raw, i) => {
+      const vp = `${p}.vnis[${i}]`;
+      const v = obj(raw, vp);
+      const vni = int(v.vni, `${vp}.vni`);
+      if (vni < 1 || vni > MAX_VNI || seenVni.has(vni)) throw new Invalid(`${vp}.vni`);
+      seenVni.add(vni);
+      const peers = arr(v.peers, `${vp}.peers`).map((pr, j) => ip(pr, `${vp}.peers[${j}]`));
+      if (peers.length > 16) throw new Invalid(`${vp}.peers`);
+      const entry: { vni: number; vlan?: number; peers: string[] } = { vni, peers };
+      if (v.vlan !== undefined) {
+        const vlan = vlanNumber(v.vlan, `${vp}.vlan`);
+        if (seenVlan.has(vlan)) throw new Invalid(`${vp}.vlan`);
+        seenVlan.add(vlan);
+        entry.vlan = vlan;
+      }
+      return entry;
+    });
+    device.vxlan = { vnis, ...(x.source !== undefined ? { source: int(x.source, `${p}.source`) } : {}) };
+  }
   if (o.vrfs !== undefined) {
     if (!isRouterLike(type) && type !== 'l3switch') throw new Invalid(`${path}.vrfs`);
     const list = arr(o.vrfs, `${path}.vrfs`);
@@ -903,6 +930,7 @@ function readDevice(v: unknown, path: string): Device {
       if (r.iface !== undefined && !valid.includes(r.iface)) throw new Invalid(`${path}.routes[${i}].iface`);
     });
   }
+  if (device.vxlan?.source !== undefined && !logicalInterfaces(device).includes(device.vxlan.source)) throw new Invalid(`${path}.vxlan.source`);
   // VRF-Zuordnungen müssen auf vorhandene VRFs zeigen.
   const vrfNames = new Set((device.vrfs ?? []).map((v) => v.name));
   for (const id of logicalInterfaces(device)) {

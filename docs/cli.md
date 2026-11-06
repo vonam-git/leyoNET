@@ -69,6 +69,7 @@ Switch(config-ext-nacl)#
 | `show vlan brief` | Angelegte VLANs mit ihren Ports; Ports in fehlenden VLANs als inaktiv (Switch) |
 | `show vrf`, `show ip route vrf NAME` | VRFs mit ihren Interfaces, Routingtabelle einer VRF |
 | `ping vrf NAME <Adresse>` | Ping über die Tabelle einer VRF (Simulation) |
+| `show nve vni`, `show nve peers` | VXLAN-Segmente und andere VTEPs mit gelernten MAC-Adressen (Layer-3-Switch) |
 | `show etherchannel summary` | Port-Channels mit Zustand der Ports: P gebündelt, s ausgestellt, D ohne Link (Switch) |
 | `show interfaces trunk` | Trunks mit Native VLAN, erlaubten und aktiven VLANs (Switch) |
 | `show interfaces status` | Ports mit Status und VLAN (Switch) |
@@ -225,6 +226,12 @@ interface range port7-8
  channel-group 1 mode active   ! Port-Channel mit LACP (passive; on = ohne LACP); no channel-group
 interface port-channel 1       ! stellt alle Ports des Channels auf einmal ein
  switchport mode trunk
+!
+vlan 10
+ vn-segment 10010              ! VXLAN: VLAN 10 über VNI 10010 (Layer-3-Switch)
+interface nve1
+ source-interface loopback0
+ member vni 10010 peer-ip 10.255.0.2      ! anderer VTEP (Ingress Replication)
 !
 interface vlan 1               ! Verwaltungsadresse (Layer-2-Switch)
  ip address 192.168.1.2/24
