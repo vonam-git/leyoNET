@@ -4,6 +4,8 @@
   import { interfaceLabel } from '../labels';
   import { editor } from '../state/editor.svelte';
   import { subnetSummary } from '../subnet';
+  import { ui } from '../state/ui.svelte';
+  import LoopbackConfig from './LoopbackConfig.svelte';
 
   /**
    * Layer-3-Switch: VLAN-Interfaces (SVIs) als Gateways der VLANs und Routing ein/aus.
@@ -60,6 +62,9 @@
   {/if}
   <button type="submit" disabled={!draft.vlan.trim()} title={t('svi.add')} aria-label={t('svi.add')}>+</button>
 </form>
+{#if device.type === 'l3switch' && ui.has('net.loopback')}
+  <LoopbackConfig {device} />
+{/if}
 {#if management}
   <label class="gw">
     <span>{t('config.gateway')}</span>

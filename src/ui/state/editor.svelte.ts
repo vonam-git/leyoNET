@@ -101,6 +101,8 @@ import {
   setSubinterface,
   setSvi,
   setVlanName,
+  setLoopback,
+  removeLoopback,
   createVlan,
   deleteVlan,
   setTrunkAllowed,
@@ -1062,6 +1064,14 @@ class Editor {
 
   setIpRouting(id: string, enabled: boolean) {
     this.#edit(setIpRouting(this.topology, id, enabled));
+  }
+
+  setLoopback(id: string, n: number, ip: string, mask: string): TopologyError | null {
+    return this.#applyForm(setLoopback(this.topology, id, n, ip, mask));
+  }
+
+  removeLoopback(id: string, n: number): TopologyError | null {
+    return this.#applyForm(removeLoopback(this.topology, id, n));
   }
 
   createVlan(id: string, vlan: number): TopologyError | null {

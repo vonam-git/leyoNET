@@ -1,4 +1,5 @@
-import { DEVICE_SPECS, canAutoRoute, isDeviceType, isSwitchType } from '../model/devices';
+import { DEVICE_SPECS, canAutoRoute, isDeviceType, isRouterLike, isSwitchType } from '../model/devices';
+import { MAX_LOOPBACK } from '../net/routing';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
 import { MAC_PATTERN } from '../model/mac';
 import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
@@ -583,6 +584,18 @@ function readDevice(v: unknown, path: string): Device {
       if (seen.has(`${parent}.${vlan}`)) throw new Invalid(`${p}.vlan`);
       seen.add(`${parent}.${vlan}`);
       return { parent, vlan, ...readAddress(si, p) };
+    });
+  }
+  if (o.loopbacks !== undefined) {
+    if (!isRouterLike(type) && type !== 'l3switch') throw new Invalid(`${path}.loopbacks`);
+    const seen = new Set<number>();
+    device.loopbacks = arr(o.loopbacks, `${path}.loopbacks`).map((raw, i) => {
+      const p = `${path}.loopbacks[${i}]`;
+      const lo = obj(raw, p);
+      const id = int(lo.id, `${p}.id`);
+      if (id < 0 || id > MAX_LOOPBACK || seen.has(id)) throw new Invalid(`${p}.id`);
+      seen.add(id);
+      return { id, ...readAddress(lo, p) };
     });
   }
   if (o.svis !== undefined) {

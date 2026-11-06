@@ -1,5 +1,5 @@
 import type { Device } from '../model/types';
-import type { IfaceAddress, Route } from '../net/routing';
+import { LOOPBACK_BASE, type IfaceAddress, type Route } from '../net/routing';
 import type { Ipv4Packet } from './frames';
 import type { SendError, SendOptions } from './ip';
 import type { NodeContext } from './simulation';
@@ -21,10 +21,12 @@ export interface RoutingHost {
   routesChanged(): void;
 }
 
-/** Router-ID: konfiguriert, sonst die höchste Interface-Adresse (wie FRRouting ohne Loopback). */
+/** Router-ID: konfiguriert, sonst die höchste Loopback-Adresse, sonst die höchste Interface-Adresse (wie Cisco). */
 export function routerIdOf(host: RoutingHost, configured?: string): string {
   if (configured) return configured;
-  const ips = host.interfaces().map((i) => i.ip);
+  const all = host.interfaces();
+  const loopbacks = all.filter((i) => i.index >= LOOPBACK_BASE);
+  const ips = (loopbacks.length ? loopbacks : all).map((i) => i.ip);
   if (!ips.length) return '0.0.0.0';
   const max = Math.max(...ips);
   return [24, 16, 8, 0].map((s) => (max >>> s) & 0xff).join('.');

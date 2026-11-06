@@ -19,6 +19,7 @@ export function interfaceLabel(device: Device, index: number, short = false): st
   const ref = decodeIface(index);
   if (ref.kind === 'sub') return t('iface.sub', { index: ref.port, vlan: ref.vlan });
   if (ref.kind === 'svi') return t('iface.svi', { vlan: ref.vlan });
+  if (ref.kind === 'loopback') return t('iface.loopback', { n: ref.id });
   if (device.interfaces[index]?.serial) {
     const n = device.interfaces.slice(0, index + 1).filter((i) => i.serial).length - 1;
     return t('iface.serial', { n });

@@ -40,7 +40,7 @@ Switch(config-ext-nacl)#
 | Gerät | Namen |
 |---|---|
 | Firewall | wie Router; in Firewall-Regeln nach `in` auch die Zone: `wan`, `lan`, `dmz`, `opt1` … |
-| Router | `eth0`, `eth1` …; Subinterfaces `eth0.10` (VLAN 10); serielle Ports `serial0`, `serial1` … (auch `se0`, `s0/0/0`) |
+| Router | `loopback0` … `loopback99` (auch `lo0`); `eth0`, `eth1` …; Subinterfaces `eth0.10` (VLAN 10); serielle Ports `serial0`, `serial1` … (auch `se0`, `s0/0/0`) |
 | Switch | `port1`, `port2` … (wie auf der Frontplatte); auch `gi0/1` oder `fa0/1`. SFP-Einschübe für Glasfaser zählen separat: `sfp1`, `sfp2` … (auch `te0/1`) |
 | Layer-3-Switch | wie Switch, dazu `vlan10` bzw. `interface vlan 10` |
 | Switch (Verwaltung) | `interface vlan 1` (oder ein anderes VLAN) als Verwaltungsadresse |
@@ -103,6 +103,9 @@ interface eth0.10              ! Router-on-a-Stick: Subinterface für VLAN 10
  ip address 192.168.10.1/24
 !
 no interface eth0.10           ! Subinterface löschen
+interface loopback0            ! Loopback (auch lo0), immer aktiv; auch auf Firewall und Layer-3-Switch
+ ip address 10.255.0.1/32      ! höchste Loopback-Adresse = Router-ID; OSPF kündigt sie als /32 an
+no interface loopback0
 ip route 0.0.0.0/0 10.0.0.2
 ip route 172.16.0.0 255.255.0.0 eth1
 no ip route 172.16.0.0/16

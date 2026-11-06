@@ -82,7 +82,7 @@ function addressesOf(device: Device, family: Family): Addr[] {
 /** Physischer Anschluss eines logischen Interfaces (Subinterface → Elternanschluss). */
 function portOf(device: Device, iface: number): number | null {
   const ref = decodeIface(iface);
-  return ref.kind === 'svi' ? null : ref.port;
+  return ref.kind === 'svi' || ref.kind === 'loopback' ? null : ref.port;
 }
 
 function build(t: Topology, family: Family): Graph {

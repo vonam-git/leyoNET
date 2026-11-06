@@ -1,5 +1,5 @@
 import type { Device } from '../model/types';
-import { decodeIface, subifId, sviId } from '../net/routing';
+import { MAX_LOOPBACK, decodeIface, loopbackId, subifId, sviId } from '../net/routing';
 
 /**
  * Interface-Namen in der Befehlszeile.
@@ -11,6 +11,7 @@ import { decodeIface, subifId, sviId } from '../net/routing';
 export function cliIfaceName(device: Device, id: number): string {
   const ref = decodeIface(id);
   if (ref.kind === 'svi') return `vlan${ref.vlan}`;
+  if (ref.kind === 'loopback') return `loopback${ref.id}`;
   if (ref.kind === 'sub') return `eth${ref.port}.${ref.vlan}`;
   if (device.interfaces[ref.port]?.serial) return `serial${serialOrdinal(device, ref.port) - 1}`;
   if (!usesPortNames(device)) return `eth${ref.port}`;
@@ -34,7 +35,8 @@ export function usesPortNames(device: Device): boolean {
 export type ParsedIface =
   | { kind: 'port'; port: number }
   | { kind: 'sub'; port: number; vlan: number }
-  | { kind: 'svi'; vlan: number };
+  | { kind: 'svi'; vlan: number }
+  | { kind: 'loopback'; id: number };
 
 /** Liest einen Interface-Namen; Gross-/Kleinschreibung egal, Leerzeichen vor der Nummer erlaubt. */
 export function parseIfaceName(device: Device, raw: string): ParsedIface | null {
@@ -42,6 +44,11 @@ export function parseIfaceName(device: Device, raw: string): ParsedIface | null 
   const ports = device.interfaces.length;
   const port = (n: number) => (Number.isInteger(n) && n >= 0 && n < ports ? n : null);
 
+  const lo = /^(?:loopback|lo)(\d+)$/.exec(text);
+  if (lo) {
+    const n = Number(lo[1]);
+    return (device.type === 'router' || device.type === 'firewall' || device.type === 'l3switch') && n <= MAX_LOOPBACK ? { kind: 'loopback', id: n } : null;
+  }
   const vlan = /^(?:vlan|vl)(\d+)$/.exec(text);
   if (vlan) {
     const v = Number(vlan[1]);
@@ -74,6 +81,7 @@ export function parseIfaceName(device: Device, raw: string): ParsedIface | null 
 
 export function ifaceIdOf(ref: ParsedIface): number {
   if (ref.kind === 'svi') return sviId(ref.vlan);
+  if (ref.kind === 'loopback') return loopbackId(ref.id);
   if (ref.kind === 'sub') return subifId(ref.port, ref.vlan);
   return ref.port;
 }

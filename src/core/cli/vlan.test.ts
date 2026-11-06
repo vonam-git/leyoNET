@@ -163,3 +163,21 @@ describe('Layer-2-Switch: Verwaltungsadresse', () => {
     expect(sim.getDeviceState(pc).console.filter((l) => l.code === 'ping.reply')).toHaveLength(4);
   });
 });
+
+describe('CLI: Loopback', () => {
+  it('interface loopback0 anlegen, Adresse, running-config, show ip interface brief, löschen', () => {
+    const net = new NetBuilder();
+    const r = net.router('R1', ['10.0.0.1/24']);
+    const step = run(net.topology, r, ['en', 'conf t', 'interface loopback0', 'ip address 10.255.0.1/32', 'interface lo1', 'ip address 10.255.1.1 255.255.255.0', 'end']);
+    expect(step.output).toEqual([]);
+    const d = getDevice(step.topology, r)!;
+    expect(d.loopbacks).toEqual([
+      { id: 0, ip: '10.255.0.1', mask: '255.255.255.255' },
+      { id: 1, ip: '10.255.1.1', mask: '255.255.255.0' },
+    ]);
+    expect(runningConfig(d).join('\n')).toContain('interface loopback0\n ip address 10.255.0.1/32');
+    expect(run(step.topology, r, ['show ip interface brief']).output.join('\n')).toMatch(/loopback0\s+10\.255\.0\.1\/32\s+up/);
+    const removed = run(step.topology, r, ['en', 'conf t', 'no interface loopback1']).topology;
+    expect(getDevice(removed, r)!.loopbacks).toHaveLength(1);
+  });
+});

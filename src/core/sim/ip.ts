@@ -809,7 +809,7 @@ export class ForwardingNode extends IpNode {
   /** Physische Verbindung eines logischen Interfaces; VLAN-Interfaces (SVI) gelten als verbunden. */
   ifaceUp(index: number): boolean {
     const ref = decodeIface(index);
-    return ref.kind === 'svi' ? true : this.ctx.isConnected(ref.port);
+    return ref.kind === 'svi' || ref.kind === 'loopback' ? true : this.ctx.isConnected(ref.port);
   }
 
   protected override linkUp6(index: number): boolean {

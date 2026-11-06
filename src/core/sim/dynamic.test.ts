@@ -187,3 +187,26 @@ group('OSPF mit mehreren Wegen und Adressen', () => {
     expect(sim.getDeviceState(routers[3]!).console.some((l) => l.code === 'ospf.subnetMismatch')).toBe(true);
   });
 });
+
+group('Loopback-Interfaces', () => {
+  it('Router-ID aus dem Loopback, OSPF kündigt /32 an, Ping an den Loopback über zwei Router', async () => {
+    const { setLoopback } = await import('../model/topology');
+    const net = new NetBuilder();
+    const pc = net.host('PC', '192.168.1.10', '24', '192.168.1.1');
+    const r1 = net.router('R1', ['192.168.1.1/24', '10.0.12.1/30']);
+    const r2 = net.router('R2', ['10.0.12.2/30']);
+    net.link(pc, r1);
+    net.link(r1, r2);
+    net.apply((t) => setLoopback(t, r2, 0, '10.255.0.2', '255.255.255.0'));
+    const networks = [{ network: '0.0.0.0', mask: '0.0.0.0', area: 0 }];
+    net.apply((t) => setOspf(t, r1, { networks }));
+    net.apply((t) => setOspf(t, r2, { networks }));
+    const sim = new Simulation(net.topology);
+    sim.runUntil(8000);
+    expect(sim.getDeviceState(r2).ospf!.routerId).toBe('10.255.0.2');
+    expect(sim.getRoutes(r1).find((r) => r.kind === 'ospf' && r.network === parseIp('10.255.0.2'))).toMatchObject({ prefix: 32 });
+    sim.ping(pc, '10.255.0.2');
+    sim.runUntil(14_000);
+    expect(replies(sim, pc)).toHaveLength(4);
+  });
+});

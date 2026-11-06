@@ -40,7 +40,7 @@ export function duplicateAddresses(topology: Topology, live?: ReadonlyMap<string
     const ref = decodeIface(iface);
     const port = ref.kind === 'sub' ? ref.port : iface;
     // Gleiche Adresse auf zwei Schnittstellen desselben Geräts ist immer ein Fehler.
-    const segment = ref.kind === 'svi' ? find(device.id) : find(node(device, port));
+    const segment = ref.kind === 'svi' || ref.kind === 'loopback' ? find(device.id) : find(node(device, port));
     for (const key of [`${segment}|${ip}`, `dev:${device.id}|${ip}|${iface}`]) {
       const list = seen.get(key) ?? [];
       list.push(`${device.id}#${ip}`);

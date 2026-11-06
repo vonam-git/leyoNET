@@ -18,11 +18,22 @@ export interface IfaceAddress {
 //   0 … 9999          physischer Anschluss (Index)
 //   10000·(p+1) + v   Subinterface von Anschluss p für VLAN v (Router-on-a-Stick)
 //   100000 + v        VLAN-Interface (SVI) eines Layer-3-Switches
+//   200000 + n        Loopback n («interface loopback0»)
 
 export const SUBIF_BASE = 10_000;
 export const SVI_BASE = 100_000;
+export const LOOPBACK_BASE = 200_000;
+export const MAX_LOOPBACK = 99;
 
-export type IfaceRef = { kind: 'port'; port: number } | { kind: 'sub'; port: number; vlan: number } | { kind: 'svi'; vlan: number };
+export type IfaceRef =
+  | { kind: 'port'; port: number }
+  | { kind: 'sub'; port: number; vlan: number }
+  | { kind: 'svi'; vlan: number }
+  | { kind: 'loopback'; id: number };
+
+export function loopbackId(n: number): number {
+  return LOOPBACK_BASE + n;
+}
 
 export function subifId(port: number, vlan: number): number {
   return SUBIF_BASE * (port + 1) + vlan;
@@ -33,6 +44,7 @@ export function sviId(vlan: number): number {
 }
 
 export function decodeIface(id: number): IfaceRef {
+  if (id >= LOOPBACK_BASE) return { kind: 'loopback', id: id - LOOPBACK_BASE };
   if (id >= SVI_BASE) return { kind: 'svi', vlan: id - SVI_BASE };
   if (id >= SUBIF_BASE) return { kind: 'sub', port: Math.floor(id / SUBIF_BASE) - 1, vlan: id % SUBIF_BASE };
   return { kind: 'port', port: id };
@@ -48,13 +60,15 @@ export function sviMac(device: Device): string {
 export function macOfIface(device: Device, id: number): string | undefined {
   const ref = decodeIface(id);
   if (ref.kind === 'svi') return sviMac(device);
+  if (ref.kind === 'loopback') return undefined;
   return device.interfaces[ref.port]?.mac;
 }
 
 /** Alle logischen Interfaces eines Geräts, auch unkonfigurierte (für Auswahllisten). */
 export function logicalInterfaces(device: Device): number[] {
-  if (device.type === 'l3switch' || device.type === 'switch') return (device.svis ?? []).map((s) => sviId(s.vlan));
-  return [...device.interfaces.map((i) => i.index), ...(device.subinterfaces ?? []).map((s) => subifId(s.parent, s.vlan))];
+  const loopbacks = (device.loopbacks ?? []).map((l) => loopbackId(l.id));
+  if (device.type === 'l3switch' || device.type === 'switch') return [...(device.svis ?? []).map((s) => sviId(s.vlan)), ...(device.type === 'l3switch' ? loopbacks : [])];
+  return [...device.interfaces.map((i) => i.index), ...(device.subinterfaces ?? []).map((s) => subifId(s.parent, s.vlan)), ...loopbacks];
 }
 
 /** Ziel des DHCP-Relays auf einem logischen Interface. */
@@ -62,6 +76,7 @@ export function relayOf(device: Device, id: number): string | undefined {
   const ref = decodeIface(id);
   if (ref.kind === 'port') return device.interfaces[ref.port]?.dhcpRelay;
   if (ref.kind === 'sub') return device.subinterfaces?.find((s) => s.parent === ref.port && s.vlan === ref.vlan)?.dhcpRelay;
+  if (ref.kind === 'loopback') return undefined;
   return device.svis?.find((s) => s.vlan === ref.vlan)?.dhcpRelay;
 }
 
@@ -92,13 +107,16 @@ export function interfaceAddresses(device: Device): IfaceAddress[] {
     return mac && ip !== null && prefix !== null ? [{ index, mac, ip, prefix }] : [];
   };
   // Layer-3-Switch: VLAN-Interfaces; Layer-2-Switch: Verwaltungs-Interface («interface vlan 1»).
+  // Loopbacks haben keine MAC (sie senden nie einen Rahmen); «lo» als Platzhalter.
+  const loopbacks = (device.loopbacks ?? []).flatMap((l) => addr(loopbackId(l.id), 'lo', l.ip, l.mask));
   if (device.type === 'l3switch' || device.type === 'switch') {
     const mac = sviMac(device);
-    return (device.svis ?? []).flatMap((s) => addr(sviId(s.vlan), mac, s.ip, s.mask));
+    return [...(device.svis ?? []).flatMap((s) => addr(sviId(s.vlan), mac, s.ip, s.mask)), ...(device.type === 'l3switch' ? loopbacks : [])];
   }
   return [
     ...device.interfaces.flatMap((i) => addr(i.index, i.mac, i.ip, i.mask)),
     ...(device.subinterfaces ?? []).flatMap((s) => addr(subifId(s.parent, s.vlan), device.interfaces[s.parent]?.mac, s.ip, s.mask)),
+    ...loopbacks,
   ];
 }
 

@@ -11,6 +11,7 @@
   import Icon from './Icon.svelte';
   import ScopeBadge from './ScopeBadge.svelte';
   import SubinterfaceConfig from './SubinterfaceConfig.svelte';
+  import LoopbackConfig from './LoopbackConfig.svelte';
 
   /**
    * Router und Internet-Knoten. `part` wählt einen Teil (rechts im Inspektor nur
@@ -220,6 +221,10 @@
 
 {#if show('interfaces') && !compact && isRouterLike(device.type) && ui.has('net.subinterfaces')}
   <SubinterfaceConfig {device} />
+{/if}
+
+{#if show('interfaces') && !compact && isRouterLike(device.type) && ui.has('net.loopback')}
+  <LoopbackConfig {device} />
 {/if}
 
 {#if show('nat') && device.type === 'internet' && ui.has('net.cgnat')}

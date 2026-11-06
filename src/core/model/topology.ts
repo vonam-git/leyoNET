@@ -3,7 +3,7 @@ import { checkDnsRecord, isValidName, normalizeName, normalizeRecord } from '../
 import { isValidPath } from '../net/http';
 import { checkMailAccount, checkMailbox } from '../net/mail';
 import { checkHostConfig, maskToText, parseIp, parseMask, type HostConfigInput } from '../net/ipv4';
-import { checkStaticRoute, decodeIface, normalizeRoute } from '../net/routing';
+import { MAX_LOOPBACK, checkStaticRoute, decodeIface, normalizeRoute } from '../net/routing';
 import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, isRouterLike, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
 import { MIN_SIGNAL, portMedium, signalBetween } from './links';
 import { macFor, normalizeMac } from './mac';
@@ -33,6 +33,7 @@ import type {
   PortForward,
   StaticRoute,
   SubInterface,
+  Loopback,
   Svi,
   Topology,
   WebFile,
@@ -998,6 +999,35 @@ export function setSubinterface(t: Topology, id: string, parent: number, vlan: n
     ? existing.map((s) => (s === old ? next : s))
     : [...existing, next].sort((a, b) => a.parent - b.parent || a.vlan - b.vlan);
   return ok(updateDevice(t, id, (d) => ({ ...d, subinterfaces: list })));
+}
+
+/** Geräte mit Loopback-Interfaces. */
+export function canLoopback(type: DeviceType): boolean {
+  return isRouterLike(type) || type === 'l3switch';
+}
+
+/** Loopback anlegen oder seine Adresse ändern («interface loopback0», «ip address 10.255.0.1/32»). */
+export function setLoopback(t: Topology, id: string, n: number, ip: string, mask: string): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canLoopback(device.type)) return fail('notARouter');
+  if (!Number.isInteger(n) || n < 0 || n > MAX_LOOPBACK) return fail('unknownInterface');
+  const issue = checkAddress(ip, mask);
+  if (issue) return { ok: false, error: issue };
+  const existing = device.loopbacks ?? [];
+  const old = existing.find((l) => l.id === n);
+  const { ip: _ip, mask: _mask, ...rest } = old ?? { id: n };
+  const next: Loopback = { ...rest, ...normalized(ip, mask) };
+  const list = old ? existing.map((l) => (l === old ? next : l)) : [...existing, next].sort((a, b) => a.id - b.id);
+  return ok(updateDevice(t, id, (d) => ({ ...d, loopbacks: list })));
+}
+
+export function removeLoopback(t: Topology, id: string, n: number): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!device.loopbacks?.some((l) => l.id === n)) return fail('unknownInterface');
+  const list = device.loopbacks.filter((l) => l.id !== n);
+  return ok(updateDevice(t, id, (d) => (list.length ? { ...d, loopbacks: list } : without(d, 'loopbacks'))));
 }
 
 export function removeSubinterface(t: Topology, id: string, parent: number, vlan: number): Result<Topology> {

@@ -127,6 +127,14 @@ export interface SubInterface {
   dhcpRelay?: string;
 }
 
+/** Loopback-Interface eines Routers oder Layer-3-Switches («interface loopback0»): immer aktiv, z.B. für die Router-ID. */
+export interface Loopback {
+  /** Nummer 0–99. */
+  id: number;
+  ip?: string;
+  mask?: string;
+}
+
 /** Layer-3-Switch: virtuelles Interface eines VLANs (SVI, «interface vlan 10»). */
 export interface Svi {
   vlan: number;
@@ -182,6 +190,8 @@ export interface Device {
   stpPriority?: number;
   /** Nur Router: 802.1Q-Subinterfaces (Router-on-a-Stick). */
   subinterfaces?: SubInterface[];
+  /** Router, Firewall, Layer-3-Switch: Loopback-Interfaces. */
+  loopbacks?: Loopback[];
   /** Nur Layer-3-Switch: VLAN-Interfaces mit Adresse. */
   svis?: Svi[];
   /** Nur Layer-3-Switch: false = Routing zwischen VLANs ausgeschaltet («no ip routing»). */

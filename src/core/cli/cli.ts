@@ -39,6 +39,8 @@ import {
   usedVlans,
   vlanExists,
   setDefaultGateway,
+  setLoopback,
+  removeLoopback,
   addStaticNat,
   removeStaticNat,
   setBgp,
@@ -353,6 +355,7 @@ function addressOn(call: Call, ip: string, mask: string): Partial<CliOutput> {
       const ref = decodeIface(id);
       if (ref.kind === 'sub') return setSubinterface(t, call.device.id, ref.port, ref.vlan, ip, mask);
       if (ref.kind === 'svi') return setSvi(t, call.device.id, ref.vlan, ip, mask);
+      if (ref.kind === 'loopback') return setLoopback(t, call.device.id, ref.id, ip, mask);
       if (usesPortNames(call.device)) return { ok: false, error: { code: 'unknownInterface' } };
       return setInterfaceAddress(t, call.device.id, ref.port, ip, mask);
     }),
@@ -486,12 +489,13 @@ const COMMANDS: Command[] = [
   },
   {
     modes: ['config'],
-    types: ROUTERS,
+    types: L3,
     syntax: 'no interface <iface>',
-    help: 'Delete a subinterface',
+    help: 'Delete a subinterface or loopback',
     run: ({ args, device, env }) => {
       const ref = parseIfaceName(device, args[0]!);
-      if (ref?.kind !== 'sub') return ok(['% Only subinterfaces (e.g. eth0.10) can be deleted']);
+      if (ref?.kind === 'loopback') return apply(removeLoopback(env.topology, device.id, ref.id));
+      if (ref?.kind !== 'sub') return ok(['% Only subinterfaces (e.g. eth0.10) and loopbacks can be deleted']);
       return apply(removeSubinterface(env.topology, device.id, ref.port, ref.vlan));
     },
   },
@@ -1110,6 +1114,11 @@ function enterInterface(call: Call, name: string): Partial<CliOutput> {
     if (!created.ok) return ok([errorLine(created.error)]);
     topology = created.value;
   }
+  if (ref.kind === 'loopback' && !device.loopbacks?.some((l) => l.id === ref.id)) {
+    const created = setLoopback(env.topology, device.id, ref.id, '', '');
+    if (!created.ok) return ok([errorLine(created.error)]);
+    topology = created.value;
+  }
   if (ref.kind === 'svi' && !device.svis?.some((s) => s.vlan === ref.vlan)) {
     const created = setSvi(env.topology, device.id, ref.vlan, '', '');
     if (!created.ok) return ok([errorLine(created.error)]);
@@ -1548,17 +1557,19 @@ interface IfaceRow {
 function ifaceRows(device: Device, env: CliEnv): IfaceRow[] {
   return logicalInterfaces(device).map((id) => {
     const ref = decodeIface(id);
-    const port = ref.kind === 'svi' ? undefined : device.interfaces[ref.port];
+    const port = ref.kind === 'svi' || ref.kind === 'loopback' ? undefined : device.interfaces[ref.port];
     const config =
       ref.kind === 'port'
         ? port
         : ref.kind === 'sub'
           ? device.subinterfaces?.find((s) => s.parent === ref.port && s.vlan === ref.vlan)
-          : device.svis?.find((s) => s.vlan === ref.vlan);
+          : ref.kind === 'loopback'
+            ? device.loopbacks?.find((l) => l.id === ref.id)
+            : device.svis?.find((s) => s.vlan === ref.vlan);
     const prefix = config?.mask ? parseMask(config.mask) : null;
     const address = config?.ip && prefix !== null ? `${config.ip}/${prefix}` : 'unassigned';
     const down = port?.shutdown;
-    const up = ref.kind === 'svi' ? true : linkUpAt(env.topology, { device: device.id, iface: ref.port });
+    const up = ref.kind === 'svi' || ref.kind === 'loopback' ? true : linkUpAt(env.topology, { device: device.id, iface: ref.port });
     return {
       id,
       name: cliIfaceName(device, id),
@@ -1772,6 +1783,11 @@ export function runningConfig(device: Device): string[] {
     lines.push(`interface eth${s.parent}.${s.vlan}`, ` encapsulation dot1q ${s.vlan}`);
     if (s.ip && s.mask) lines.push(` ip address ${s.ip}/${parseMask(s.mask)}`);
     if (s.dhcpRelay) lines.push(` ip helper-address ${s.dhcpRelay}`);
+    lines.push('!');
+  }
+  for (const l of device.loopbacks ?? []) {
+    lines.push(`interface loopback${l.id}`);
+    if (l.ip && l.mask) lines.push(` ip address ${l.ip}/${parseMask(l.mask)}`);
     lines.push('!');
   }
   for (const s of device.svis ?? []) {
