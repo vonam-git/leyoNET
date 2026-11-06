@@ -39,6 +39,11 @@ import {
   usedVlans,
   vlanExists,
   setDefaultGateway,
+  addVrf,
+  removeVrf,
+  setInterfaceVrf,
+  addVrfRoute,
+  removeVrfRoute,
   setPortChannel,
   channelMembers,
   setLoopback,
@@ -70,7 +75,7 @@ import { ipv6Links } from '../sim/ip6';
 import type { BgpConfig, CliConfig, Device, DeviceType, Ospf6Config, RipngConfig, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, Topology } from '../model/types';
 import { formatIp, maskToText, networkOf, parseIp, parseMask } from '../net/ipv4';
 import { formatCidr6, formatIp6, parseCidr6, parseIp6 } from '../net/ipv6';
-import { buildRoutes, decodeIface, logicalInterfaces, type Route } from '../net/routing';
+import { buildRoutes, decodeIface, logicalInterfaces, vrfOfIface, type Route } from '../net/routing';
 import type { DeviceState } from '../sim/simulation';
 import { cliIfaceName, ifaceIdOf, parseIfaceName, usesPortNames } from './names';
 
@@ -107,7 +112,7 @@ export interface CliOutput {
   /** Sitzung beendet («exit» im obersten Modus). */
   close?: boolean;
   /** Etwas, das die Simulation ausführen soll (z.B. ping). */
-  action?: { kind: 'ping'; target: string };
+  action?: { kind: 'ping'; target: string; vrf?: string };
 }
 
 /** Gerätetypen mit Befehlszeile. */
@@ -364,6 +369,39 @@ function addressOn(call: Call, ip: string, mask: string): Partial<CliOutput> {
   );
 }
 
+/** Alle gewählten logischen Interfaces (Ports, Subinterfaces, SVIs, Loopbacks). */
+function forLogical(call: Call, step: (t: Topology, id: number) => Result<Topology>): Partial<CliOutput> {
+  return applyAll(
+    call.env.topology,
+    (call.session.targets ?? []).map((id) => (t: Topology) => step(t, id)),
+  );
+}
+
+function addVrfRouteCli(call: Call, vrf: string, prefixText: string, via: string): Partial<CliOutput> {
+  const { device, env } = call;
+  const [network, prefix] = splitCidr(prefixText);
+  if (parseIp(via) !== null) return apply(addVrfRoute(env.topology, device.id, vrf, { network, mask: prefix, gateway: via }));
+  const ref = parseIfaceName(device, via);
+  if (!ref) return ok([`% Invalid next hop: ${via}`]);
+  return apply(addVrfRoute(env.topology, device.id, vrf, { network, mask: prefix, iface: ifaceIdOf(ref) }));
+}
+
+function removeVrfRouteCli(call: Call, vrf: string, prefixText: string): Partial<CliOutput> {
+  const { device, env } = call;
+  const [network, prefix] = splitCidr(prefixText);
+  const routes = device.vrfs?.find((v) => v.name === vrf)?.routes ?? [];
+  const index = routes.findIndex((r) => r.network === network && parseMask(r.mask) === parseMask(prefix));
+  if (index < 0) return ok(['% No such route']);
+  return apply(removeVrfRoute(env.topology, device.id, vrf, index));
+}
+
+function showVrf(device: Device): string[] {
+  const vrfs = device.vrfs ?? [];
+  if (!vrfs.length) return ['(no VRFs)'];
+  const rows = vrfs.map((v) => [v.name, logicalInterfaces(device).filter((id) => vrfOfIface(device, id) === v.name).map((id) => cliIfaceName(device, id)).join(', ') || '–']);
+  return table(['Name', 'Interfaces'], rows);
+}
+
 /** Nur VLAN-Interfaces gewählt? («no shutdown» auf «interface vlan 1» ist dann ohne Wirkung, aber kein Fehler.) */
 function onlySvis(call: Call): boolean {
   const targets = call.session.targets ?? [];
@@ -438,6 +476,33 @@ const COMMANDS: Command[] = [
   { modes: EXEC, syntax: 'show version', help: 'Software version', run: ({ device }) => ok(showVersion(device)) },
   { modes: ['enable'], syntax: 'show running-config', help: 'Current operating configuration', run: ({ device }) => ok(runningConfig(device)) },
   { modes: EXEC, types: L3, syntax: 'show ip route', help: 'IP routing table', run: ({ device, env }) => ok(showIpRoute(device, env)) },
+  {
+    modes: EXEC,
+    types: L3,
+    syntax: 'show ip route vrf <word>',
+    help: 'Routing table of a VRF',
+    run: ({ device, env, args }) => (device.vrfs?.some((v) => v.name === args[0]) ? ok(showIpRoute(device, env, args[0])) : ok([`% VRF ${args[0]} does not exist`])),
+  },
+  { modes: EXEC, types: L3, syntax: 'show vrf', help: 'VRFs and their interfaces', run: ({ device }) => ok(showVrf(device)) },
+  {
+    modes: EXEC,
+    types: L3,
+    syntax: 'ping vrf <word> <ip>',
+    help: 'Ping using the routing table of a VRF',
+    run: ({ args, device }) =>
+      device.vrfs?.some((v) => v.name === args[0])
+        ? { lines: [`Sending 4 ICMP echos to ${args[1]} (VRF ${args[0]}):`], action: { kind: 'ping', target: args[1]!, vrf: args[0]! } }
+        : ok([`% VRF ${args[0]} does not exist`]),
+  },
+  { modes: ['config'], types: L3, syntax: 'vrf definition <word>', help: 'Create a VRF (own routing table)', run: ({ device, env, args }) => apply(addVrf(env.topology, device.id, args[0]!)) },
+  { modes: ['config'], types: L3, syntax: 'ip vrf <word>', help: 'Create a VRF (older syntax)', run: ({ device, env, args }) => apply(addVrf(env.topology, device.id, args[0]!)) },
+  { modes: ['config'], types: L3, syntax: 'no vrf definition <word>', help: 'Delete a VRF; its interfaces return to the global table', run: ({ device, env, args }) => apply(removeVrf(env.topology, device.id, args[0]!)) },
+  { modes: ['config'], types: L3, syntax: 'ip route vrf <word> <cidr> <word>', help: 'Static route in a VRF', run: (call) => addVrfRouteCli(call, call.args[0]!, call.args[1]!, call.args[2]!) },
+  { modes: ['config'], types: L3, syntax: 'ip route vrf <word> <ip> <mask> <word>', help: 'Static route in a VRF', run: (call) => addVrfRouteCli(call, call.args[0]!, `${call.args[1]}/${call.args[2]}`, call.args[3]!) },
+  { modes: ['config'], types: L3, syntax: 'no ip route vrf <word> <cidr>', help: 'Remove a static route of a VRF', run: (call) => removeVrfRouteCli(call, call.args[0]!, call.args[1]!) },
+  { modes: ['if'], types: L3, syntax: 'vrf forwarding <word>', help: 'Put this interface into a VRF', run: (call) => forLogical(call, (t, id) => setInterfaceVrf(t, call.device.id, id, call.args[0]!)) },
+  { modes: ['if'], types: L3, syntax: 'ip vrf forwarding <word>', help: 'Put this interface into a VRF (older syntax)', run: (call) => forLogical(call, (t, id) => setInterfaceVrf(t, call.device.id, id, call.args[0]!)) },
+  { modes: ['if'], types: L3, syntax: 'no vrf forwarding', help: 'Back to the global routing table', run: (call) => forLogical(call, (t, id) => setInterfaceVrf(t, call.device.id, id, null)) },
   { modes: EXEC, types: ROUTERS6, syntax: 'show ipv6 route', help: 'IPv6 routing table', run: ({ device, env }) => ok(showIpv6Route(device, env)) },
   { modes: EXEC, types: ROUTERS6, syntax: 'show ipv6 neighbors', help: 'IPv6 neighbour cache (Neighbor Discovery)', run: ({ device, env }) => ok(showIpv6Neighbors(device, env)) },
   { modes: EXEC, types: ROUTERS6, syntax: 'show ipv6 interface brief', help: 'IPv6 addresses per interface', run: ({ device, env }) => ok(showIpv6Brief(device, env)) },
@@ -1448,9 +1513,10 @@ const prefixText = (ip: number, prefix: number) => `${formatIp(networkOf(ip, pre
 const ROUTE_CODES: Record<Route['kind'], string> = { connected: 'C', static: 'S', default: 'S', ospf: 'O', rip: 'R', bgp: 'B', auto: 'A' };
 
 /** Routingtabelle; in der Simulation inklusive dynamisch gelernter Routen. */
-export function showIpRoute(device: Device, env?: CliEnv): string[] {
-  const routes = env?.state?.routes ?? buildRoutes(device).routes;
-  const lines = ['Codes: C - connected, S - static, O - OSPF, R - RIP, B - BGP, A - automatic (leyoNET)', '       > - selected route, * - FIB route', ''];
+export function showIpRoute(device: Device, env?: CliEnv, vrf?: string): string[] {
+  // VRF-Tabellen haben nur direkte und statische Routen; sie lassen sich ohne Simulation berechnen.
+  const routes = vrf ? buildRoutes(device, vrf).routes : (env?.state?.routes ?? buildRoutes(device).routes);
+  const lines = [...(vrf ? [`Routing Table: VRF ${vrf}`] : []), 'Codes: C - connected, S - static, O - OSPF, R - RIP, B - BGP, A - automatic (leyoNET)', '       > - selected route, * - FIB route', ''];
   const sorted = [...routes].sort((a, b) => (a.network >>> 0) - (b.network >>> 0) || a.prefix - b.prefix || (a.distance ?? 0) - (b.distance ?? 0));
   const selected = new Set<string>();
   for (const r of sorted) {
@@ -1793,6 +1859,7 @@ export function runningConfig(device: Device): string[] {
   if (cli?.enableSecret) lines.push(`enable secret ${cli.enableSecret}`);
   if (cli?.banner) lines.push(`banner motd ${cli.banner}`);
   if (device.type === 'l3switch') lines.push(device.ipRouting === false ? 'no ip routing' : 'ip routing');
+  for (const v of device.vrfs ?? []) lines.push(`vrf definition ${v.name}`);
   if (device.type === 'switch' || device.type === 'l3switch') {
     if (device.stp) {
       lines.push('spanning-tree');
@@ -1808,6 +1875,7 @@ export function runningConfig(device: Device): string[] {
   for (const p of device.interfaces) {
     lines.push(`interface ${cliIfaceName(device, p.index)}`);
     if (p.description) lines.push(` description ${p.description}`);
+    if (p.vrf) lines.push(` vrf forwarding ${p.vrf}`);
     if (usesPortNames(device)) {
       if (p.trunk) {
         lines.push(' switchport mode trunk');
@@ -1832,17 +1900,20 @@ export function runningConfig(device: Device): string[] {
   }
   for (const s of device.subinterfaces ?? []) {
     lines.push(`interface eth${s.parent}.${s.vlan}`, ` encapsulation dot1q ${s.vlan}`);
+    if (s.vrf) lines.push(` vrf forwarding ${s.vrf}`);
     if (s.ip && s.mask) lines.push(` ip address ${s.ip}/${parseMask(s.mask)}`);
     if (s.dhcpRelay) lines.push(` ip helper-address ${s.dhcpRelay}`);
     lines.push('!');
   }
   for (const l of device.loopbacks ?? []) {
     lines.push(`interface loopback${l.id}`);
+    if (l.vrf) lines.push(` vrf forwarding ${l.vrf}`);
     if (l.ip && l.mask) lines.push(` ip address ${l.ip}/${parseMask(l.mask)}`);
     lines.push('!');
   }
   for (const s of device.svis ?? []) {
     lines.push(`interface vlan${s.vlan}`);
+    if (s.vrf) lines.push(` vrf forwarding ${s.vrf}`);
     if (s.ip && s.mask) lines.push(` ip address ${s.ip}/${parseMask(s.mask)}`);
     if (s.dhcpRelay) lines.push(` ip helper-address ${s.dhcpRelay}`);
     if (s.ipv6) lines.push(` ipv6 address ${s.ipv6}`);
@@ -1860,6 +1931,9 @@ export function runningConfig(device: Device): string[] {
     lines.push(`ip route ${r.network}/${prefix} ${via}`);
   }
   if (device.routes?.length) lines.push('!');
+  for (const v of device.vrfs ?? []) {
+    for (const r of v.routes ?? []) lines.push(`ip route vrf ${v.name} ${r.network}/${parseMask(r.mask)} ${r.gateway ?? (r.iface !== undefined ? cliIfaceName(device, r.iface) : '')}`);
+  }
   for (const r of device.routes6 ?? []) {
     const via = [r.gateway, r.iface !== undefined ? cliIfaceName(device, r.iface) : undefined].filter(Boolean).join(' ');
     lines.push(`ipv6 route ${r.network} ${via}`);

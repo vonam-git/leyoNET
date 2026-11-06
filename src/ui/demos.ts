@@ -185,6 +185,25 @@ export const DEMOS: readonly Demo[] = [
       { highlight: 'R3' },
     ] },
   { id: 'ripng', file: 'ripng.json', topic: 'routing', layers: [3, 4], actions: [{ at: 12_000, device: 'PC 1', command: 'tracert 2001:db8:2::10' }], check: { kind: 'trace', device: 'PC 1' }, until: 22_000 },
+  {
+    id: 'vrf',
+    file: 'vrf.json',
+    topic: 'routing',
+    layers: [3],
+    actions: [
+      { at: 600, device: 'PC Kunde A', browse: 'http://10.9.0.10/' },
+      { at: 4000, device: 'PC Kunde B', browse: 'http://10.9.0.10/' },
+    ],
+    check: { kind: 'browser', device: 'PC Kunde B', contains: 'Kunde B' },
+    until: 9000,
+    tour: [
+      { sim: false, highlight: 'Provider-Router' },
+      { highlight: 'Provider-Router', window: { device: 'Provider-Router', tab: 'vrf' } },
+      { sim: true, pause: false, action: { at: 0, device: 'PC Kunde A', browse: 'http://10.9.0.10/' }, highlight: 'Server Kunde A' },
+      { action: { at: 0, device: 'PC Kunde B', browse: 'http://10.9.0.10/' }, highlight: 'Server Kunde B' },
+      { highlight: 'Provider-Router' },
+    ],
+  },
   { id: 'bgp', file: 'bgp.json', topic: 'routing', layers: [4, 7], actions: [{ at: 12_000, device: 'PC AS 65001', command: 'ping 10.3.0.10' }], check: { kind: 'ping', device: 'PC AS 65001' }, until: 25_000 },
   // Zugang ins Internet
   { id: 'nat', file: 'heimnetz-nat.json', topic: 'access', layers: [3, 4], actions: [{ at: 600, device: 'PC', browse: 'http://198.51.100.10/' }], check: { kind: 'browser', device: 'PC', contains: 'Öffentlicher Webserver' }, until: 6000 },

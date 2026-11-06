@@ -63,6 +63,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('net.acl', 'network', 4),
   f('net.loopback', 'network', 3),
   f('net.lag', 'network', 4),
+  f('net.vrf', 'network', 4),
   f('net.vpn', 'network', 4),
   f('net.ipv6', 'network', 4),
   f('net.dsLite', 'network', 4),
@@ -143,6 +144,7 @@ export function usedFeatures(t: Topology): string[] {
     if (d.firewall && d.type !== 'firewall') used.add('net.firewall');
     if (d.acls?.length) used.add('net.acl');
     if (d.loopbacks?.length) used.add('net.loopback');
+    if (d.vrfs?.length) used.add('net.vrf');
     if (d.vpn?.length) used.add('net.vpn');
     if (d.vlanNames?.length) used.add('net.vlan');
     if (d.wlan?.mesh) used.add('net.wlanMesh');

@@ -3,7 +3,7 @@ import { checkDnsRecord, isValidName, normalizeName, normalizeRecord } from '../
 import { isValidPath } from '../net/http';
 import { checkMailAccount, checkMailbox } from '../net/mail';
 import { checkHostConfig, maskToText, parseIp, parseMask, type HostConfigInput } from '../net/ipv4';
-import { MAX_LOOPBACK, checkStaticRoute, decodeIface, normalizeRoute } from '../net/routing';
+import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME, checkStaticRoute, decodeIface, normalizeRoute } from '../net/routing';
 import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, isRouterLike, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
 import { MIN_SIGNAL, portMedium, signalBetween } from './links';
 import { macFor, normalizeMac } from './mac';
@@ -76,6 +76,8 @@ export type ErrorCode =
   | 'notASwitch'
   | 'invalidVlan'
   | 'invalidChannel'
+  | 'invalidVrfName'
+  | 'unknownVrf'
   | 'defaultVlan'
   | 'stpNeededForLoop'
   | 'invalidPriority'
@@ -1026,6 +1028,102 @@ export function setSubinterface(t: Topology, id: string, parent: number, vlan: n
     ? existing.map((s) => (s === old ? next : s))
     : [...existing, next].sort((a, b) => a.parent - b.parent || a.vlan - b.vlan);
   return ok(updateDevice(t, id, (d) => ({ ...d, subinterfaces: list })));
+}
+
+// --- VRF ----------------------------------------------------------------------------
+
+/** Geräte mit VRFs (eigenen Routingtabellen). */
+export function canVrf(type: DeviceType): boolean {
+  return isRouterLike(type) || type === 'l3switch';
+}
+
+function vrfDevice(t: Topology, id: string): Result<Device> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canVrf(device.type)) return fail('notARouter');
+  return ok(device);
+}
+
+/** VRF anlegen («vrf definition KUNDE-A»); vorhandene bleibt unverändert. */
+export function addVrf(t: Topology, id: string, name: string): Result<Topology> {
+  const device = vrfDevice(t, id);
+  if (!device.ok) return device;
+  if (!VRF_NAME.test(name)) return fail('invalidVrfName', { value: name.slice(0, 40) });
+  if (device.value.vrfs?.some((v) => v.name === name)) return ok(t);
+  if ((device.value.vrfs?.length ?? 0) >= MAX_VRFS) return fail('tooMany', { max: MAX_VRFS });
+  return ok(updateDevice(t, id, (d) => ({ ...d, vrfs: [...(d.vrfs ?? []), { name }] })));
+}
+
+/** VRF löschen: Ihre Anschlüsse fallen in die globale Tabelle zurück, ihre Routen verschwinden. */
+export function removeVrf(t: Topology, id: string, name: string): Result<Topology> {
+  const device = vrfDevice(t, id);
+  if (!device.ok) return device;
+  if (!device.value.vrfs?.some((v) => v.name === name)) return fail('unknownVrf', { name });
+  const strip = <T extends { vrf?: string }>(x: T): T => (x.vrf === name ? (without(x, 'vrf') as T) : x);
+  return ok(
+    updateDevice(t, id, (d) => {
+      const vrfs = (d.vrfs ?? []).filter((v) => v.name !== name);
+      const next: Device = {
+        ...d,
+        interfaces: d.interfaces.map(strip),
+        ...(d.subinterfaces ? { subinterfaces: d.subinterfaces.map(strip) } : {}),
+        ...(d.svis ? { svis: d.svis.map(strip) } : {}),
+        ...(d.loopbacks ? { loopbacks: d.loopbacks.map(strip) } : {}),
+      };
+      return vrfs.length ? { ...next, vrfs } : without(next, 'vrfs');
+    }),
+  );
+}
+
+/** Logisches Interface einer VRF zuordnen («vrf forwarding KUNDE-A»); null = globale Tabelle. */
+export function setInterfaceVrf(t: Topology, id: string, index: number, name: string | null): Result<Topology> {
+  const device = vrfDevice(t, id);
+  if (!device.ok) return device;
+  if (name !== null && !device.value.vrfs?.some((v) => v.name === name)) return fail('unknownVrf', { name });
+  const ref = decodeIface(index);
+  const apply = <T extends { vrf?: string }>(x: T): T => (name === null ? (without(x, 'vrf') as T) : { ...x, vrf: name });
+  if (ref.kind === 'port') {
+    if (!device.value.interfaces[ref.port]) return fail('unknownInterface');
+    return ok(updateDevice(t, id, (d) => ({ ...d, interfaces: d.interfaces.map((i) => (i.index === ref.port ? apply(i) : i)) })));
+  }
+  if (ref.kind === 'sub') {
+    if (!device.value.subinterfaces?.some((s) => s.parent === ref.port && s.vlan === ref.vlan)) return fail('unknownInterface');
+    return ok(updateDevice(t, id, (d) => ({ ...d, subinterfaces: d.subinterfaces!.map((s) => (s.parent === ref.port && s.vlan === ref.vlan ? apply(s) : s)) })));
+  }
+  if (ref.kind === 'svi') {
+    if (!device.value.svis?.some((s) => s.vlan === ref.vlan)) return fail('unknownInterface');
+    return ok(updateDevice(t, id, (d) => ({ ...d, svis: d.svis!.map((s) => (s.vlan === ref.vlan ? apply(s) : s)) })));
+  }
+  if (!device.value.loopbacks?.some((l) => l.id === ref.id)) return fail('unknownInterface');
+  return ok(updateDevice(t, id, (d) => ({ ...d, loopbacks: d.loopbacks!.map((l) => (l.id === ref.id ? apply(l) : l)) })));
+}
+
+/** Statische Route in einer VRF («ip route vrf KUNDE-A 0.0.0.0/0 10.1.1.2»). */
+export function addVrfRoute(t: Topology, id: string, name: string, route: StaticRoute): Result<Topology> {
+  const device = vrfDevice(t, id);
+  if (!device.ok) return device;
+  if (!device.value.vrfs?.some((v) => v.name === name)) return fail('unknownVrf', { name });
+  const issue = checkStaticRoute(device.value, route, name);
+  if (issue) return { ok: false, error: { code: issue.code as ErrorCode, params: issue.params, field: issue.field } };
+  return ok(updateDevice(t, id, (d) => ({ ...d, vrfs: d.vrfs!.map((v) => (v.name === name ? { ...v, routes: [...(v.routes ?? []), normalizeRoute(route)] } : v)) })));
+}
+
+export function removeVrfRoute(t: Topology, id: string, name: string, index: number): Result<Topology> {
+  const device = vrfDevice(t, id);
+  if (!device.ok) return device;
+  const vrf = device.value.vrfs?.find((v) => v.name === name);
+  if (!vrf) return fail('unknownVrf', { name });
+  if (!vrf.routes?.[index]) return fail('unknownRoute');
+  return ok(
+    updateDevice(t, id, (d) => ({
+      ...d,
+      vrfs: d.vrfs!.map((v) => {
+        if (v.name !== name) return v;
+        const routes = (v.routes ?? []).filter((_, i) => i !== index);
+        return routes.length ? { ...v, routes } : without(v, 'routes');
+      }),
+    })),
+  );
 }
 
 /** Geräte mit Loopback-Interfaces. */

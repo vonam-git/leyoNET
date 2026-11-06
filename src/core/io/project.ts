@@ -1,12 +1,12 @@
 import { DEVICE_SPECS, canAutoRoute, isDeviceType, isRouterLike, isSwitchType } from '../model/devices';
-import { MAX_LOOPBACK } from '../net/routing';
+import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME } from '../net/routing';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
 import { MAC_PATTERN } from '../model/mac';
 import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
 import { ACL_NAME, MAX_ACLS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
 import { MAX_GROUP_SIZE } from '../model/devices';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
-import { logicalInterfaces, sviId } from '../net/routing';
+import { logicalInterfaces, sviId, vrfOfIface } from '../net/routing';
 import type {
   Cable,
   Device,
@@ -362,6 +362,11 @@ function readDevice(v: unknown, path: string): Device {
     if (!MAC_PATTERN.test(mac)) throw new Invalid(`${p}.mac`);
     const iface: NetInterface = { index: i, mac };
     if (io.ip !== undefined) iface.ip = ip(io.ip, `${p}.ip`);
+    if (io.vrf !== undefined) {
+      const name = str(io.vrf, `${p}.vrf`);
+      if (!VRF_NAME.test(name)) throw new Invalid(`${p}.vrf`);
+      iface.vrf = name;
+    }
     if (io.mask !== undefined) {
       const prefix = parseMask(str(io.mask, `${p}.mask`));
       if (prefix === null) throw new Invalid(`${p}.mask`);
@@ -568,9 +573,9 @@ function readDevice(v: unknown, path: string): Device {
     if (issue) throw new Invalid(`${p}.${issue.field}`);
     device.mailAccount = account;
   }
-  if (o.routes !== undefined) {
-    device.routes = arr(o.routes, `${path}.routes`).map((raw, i): StaticRoute => {
-      const p = `${path}.routes[${i}]`;
+  const readRoutes = (v: unknown, base: string) =>
+    arr(v, base).map((raw, i): StaticRoute => {
+      const p = `${base}[${i}]`;
       const r = obj(raw, p);
       const prefix = parseMask(str(r.mask, `${p}.mask`));
       if (prefix === null) throw new Invalid(`${p}.mask`);
@@ -581,6 +586,20 @@ function readDevice(v: unknown, path: string): Device {
         route.iface = iface;
       }
       return route;
+    });
+  if (o.routes !== undefined) device.routes = readRoutes(o.routes, `${path}.routes`);
+  if (o.vrfs !== undefined) {
+    if (!isRouterLike(type) && type !== 'l3switch') throw new Invalid(`${path}.vrfs`);
+    const list = arr(o.vrfs, `${path}.vrfs`);
+    if (list.length > MAX_VRFS) throw new Invalid(`${path}.vrfs`);
+    const names = new Set<string>();
+    device.vrfs = list.map((raw, i) => {
+      const p = `${path}.vrfs[${i}]`;
+      const v = obj(raw, p);
+      const name = str(v.name, `${p}.name`);
+      if (!VRF_NAME.test(name) || names.has(name)) throw new Invalid(`${p}.name`);
+      names.add(name);
+      return { name, ...(v.routes !== undefined ? { routes: readRoutes(v.routes, `${p}.routes`) } : {}) };
     });
   }
   if (o.subinterfaces !== undefined) {
@@ -884,6 +903,18 @@ function readDevice(v: unknown, path: string): Device {
       if (r.iface !== undefined && !valid.includes(r.iface)) throw new Invalid(`${path}.routes[${i}].iface`);
     });
   }
+  // VRF-Zuordnungen müssen auf vorhandene VRFs zeigen.
+  const vrfNames = new Set((device.vrfs ?? []).map((v) => v.name));
+  for (const id of logicalInterfaces(device)) {
+    const vrf = vrfOfIface(device, id);
+    if (vrf !== undefined && !vrfNames.has(vrf)) throw new Invalid(`${path}.vrf`);
+  }
+  for (const [n, v] of (device.vrfs ?? []).entries()) {
+    const valid = logicalInterfaces(device);
+    (v.routes ?? []).forEach((r, i) => {
+      if (r.iface !== undefined && !valid.includes(r.iface)) throw new Invalid(`${path}.vrfs[${n}].routes[${i}].iface`);
+    });
+  }
   return device;
 }
 
@@ -901,8 +932,13 @@ function readRedistribute(v: unknown, path: string): RedistributeSource[] {
   });
 }
 
-function readAddress(o: Record<string, unknown>, path: string): { ip?: string; mask?: string; dhcpRelay?: string } {
-  const result: { ip?: string; mask?: string; dhcpRelay?: string } = {};
+function readAddress(o: Record<string, unknown>, path: string): { ip?: string; mask?: string; dhcpRelay?: string; vrf?: string } {
+  const result: { ip?: string; mask?: string; dhcpRelay?: string; vrf?: string } = {};
+  if (o.vrf !== undefined) {
+    const name = str(o.vrf, `${path}.vrf`);
+    if (!VRF_NAME.test(name)) throw new Invalid(`${path}.vrf`);
+    result.vrf = name;
+  }
   if (o.ip !== undefined) result.ip = ip(o.ip, `${path}.ip`);
   if (o.mask !== undefined) {
     const prefix = parseMask(str(o.mask, `${path}.mask`));

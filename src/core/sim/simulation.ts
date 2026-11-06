@@ -261,12 +261,12 @@ export class Simulation {
   }
 
   /** Startet "ping <ziel>" auf einem Endgerät oder (aus der Befehlszeile) auf einem Router/Layer-3-Switch. */
-  ping(deviceId: string, target: string, member = 1) {
+  ping(deviceId: string, target: string, member = 1, vrf?: string) {
     const node = this.#node(deviceId);
     if (node instanceof HostNode) node.ping(target);
     else if (node instanceof ClientGroupNode) node.member(member)?.ping(target);
-    else if (node instanceof RouterNode) node.ping(target);
-    else if (node instanceof L3SwitchNode) node.router.ping(target);
+    else if (node instanceof RouterNode) node.ping(target, vrf);
+    else if (node instanceof L3SwitchNode) node.router.ping(target, vrf);
   }
 
   traceroute(deviceId: string, target: string, member = 1) {

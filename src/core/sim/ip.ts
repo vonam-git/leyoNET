@@ -2,7 +2,7 @@ import type { Device, StaticNat, Topology } from '../model/types';
 import { routingModeOf } from '../model/devices';
 import { autoRoutes } from '../net/autoroute';
 import { LIMITED_BROADCAST, broadcastOf, formatIp, isCgnatRange, isPrivate, parseIp } from '../net/ipv4';
-import { buildRoutes, decodeIface, interfaceAddresses, lookupRoute, macOfIface, relayOf, subifId, type IfaceAddress, type Route } from '../net/routing';
+import { buildRoutes, decodeIface, interfaceAddresses, lookupRoute, macOfIface, relayOf, subifId, vrfOfIface, type IfaceAddress, type Route } from '../net/routing';
 import {
   BROADCAST_MAC,
   DHCP_CLIENT_PORT,
@@ -72,6 +72,8 @@ export type SendError = 'noRoute' | 'hostUnreachable' | 'gatewayUnreachable';
 export interface SendOptions {
   src?: string;
   ttl?: number;
+  /** Routingtabelle einer VRF statt der globalen («ping vrf KUNDE-A …»). */
+  vrf?: string;
 }
 
 const isLoopback = (ip: number) => ip >>> 24 === 127;
@@ -185,6 +187,22 @@ export class IpNode implements SimNode {
     const device = this.effectiveDevice();
     return device ? buildRoutes(device).routes : [];
   }
+
+  /** VRF eines logischen Interfaces (undefined = global). */
+  vrfOf(index: number): string | undefined {
+    const device = this.effectiveDevice();
+    return device && index >= 0 ? vrfOfIface(device, index) : undefined;
+  }
+
+  /** Routingtabelle einer VRF; ohne Namen die globale (mit dynamischen Routen). */
+  routesIn(vrf?: string): Route[] {
+    if (!vrf) return this.routes();
+    const device = this.effectiveDevice();
+    return device ? buildRoutes(device, vrf).routes : [];
+  }
+
+  /** VRF des Pakets, das gerade zugestellt wird: Antworten (Ping, ICMP) gehen in dieselbe VRF zurück. */
+  #replyVrf: string | undefined;
 
   arpEntries(): ArpEntry[] {
     const now = this.ctx.now;
@@ -319,7 +337,7 @@ export class IpNode implements SimNode {
     if (!iface) return;
     const forMe = parseIp(arp.targetIp) === iface.ip || this.answersArpFor(index, arp.targetIp);
     // Wie RFC 826: Absender lernen, wenn die Anfrage uns gilt oder er schon bekannt ist.
-    if (forMe || this.#arp.has(arp.senderIp)) this.#learn(arp.senderIp, arp.senderMac, index);
+    if (forMe || this.#arp.has(this.#arpKey(arp.senderIp, index))) this.#learn(arp.senderIp, arp.senderMac, index);
     if (arp.op === 'request' && forMe) {
       this.sendFrame(index, {
         src: iface.mac,
@@ -336,11 +354,18 @@ export class IpNode implements SimNode {
     }
   }
 
+  /** ARP-Cache je VRF: Dieselbe Adresse kann in zwei VRFs zu verschiedenen Geräten gehören. */
+  #arpKey(ip: string, index: number): string {
+    const vrf = this.vrfOf(index);
+    return vrf ? `${vrf}|${ip}` : ip;
+  }
+
   #learn(ip: string, mac: string, iface: number) {
-    this.#arp.set(ip, { ip, mac, iface, expires: this.ctx.now + ARP_TTL });
-    const pending = this.#pending.get(ip);
+    const key = this.#arpKey(ip, iface);
+    this.#arp.set(key, { ip, mac, iface, expires: this.ctx.now + ARP_TTL });
+    const pending = this.#pending.get(key);
     if (!pending) return;
-    this.#pending.delete(ip);
+    this.#pending.delete(key);
     for (const waiter of pending.waiters) waiter.onMac(mac);
   }
 
@@ -348,7 +373,7 @@ export class IpNode implements SimNode {
   #resolve(index: number, ip: number, waiter: Waiter) {
     // Punkt-zu-Punkt-Leitungen brauchen keine Adressauflösung.
     if (this.isSerial(index)) return waiter.onMac('');
-    const key = formatIp(ip);
+    const key = this.#arpKey(formatIp(ip), index);
     const cached = this.#arp.get(key);
     if (cached && cached.expires > this.ctx.now) {
       waiter.onMac(cached.mac);
@@ -478,7 +503,8 @@ export class IpNode implements SimNode {
     if (this.tunnelOut(inIface, { ...packet, ttl: packet.ttl - 1 })) return;
     if (this.vpnRoute({ ...packet, ttl: packet.ttl - 1 })) return;
     const dst = parseIp(packet.dst)!;
-    const route = lookupRoute(this.routes(), dst);
+    // VRF: Das Paket bleibt in der Tabelle des Anschlusses, über den es kam.
+    const route = lookupRoute(this.routesIn(this.vrfOf(inIface.index)), dst);
     const out = route && this.interfaces().find((i) => i.index === route.iface);
     if (!route || !out) {
       this.#icmpError(inIface, packet, 'destUnreachable', 'net');
@@ -510,10 +536,20 @@ export class IpNode implements SimNode {
       },
       ...(code ? { code } : {}),
     };
-    this.sendIp(original.src, message, { src: formatIp(from.ip) });
+    this.sendIp(original.src, message, { src: formatIp(from.ip), ...(this.vrfOf(from.index) ? { vrf: this.vrfOf(from.index) } : {}) });
   }
 
   #deliver(packet: Ipv4Packet, broadcast: boolean, index: number, srcMac = '') {
+    const before = this.#replyVrf;
+    this.#replyVrf = this.vrfOf(index);
+    try {
+      this.#dispatch(packet, broadcast, index, srcMac);
+    } finally {
+      this.#replyVrf = before;
+    }
+  }
+
+  #dispatch(packet: Ipv4Packet, broadcast: boolean, index: number, srcMac: string) {
     const payload = packet.payload;
     if (payload.kind === 'ospf') {
       this.onOspf(packet, payload, index);
@@ -597,7 +633,7 @@ export class IpNode implements SimNode {
       return;
     }
 
-    const route = lookupRoute(this.routes(), dst);
+    const route = lookupRoute(this.routesIn(options.vrf ?? this.#replyVrf), dst);
     const iface = route && this.interfaces().find((i) => i.index === route.iface);
     if (!route || !iface) {
       onError?.('noRoute');
@@ -779,7 +815,8 @@ export class ForwardingNode extends IpNode {
       ctx,
       tcp: this.tcp,
       device: () => this.routingDevice(),
-      interfaces: () => this.interfaces(),
+      // Routingprotokolle laufen nur in der globalen Tabelle; Anschlüsse in einer VRF nehmen nicht teil.
+      interfaces: () => this.interfaces().filter((i) => !this.vrfOf(i.index)),
       routesExcept: (kind) => this.#combine(kind),
       sendMulticast: (index, group, payload) => this.sendMulticast(index, group, payload),
       sendIp: (dst, payload, options, onError) => this.sendIp(dst, payload, options, onError),
@@ -1001,8 +1038,8 @@ export class RouterNode extends ForwardingNode {
     return this.vpn.state();
   }
 
-  /** «ping» aus der Befehlszeile des Routers. */
-  ping(target: string) {
+  /** «ping» aus der Befehlszeile des Routers; mit VRF über deren Tabelle. */
+  ping(target: string, vrf?: string) {
     this.#ping?.cancel();
     // IPv6-Ziel: Echo als ICMPv6 über den IPv6-Stack.
     const v6 = parseIp(target) === null && parseIp6(target) !== null;
@@ -1013,7 +1050,9 @@ export class RouterNode extends ForwardingNode {
             if (payload.kind === 'icmp') this.v6.send(dst, { ...payload, kind: 'icmpv6' }, options?.ttl !== undefined ? { hopLimit: options.ttl } : {}, onError);
           },
         }
-      : this;
+      : vrf
+        ? { ctx: this.ctx, sendIp: (dst, payload, options, onError) => this.sendIp(dst, payload, { ...options, vrf }, onError) }
+        : this;
     const run = new PingRun(via, v6 ? (normalizeIp6(target) ?? target) : target, ++this.#pingId, '');
     this.#ping = run;
     run.start();

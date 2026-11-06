@@ -91,6 +91,10 @@ no firewall stateful        ! zustandslos
 show firewall               ! Regeln mit Trefferzählern
 ```
 
+## VRF: mehrere Routingtabellen
+
+Ab Profil 4 (oder einzeln «VRF») haben Router, Firewall und Layer-3-Switch den Reiter **VRF**. Eine VRF ist eine eigene Routingtabelle: Anschlüsse darin sehen nur die Netze und statischen Routen dieser VRF. So laufen zwei Kunden mit denselben Adressen (z.B. beide 10.0.0.0/24) über denselben Router, ohne sich zu sehen. Pakete bleiben in der VRF des Anschlusses, über den sie hereinkommen. OSPF, RIP, BGP, NAT und das automatische Routing gelten nur für die globale Tabelle. Befehlszeile: `vrf definition KUNDE-A`, am Interface `vrf forwarding KUNDE-A`, `ip route vrf …`, `show ip route vrf KUNDE-A`, `ping vrf KUNDE-A …`.
+
 ## Mehrere Kabel und Port-Channel
 
 Zwischen zwei Geräten dürfen mehrere Kabel liegen; die Fläche zeichnet sie nebeneinander. Zwischen Switches ist das ohne weitere Einstellung eine **Schleife**: Spanning Tree blockiert ein Kabel, ohne STP zeigt die Simulation den Broadcast-Sturm.

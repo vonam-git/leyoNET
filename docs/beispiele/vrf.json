@@ -1,0 +1,218 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "router",
+        "name": "Provider-Router",
+        "position": {
+          "x": 480,
+          "y": 260
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "ip": "10.0.0.1",
+            "mask": "255.255.255.0",
+            "vrf": "KUNDE-A"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:01:01",
+            "ip": "10.9.0.1",
+            "mask": "255.255.255.0",
+            "vrf": "KUNDE-A"
+          },
+          {
+            "mac": "02:00:00:00:01:03",
+            "index": 2,
+            "ip": "10.0.0.1",
+            "mask": "255.255.255.0",
+            "vrf": "KUNDE-B"
+          },
+          {
+            "mac": "02:00:00:00:01:04",
+            "index": 3,
+            "ip": "10.9.0.1",
+            "mask": "255.255.255.0",
+            "vrf": "KUNDE-B"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:01:02",
+            "sfpSlot": true
+          }
+        ],
+        "vrfs": [
+          {
+            "name": "KUNDE-A"
+          },
+          {
+            "name": "KUNDE-B"
+          }
+        ]
+      },
+      {
+        "id": "d2",
+        "type": "pc",
+        "name": "PC Kunde A",
+        "position": {
+          "x": 200,
+          "y": 120
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "10.0.0.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "10.0.0.1"
+      },
+      {
+        "id": "d3",
+        "type": "pc",
+        "name": "Server Kunde A",
+        "position": {
+          "x": 760,
+          "y": 120
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ip": "10.9.0.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "10.9.0.1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Kunde A</h1><p>Intranet von Kunde A.</p>"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d4",
+        "type": "pc",
+        "name": "PC Kunde B",
+        "position": {
+          "x": 200,
+          "y": 400
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ip": "10.0.0.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "10.0.0.1"
+      },
+      {
+        "id": "d5",
+        "type": "pc",
+        "name": "Server Kunde B",
+        "position": {
+          "x": 760,
+          "y": 400
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ip": "10.9.0.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "10.9.0.1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Kunde B</h1><p>Intranet von Kunde B.</p>"
+            }
+          ]
+        }
+      }
+    ],
+    "cables": [
+      {
+        "id": "c6",
+        "a": {
+          "device": "d2",
+          "iface": 0
+        },
+        "b": {
+          "device": "d1",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c7",
+        "a": {
+          "device": "d3",
+          "iface": 0
+        },
+        "b": {
+          "device": "d1",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c8",
+        "a": {
+          "device": "d4",
+          "iface": 0
+        },
+        "b": {
+          "device": "d1",
+          "iface": 2
+        }
+      },
+      {
+        "id": "c9",
+        "a": {
+          "device": "d5",
+          "iface": 0
+        },
+        "b": {
+          "device": "d1",
+          "iface": 3
+        }
+      }
+    ],
+    "nextId": 12,
+    "areas": [
+      {
+        "id": "a10",
+        "title": "Kunde A",
+        "color": "blue",
+        "x": 100,
+        "y": 40,
+        "width": 780,
+        "height": 160
+      },
+      {
+        "id": "a11",
+        "title": "Kunde B",
+        "color": "orange",
+        "x": 100,
+        "y": 320,
+        "width": 780,
+        "height": 160
+      }
+    ]
+  },
+  "configuration": {}
+}

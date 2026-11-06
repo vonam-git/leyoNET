@@ -117,7 +117,7 @@
     if (result.action?.kind === 'ping') {
       if (editor.acting && simStore.sim) {
         pingFrom = simStore.sim.getDeviceState(deviceId).console.length;
-        simStore.ping(deviceId, result.action.target);
+        simStore.ping(deviceId, result.action.target, result.action.vrf);
       } else {
         lines = [...lines, { text: '% Ping needs the running simulation (action mode)', kind: 'out' }];
       }

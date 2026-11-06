@@ -102,6 +102,11 @@ import {
   setSubinterface,
   setSvi,
   setVlanName,
+  addVrf,
+  removeVrf,
+  setInterfaceVrf,
+  addVrfRoute,
+  removeVrfRoute,
   setPortChannel,
   setLoopback,
   removeLoopback,
@@ -1078,6 +1083,26 @@ class Editor {
 
   setPortChannel(id: string, index: number, channel: number | null, mode: ChannelMode = 'active'): TopologyError | null {
     return this.#applyForm(setPortChannel(this.topology, id, index, channel, mode));
+  }
+
+  addVrf(id: string, name: string): TopologyError | null {
+    return this.#applyForm(addVrf(this.topology, id, name));
+  }
+
+  removeVrf(id: string, name: string): TopologyError | null {
+    return this.#applyForm(removeVrf(this.topology, id, name));
+  }
+
+  setInterfaceVrf(id: string, index: number, name: string | null): TopologyError | null {
+    return this.#applyForm(setInterfaceVrf(this.topology, id, index, name));
+  }
+
+  addVrfRoute(id: string, name: string, route: StaticRoute): TopologyError | null {
+    return this.#applyForm(addVrfRoute(this.topology, id, name, route));
+  }
+
+  removeVrfRoute(id: string, name: string, index: number): TopologyError | null {
+    return this.#applyForm(removeVrfRoute(this.topology, id, name, index));
   }
 
   createVlan(id: string, vlan: number): TopologyError | null {

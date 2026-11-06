@@ -2,7 +2,7 @@ import { hasRoutingTable } from '../model/devices';
 import { isBridge } from '../model/topology';
 import type { Device, Topology } from '../model/types';
 import { networkOf6, parseCidr6 } from './ipv6';
-import { ADMIN_DISTANCE, decodeIface, interfaceAddresses, sviId, type Route } from './routing';
+import { ADMIN_DISTANCE, decodeIface, interfaceAddresses, sviId, vrfOfIface, type Route } from './routing';
 
 /** Adresse eines Anschlusses, für IPv4 und IPv6 gemeinsam als bigint gerechnet. */
 interface Addr {
@@ -66,7 +66,8 @@ const graphs = { 4: new WeakMap<Topology, Graph>(), 6: new WeakMap<Topology, Gra
 
 /** Adressen eines Geräts je Familie (IPv6: nur von Hand gesetzte, globale Adressen). */
 function addressesOf(device: Device, family: Family): Addr[] {
-  if (family === 4) return interfaceAddresses(device).map((a) => ({ index: a.index, ip: BigInt(a.ip), prefix: a.prefix }));
+  // Anschlüsse in einer VRF gehören nicht zum automatischen Routing (globale Tabelle).
+  if (family === 4) return interfaceAddresses(device).filter((a) => !vrfOfIface(device, a.index)).map((a) => ({ index: a.index, ip: BigInt(a.ip), prefix: a.prefix }));
   if (device.type === 'l3switch') {
     return (device.svis ?? []).flatMap((s) => {
       const c = s.ipv6 ? parseCidr6(s.ipv6) : null;

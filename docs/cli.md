@@ -67,6 +67,8 @@ Switch(config-ext-nacl)#
 | `show ip nat translations` | NAT-Tabelle (Router) |
 | `show mac address-table` | MAC-Tabelle (Switch, Simulation) |
 | `show vlan brief` | Angelegte VLANs mit ihren Ports; Ports in fehlenden VLANs als inaktiv (Switch) |
+| `show vrf`, `show ip route vrf NAME` | VRFs mit ihren Interfaces, Routingtabelle einer VRF |
+| `ping vrf NAME <Adresse>` | Ping über die Tabelle einer VRF (Simulation) |
 | `show etherchannel summary` | Port-Channels mit Zustand der Ports: P gebündelt, s ausgestellt, D ohne Link (Switch) |
 | `show interfaces trunk` | Trunks mit Native VLAN, erlaubten und aktiven VLANs (Switch) |
 | `show interfaces status` | Ports mit Status und VLAN (Switch) |
@@ -104,6 +106,11 @@ interface eth0.10              ! Router-on-a-Stick: Subinterface für VLAN 10
  ip address 192.168.10.1/24
 !
 no interface eth0.10           ! Subinterface löschen
+vrf definition KUNDE-A         ! VRF: eigene Routingtabelle (auch: ip vrf KUNDE-A)
+interface eth2
+ vrf forwarding KUNDE-A        ! Interface in die VRF (no vrf forwarding = global)
+ip route vrf KUNDE-A 0.0.0.0/0 10.9.0.2
+no vrf definition KUNDE-A
 interface loopback0            ! Loopback (auch lo0), immer aktiv; auch auf Firewall und Layer-3-Switch
  ip address 10.255.0.1/32      ! höchste Loopback-Adresse = Router-ID; OSPF kündigt sie als /32 an
 no interface loopback0
