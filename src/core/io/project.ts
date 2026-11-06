@@ -280,10 +280,10 @@ function readTopology(v: unknown): Topology {
     const id = str(o.id, `${path}.id`);
     if (!/^a\d+$/.test(id) || areaIds.has(id)) throw new Invalid(`${path}.id`);
     areaIds.add(id);
-    if (o.kind !== undefined && o.kind !== 'rack') throw new Invalid(`${path}.kind`);
+    if (o.kind !== undefined && o.kind !== 'rack' && o.kind !== 'note') throw new Invalid(`${path}.kind`);
     const area: DocArea = {
       id,
-      ...(o.kind === 'rack' ? { kind: 'rack' as const } : {}),
+      ...(o.kind === 'rack' || o.kind === 'note' ? { kind: o.kind } : {}),
       title: text(o.title, `${path}.title`, 80),
       color: color(o.color, `${path}.color`),
       x: num(o.x, `${path}.x`),
@@ -294,7 +294,7 @@ function readTopology(v: unknown): Topology {
     if (area.width <= 0 || area.height <= 0) throw new Invalid(`${path}.width`);
     if (o.network !== undefined) area.network = text(o.network, `${path}.network`, 40).trim();
     if (o.vlan !== undefined) area.vlan = vlanNumber(o.vlan, `${path}.vlan`);
-    if (o.note !== undefined) area.note = text(o.note, `${path}.note`, 2000);
+    if (o.note !== undefined) area.note = text(o.note, `${path}.note`, 4000);
     if (o.floor !== undefined) area.floor = int(o.floor, `${path}.floor`);
     if (o.public !== undefined && bool(o.public, `${path}.public`)) area.public = true;
     return area;

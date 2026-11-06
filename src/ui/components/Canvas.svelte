@@ -480,7 +480,7 @@
     </g>
   </svg>
 
-  {#if editor.topology.devices.length === 0}
+  {#if editor.topology.devices.length === 0 && !(editor.topology.areas ?? []).length}
     <p class="empty">{t('canvas.empty')}</p>
   {/if}
   <TourPanel />

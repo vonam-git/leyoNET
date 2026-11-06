@@ -1526,6 +1526,9 @@ export function setDeviceFloor(t: Topology, id: string, floor: number): Result<T
 
 // --- Dokumentationsmodus: Bereiche ---------------------------------------------
 
+/** Höchstlänge des Texts eines Bereichs bzw. Textfelds. */
+export const MAX_NOTE = 4000;
+
 export function addArea(t: Topology, area: Omit<DocArea, 'id'>): Result<{ topology: Topology; id: string }> {
   const id = `a${t.nextId}`;
   const checked = checkArea({ ...area, id });
@@ -1535,11 +1538,11 @@ export function addArea(t: Topology, area: Omit<DocArea, 'id'>): Result<{ topolo
 
 function checkArea(area: DocArea): Result<DocArea> {
   if (area.title.length > 80) return fail('textTooLong', { max: 80 });
-  if ((area.note ?? '').length > 2000) return fail('textTooLong', { max: 2000 });
+  if ((area.note ?? '').length > MAX_NOTE) return fail('textTooLong', { max: MAX_NOTE });
   if (area.vlan !== undefined && (!Number.isInteger(area.vlan) || area.vlan < 1 || area.vlan > 4094)) return fail('invalidVlan');
   const clean: DocArea = {
     id: area.id,
-    ...(area.kind === 'rack' ? { kind: 'rack' as const } : {}),
+    ...(area.kind === 'rack' || area.kind === 'note' ? { kind: area.kind } : {}),
     title: area.title,
     color: area.color,
     x: Math.round(area.x),
@@ -1551,6 +1554,7 @@ function checkArea(area: DocArea): Result<DocArea> {
   if (area.vlan !== undefined) clean.vlan = area.vlan;
   if (area.note?.trim()) clean.note = area.note;
   if (area.floor !== undefined) clean.floor = area.floor;
+  if (area.public) clean.public = true;
   return ok(clean);
 }
 

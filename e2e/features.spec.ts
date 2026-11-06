@@ -597,3 +597,15 @@ test('Firewall als Gerät und ACL am Switch im Formular', async ({ page }) => {
   await expect(sw).toContainText('an Port 1');
   if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
 });
+
+test('Textfeld (Bereich) mit gegliedertem Text', async ({ page }) => {
+  await shop(page, 'Bereiche', /^Textfeld/);
+  const canvas = page.getByRole('application');
+  await expect(canvas).toContainText('Notiz 1');
+  const text = page.locator('.inspector').getByLabel('Text', { exact: true });
+  await text.fill('Auftrag für die Klasse\n\n- Router konfigurieren\n- **Ping** an 192.168.1.1');
+  await text.press('Tab');
+  await expect(canvas.locator('foreignObject li').filter({ hasText: 'Router konfigurieren' })).toBeVisible();
+  await expect(canvas.locator('foreignObject strong')).toHaveText('Ping');
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+});

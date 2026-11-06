@@ -158,6 +158,8 @@ Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routi
 - **orange: CGNAT** (100.64/10), vom Provider vergeben
 - **grün, fett: öffentlich**, im Internet erreichbar
 
+**Textfeld:** Shop → Bereiche → **Textfeld** setzt ein Feld mit Titel und freiem Text auf die Fläche, z.B. für Infos, einen Auftrag oder eine Legende. Leerzeile = neuer Absatz, «- » = Liste, «1. » = nummerierte Liste, `**fett**`, `` `Befehl` ``; IP-Adressen werden hervorgehoben. Die Ecke unten rechts zieht das Feld grösser.
+
 Ein Bereich «Öffentliches Netz» (mit Weltkugel) markiert ein ganzes Netz als öffentlich, z.B. eine DMZ. Bei Routern steht der Anschluss dezent davor, z.B. `eth0: 192.168.1.1/24`.
 
 **Doppelte Adressen:** Haben zwei Geräte im selben Netz dieselbe IP-Adresse, erscheint am Gerät ein rotes **!**, und das Formular warnt. Hinter verschiedenen Routern (zwei Heimnetze mit 192.168.1.1) ist dieselbe private Adresse erlaubt.

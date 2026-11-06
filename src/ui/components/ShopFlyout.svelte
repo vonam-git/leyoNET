@@ -64,6 +64,9 @@
                   {#if item.preset.key === 'rack'}
                     <rect x="10" y="2" width="24" height="28" rx="2" fill="#111827" stroke="#475569" stroke-width="2" />
                     <path d="M14 9 H30 M14 15 H30 M14 21 H30" stroke="#64748b" stroke-width="2" />
+                  {:else if item.preset.key === 'note'}
+                    <rect x="5" y="3" width="34" height="26" rx="3" fill={TAG_HEX[item.preset.color]} fill-opacity="0.3" stroke={TAG_HEX[item.preset.color]} stroke-width="1.5" />
+                    <path d="M10 11 H34 M10 16 H30 M10 21 H26" stroke="#64748b" stroke-width="1.6" />
                   {:else}
                     <rect x="3" y="4" width="38" height="24" rx="5" fill={TAG_HEX[item.preset.color]} fill-opacity="0.15" stroke={TAG_HEX[item.preset.color]} stroke-width="2" stroke-dasharray="5 3" />
                   {/if}

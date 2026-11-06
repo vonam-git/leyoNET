@@ -3,7 +3,7 @@ import { t } from '../i18n';
 
 /** Vorlagen für Bereiche (Dokumentation auf der Zeichenfläche). */
 export interface AreaPreset {
-  key: 'subnet' | 'vlan' | 'room' | 'zone' | 'public' | 'rack';
+  key: 'subnet' | 'vlan' | 'room' | 'zone' | 'public' | 'rack' | 'note';
   color: TagColor;
   width: number;
   height: number;
@@ -16,11 +16,12 @@ export const AREA_PRESETS: AreaPreset[] = [
   { key: 'zone', color: 'orange', width: 300, height: 200 },
   { key: 'public', color: 'teal', width: 360, height: 220 },
   { key: 'rack', color: 'gray', width: 200, height: 200 },
+  { key: 'note', color: 'yellow', width: 280, height: 180 },
 ];
 
 export function presetArea(preset: AreaPreset, center: { x: number; y: number }, n: number, floor?: number): Omit<DocArea, 'id'> {
   return {
-    ...(preset.key === 'rack' ? { kind: 'rack' as const } : {}),
+    ...(preset.key === 'rack' ? { kind: 'rack' as const } : preset.key === 'note' ? { kind: 'note' as const, note: t('areaPreset.note.text') } : {}),
     ...(preset.key === 'public' ? { public: true } : {}),
     title: t(`areaPreset.${preset.key}.title`, { n }),
     color: preset.color,

@@ -504,8 +504,11 @@ export interface Cable {
 export interface DocArea {
   /** Form "a<n>". */
   id: string;
-  /** «rack»: 19-Zoll-Schrank, in den Netzwerkgeräte eingebaut werden; sonst ein farbiger Bereich. */
-  kind?: 'rack';
+  /**
+   * «rack»: 19-Zoll-Schrank, in den Netzwerkgeräte eingebaut werden; «note»: Textfeld
+   * mit Titel und frei formatiertem Text (Absätze, Listen, **fett**); sonst ein farbiger Bereich.
+   */
+  kind?: 'rack' | 'note';
   title: string;
   color: TagColor;
   x: number;
