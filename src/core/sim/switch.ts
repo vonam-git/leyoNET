@@ -1,5 +1,5 @@
 import { MODEM_WAN } from '../model/links';
-import { cableAt, getDevice, otherEnd } from '../model/topology';
+import { cableAt, getDevice, otherEnd, trunkAllows, vlanExists } from '../model/topology';
 import type { ModemKind } from '../model/types';
 import { ACCESS_PROFILES, nextSteps, stepIndex } from './access';
 import { toLink, wlanRun, wlanStepIndex, wlanSteps } from './wlan';
@@ -177,8 +177,20 @@ export class SwitchNode implements SimNode {
     return this.#device?.interfaces[port]?.vlan ?? DEFAULT_VLAN;
   }
 
+  #native(port: number) {
+    return this.#device?.interfaces[port]?.nativeVlan ?? DEFAULT_VLAN;
+  }
+
+  /** Kennt der Switch das VLAN? (VLAN-Datenbank; ältere Dateien ohne Datenbank: jedes) */
+  #exists(vlan: number) {
+    const device = this.#device;
+    return !device || vlanExists(device, vlan);
+  }
+
   #member(port: number, vlan: number) {
-    return this.#isTrunk(port) || this.#vlanOf(port) === vlan;
+    if (!this.#exists(vlan)) return false;
+    const iface = this.#device?.interfaces[port];
+    return iface?.trunk ? trunkAllows(iface, vlan) : this.#vlanOf(port) === vlan;
   }
 
   /** Am Port hängt ein Endgerät oder Router: keine Schleifengefahr, darum sofort weiterleiten. */
@@ -290,9 +302,9 @@ export class SwitchNode implements SimNode {
   // --- Weiterleiten -------------------------------------------------------------
 
   #send(port: number, frame: EthernetFrame, vlan: number) {
-    // Auf Trunks mit Tag (ausser VLAN 1), auf Access-Ports immer ohne.
+    // Auf Trunks mit Tag (ausser dem Native VLAN), auf Access-Ports immer ohne.
     const { vlan: _v, ...untagged } = frame;
-    this.ctx.transmit(port, this.#isTrunk(port) && vlan !== DEFAULT_VLAN ? { ...untagged, vlan } : untagged);
+    this.ctx.transmit(port, this.#isTrunk(port) && vlan !== this.#native(port) ? { ...untagged, vlan } : untagged);
   }
 
   receive(inPort: number, frame: EthernetFrame) {
@@ -308,7 +320,9 @@ export class SwitchNode implements SimNode {
     if (inState === 'blocking') return;
     // Getaggte Rahmen gehören nur auf Trunks.
     if (!this.#isTrunk(inPort) && frame.vlan !== undefined) return;
-    const vlan = this.#isTrunk(inPort) ? (frame.vlan ?? DEFAULT_VLAN) : this.#vlanOf(inPort);
+    const vlan = this.#isTrunk(inPort) ? (frame.vlan ?? this.#native(inPort)) : this.#vlanOf(inPort);
+    // Unbekanntes VLAN (nicht angelegt) oder auf diesem Trunk nicht erlaubt: verwerfen.
+    if (!this.#member(inPort, vlan)) return this.#noteVlan(inPort, vlan);
     const now = this.ctx.now;
     // Dieselbe Absender-MAC an einem anderen Port: doppelte MAC oder Schleife («MAC flapping»).
     const before = this.#table.get(`${vlan}|${frame.src}`);
@@ -332,7 +346,7 @@ export class SwitchNode implements SimNode {
 
     const flood = frame.dst === BROADCAST_MAC || frame.dst === STP_MAC;
     const known = flood ? undefined : this.#table.get(`${vlan}|${frame.dst}`);
-    if (known && known.expires > now && this.ctx.isConnected(known.port) && this.#state(known.port) === 'forwarding') {
+    if (known && known.expires > now && this.ctx.isConnected(known.port) && this.#state(known.port) === 'forwarding' && this.#member(known.port, vlan)) {
       // Ziel hängt am selben Port wie der Absender: Der Rahmen hat sein Ziel schon erreicht.
       if (known.port !== inPort) this.#send(known.port, frame, vlan);
       return;
@@ -341,6 +355,17 @@ export class SwitchNode implements SimNode {
       if (port.index === inPort || !this.#member(port.index, vlan) || this.#state(port.index) !== 'forwarding') continue;
       this.#send(port.index, frame, vlan);
     }
+  }
+
+  #vlanNoted = new Map<string, number>();
+
+  /** Verworfenen Rahmen wegen eines fehlenden oder nicht erlaubten VLANs melden (höchstens alle 5 s je Port und VLAN). */
+  #noteVlan(port: number, vlan: number) {
+    const key = `${port}|${vlan}`;
+    const now = this.ctx.now;
+    if (now - (this.#vlanNoted.get(key) ?? -Infinity) < 5000) return;
+    this.#vlanNoted.set(key, now);
+    this.ctx.print(!this.#exists(vlan) ? 'switch.vlanMissing' : 'switch.vlanNotAllowed', { vlan, port: port + 1 });
   }
 
   /** Zugriffsliste am Eingangsport prüfen («ip access-group NAME in»). Fehlt die Liste, geht alles durch. */

@@ -72,6 +72,7 @@ export type ErrorCode =
   | 'duplicateForward'
   | 'notASwitch'
   | 'invalidVlan'
+  | 'defaultVlan'
   | 'stpNeededForLoop'
   | 'invalidPriority'
   | 'notAnEndpoint'
@@ -311,6 +312,7 @@ export function firewallZone(index: number): string {
 export function setDefaultGateway(t: Topology, id: string, gateway: string): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
+  if (DEVICE_SPECS[device.type].role === 'endpoint' || device.type === 'accesspoint' || device.type === 'modem') return fail('notARouter');
   const value = gateway.trim();
   if (value && parseIp(value) === null) return { ok: false, error: { code: 'invalidIp', params: { value }, field: 'gateway' } };
   const others = (device.routes ?? []).filter((r) => parseMask(r.mask) !== 0);
@@ -351,6 +353,8 @@ export function addDevice(
   if ((type === 'modem' || type === 'cpe') && options.modem) device.modem = { kind: options.modem };
   if (type === 'cpe') Object.assign(device, cpeDefaults(device));
   if (type === 'firewall') device.firewall = firewallDefaults(device);
+  // Neue Switches führen eine VLAN-Datenbank: Weitergeleitet wird nur, was angelegt ist.
+  if (isSwitchType(type)) device.vlanDb = [];
   return ok({ topology: { ...t, devices: [...t.devices, device], nextId: seq + 1 }, id: device.id });
 }
 
@@ -594,18 +598,97 @@ function updatePort(t: Topology, id: string, index: number, change: (i: NetInter
   return updateDevice(t, id, (d) => ({ ...d, interfaces: d.interfaces.map((i) => (i.index === index ? change(i) : i)) }));
 }
 
-/** VLAN eines Access-Ports (1–4094); VLAN 1 wird nicht gespeichert. */
+// --- VLAN-Datenbank ----------------------------------------------------------------
+
+/** Kennt der Switch das VLAN? VLAN 1 immer; ohne Datenbank (ältere Dateien) jedes. */
+export function vlanExists(device: Pick<Device, 'vlanDb'>, vlan: number): boolean {
+  return vlan === 1 || !device.vlanDb || device.vlanDb.includes(vlan);
+}
+
+/** VLANs, die ein Switch verwendet (Ports, Trunks, SVIs, Namen) – Grundlage für die Datenbank älterer Dateien. */
+export function usedVlans(device: Device): number[] {
+  const set = new Set<number>();
+  for (const p of device.interfaces) {
+    if (!p.trunk && p.vlan) set.add(p.vlan);
+    for (const v of p.allowedVlans ?? []) set.add(v);
+    if (p.nativeVlan) set.add(p.nativeVlan);
+  }
+  for (const s of device.svis ?? []) set.add(s.vlan);
+  for (const n of device.vlanNames ?? []) set.add(n.vlan);
+  set.delete(1);
+  return [...set].sort((a, b) => a - b);
+}
+
+const validVlanId = (vlan: number) => Number.isInteger(vlan) && vlan >= 1 && vlan <= 4094;
+
+/** Datenbank mit diesen VLANs ergänzen; eine ältere Datei ohne Datenbank bekommt dabei alle verwendeten. */
+function withVlans(device: Device, add: number[]): Device {
+  const base = device.vlanDb ?? usedVlans(device);
+  const next = [...new Set([...base, ...add.filter((v) => v !== 1)])].sort((a, b) => a - b);
+  return { ...device, vlanDb: next };
+}
+
+/** VLAN anlegen («vlan 20»). */
+export function createVlan(t: Topology, id: string, vlan: number): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  if (!validVlanId(vlan)) return fail('invalidVlan');
+  return ok(updateDevice(t, id, (d) => withVlans(d, [vlan])));
+}
+
+/**
+ * VLAN löschen («no vlan 20»): Name und Eintrag verschwinden. Ports bleiben im
+ * VLAN, sind aber inaktiv, bis es wieder angelegt wird (wie bei Cisco).
+ */
+export function deleteVlan(t: Topology, id: string, vlan: number): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  if (vlan === 1) return fail('defaultVlan');
+  if (!validVlanId(vlan)) return fail('invalidVlan');
+  return ok(
+    updateDevice(t, id, (d) => {
+      const names = (d.vlanNames ?? []).filter((n) => n.vlan !== vlan);
+      const { vlanNames: _n, ...rest } = withVlans(d, []);
+      return { ...rest, vlanDb: (rest.vlanDb ?? []).filter((v) => v !== vlan), ...(names.length ? { vlanNames: names } : {}) };
+    }),
+  );
+}
+
+/** VLAN eines Access-Ports (1–4094); VLAN 1 wird nicht gespeichert. Ein unbekanntes VLAN wird angelegt (wie Cisco). */
 export function setPortVlan(t: Topology, id: string, index: number, vlan: number): Result<Topology> {
   const device = switchDevice(t, id);
   if (!device.ok) return device;
   if (!device.value.interfaces[index]) return fail('unknownInterface');
-  if (!Number.isInteger(vlan) || vlan < 1 || vlan > 4094) return fail('invalidVlan');
-  return ok(
-    updatePort(t, id, index, (i) => {
-      const { vlan: _v, ...base } = i;
-      return vlan === 1 ? base : { ...base, vlan };
-    }),
-  );
+  if (!validVlanId(vlan)) return fail('invalidVlan');
+  const next = updatePort(t, id, index, (i) => {
+    const { vlan: _v, ...base } = i;
+    return vlan === 1 ? base : { ...base, vlan };
+  });
+  return ok(vlanExists(device.value, vlan) ? next : updateDevice(next, id, (d) => withVlans(d, [vlan])));
+}
+
+/** Erlaubte VLANs eines Trunks; null = alle. */
+export function setTrunkAllowed(t: Topology, id: string, index: number, vlans: number[] | null): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  if (!device.value.interfaces[index]) return fail('unknownInterface');
+  if (vlans && !vlans.every(validVlanId)) return fail('invalidVlan');
+  const list = vlans ? [...new Set(vlans)].sort((a, b) => a - b) : null;
+  return ok(updatePort(t, id, index, (i) => (list === null ? without(i, 'allowedVlans') : { ...i, allowedVlans: list })));
+}
+
+/** VLAN ohne Tag auf einem Trunk (Native VLAN); 1 = Standard. */
+export function setTrunkNative(t: Topology, id: string, index: number, vlan: number): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  if (!device.value.interfaces[index]) return fail('unknownInterface');
+  if (!validVlanId(vlan)) return fail('invalidVlan');
+  return ok(updatePort(t, id, index, (i) => (vlan === 1 ? without(i, 'nativeVlan') : { ...i, nativeVlan: vlan })));
+}
+
+/** Darf ein Trunk dieses VLAN übertragen? */
+export function trunkAllows(iface: Pick<NetInterface, 'allowedVlans'>, vlan: number): boolean {
+  return !iface.allowedVlans || iface.allowedVlans.includes(vlan);
 }
 
 export function setPortTrunk(t: Topology, id: string, index: number, trunk: boolean): Result<Topology> {
@@ -930,11 +1013,14 @@ export function removeSubinterface(t: Topology, id: string, parent: number, vlan
   );
 }
 
-/** VLAN-Interface eines Layer-3-Switches anlegen oder seine Adresse ändern («interface vlan 10»). */
+/**
+ * VLAN-Interface anlegen oder seine Adresse ändern («interface vlan 10»): am
+ * Layer-3-Switch als Gateway der VLANs, am Layer-2-Switch als Verwaltungsadresse (ohne Routing).
+ */
 export function setSvi(t: Topology, id: string, vlan: number, ip: string, mask: string): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  if (device.type !== 'l3switch') return fail('notASwitch');
+  if (device.type !== 'l3switch' && device.type !== 'switch') return fail('notASwitch');
   if (!validVlan(vlan)) return { ok: false, error: { code: 'invalidVlan', field: 'vlan' } };
   const issue = checkAddress(ip, mask);
   if (issue) return { ok: false, error: issue };
@@ -943,7 +1029,8 @@ export function setSvi(t: Topology, id: string, vlan: number, ip: string, mask: 
   const { ip: _ip, mask: _mask, ...rest } = old ?? { vlan };
   const next: Svi = { ...rest, ...normalized(ip, mask) };
   const list = old ? existing.map((s) => (s === old ? next : s)) : [...existing, next].sort((a, b) => a.vlan - b.vlan);
-  return ok(updateDevice(t, id, (d) => ({ ...d, svis: list })));
+  // Eine SVI legt ihr VLAN mit an, sonst bliebe sie stumm.
+  return ok(updateDevice(t, id, (d) => ({ ...(vlanExists(d, vlan) ? d : withVlans(d, [vlan])), svis: list })));
 }
 
 export function removeSvi(t: Topology, id: string, vlan: number): Result<Topology> {
@@ -1500,7 +1587,7 @@ export function setVlanName(t: Topology, id: string, vlan: number, name: string)
   list.sort((a, b) => a.vlan - b.vlan);
   return ok(
     updateDevice(t, id, (d) => {
-      const { vlanNames: _v, ...rest } = d;
+      const { vlanNames: _v, ...rest } = value && !vlanExists(d, vlan) ? withVlans(d, [vlan]) : d;
       return list.length ? { ...rest, vlanNames: list } : rest;
     }),
   );

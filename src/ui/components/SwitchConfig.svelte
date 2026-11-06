@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cableAt, findSwitchLoop, getDevice, otherEnd, vlanColor, vlanLabel, type Device } from '../../core';
+  import { cableAt, findSwitchLoop, formatVlanList, getDevice, otherEnd, parseVlanList, vlanColor, vlanExists, vlanLabel, vlansOf, type Device } from '../../core';
   import { TAG_HEX } from '../tags';
   import { t } from '../../i18n';
   import { interfaceLabel } from '../labels';
@@ -25,6 +25,39 @@
   function setVlan(index: number, value: string) {
     const vlan = Number(value);
     if (Number.isInteger(vlan) && vlan >= 1 && vlan <= 4094) editor.setPortVlan(device.id, index, vlan);
+  }
+
+  /** VLAN-Datenbank: angelegte VLANs mit Namen. */
+  const known = $derived(vlansOf(device));
+  const nameOf = (vlan: number) => device.vlanNames?.find((n) => n.vlan === vlan)?.name ?? '';
+  let draft = $state({ vlan: '', name: '' });
+  let error = $state<string | null>(null);
+
+  function report(failure: { code: string; params?: Record<string, string | number> } | null) {
+    error = failure ? t(`error.${failure.code}`, failure.params) : null;
+    return !failure;
+  }
+
+  function addVlans(event: SubmitEvent) {
+    event.preventDefault();
+    const list = parseVlanList(draft.vlan);
+    if (!list) return report({ code: 'invalidVlan' });
+    for (const vlan of list) if (!report(editor.createVlan(device.id, vlan))) return;
+    if (draft.name.trim() && list.length === 1 && !report(editor.setVlanName(device.id, list[0]!, draft.name))) return;
+    draft = { vlan: '', name: '' };
+  }
+
+  function setAllowed(index: number, value: string) {
+    const text = value.trim();
+    if (!text) return report(editor.setTrunkAllowed(device.id, index, null));
+    const list = text.toLowerCase() === 'none' ? [] : parseVlanList(text);
+    if (!list) return report({ code: 'invalidVlan' });
+    report(editor.setTrunkAllowed(device.id, index, list));
+  }
+
+  function setNative(index: number, value: string) {
+    const vlan = Number(value || 1);
+    if (Number.isInteger(vlan) && vlan >= 1 && vlan <= 4094) report(editor.setTrunkNative(device.id, index, vlan));
   }
 </script>
 
@@ -54,6 +87,39 @@
 {/if}
 
 {#if ui.has('net.vlan')}
+<h3>{t('switch.vlanDb')}</h3>
+<p class="muted">{device.vlanDb ? t('switch.vlanDbHint') : t('switch.vlanDbLegacy')}</p>
+<ul class="vlans">
+  {#each known as vlan (vlan)}
+    <li>
+      <span class="swatch" style:background={vlanColor(editor.topology, vlan) ? TAG_HEX[vlanColor(editor.topology, vlan)!] : 'transparent'}></span>
+      <strong>{vlan}</strong>
+      {#if vlan === 1}
+        <span class="muted">default</span>
+      {:else}
+        <input
+          class="name"
+          value={nameOf(vlan)}
+          placeholder={`VLAN${String(vlan).padStart(4, '0')}`}
+          maxlength="32"
+          disabled={!editor.editable}
+          aria-label={t('switch.vlanNameOf', { vlan })}
+          onchange={(e) => report(editor.setVlanName(device.id, vlan, e.currentTarget.value))}
+        />
+        <button class="small" disabled={!editor.editable} onclick={() => report(editor.deleteVlan(device.id, vlan))} aria-label={t('switch.vlanDelete', { vlan })} title={t('switch.vlanDelete', { vlan })}>✕</button>
+      {/if}
+    </li>
+  {/each}
+</ul>
+{#if editor.editable}
+  <form class="add" onsubmit={addVlans}>
+    <input bind:value={draft.vlan} placeholder="10 / 10,20,30-35" aria-label={t('switch.vlanNew')} inputmode="numeric" />
+    <input bind:value={draft.name} placeholder={t('switch.vlanNamePlaceholder')} aria-label={t('switch.vlanNewName')} maxlength="32" />
+    <button type="submit" disabled={!draft.vlan.trim()}>{t('switch.vlanCreate')}</button>
+  </form>
+{/if}
+{#if error}<p class="warn" role="alert">{error}</p>{/if}
+
 <h3>{t('switch.vlans')}</h3>
 <table>
   <thead>
@@ -70,16 +136,40 @@
         <th scope="row">{interfaceLabel(device, iface.index)}</th>
         <td>
           <span class="swatch" style:background={colorOf(iface) ? TAG_HEX[colorOf(iface)!] : 'transparent'} title={colorOf(iface) ? (vlanLabel(editor.topology, iface.vlan ?? 1) ?? '') : t('switch.vlanNoColor')}></span>
-          <input
-            class="vlan"
-            type="number"
-            min="1"
-            max="4094"
-            value={iface.vlan ?? 1}
-            disabled={!!iface.trunk || !editor.editable}
-            aria-label={t('switch.vlanOf', { port: interfaceLabel(device, iface.index) })}
-            onchange={(e) => setVlan(iface.index, e.currentTarget.value)}
-          />
+          {#if iface.trunk}
+            <input
+              class="vlan"
+              type="number"
+              min="1"
+              max="4094"
+              value={iface.nativeVlan ?? 1}
+              disabled={!editor.editable}
+              title={t('switch.native')}
+              aria-label={t('switch.nativeOf', { port: interfaceLabel(device, iface.index) })}
+              onchange={(e) => setNative(iface.index, e.currentTarget.value)}
+            />
+            <input
+              class="allowed"
+              value={iface.allowedVlans ? formatVlanList(iface.allowedVlans) : ''}
+              placeholder={t('switch.allowedAll')}
+              disabled={!editor.editable}
+              title={t('switch.allowedHint')}
+              aria-label={t('switch.allowedOf', { port: interfaceLabel(device, iface.index) })}
+              onchange={(e) => setAllowed(iface.index, e.currentTarget.value)}
+            />
+          {:else}
+            <input
+              class="vlan"
+              type="number"
+              min="1"
+              max="4094"
+              value={iface.vlan ?? 1}
+              disabled={!editor.editable}
+              aria-label={t('switch.vlanOf', { port: interfaceLabel(device, iface.index) })}
+              onchange={(e) => setVlan(iface.index, e.currentTarget.value)}
+            />
+            {#if !vlanExists(device, iface.vlan ?? 1)}<span class="missing" title={t('switch.vlanMissingHint')}>{t('switch.vlanMissing')}</span>{/if}
+          {/if}
         </td>
         <td>
           <input
@@ -126,6 +216,61 @@
   }
   .vlan {
     width: 4.5em;
+  }
+  .allowed {
+    width: 8em;
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 2px 4px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .missing {
+    color: var(--danger);
+    font-size: 0.72rem;
+    margin-left: 4px;
+  }
+  .vlans {
+    list-style: none;
+    margin: 0 0 6px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 3px 10px;
+    font-size: 0.8rem;
+  }
+  .vlans li {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .vlans .name {
+    flex: 1;
+    min-width: 0;
+  }
+  .add {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .add input,
+  .vlans .name {
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 2px 4px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    min-width: 0;
+  }
+  .add input:first-child {
+    width: 9em;
+  }
+  .small {
+    padding: 0 5px;
   }
   .swatch {
     display: inline-block;

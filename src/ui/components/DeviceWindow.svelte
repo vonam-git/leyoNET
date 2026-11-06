@@ -69,7 +69,7 @@
     if (editor.acting) list.push('state');
     if (role === 'endpoint' && d.type !== 'clientgroup') list.push('addresses');
     if (d.type === 'clientgroup') list.push('group');
-    if (isRouterType(d.type) || d.type === 'l3switch' || d.type === 'cpe') list.push('addresses');
+    if (isRouterType(d.type) || d.type === 'l3switch' || d.type === 'cpe' || (d.type === 'switch' && ui.has('net.vlan'))) list.push('addresses');
     list.push('ports');
     if (hasRoutingTable(d.type) && role !== 'endpoint') list.push('routing');
     if (d.type === 'cpe') list.push('dhcp');
@@ -233,7 +233,7 @@
           {#if DEVICE_SPECS[device.type].role === 'endpoint'}
             {#if editor.ipMode !== 'ipv6'}<HostConfigForm {device} />{/if}
             {#if editor.ipMode !== 'ipv4'}<Host6Form {device} />{/if}
-          {:else if device.type === 'l3switch'}
+          {:else if device.type === 'l3switch' || device.type === 'switch'}
             <SviConfig {device} />
           {:else if device.type === 'cpe'}
             <CpeConfig {device} />

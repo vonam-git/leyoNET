@@ -101,6 +101,10 @@ import {
   setSubinterface,
   setSvi,
   setVlanName,
+  createVlan,
+  deleteVlan,
+  setTrunkAllowed,
+  setTrunkNative,
   setWifiClient,
   setWlan,
   updateArea,
@@ -1058,6 +1062,22 @@ class Editor {
 
   setIpRouting(id: string, enabled: boolean) {
     this.#edit(setIpRouting(this.topology, id, enabled));
+  }
+
+  createVlan(id: string, vlan: number): TopologyError | null {
+    return this.#applyForm(createVlan(this.topology, id, vlan));
+  }
+
+  deleteVlan(id: string, vlan: number): TopologyError | null {
+    return this.#applyForm(deleteVlan(this.topology, id, vlan));
+  }
+
+  setTrunkAllowed(id: string, index: number, vlans: number[] | null): TopologyError | null {
+    return this.#applyForm(setTrunkAllowed(this.topology, id, index, vlans));
+  }
+
+  setTrunkNative(id: string, index: number, vlan: number): TopologyError | null {
+    return this.#applyForm(setTrunkNative(this.topology, id, index, vlan));
   }
 
   setVlanName(id: string, vlan: number, name: string): TopologyError | null {

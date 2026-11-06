@@ -53,7 +53,7 @@ export function macOfIface(device: Device, id: number): string | undefined {
 
 /** Alle logischen Interfaces eines Geräts, auch unkonfigurierte (für Auswahllisten). */
 export function logicalInterfaces(device: Device): number[] {
-  if (device.type === 'l3switch') return (device.svis ?? []).map((s) => sviId(s.vlan));
+  if (device.type === 'l3switch' || device.type === 'switch') return (device.svis ?? []).map((s) => sviId(s.vlan));
   return [...device.interfaces.map((i) => i.index), ...(device.subinterfaces ?? []).map((s) => subifId(s.parent, s.vlan))];
 }
 
@@ -91,7 +91,8 @@ export function interfaceAddresses(device: Device): IfaceAddress[] {
     const prefix = maskText ? parseMask(maskText) : null;
     return mac && ip !== null && prefix !== null ? [{ index, mac, ip, prefix }] : [];
   };
-  if (device.type === 'l3switch') {
+  // Layer-3-Switch: VLAN-Interfaces; Layer-2-Switch: Verwaltungs-Interface («interface vlan 1»).
+  if (device.type === 'l3switch' || device.type === 'switch') {
     const mac = sviMac(device);
     return (device.svis ?? []).flatMap((s) => addr(sviId(s.vlan), mac, s.ip, s.mask));
   }
@@ -127,8 +128,10 @@ export function buildRoutes(device: Device): { routes: Route[]; unusable: number
   const routes = [...connected];
   const unusable: number[] = [];
 
-  if (DEVICE_SPECS[device.type].role === 'endpoint') {
-    const gateway = device.gateway ? parseIp(device.gateway) : null;
+  if (DEVICE_SPECS[device.type].role === 'endpoint' || device.type === 'switch') {
+    // Layer-2-Switch: «ip default-gateway» steht als Route 0.0.0.0/0 in den Routen.
+    const configured = device.type === 'switch' ? device.routes?.find((r) => parseMask(r.mask) === 0)?.gateway : device.gateway;
+    const gateway = configured ? parseIp(configured) : null;
     const towards = gateway !== null ? lookupRoute(connected, gateway) : undefined;
     if (gateway !== null && towards) {
       routes.push({ network: 0, prefix: 0, iface: towards.iface, via: gateway, kind: 'default' });

@@ -75,6 +75,10 @@ export interface NetInterface {
   vlan?: number;
   /** Nur Switch: Trunk-Port, überträgt alle VLANs mit 802.1Q-Tag (VLAN 1 ohne Tag). */
   trunk?: boolean;
+  /** Nur Switch, Trunk: erlaubte VLANs («switchport trunk allowed vlan»); fehlt = alle. */
+  allowedVlans?: number[];
+  /** Nur Switch, Trunk: VLAN ohne Tag («switchport trunk native vlan»); fehlt = 1. */
+  nativeVlan?: number;
   /** Nur Switch: Name der Zugriffsliste für eingehende Pakete («ip access-group NAME in»). */
   aclIn?: string;
   /** Administrativ abgeschaltet («shutdown»): Link ist aus, nichts wird gesendet oder empfangen. */
@@ -192,6 +196,12 @@ export interface Device {
   cli?: CliConfig;
   /** Nur Switches: Namen der VLANs («vlan 10» / «name Verwaltung»). */
   vlanNames?: VlanName[];
+  /**
+   * Nur Switches: angelegte VLANs ausser VLAN 1 («vlan 10»). Ein Switch leitet
+   * nur VLANs weiter, die er kennt. Fehlt das Feld (Dateien vor Version 1.2),
+   * gelten alle verwendeten VLANs als angelegt.
+   */
+  vlanDb?: number[];
   /** In diesem Rack (Bereich der Art «rack») eingebaut. */
   rack?: string;
   /** Nur Client-Gruppe: Anzahl Rechner, die sich den Anschluss teilen (alle per DHCP). */

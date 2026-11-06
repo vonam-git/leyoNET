@@ -149,6 +149,15 @@ function readSnapshots(v: unknown): Snapshot[] {
     });
 }
 
+/** Liste von VLAN-Nummern 1–4094, ohne Doppelte, sortiert. */
+function vlanList(v: unknown, path: string): number[] {
+  const list = arr(v, path);
+  if (list.length > 4094) throw new Invalid(path);
+  const set = new Set(list.map((x, i) => int(x, `${path}[${i}]`)));
+  for (const vlan of set) if (vlan < 1 || vlan > 4094) throw new Invalid(path);
+  return [...set].sort((a, b) => a - b);
+}
+
 /** Hebt ältere Formatversionen schrittweise auf die aktuelle an. */
 function migrate(data: Record<string, unknown>, _version: number): Record<string, unknown> {
   return data;
@@ -370,6 +379,12 @@ function readDevice(v: unknown, path: string): Device {
     if (io.trunk !== undefined) {
       if (typeof io.trunk !== 'boolean') throw new Invalid(`${p}.trunk`);
       if (io.trunk) iface.trunk = true;
+    }
+    if (io.allowedVlans !== undefined) iface.allowedVlans = vlanList(io.allowedVlans, `${p}.allowedVlans`);
+    if (io.nativeVlan !== undefined) {
+      const vlan = int(io.nativeVlan, `${p}.nativeVlan`);
+      if (vlan < 2 || vlan > 4094) throw new Invalid(`${p}.nativeVlan`);
+      iface.nativeVlan = vlan;
     }
     if (io.aclIn !== undefined) {
       const name = str(io.aclIn, `${p}.aclIn`);
@@ -629,6 +644,10 @@ function readDevice(v: unknown, path: string): Device {
         return { name, password: text(u.password, `${p}.users[${i}].password`, 64) };
       });
     }
+  }
+  if (o.vlanDb !== undefined) {
+    if (!isSwitchType(type)) throw new Invalid(`${path}.vlanDb`);
+    device.vlanDb = vlanList(o.vlanDb, `${path}.vlanDb`).filter((v) => v !== 1);
   }
   if (o.vlanNames !== undefined) {
     const seen = new Set<number>();

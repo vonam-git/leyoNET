@@ -33,6 +33,8 @@ Switch(config-ext-nacl)#
 
 `exit` geht eine Stufe zurück, `end` direkt zu `Router#`, `disable` zurück zu `Router>`.
 
+**Direkt wechseln (wie bei Cisco):** Ein Befehl des globalen Konfigurationsmodus funktioniert auch in jedem Untermodus. Er verlässt den Untermodus und wird global ausgeführt. So geht man von `vlan 10` direkt zu `vlan 20`, von `interface port1` direkt zu `interface port2` oder aus dem VLAN-Modus zu `interface port3`, ohne `exit`.
+
 ## Interface-Namen
 
 | Gerät | Namen |
@@ -41,6 +43,7 @@ Switch(config-ext-nacl)#
 | Router | `eth0`, `eth1` …; Subinterfaces `eth0.10` (VLAN 10); serielle Ports `serial0`, `serial1` … (auch `se0`, `s0/0/0`) |
 | Switch | `port1`, `port2` … (wie auf der Frontplatte); auch `gi0/1` oder `fa0/1`. SFP-Einschübe für Glasfaser zählen separat: `sfp1`, `sfp2` … (auch `te0/1`) |
 | Layer-3-Switch | wie Switch, dazu `vlan10` bzw. `interface vlan 10` |
+| Switch (Verwaltung) | `interface vlan 1` (oder ein anderes VLAN) als Verwaltungsadresse |
 
 ## Befehle
 
@@ -63,7 +66,8 @@ Switch(config-ext-nacl)#
 | `show ip arp` | ARP-Tabelle (nur in der Simulation) |
 | `show ip nat translations` | NAT-Tabelle (Router) |
 | `show mac address-table` | MAC-Tabelle (Switch, Simulation) |
-| `show vlan brief` | VLANs mit ihren Ports (Switch) |
+| `show vlan brief` | Angelegte VLANs mit ihren Ports; Ports in fehlenden VLANs als inaktiv (Switch) |
+| `show interfaces trunk` | Trunks mit Native VLAN, erlaubten und aktiven VLANs (Switch) |
 | `show interfaces status` | Ports mit Status und VLAN (Switch) |
 | `show spanning-tree` | Root-Bridge, Port-Rollen und -Zustände (Switch) |
 | `show access-lists` (auch `show ip access-lists`) | Zugriffslisten mit Ports und Treffern (Switch) |
@@ -189,8 +193,12 @@ Ein Netz wird nur angekündigt, wenn es in der Routingtabelle steht.
 ```
 spanning-tree                  ! Spanning Tree ein
 spanning-tree priority 4096
-vlan 10
+vlan 10                        ! VLAN anlegen
  name Verwaltung
+vlan 20                        ! direkt zum nächsten VLAN
+ name Schulung
+vlan 30,40-42                  ! mehrere auf einmal anlegen
+no vlan 42                     ! löschen (Ports darin werden inaktiv)
 !
 interface range port1-4
  switchport mode access
@@ -198,8 +206,16 @@ interface range port1-4
 !
 interface port24
  switchport mode trunk
+ switchport trunk allowed vlan 10,20      ! nur diese VLANs (add/remove/except/all/none)
+ switchport trunk native vlan 99          ! VLAN ohne Tag
  description Uplink zum Router
+!
+interface vlan 1               ! Verwaltungsadresse (Layer-2-Switch)
+ ip address 192.168.1.2/24
+ip default-gateway 192.168.1.1
 ```
+
+**VLAN-Datenbank:** Ein Switch leitet nur angelegte VLANs weiter, auch auf Trunks. `switchport access vlan 30` legt ein fehlendes VLAN an und meldet `% Access VLAN does not exist. Creating vlan 30` (wie Cisco). Ein Switch, der ein VLAN nur über Trunks weitergibt, braucht `vlan 30` trotzdem. Dateien vor Version 1.2 haben keine Liste; dort gelten alle verwendeten VLANs als angelegt, bis man das erste VLAN anlegt oder löscht.
 
 ### Zugriffslisten (Switch und Layer-3-Switch)
 

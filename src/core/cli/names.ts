@@ -45,7 +45,7 @@ export function parseIfaceName(device: Device, raw: string): ParsedIface | null 
   const vlan = /^(?:vlan|vl)(\d+)$/.exec(text);
   if (vlan) {
     const v = Number(vlan[1]);
-    return device.type === 'l3switch' && v >= 1 && v <= 4094 ? { kind: 'svi', vlan: v } : null;
+    return (device.type === 'l3switch' || device.type === 'switch') && v >= 1 && v <= 4094 ? { kind: 'svi', vlan: v } : null;
   }
   if (usesPortNames(device)) {
     const sfp = /^(?:sfp|te|tengigabitethernet)(?:0\/)?(\d+)$/.exec(text);

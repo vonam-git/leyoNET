@@ -46,6 +46,11 @@ export class Ospf {
       up: (index) => host.ifaceUp(index),
       ownPrefixes: () => new Set(host.interfaces().map((i) => `${formatIp(networkOf(i.ip, i.prefix))}/${i.prefix}`)),
       hello: (link, neighbors) => ({ mask: maskToText(link.prefixes[0]?.prefix ?? 0), helloInterval: OSPF_HELLO / 1000, deadInterval: OSPF_DEAD / 1000, neighbors }),
+      sameSubnet: (src, link) => {
+        const ip = parseIp(src);
+        const p = link.prefixes[0];
+        return ip !== null && !!p && formatIp(networkOf(ip, p.prefix)) === p.network;
+      },
       helloMatches: (hello, link) => parseMask(hello.mask) === link.prefixes[0]?.prefix && hello.helloInterval * 1000 === OSPF_HELLO,
       sendMulticast: (link, packet) => host.sendMulticast(link.index, OSPF_ALL_ROUTERS, packet),
       sendTo: (neighbor, link, packet) => host.sendIp(neighbor.ip, packet, { src: link.address, ttl: 1 }),

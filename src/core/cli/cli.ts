@@ -31,6 +31,14 @@ import {
   setSvi,
   removeSvi,
   setVlanName,
+  createVlan,
+  deleteVlan,
+  setTrunkAllowed,
+  setTrunkNative,
+  trunkAllows,
+  usedVlans,
+  vlanExists,
+  setDefaultGateway,
   addStaticNat,
   removeStaticNat,
   setBgp,
@@ -170,6 +178,7 @@ const ROUTERS: DeviceType[] = ['router', 'firewall'];
 const ROUTERS6: DeviceType[] = ['router', 'firewall', 'l3switch'];
 const SWITCHES: DeviceType[] = ['switch', 'l3switch'];
 const L3: DeviceType[] = ['router', 'firewall', 'l3switch'];
+const L3_AND_SWITCH: DeviceType[] = [...L3, 'switch'];
 const EXEC: CliMode[] = ['user', 'enable'];
 const ROUTER_MODES: CliMode[] = ['router-ospf', 'router-rip', 'router-bgp', 'router-ospf6', 'router-ripng'];
 const CONFIG_ALL: CliMode[] = ['config', 'if', 'vlan', 'line', 'acl', ...ROUTER_MODES];
@@ -350,6 +359,12 @@ function addressOn(call: Call, ip: string, mask: string): Partial<CliOutput> {
   );
 }
 
+/** Nur VLAN-Interfaces gewählt? («no shutdown» auf «interface vlan 1» ist dann ohne Wirkung, aber kein Fehler.) */
+function onlySvis(call: Call): boolean {
+  const targets = call.session.targets ?? [];
+  return targets.length > 0 && targets.every((id) => decodeIface(id).kind === 'svi');
+}
+
 function forPorts(call: Call, step: (t: Topology, port: number) => Result<Topology>): Partial<CliOutput> {
   const targets = call.session.targets ?? [];
   if (!targets.every(isPortTarget)) return ok(['% Not supported on this interface']);
@@ -438,6 +453,7 @@ const COMMANDS: Command[] = [
   { modes: EXEC, types: SWITCHES, syntax: 'show mac address-table', help: 'MAC forwarding table', run: ({ device, env }) => ok(showMacTable(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show vlan brief', help: 'VLAN summary', run: ({ device }) => ok(showVlanBrief(device)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show vlan', help: 'VLAN summary', run: ({ device }) => ok(showVlanBrief(device)) },
+  { modes: EXEC, types: SWITCHES, syntax: 'show interfaces trunk', help: 'Trunk ports with allowed and native VLANs', run: ({ device, env }) => ok(showTrunks(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show interfaces status', help: 'Port status', run: ({ device, env }) => ok(showInterfacesStatus(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show spanning-tree', help: 'Spanning tree state', run: ({ device, env }) => ok(showSpanningTree(device, env)) },
 
@@ -456,9 +472,9 @@ const COMMANDS: Command[] = [
   },
   {
     modes: ['config'],
-    types: ['l3switch'],
+    types: SWITCHES,
     syntax: 'interface vlan <vlan>',
-    help: 'Select or create a VLAN interface (SVI)',
+    help: 'Select or create a VLAN interface (SVI; on a layer-2 switch the management address)',
     run: (call) => enterInterface(call, `vlan${call.args[0]}`),
   },
   {
@@ -481,7 +497,15 @@ const COMMANDS: Command[] = [
   },
   {
     modes: ['config'],
-    types: ['l3switch'],
+    types: ['switch'],
+    syntax: 'ip default-gateway <ip>',
+    help: 'Gateway for the management address',
+    run: ({ args, device, env }) => apply(setDefaultGateway(env.topology, device.id, args[0]!)),
+  },
+  { modes: ['config'], types: ['switch'], syntax: 'no ip default-gateway', help: 'Remove the gateway', run: ({ device, env }) => apply(setDefaultGateway(env.topology, device.id, '')) },
+  {
+    modes: ['config'],
+    types: SWITCHES,
     syntax: 'no interface vlan <vlan>',
     help: 'Delete a VLAN interface',
     run: ({ args, device, env }) => apply(removeSvi(env.topology, device.id, Number(args[0]))),
@@ -508,16 +532,25 @@ const COMMANDS: Command[] = [
   {
     modes: ['config'],
     types: SWITCHES,
-    syntax: 'vlan <vlan>',
-    help: 'Create or select a VLAN',
-    run: ({ args, session }) => ({ session: { ...session, mode: 'vlan', vlan: Number(args[0]) } }),
+    syntax: 'vlan <word>',
+    help: 'Create or select a VLAN (several at once: 10,20,30-35)',
+    run: ({ args, device, env, session }) => {
+      const list = parseVlanList(args[0]!);
+      if (!list) return ok([`% Invalid VLAN list: ${args[0]}`]);
+      if (list.length > 1) return applyAll(env.topology, list.map((v) => (t: Topology) => createVlan(t, device.id, v)));
+      const vlan = list[0]!;
+      const next: CliSession = { device: session.device, mode: 'vlan', vlan, ...(session.remote ? { remote: true } : {}) };
+      if (vlanExists(device, vlan) && device.vlanDb) return { session: next };
+      const created = createVlan(env.topology, device.id, vlan);
+      return created.ok ? { topology: created.value, session: next } : { lines: [errorLine(created.error)] };
+    },
   },
   {
     modes: ['config'],
     types: SWITCHES,
     syntax: 'no vlan <vlan>',
-    help: 'Remove the VLAN name',
-    run: ({ args, device, env }) => apply(setVlanName(env.topology, device.id, Number(args[0]), '')),
+    help: 'Delete the VLAN (its ports become inactive)',
+    run: ({ args, device, env }) => apply(deleteVlan(env.topology, device.id, Number(args[0]))),
   },
   {
     modes: ['config'],
@@ -688,9 +721,9 @@ const COMMANDS: Command[] = [
   { modes: ['if'], types: ROUTERS6, syntax: 'no ipv6 nd managed-config-flag', help: 'Addresses by SLAAC (no M flag)', run: (call) => forLinks6(call, (t, id) => setInterfaceDhcp6(t, call.device.id, id, false)) },
   { modes: ['if'], types: ROUTERS6, syntax: 'ipv6 nd ra dns server <ip6>', help: 'DNS server in router advertisements (RDNSS) and DHCPv6', run: (call) => forLinks6(call, (t, id) => setInterfaceDns6(t, call.device.id, id, call.args[0]!)) },
   { modes: ['if'], types: ROUTERS6, syntax: 'no ipv6 nd ra dns server', help: 'No DNS server in router advertisements', run: (call) => forLinks6(call, (t, id) => setInterfaceDns6(t, call.device.id, id, '')) },
-  { modes: ['if'], types: L3, syntax: 'ip address <cidr>', help: 'Address with prefix length, e.g. 192.168.1.1/24', run: (call) => addressOn(call, ...splitCidr(call.args[0]!)) },
-  { modes: ['if'], types: L3, syntax: 'ip address <ip> <mask>', help: 'Address and netmask', run: (call) => addressOn(call, call.args[0]!, call.args[1]!) },
-  { modes: ['if'], types: L3, syntax: 'no ip address', help: 'Remove the IP address', run: (call) => addressOn(call, '', '') },
+  { modes: ['if'], types: L3_AND_SWITCH, syntax: 'ip address <cidr>', help: 'Address with prefix length, e.g. 192.168.1.1/24', run: (call) => addressOn(call, ...splitCidr(call.args[0]!)) },
+  { modes: ['if'], types: L3_AND_SWITCH, syntax: 'ip address <ip> <mask>', help: 'Address and netmask', run: (call) => addressOn(call, call.args[0]!, call.args[1]!) },
+  { modes: ['if'], types: L3_AND_SWITCH, syntax: 'no ip address', help: 'Remove the IP address', run: (call) => addressOn(call, '', '') },
   {
     modes: ['if'],
     types: L3,
@@ -736,13 +769,38 @@ const COMMANDS: Command[] = [
   },
   { modes: ['if'], types: L3, syntax: 'ip ospf cost <num>', help: 'OSPF cost of this interface (1–65535)', run: (call) => forPorts(call, (t, p) => setOspfCost(t, call.device.id, p, Number(call.args[0]))) },
   { modes: ['if'], types: L3, syntax: 'no ip ospf cost', help: 'Default OSPF cost (10)', run: (call) => forPorts(call, (t, p) => setOspfCost(t, call.device.id, p, null)) },
-  { modes: ['if'], syntax: 'shutdown', help: 'Disable the interface', run: (call) => forPorts(call, (t, p) => setInterfaceShutdown(t, call.device.id, p, true)) },
-  { modes: ['if'], syntax: 'no shutdown', help: 'Enable the interface', run: (call) => forPorts(call, (t, p) => setInterfaceShutdown(t, call.device.id, p, false)) },
+  { modes: ['if'], syntax: 'shutdown', help: 'Disable the interface', run: (call) => (onlySvis(call) ? ok(['% VLAN interfaces stay up here']) : forPorts(call, (t, p) => setInterfaceShutdown(t, call.device.id, p, true))) },
+  { modes: ['if'], syntax: 'no shutdown', help: 'Enable the interface', run: (call) => (onlySvis(call) ? ok() : forPorts(call, (t, p) => setInterfaceShutdown(t, call.device.id, p, false))) },
   { modes: ['if'], syntax: 'description <text>', help: 'Interface description', run: (call) => forPorts(call, (t, p) => setInterfaceDescription(t, call.device.id, p, call.args[0]!)) },
   { modes: ['if'], syntax: 'no description', help: 'Remove the description', run: (call) => forPorts(call, (t, p) => setInterfaceDescription(t, call.device.id, p, '')) },
   { modes: ['if'], types: SWITCHES, syntax: 'switchport mode access', help: 'Access port (one VLAN, untagged)', run: (call) => forPorts(call, (t, p) => setPortTrunk(t, call.device.id, p, false)) },
   { modes: ['if'], types: SWITCHES, syntax: 'switchport mode trunk', help: 'Trunk port (all VLANs, 802.1Q)', run: (call) => forPorts(call, (t, p) => setPortTrunk(t, call.device.id, p, true)) },
-  { modes: ['if'], types: SWITCHES, syntax: 'switchport access vlan <vlan>', help: 'VLAN of this access port', run: (call) => forPorts(call, (t, p) => setPortVlan(t, call.device.id, p, Number(call.args[0]))) },
+  {
+    modes: ['if'],
+    types: SWITCHES,
+    syntax: 'switchport access vlan <vlan>',
+    help: 'VLAN of this access port',
+    run: (call) => {
+      const vlan = Number(call.args[0]);
+      const out = forPorts(call, (t, p) => setPortVlan(t, call.device.id, p, vlan));
+      // Wie Cisco: Ein unbekanntes VLAN wird beim Zuweisen angelegt.
+      return !vlanExists(call.device, vlan) && out.topology ? { ...out, lines: [`% Access VLAN does not exist. Creating vlan ${vlan}`, ...(out.lines ?? [])] } : out;
+    },
+  },
+  {
+    modes: ['if'],
+    types: SWITCHES,
+    syntax: 'switchport trunk allowed vlan <text>',
+    help: 'VLANs on this trunk: list (10,20,30-35), add …, remove …, except …, all, none',
+    run: (call) => forPorts(call, (t, p) => {
+      const current = getDevice(t, call.device.id)?.interfaces[p]?.allowedVlans ?? null;
+      const next = allowedVlans(call.args[0]!, current);
+      return next === undefined ? { ok: false, error: { code: 'invalidVlan' } } : setTrunkAllowed(t, call.device.id, p, next);
+    }),
+  },
+  { modes: ['if'], types: SWITCHES, syntax: 'no switchport trunk allowed vlan', help: 'All VLANs on this trunk', run: (call) => forPorts(call, (t, p) => setTrunkAllowed(t, call.device.id, p, null)) },
+  { modes: ['if'], types: SWITCHES, syntax: 'switchport trunk native vlan <vlan>', help: 'VLAN sent without a tag on this trunk', run: (call) => forPorts(call, (t, p) => setTrunkNative(t, call.device.id, p, Number(call.args[0]))) },
+  { modes: ['if'], types: SWITCHES, syntax: 'no switchport trunk native vlan', help: 'Native VLAN 1', run: (call) => forPorts(call, (t, p) => setTrunkNative(t, call.device.id, p, 1)) },
   { modes: ['if'], types: SWITCHES, syntax: 'no switchport access vlan', help: 'Back to VLAN 1', run: (call) => forPorts(call, (t, p) => setPortVlan(t, call.device.id, p, 1)) },
   { modes: ['if'], types: SWITCHES, syntax: 'spanning-tree portfast', help: 'Ports with end devices forward at once (always on here)', run: () => ok() },
   // --- Zugriffslisten (Switches) ---------------------------------------------
@@ -1262,6 +1320,12 @@ export function execute(session: CliSession, line: string, env: CliEnv): CliOutp
   const candidates = available(device, session.mode);
   const results = candidates.map((c) => matchCommand(c, tokens, trimmed));
   const matches = results.flatMap((r) => (r.match ? [r.match] : []));
+  // Wie bei Cisco: Ein globaler Befehl in einem Untermodus (z.B. «vlan 20» im VLAN-Modus,
+  // «interface port2» im Interface-Modus) verlässt den Untermodus und wird global ausgeführt.
+  if (matches.length === 0 && CONFIG_ALL.includes(session.mode) && session.mode !== 'config') {
+    const global: CliSession = { device: session.device, mode: 'config', ...(session.remote ? { remote: true } : {}) };
+    if (available(device, 'config').some((c) => matchCommand(c, tokens, trimmed).match)) return execute(global, line, env);
+  }
   if (matches.length === 0) {
     const promptText = prompt(env.topology, session);
     if (results.some((r) => r.incomplete && r.failedAt === tokens.length)) return { session, lines: ['% Incomplete command.'] };
@@ -1545,12 +1609,65 @@ function showMacTable(device: Device, env: CliEnv): string[] {
   return [...table(['Vlan', 'Mac Address', 'Type', 'Ports'], rows), `Total Mac Addresses: ${rows.length}`];
 }
 
+/** Angelegte VLANs (Datenbank; bei älteren Dateien alle verwendeten). */
 export function vlansOf(device: Device): number[] {
-  const set = new Set<number>([1]);
-  for (const p of device.interfaces) if (!p.trunk) set.add(p.vlan ?? 1);
-  for (const v of device.vlanNames ?? []) set.add(v.vlan);
-  for (const s of device.svis ?? []) set.add(s.vlan);
-  return [...set].sort((a, b) => a - b);
+  return [1, ...(device.vlanDb ?? usedVlans(device))];
+}
+
+/** «10,20,30-35» → [10, 20, 30, …, 35]; null bei Fehlern. */
+export function parseVlanList(text: string): number[] | null {
+  const result: number[] = [];
+  for (const part of text.split(',')) {
+    const m = /^\s*(\d{1,4})(?:\s*-\s*(\d{1,4}))?\s*$/.exec(part);
+    if (!m) return null;
+    const from = Number(m[1]);
+    const to = m[2] === undefined ? from : Number(m[2]);
+    if (from < 1 || to > 4094 || to < from) return null;
+    for (let v = from; v <= to; v++) result.push(v);
+  }
+  return [...new Set(result)].sort((a, b) => a - b);
+}
+
+/** «switchport trunk allowed vlan …»: Liste, add, remove, except, all, none. undefined = ungültig, null = alle. */
+export function allowedVlans(spec: string, current: number[] | null): number[] | null | undefined {
+  const [word = '', ...rest] = spec.trim().toLowerCase().split(/\s+/);
+  const listText = rest.join('');
+  if (word === 'all') return null;
+  if (word === 'none') return [];
+  const all = () => Array.from({ length: 4094 }, (_, i) => i + 1);
+  if (word === 'add' || word === 'remove' || word === 'except') {
+    const list = parseVlanList(listText);
+    if (!list) return undefined;
+    if (word === 'except') return all().filter((v) => !list.includes(v));
+    const base = current ?? all();
+    const next = word === 'add' ? [...new Set([...base, ...list])] : base.filter((v) => !list.includes(v));
+    return next.length === 4094 ? null : next.sort((a, b) => a - b);
+  }
+  return parseVlanList([word, ...rest].join('')) ?? undefined;
+}
+
+/** Kurze Schreibweise einer VLAN-Liste: 10,20,30-35. */
+export function formatVlanList(list: number[]): string {
+  const parts: string[] = [];
+  for (let i = 0; i < list.length; ) {
+    let j = i;
+    while (j + 1 < list.length && list[j + 1] === list[j]! + 1) j++;
+    parts.push(j > i ? `${list[i]}-${list[j]}` : String(list[i]));
+    i = j + 1;
+  }
+  return parts.join(',') || 'none';
+}
+
+function showTrunks(device: Device, env: CliEnv): string[] {
+  const trunks = device.interfaces.filter((p) => p.trunk);
+  if (!trunks.length) return ['(no trunk ports)'];
+  const rows = trunks.map((p) => {
+    const up = linkUpAt(env.topology, { device: device.id, iface: p.index });
+    const allowed = p.allowedVlans ? formatVlanList(p.allowedVlans) : '1-4094';
+    const active = vlansOf(device).filter((v) => trunkAllows(p, v));
+    return [cliIfaceName(device, p.index), up && !p.shutdown ? 'trunking' : 'not-connected', String(p.nativeVlan ?? 1), allowed, formatVlanList(active)];
+  });
+  return table(['Port', 'Status', 'Native', 'Allowed', 'Allowed and active'], rows);
 }
 
 function vlanName(device: Device, vlan: number): string {
@@ -1567,8 +1684,16 @@ function showVlanBrief(device: Device): string[] {
       .map((p) => cliIfaceName(device, p.index))
       .join(', '),
   ]);
+  // Ports in einem VLAN, das nicht angelegt ist, sind inaktiv.
+  const missing = [...new Set(device.interfaces.filter((p) => !p.trunk && !vlanExists(device, p.vlan ?? 1)).map((p) => p.vlan!))];
+  const lines = table(['VLAN', 'Name', 'Status', 'Ports'], rows);
+  for (const v of missing) {
+    const ports = device.interfaces.filter((p) => !p.trunk && p.vlan === v).map((p) => cliIfaceName(device, p.index));
+    lines.push(`% VLAN ${v} does not exist: ${ports.join(', ')} inactive`);
+  }
   const trunks = device.interfaces.filter((p) => p.trunk).map((p) => cliIfaceName(device, p.index));
-  return [...table(['VLAN', 'Name', 'Status', 'Ports'], rows), ...(trunks.length ? ['', `Trunk ports (all VLANs): ${trunks.join(', ')}`] : [])];
+  if (trunks.length) lines.push('', `Trunk ports: ${trunks.join(', ')} (show interfaces trunk)`);
+  return lines;
 }
 
 function showInterfacesStatus(device: Device, env: CliEnv): string[] {
@@ -1612,7 +1737,10 @@ export function runningConfig(device: Device): string[] {
       lines.push('spanning-tree');
       if (device.stpPriority !== undefined) lines.push(`spanning-tree priority ${device.stpPriority}`);
     }
-    for (const v of device.vlanNames ?? []) lines.push('!', `vlan ${v.vlan}`, ` name ${v.name}`);
+    for (const v of vlansOf(device).slice(1)) {
+      const name = device.vlanNames?.find((n) => n.vlan === v)?.name;
+      lines.push('!', `vlan ${v}`, ...(name ? [` name ${name}`] : []));
+    }
     for (const acl of device.acls ?? []) lines.push('!', `ip access-list extended ${acl.name}`, ...acl.rules.map((r) => ` ${formatAclRule(r)}`));
   }
   lines.push('!');
@@ -1620,7 +1748,11 @@ export function runningConfig(device: Device): string[] {
     lines.push(`interface ${cliIfaceName(device, p.index)}`);
     if (p.description) lines.push(` description ${p.description}`);
     if (usesPortNames(device)) {
-      if (p.trunk) lines.push(' switchport mode trunk');
+      if (p.trunk) {
+        lines.push(' switchport mode trunk');
+        if (p.nativeVlan) lines.push(` switchport trunk native vlan ${p.nativeVlan}`);
+        if (p.allowedVlans) lines.push(` switchport trunk allowed vlan ${formatVlanList(p.allowedVlans)}`);
+      }
       else if (p.vlan && p.vlan !== 1) lines.push(' switchport mode access', ` switchport access vlan ${p.vlan}`);
       if (p.aclIn) lines.push(` ip access-group ${p.aclIn} in`);
     } else {
@@ -1651,7 +1783,11 @@ export function runningConfig(device: Device): string[] {
     if (s.dns6) lines.push(` ipv6 nd ra dns server ${s.dns6}`);
     lines.push('!');
   }
-  for (const r of device.routes ?? []) {
+  if (device.type === 'switch') {
+    const gw = device.routes?.find((r) => parseMask(r.mask) === 0)?.gateway;
+    if (gw) lines.push(`ip default-gateway ${gw}`, '!');
+  }
+  for (const r of device.type === 'switch' ? [] : (device.routes ?? [])) {
     const prefix = parseMask(r.mask);
     const via = r.gateway ?? (r.iface !== undefined ? cliIfaceName(device, r.iface) : '');
     lines.push(`ip route ${r.network}/${prefix} ${via}`);

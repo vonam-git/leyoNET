@@ -21,15 +21,16 @@ class SviRouter extends RouterNode {
     return true;
   }
 
-  /** «no ip routing»: Der Switch ist nur über seine SVIs erreichbar, leitet aber nicht weiter. */
+  /** «no ip routing» und Layer-2-Switch: nur über die SVIs erreichbar, leitet aber nicht weiter. */
   protected override outbound(inIface: IfaceAddress, outIface: IfaceAddress, packet: Ipv4Packet): Ipv4Packet | null {
-    if (this.ctx.device()?.ipRouting === false) return null;
+    const device = this.ctx.device();
+    if (device?.ipRouting === false || device?.type === 'switch') return null;
     return super.outbound(inIface, outIface, packet);
   }
 }
 
 /**
- * Layer-3-Switch: ein lernender Switch mit VLANs und Spanning Tree, der
+ * Layer-3-Switch (und Layer-2-Switch mit Verwaltungs-Interface): ein lernender Switch mit VLANs und Spanning Tree, der
  * zusätzlich über VLAN-Interfaces (SVIs) zwischen den VLANs routet.
  */
 export class L3SwitchNode extends SwitchNode {

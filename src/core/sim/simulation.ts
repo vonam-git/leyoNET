@@ -333,9 +333,9 @@ export class Simulation {
     if (!device) return undefined;
     const ctx = this.#context(id);
     const node: SimNode =
-      device.type === 'switch' || device.type === 'accesspoint'
+      device.type === 'accesspoint'
         ? new SwitchNode(ctx)
-        : device.type === 'l3switch'
+        : device.type === 'l3switch' || device.type === 'switch'
           ? new L3SwitchNode(ctx)
         : device.type === 'modem'
           ? new ModemNode(ctx)

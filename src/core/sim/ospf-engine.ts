@@ -17,6 +17,8 @@ export interface OspfNeighbor {
   state: OspfNeighborState;
   /** Zeitpunkt des letzten Hellos. */
   lastHello: number;
+  /** Seit wann der Datenbankabgleich läuft (für Wiederholungen bei verlorenen Paketen). */
+  since?: number;
 }
 
 export interface OspfState {
@@ -63,6 +65,8 @@ export interface OspfFamily<R> {
   sendTo(neighbor: OspfNeighbor, link: OspfLink, packet: OspfPacket): void;
   /** Netze aus Redistribution (ohne die eigenen OSPF-Netze). */
   externals(): Prefix[];
+  /** Liegt die Absenderadresse eines Hellos im Netz des Anschlusses? (OSPFv2; OSPFv3 nutzt Link-Local) */
+  sameSubnet?(src: string, link: OspfLink): boolean;
   /** Präfix im LSA: OSPFv2 Netz und Maske, OSPFv3 Netz und Präfixlänge. */
   encode(p: Prefix): { id: string; data: string };
   decode(link: OspfLsa['links'][number]): Prefix | null;
@@ -128,6 +132,7 @@ export class OspfEngine<R> {
         return;
       }
       this.#checkDead();
+      this.#retransmit();
       this.#sendHellos();
       this.#originate();
       this.#ctx.schedule(OSPF_HELLO, tick);
@@ -161,6 +166,16 @@ export class OspfEngine<R> {
     if (changed) this.#originate();
   }
 
+  /** Hängt ein Abgleich (DBD, LSR oder LSU verloren), wird er nach zwei Hello-Intervallen wiederholt. */
+  #retransmit() {
+    const now = this.#ctx.now;
+    for (const n of this.#neighbors.values()) {
+      if (n.state !== 'exchange' || now - (n.since ?? now) < 2 * OSPF_HELLO) continue;
+      n.since = now;
+      this.#sendDbd(n);
+    }
+  }
+
   receive(src: string, ospf: OspfPacket, index: number) {
     if ((ospf.version ?? 2) !== this.family.version) return;
     const link = this.family.links().find((l) => l.index === index);
@@ -182,6 +197,10 @@ export class OspfEngine<R> {
   #onHello(src: string, ospf: OspfPacket, link: OspfLink, key: string) {
     const hello = ospf.hello;
     if (!hello) return;
+    if (this.family.sameSubnet && !this.family.sameSubnet(src, link)) {
+      this.#say('subnetMismatch', { neighbor: ospf.routerId, ip: src });
+      return;
+    }
     if (!this.family.helloMatches(hello, link)) {
       this.#say('helloMismatch', { neighbor: ospf.routerId, mask: hello.mask });
       return;
@@ -200,6 +219,7 @@ export class OspfEngine<R> {
     }
     if (neighbor.state === 'init') {
       neighbor.state = 'exchange';
+      neighbor.since = this.#ctx.now;
       this.#sendDbd(neighbor);
     }
   }
@@ -221,6 +241,7 @@ export class OspfEngine<R> {
   #onDbd(neighbor: OspfNeighbor, ospf: OspfPacket) {
     if (neighbor.state === 'init') {
       neighbor.state = 'exchange';
+      neighbor.since = this.#ctx.now;
       this.#sendDbd(neighbor);
     }
     const wanted = (ospf.headers ?? []).filter((h) => {
@@ -243,7 +264,9 @@ export class OspfEngine<R> {
       const mine = this.#lsdb.get(key);
       if (lsa.advertisingRouter === this.routerId()) {
         // Eigenes LSA mit höherer Nummer (nach einem Neustart): mit noch höherer Nummer neu ausgeben.
-        if (mine && lsa.seq >= mine.seq) {
+        // Kommt das aktuelle LSA nur über einen zweiten Weg zurück (gleiche Nummer), ist nichts zu tun;
+        // sonst gäbe es mit mehreren Wegen einen endlosen LSU-Sturm.
+        if (!mine || lsa.seq > mine.seq) {
           this.#seq = lsa.seq + 1;
           this.#lsdb.delete(key);
           this.#originate();
@@ -376,7 +399,7 @@ export class OspfEngine<R> {
   state(): OspfState {
     return {
       routerId: this.routerId(),
-      neighbors: [...this.#neighbors.values()].map((n) => ({ ...n })),
+      neighbors: [...this.#neighbors.values()].map(({ since: _since, ...n }) => ({ ...n })),
       lsdb: [...this.#lsdb.values()].map((l) => ({ type: l.type, advertisingRouter: l.advertisingRouter, seq: l.seq, links: l.links.length })),
     };
   }
