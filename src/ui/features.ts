@@ -62,6 +62,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('net.firewall', 'network', 3),
   f('net.acl', 'network', 4),
   f('net.loopback', 'network', 3),
+  f('net.lag', 'network', 4),
   f('net.vpn', 'network', 4),
   f('net.ipv6', 'network', 4),
   f('net.dsLite', 'network', 4),
@@ -153,6 +154,7 @@ export function usedFeatures(t: Topology): string[] {
       if (i.nat) used.add('net.nat');
       if (i.dhcpRelay) used.add('net.dhcpRelay');
       if (i.aclIn) used.add('net.acl');
+      if (i.channel) used.add('net.lag');
       if (i.serial) used.add('medium.serial');
       if (i.cgnat) used.add('net.cgnat');
       if (i.sfp) used.add('medium.fiber');

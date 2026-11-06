@@ -5,6 +5,8 @@
   import { interfaceLabel } from '../labels';
   import { editor } from '../state/editor.svelte';
   import { ui } from '../state/ui.svelte';
+  import { simStore } from '../state/sim.svelte';
+  import type { ChannelMode } from '../../core';
 
   /** Switch: Spanning Tree (auch während der Simulation umschaltbar) und VLAN pro Port. */
   let { device }: { device: Device } = $props();
@@ -25,6 +27,16 @@
   function setVlan(index: number, value: string) {
     const vlan = Number(value);
     if (Number.isInteger(vlan) && vlan >= 1 && vlan <= 4094) editor.setPortVlan(device.id, index, vlan);
+  }
+
+  /** Port-Channel (Link Aggregation): nur Switch und Layer-3-Switch. */
+  const canChannel = $derived((device.type === 'switch' || device.type === 'l3switch') && ui.has('net.lag'));
+  const live = $derived((simStore.tick, editor.acting ? simStore.sim?.getDeviceState(device.id).channels : undefined));
+  const channelStatus = (port: number) => live?.flatMap((c) => c.ports).find((p) => p.port === port);
+
+  function setChannel(index: number, value: string, mode: ChannelMode) {
+    const text = value.trim();
+    report(editor.setPortChannel(device.id, index, text ? Number(text) : null, mode));
   }
 
   /** VLAN-Datenbank: angelegte VLANs mit Namen. */
@@ -127,6 +139,7 @@
       <th scope="col">{t('switch.port')}</th>
       <th scope="col">{t('switch.vlan')}</th>
       <th scope="col">{t('switch.trunk')}</th>
+      {#if canChannel}<th scope="col" title={t('switch.channelHint')}>{t('switch.channel')}</th>{/if}
       <th scope="col"><span class="visually-hidden">{t('switch.peer')}</span></th>
     </tr>
   </thead>
@@ -180,6 +193,28 @@
             onchange={(e) => editor.setPortTrunk(device.id, iface.index, e.currentTarget.checked)}
           />
         </td>
+        {#if canChannel}
+          {@const status = channelStatus(iface.index)}
+          <td class="channel">
+            <input
+              class="po"
+              inputmode="numeric"
+              value={iface.channel ?? ''}
+              placeholder="–"
+              disabled={!editor.editable}
+              aria-label={t('switch.channelOf', { port: interfaceLabel(device, iface.index) })}
+              onchange={(e) => setChannel(iface.index, e.currentTarget.value, iface.channelMode ?? 'active')}
+            />
+            {#if iface.channel}
+              <select value={iface.channelMode ?? 'active'} disabled={!editor.editable} aria-label={t('switch.channelModeOf', { port: interfaceLabel(device, iface.index) })} onchange={(e) => setChannel(iface.index, String(iface.channel), e.currentTarget.value as ChannelMode)}>
+                <option value="active">{t('switch.channelMode.active')}</option>
+                <option value="passive">{t('switch.channelMode.passive')}</option>
+                <option value="on">{t('switch.channelMode.on')}</option>
+              </select>
+              {#if status}<span class="po-status {status.status}" title={status.reason ? t(`switch.channelReason.${status.reason}`) : ''}>{t(`switch.channelStatus.${status.status}`)}</span>{/if}
+            {/if}
+          </td>
+        {/if}
         <td class="muted">{peerOf(iface.index)}</td>
       </tr>
     {/each}
@@ -226,6 +261,33 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 4px;
+  }
+  .channel {
+    white-space: nowrap;
+  }
+  .po {
+    width: 2.6em;
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 2px 4px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .po-status {
+    font-size: 0.7rem;
+    margin-left: 4px;
+    padding: 0 4px;
+    border-radius: 3px;
+  }
+  .po-status.bundled {
+    color: #15803d;
+    background: color-mix(in srgb, #16a34a 15%, transparent);
+  }
+  .po-status.suspended {
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
   }
   .missing {
     color: var(--danger);

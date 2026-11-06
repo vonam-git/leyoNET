@@ -91,6 +91,12 @@ no firewall stateful        ! zustandslos
 show firewall               ! Regeln mit Trefferzählern
 ```
 
+## Mehrere Kabel und Port-Channel
+
+Zwischen zwei Geräten dürfen mehrere Kabel liegen; die Fläche zeichnet sie nebeneinander. Zwischen Switches ist das ohne weitere Einstellung eine **Schleife**: Spanning Tree blockiert ein Kabel, ohne STP zeigt die Simulation den Broadcast-Sturm.
+
+Ab Profil 4 (oder einzeln «Port-Channel») bündelt man die Kabel zu einem **Port-Channel** (Link Aggregation): Im Reiter **Switching** auf beiden Switches dieselbe Channel-Nummer bei den Ports eintragen, Modus «LACP aktiv» (oder auf einer Seite passiv). Die Switches handeln das Bündel mit LACP aus, Spanning Tree sieht es als einen Port. Fällt ein Kabel aus, läuft alles über die übrigen. Ports mit abweichender VLAN-/Trunk-Einstellung, zu einem anderen Switch oder ohne Partner bleiben ausgestellt. Befehlszeile: `channel-group 1 mode active`, `interface port-channel 1`, `show etherchannel summary`. Demo «Port-Channel mit LACP».
+
 ## Zugriffslisten (ACL) auf Switches
 
 Ab Profil 4 (oder einzeln «Zugriffslisten (ACL)») hat jeder Switch im Fenster **Erweitert … → ACL** benannte Zugriffslisten. Eine Liste wirkt erst, wenn sie einem Port zugewiesen ist; dann prüft der Switch jedes IP-Paket, das an diesem Port **hereinkommt**. Die erste passende Regel gilt, am Ende steht ein **implizites Verweigern**. Anders als die Firewall ist die ACL **zustandslos**: Antworten prüft der Switch am Port, über den sie hereinkommen. ARP, Spanning Tree und IPv6 Neighbor Discovery gehen immer durch. In der Simulation zählt der Reiter die Treffer, die Konsole des Switches meldet verworfene Pakete.

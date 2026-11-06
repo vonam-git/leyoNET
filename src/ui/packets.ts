@@ -75,6 +75,7 @@ export function infoOf(frame: EthernetFrame): string {
     return tag + (gratuitous ? t('packets.arp.gratuitous', { ...p }) : t(`packets.arp.${p.op}`, { ...p }));
   }
   if (p.kind === 'stp') return t('packets.stp', { root: p.rootId, cost: p.cost, bridge: p.bridgeId });
+  if (p.kind === 'lacp') return t('packets.lacp', { system: p.actorSystem.toLowerCase(), key: p.actorKey, port: p.actorPort, partner: p.partnerSystem === '00:00:00:00:00:00' ? '–' : p.partnerSystem.toLowerCase() });
   if (p.kind === 'ppp') return `${p.protocol.toUpperCase()} ${p.code}${p.ip ? ` ${p.ip}` : ''}${p.magic !== undefined ? ` magic=${hex(p.magic)}` : ''}`;
   if (p.kind === 'link') {
     const fields = Object.entries(p.fields ?? {})

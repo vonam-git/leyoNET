@@ -33,6 +33,7 @@ import type {
   PortForward,
   StaticRoute,
   SubInterface,
+  ChannelMode,
   Loopback,
   Svi,
   Topology,
@@ -49,6 +50,7 @@ import type {
   StaticNat,
   VlanDef,
 } from './types';
+import { CHANNEL_MODES, MAX_CHANNEL } from './types';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
 
 export const MAX_NAME_LENGTH = 32;
@@ -73,6 +75,7 @@ export type ErrorCode =
   | 'duplicateForward'
   | 'notASwitch'
   | 'invalidVlan'
+  | 'invalidChannel'
   | 'defaultVlan'
   | 'stpNeededForLoop'
   | 'invalidPriority'
@@ -448,8 +451,7 @@ export function connect(t: Topology, aId: string, bId: string, medium: Medium = 
   const b = getDevice(t, bId);
   if (!a || !b) return fail('unknownDevice');
   if (a.id === b.id) return fail('sameDevice');
-  const direct = cablesOf(t, a.id).some((c) => otherEnd(c, a.id).device === b.id);
-  if (direct) return fail('alreadyConnected', { a: a.name, b: b.name });
+  // Mehrere Kabel zwischen denselben Geräten sind erlaubt: Port-Channel (Link Aggregation) oder Schleifen.
   const mediumIssue = checkMedium(a, b, medium);
   if (mediumIssue) return fail(mediumIssue);
   // Schleifen zwischen Switches sind erlaubt: Ohne Spanning Tree zeigt die Simulation den Broadcast-Sturm.
@@ -685,6 +687,31 @@ export function setTrunkNative(t: Topology, id: string, index: number, vlan: num
   if (!device.value.interfaces[index]) return fail('unknownInterface');
   if (!validVlanId(vlan)) return fail('invalidVlan');
   return ok(updatePort(t, id, index, (i) => (vlan === 1 ? without(i, 'nativeVlan') : { ...i, nativeVlan: vlan })));
+}
+
+/**
+ * Port einem Port-Channel zuweisen («channel-group 1 mode active») oder ihn
+ * herauslösen (null). Alle Ports eines Channels sollten gleich eingestellt sein
+ * (VLAN bzw. Trunk); sonst stellt die Simulation abweichende Ports aus.
+ */
+export function setPortChannel(t: Topology, id: string, index: number, channel: number | null, mode: ChannelMode = 'active'): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  if (device.value.type === 'accesspoint') return fail('notASwitch');
+  if (!device.value.interfaces[index]) return fail('unknownInterface');
+  if (channel !== null && (!Number.isInteger(channel) || channel < 1 || channel > MAX_CHANNEL)) return fail('invalidChannel', { max: MAX_CHANNEL });
+  if (!CHANNEL_MODES.includes(mode)) return fail('invalidChannel', { max: MAX_CHANNEL });
+  return ok(
+    updatePort(t, id, index, (i) => {
+      const { channel: _c, channelMode: _m, ...base } = i;
+      return channel === null ? base : { ...base, channel, ...(mode !== 'active' ? { channelMode: mode } : {}) };
+    }),
+  );
+}
+
+/** Ports eines Port-Channels (Index aufsteigend). */
+export function channelMembers(device: Device, channel: number): number[] {
+  return device.interfaces.filter((i) => i.channel === channel).map((i) => i.index);
 }
 
 /** Darf ein Trunk dieses VLAN übertragen? */

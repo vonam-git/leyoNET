@@ -6,6 +6,7 @@
   import { editor } from '../state/editor.svelte';
   import { simStore } from '../state/sim.svelte';
   import { TAG_HEX } from '../tags';
+  import { parallelOffset } from '../cableGeometry';
 
   let { cable, a, b, faded = false }: { cable: Cable; a: Device; b: Device; faded?: boolean } = $props();
 
@@ -13,6 +14,10 @@
   const LED_DISTANCE = 40;
 
   const medium = $derived(mediumOf(cable));
+  /** Endpunkte, bei mehreren Kabeln zwischen denselben Geräten parallel versetzt. */
+  const shift = $derived(parallelOffset(editor.topology, cable, a.position, b.position));
+  const pa = $derived({ x: a.position.x + shift.x, y: a.position.y + shift.y });
+  const pb = $derived({ x: b.position.x + shift.x, y: b.position.y + shift.y });
   const status = $derived(linkStatus(editor.topology, cable));
 
   /** Abstand der Port-Beschriftung vom Gerätemittelpunkt, ausserhalb des Gerätenamens. */
@@ -25,6 +30,7 @@
     const base = interfaceLabel(device, index, short);
     const iface = device.interfaces[index];
     if (!isSwitchType(device.type) || !iface) return base;
+    if (iface.channel) return `${base} · Po${iface.channel}`;
     if (iface.trunk) return `${base} · ${t('switch.trunkShort')}`;
     return iface.vlan ? `${base} · V${iface.vlan}` : base;
   }
@@ -57,8 +63,8 @@
   });
 
   const geometry = $derived.by(() => {
-    const dx = b.position.x - a.position.x;
-    const dy = b.position.y - a.position.y;
+    const dx = pb.x - pa.x;
+    const dy = pb.y - pa.y;
     const length = Math.hypot(dx, dy);
     // Liegen die Geräte zu nah beieinander, hätten die Beschriftungen keinen Platz.
     const ux = length ? dx / length : 0;
@@ -66,8 +72,8 @@
     const leds =
       length > LED_DISTANCE * 2.4
         ? {
-            a: { x: a.position.x + ux * LED_DISTANCE, y: a.position.y + uy * LED_DISTANCE },
-            b: { x: b.position.x - ux * LED_DISTANCE, y: b.position.y - uy * LED_DISTANCE },
+            a: { x: pa.x + ux * LED_DISTANCE, y: pa.y + uy * LED_DISTANCE },
+            b: { x: pb.x - ux * LED_DISTANCE, y: pb.y - uy * LED_DISTANCE },
           }
         : null;
     if (length < LABEL_DISTANCE * 2.2) return { length, labels: null, leds };
@@ -75,8 +81,8 @@
       length,
       leds,
       labels: {
-        a: { x: a.position.x + ux * LABEL_DISTANCE, y: a.position.y + uy * LABEL_DISTANCE },
-        b: { x: b.position.x - ux * LABEL_DISTANCE, y: b.position.y - uy * LABEL_DISTANCE },
+        a: { x: pa.x + ux * LABEL_DISTANCE, y: pa.y + uy * LABEL_DISTANCE },
+        b: { x: pb.x - ux * LABEL_DISTANCE, y: pb.y - uy * LABEL_DISTANCE },
       },
     };
   });
@@ -133,19 +139,19 @@
   onfocus={() => editor.tool === 'select' && editor.select({ kind: 'cable', id: cable.id })}
   {onkeydown}
 >
-  <line class="hit" x1={a.position.x} y1={a.position.y} x2={b.position.x} y2={b.position.y} />
-  <line class="wire" class:damaged={!!cable.loss} class:blocked x1={a.position.x} y1={a.position.y} x2={b.position.x} y2={b.position.y} />
+  <line class="hit" x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} />
+  <line class="wire" class:damaged={!!cable.loss} class:blocked x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} />
   {#if medium === 'coax'}
-    <line class="core" x1={a.position.x} y1={a.position.y} x2={b.position.x} y2={b.position.y} />
+    <line class="core" x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} />
   {/if}
   {#if medium === 'serial' || medium === 'dsl' || medium === 'cellular' || medium === 'coax'}
-    <g class="medium-badge" transform="translate({(a.position.x + b.position.x) / 2} {(a.position.y + b.position.y) / 2})">
+    <g class="medium-badge" transform="translate({(pa.x + pb.x) / 2} {(pa.y + pb.y) / 2})">
       <rect x="-15" y="-8" width="30" height="16" rx="8" />
       <text y="1">{{ serial: 'S', dsl: 'DSL', cellular: '4G', coax: 'COAX' }[medium]}</text>
     </g>
   {/if}
   {#if medium === 'wireless'}
-    <g class="wifi-badge" transform="translate({(a.position.x + b.position.x) / 2} {(a.position.y + b.position.y) / 2})">
+    <g class="wifi-badge" transform="translate({(pa.x + pb.x) / 2} {(pa.y + pb.y) / 2})">
       <circle r="11" />
       <path d="M-6 -1 Q0 -7 6 -1 M-3.5 2 Q0 -1.5 3.5 2" />
       <circle class="dotc" cy="5" r="1.4" />
@@ -173,14 +179,14 @@
     {/each}
   {/if}
   {#if blocked}
-    <text class="blocked-label" x={(a.position.x + b.position.x) / 2} y={(a.position.y + b.position.y) / 2 + 14}>{t('switch.blockedCable')}</text>
+    <text class="blocked-label" x={(pa.x + pb.x) / 2} y={(pa.y + pb.y) / 2 + 14}>{t('switch.blockedCable')}</text>
   {/if}
   {#if geometry.labels && ui.showPortLabels}
     <text class="port" x={geometry.labels.a.x} y={geometry.labels.a.y} style:fill={endColor(a, cable.a.iface)}>{shortA}</text>
     <text class="port" x={geometry.labels.b.x} y={geometry.labels.b.y} style:fill={endColor(b, cable.b.iface)}>{shortB}</text>
   {/if}
   {#if cable.loss}
-    <text class="loss" x={(a.position.x + b.position.x) / 2} y={(a.position.y + b.position.y) / 2 - 8}>⚡ {cable.loss} %</text>
+    <text class="loss" x={(pa.x + pb.x) / 2} y={(pa.y + pb.y) / 2 - 8}>⚡ {cable.loss} %</text>
   {/if}
 </g>
 

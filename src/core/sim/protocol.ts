@@ -10,6 +10,7 @@ export function protocolOf(frame: EthernetFrame): string {
   const p = frame.payload;
   if (p.kind === 'arp') return 'ARP';
   if (p.kind === 'stp') return 'STP';
+  if (p.kind === 'lacp') return 'LACP';
   if (p.kind === 'ppp') return p.protocol === 'lcp' ? 'PPP LCP' : 'PPP IPCP';
   if (p.kind === 'link') return LINK_NAMES[p.tech];
   if (p.kind === 'ipv6') {

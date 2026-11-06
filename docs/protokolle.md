@@ -8,6 +8,7 @@ Der Simulator sendet Pakete, die den Standards folgen. Jeder Rahmen lässt sich 
 |---|---|---|---|
 | 1 | Ethernet-PHY, 802.11-Funk, DOCSIS, GPON, DSL, LTE | IEEE 802.3, 802.11, ITU-T | Nur als Beschreibung (Medium, Rate, Modulation); keine Bitfehler ausser «beschädigtes Kabel» |
 | 2 | Ethernet II, 802.1Q | IEEE 802.3, 802.1Q | Ohne Präambel und FCS, wie in den meisten Mitschnitten |
+| 2 | LACP | IEEE 802.1AX | LACPDU (Slow Protocols, 0x8809) mit Actor/Partner, kurze Zeiten (1 s, Partner gilt 3 s); keine Prioritäten, kein Marker-Protokoll; Verteilung nach Hash der MAC-Adressen |
 | 2 | STP | IEEE 802.1D | Verkürzte Zeiten; Ports zu Endgeräten leiten sofort weiter (wie PortFast) |
 | 2 | ARP, Gratuitous ARP, Proxy-ARP | RFC 826, RFC 5227 | – |
 | 2 | 802.11 Management, EAPOL | IEEE 802.11, 802.11i | Authentication, Association/Reassociation und 4-Way-Handshake als Ablauf; keine echte Verschlüsselung |

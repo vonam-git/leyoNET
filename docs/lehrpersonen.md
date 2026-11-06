@@ -25,6 +25,7 @@ Profile und Funktionsdateien: [funktionsprofile.md](funktionsprofile.md).
 | Dienste | E-Mail | SMTP, IMAP |
 | Switching | VLAN und Spanning Tree | blockierter Port, 802.1Q-Tag auf dem Trunk |
 | Switching | Broadcast-Sturm | Schleife ohne STP, Sturm-Warnung |
+| Switching | Port-Channel mit LACP | zwei Kabel gebündelt, LACPDUs, kein blockierter Port |
 | Switching | Router-on-a-Stick, Layer-3-Switch | Routing zwischen VLANs, DHCP-Relay |
 | Routing | Statische Routen, OSPF, RIP, BGP | `tracert` über die Router, Protokollmeldungen, gelernte Routen |
 | Zugang | NAT, Internet-Box (CPE), serielle Leitung mit PPP, WLAN-Mesh | NAT-Tabelle, DOCSIS-Aufbau, LCP/IPCP, Mesh |

@@ -181,3 +181,21 @@ describe('CLI: Loopback', () => {
     expect(getDevice(removed, r)!.loopbacks).toHaveLength(1);
   });
 });
+
+describe('CLI: Port-Channel', () => {
+  it('channel-group auf zwei Ports, interface port-channel konfiguriert beide, show etherchannel summary', () => {
+    const net = new NetBuilder();
+    const sw = net.add('switch', 'SW1');
+    const r = run(net.topology, sw, ['en', 'conf t', 'interface range port7-8', 'channel-group 1 mode active', 'interface port-channel 1', 'switchport mode trunk', 'switchport trunk allowed vlan 10,20', 'end']);
+    expect(r.output).toEqual([]);
+    const d = getDevice(r.topology, sw)!;
+    expect([d.interfaces[6], d.interfaces[7]].map((i) => [i!.channel, i!.trunk, i!.allowedVlans])).toEqual([
+      [1, true, [10, 20]],
+      [1, true, [10, 20]],
+    ]);
+    expect(runningConfig(d).join('\n')).toContain('interface port8\n switchport mode trunk\n switchport trunk allowed vlan 10,20\n channel-group 1 mode active');
+    expect(run(r.topology, sw, ['show etherchannel summary']).output.join('\n')).toMatch(/1\s+Po1\(-\)\s+LACP\s+port7\(active\) port8\(active\)/);
+    expect(run(r.topology, sw, ['en', 'conf t', 'interface port-channel 2']).output[0]).toMatch(/no ports/);
+    expect(run(r.topology, sw, ['en', 'conf t', 'int port1', 'channel-group 1 mode maybe']).output[0]).toMatch(/active, passive or on/);
+  });
+});

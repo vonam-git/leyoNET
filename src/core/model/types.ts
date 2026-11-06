@@ -50,6 +50,10 @@ export interface ModemConfig {
 export type SerialEncapsulation = 'hdlc' | 'ppp';
 
 /** Farbmarkierung für Anschlüsse und Bereiche (Dokumentationsmodus). */
+export type ChannelMode = 'active' | 'passive' | 'on';
+export const CHANNEL_MODES: readonly ChannelMode[] = ['active', 'passive', 'on'];
+export const MAX_CHANNEL = 64;
+
 export type TagColor = 'red' | 'orange' | 'yellow' | 'green' | 'teal' | 'blue' | 'purple' | 'pink' | 'gray';
 
 /** Rolle eines Geräts, bestimmt u.a. die Farbe in der Oberfläche. */
@@ -75,10 +79,16 @@ export interface NetInterface {
   vlan?: number;
   /** Nur Switch: Trunk-Port, überträgt alle VLANs mit 802.1Q-Tag (VLAN 1 ohne Tag). */
   trunk?: boolean;
+  /** Router, Firewall: VRF, zu dem der Anschluss gehört («vrf forwarding KUNDE-A»); fehlt = globale Tabelle. */
+  vrf?: string;
   /** Nur Switch, Trunk: erlaubte VLANs («switchport trunk allowed vlan»); fehlt = alle. */
   allowedVlans?: number[];
   /** Nur Switch, Trunk: VLAN ohne Tag («switchport trunk native vlan»); fehlt = 1. */
   nativeVlan?: number;
+  /** Nur Switch: Port-Channel (Link Aggregation), dem der Port angehört («channel-group 1»). */
+  channel?: number;
+  /** Nur Switch: Aushandlung im Port-Channel: LACP aktiv, passiv oder fest ohne LACP («on»). Fehlt = aktiv. */
+  channelMode?: ChannelMode;
   /** Nur Switch: Name der Zugriffsliste für eingehende Pakete («ip access-group NAME in»). */
   aclIn?: string;
   /** Administrativ abgeschaltet («shutdown»): Link ist aus, nichts wird gesendet oder empfangen. */
@@ -125,6 +135,7 @@ export interface SubInterface {
   ip?: string;
   mask?: string;
   dhcpRelay?: string;
+  vrf?: string;
 }
 
 /** Loopback-Interface eines Routers oder Layer-3-Switches («interface loopback0»): immer aktiv, z.B. für die Router-ID. */
@@ -133,11 +144,25 @@ export interface Loopback {
   id: number;
   ip?: string;
   mask?: string;
+  vrf?: string;
+}
+
+/**
+ * VRF (Virtual Routing and Forwarding): eigene Routingtabelle auf demselben
+ * Gerät, z.B. für zwei Kunden mit überlappenden Adressen. Anschlüsse werden
+ * per `vrf` zugeordnet; Pakete bleiben in ihrer VRF.
+ */
+export interface Vrf {
+  /** Name, z.B. «KUNDE-A» (Buchstaben, Ziffern, «-», «_»). */
+  name: string;
+  /** Statische Routen dieser VRF. */
+  routes?: StaticRoute[];
 }
 
 /** Layer-3-Switch: virtuelles Interface eines VLANs (SVI, «interface vlan 10»). */
 export interface Svi {
   vlan: number;
+  vrf?: string;
   ip?: string;
   mask?: string;
   dhcpRelay?: string;
@@ -192,6 +217,8 @@ export interface Device {
   subinterfaces?: SubInterface[];
   /** Router, Firewall, Layer-3-Switch: Loopback-Interfaces. */
   loopbacks?: Loopback[];
+  /** Router, Firewall, Layer-3-Switch: VRFs (eigene Routingtabellen). */
+  vrfs?: Vrf[];
   /** Nur Layer-3-Switch: VLAN-Interfaces mit Adresse. */
   svis?: Svi[];
   /** Nur Layer-3-Switch: false = Routing zwischen VLANs ausgeschaltet («no ip routing»). */

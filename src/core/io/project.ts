@@ -29,7 +29,7 @@ import type {
   RoutedNetwork,
   VlanDef,
 } from '../model/types';
-import { DNS_TYPES, IP_MODES, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type DnsType, type IpMode, type Svi, type RoutingMode } from '../model/types';
+import { CHANNEL_MODES, DNS_TYPES, IP_MODES, MAX_CHANNEL, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type ChannelMode, type DnsType, type IpMode, type Svi, type RoutingMode } from '../model/types';
 import { formatCidr6, formatIp6, isLinkLocal6, isMulticast6, parseCidr6, parseIp6 } from '../net/ipv6';
 import { checkDnsRecord, isValidName, normalizeName, normalizeRecord } from '../net/dns';
 import { normalizeMac } from '../model/mac';
@@ -380,6 +380,16 @@ function readDevice(v: unknown, path: string): Device {
     if (io.trunk !== undefined) {
       if (typeof io.trunk !== 'boolean') throw new Invalid(`${p}.trunk`);
       if (io.trunk) iface.trunk = true;
+    }
+    if (io.channel !== undefined) {
+      const channel = int(io.channel, `${p}.channel`);
+      if (channel < 1 || channel > MAX_CHANNEL) throw new Invalid(`${p}.channel`);
+      iface.channel = channel;
+    }
+    if (io.channelMode !== undefined) {
+      const mode = str(io.channelMode, `${p}.channelMode`) as ChannelMode;
+      if (!CHANNEL_MODES.includes(mode) || iface.channel === undefined) throw new Invalid(`${p}.channelMode`);
+      if (mode !== 'active') iface.channelMode = mode;
     }
     if (io.allowedVlans !== undefined) iface.allowedVlans = vlanList(io.allowedVlans, `${p}.allowedVlans`);
     if (io.nativeVlan !== undefined) {

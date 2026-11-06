@@ -153,6 +153,7 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
   const tag = entry.frame.vlan !== undefined ? ` [VLAN ${entry.frame.vlan}]` : '';
   if (p.kind === 'arp') return `${route}${tag} ARP ${p.op} ${p.targetIp}`;
   if (p.kind === 'stp') return `${route} STP root=${p.rootId} cost=${p.cost}`;
+  if (p.kind === 'lacp') return `${route} LACP key=${p.actorKey} port=${p.actorPort}`;
   if (p.kind === 'ppp') return `${route} PPP ${p.protocol.toUpperCase()} ${p.code}`;
   if (p.kind === 'link') return `${route} ${p.tech.toUpperCase()} ${p.message}`;
   if (p.kind === 'ipv6') {

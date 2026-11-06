@@ -22,7 +22,7 @@ import type { FirewallState } from './firewall';
 import type { VpnState } from './vpn';
 import { EventQueue } from './queue';
 import { L3SwitchNode } from './l3switch';
-import { ModemNode, SwitchNode, type AclState, type MacEntry, type ModemState, type StormState, type StpState } from './switch';
+import { ModemNode, SwitchNode, type AclState, type ChannelState, type MacEntry, type ModemState, type StormState, type StpState } from './switch';
 import { CpeNode } from './cpe';
 
 /** Übertragungszeit pro Kabel in Millisekunden (virtuelle Zeit). */
@@ -86,6 +86,8 @@ export interface DeviceState {
   storm?: StormState;
   /** Switch: Treffer der Zugriffslisten (ACL). */
   acls?: AclState[];
+  /** Switch: Port-Channels mit Zustand der Ports. */
+  channels?: ChannelState[];
   /** Client-Gruppe: Adressen der einzelnen Rechner. */
   group?: GroupMemberState[];
   /** Modem: Zustand der Zugangsleitung. */

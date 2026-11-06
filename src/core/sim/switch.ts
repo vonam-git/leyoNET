@@ -1,9 +1,10 @@
 import { MODEM_WAN } from '../model/links';
-import { cableAt, getDevice, otherEnd, trunkAllows, vlanExists } from '../model/topology';
+import { cableAt, channelMembers, getDevice, otherEnd, trunkAllows, vlanExists } from '../model/topology';
+import type { NetInterface } from '../model/types';
 import type { ModemKind } from '../model/types';
 import { ACCESS_PROFILES, nextSteps, stepIndex } from './access';
 import { toLink, wlanRun, wlanStepIndex, wlanSteps } from './wlan';
-import { BROADCAST_MAC, STP_MAC, type EthernetFrame, type LinkControl, type StpBpdu } from './frames';
+import { BROADCAST_MAC, LACP_MAC, STP_MAC, type EthernetFrame, type LacpPdu, type LinkControl, type StpBpdu } from './frames';
 import type { NodeContext, SimNode } from './simulation';
 import { aclVerdict } from './firewall';
 
@@ -35,6 +36,19 @@ export const STORM_WINDOW = 100;
 export const STORM_THRESHOLD = 60;
 /** So lange ohne kreisende Rahmen, dann gilt der Sturm als vorbei. */
 export const STORM_QUIET = 1000;
+
+/** LACP mit kurzen Zeiten (fast rate): LACPDU jede Sekunde, Partner gilt 3 s. */
+export const LACP_INTERVAL = 1000;
+export const LACP_TIMEOUT = 3000;
+
+/** Zustand eines Ports in einem Port-Channel. */
+export type ChannelPortStatus = 'bundled' | 'suspended' | 'down';
+export type ChannelSuspendReason = 'noPartner' | 'otherPartner' | 'config';
+
+export interface ChannelState {
+  channel: number;
+  ports: { port: number; status: ChannelPortStatus; reason?: ChannelSuspendReason; partner?: string }[];
+}
 
 export interface MacEntry {
   mac: string;
@@ -121,6 +135,11 @@ export class SwitchNode implements SimNode {
   #lastLoop = 0;
   #seen = new WeakMap<object, number>();
   #aclHits = new Map<string, { rules: object; hits: number[]; implicitDeny: number }>();
+  /** LACP: zuletzt gehörter Partner je Port. */
+  #lacpPartner = new Map<number, { system: string; key: number; port: number; state: number; expires: number }>();
+  /** Zuletzt gemeldeter Zustand je Channel-Port (für Konsolenmeldungen bei Änderungen). */
+  #channelNoted = new Map<number, string>();
+  #lacpRunning = false;
 
   constructor(private readonly ctx: NodeContext) {}
 
@@ -211,6 +230,7 @@ export class SwitchNode implements SimNode {
 
   boot() {
     this.start();
+    this.#startLacp();
   }
 
   /** Startet die regelmässigen BPDUs (beim Start der Simulation). */
@@ -234,7 +254,7 @@ export class SwitchNode implements SimNode {
     if (!device) return;
     const bridgeId = this.#bridgeId();
     for (const port of device.interfaces) {
-      if (this.#roles.get(port.index) !== 'designated') continue;
+      if (this.#roles.get(port.index) !== 'designated' || !this.#isLogical(port.index)) continue;
       const bpdu: StpBpdu = { kind: 'stp', rootId: this.#rootId, cost: this.#rootCost, bridgeId, portId: port.index };
       this.ctx.transmit(port.index, { src: port.mac, dst: STP_MAC, payload: bpdu });
     }
@@ -263,7 +283,8 @@ export class SwitchNode implements SimNode {
 
     let changed = false;
     for (const port of device.interfaces) {
-      if (!this.ctx.isConnected(port.index)) continue;
+      // Ein Port-Channel zählt als ein Port (sein erster gebündelter Port vertritt ihn).
+      if (!this.ctx.isConnected(port.index) || !this.#isLogical(port.index)) continue;
       let role: PortRole;
       if (this.#isEdge(port.index)) role = 'edge';
       else if (port.index === rootPort) role = 'root';
@@ -285,7 +306,9 @@ export class SwitchNode implements SimNode {
     }
   }
 
-  #state(port: number): PortState {
+  #state(member: number): PortState {
+    if (this.#suspendedPort(member)) return 'blocking';
+    const port = this.#rep(member);
     if (!this.#stp) return 'forwarding';
     const role = this.#roles.get(port) ?? (this.#isEdge(port) ? 'edge' : undefined);
     if (role === 'edge') return 'forwarding';
@@ -294,7 +317,9 @@ export class SwitchNode implements SimNode {
     return this.ctx.now - (this.#since.get(port) ?? 0) >= STP_FORWARD_DELAY ? 'forwarding' : 'learning';
   }
 
-  #onBpdu(port: number, bpdu: StpBpdu) {
+  #onBpdu(member: number, bpdu: StpBpdu) {
+    if (this.#suspendedPort(member)) return;
+    const port = this.#rep(member);
     this.#received.set(port, { ...bpdu, expires: this.ctx.now + STP_MAX_AGE });
     this.#recompute();
   }
@@ -304,13 +329,18 @@ export class SwitchNode implements SimNode {
   #send(port: number, frame: EthernetFrame, vlan: number) {
     // Auf Trunks mit Tag (ausser dem Native VLAN), auf Access-Ports immer ohne.
     const { vlan: _v, ...untagged } = frame;
-    this.ctx.transmit(port, this.#isTrunk(port) && vlan !== this.#native(port) ? { ...untagged, vlan } : untagged);
+    // Port-Channel: ein gebündelter Port nach Hash der MAC-Adressen (gleiche Verbindung, gleicher Weg).
+    this.ctx.transmit(this.#egress(port, frame), this.#isTrunk(port) && vlan !== this.#native(port) ? { ...untagged, vlan } : untagged);
   }
 
-  receive(inPort: number, frame: EthernetFrame) {
+  receive(member: number, frame: EthernetFrame) {
     const device = this.#device;
     if (!device) return;
-    if (frame.payload.kind === 'stp' && this.#stp) return this.#onBpdu(inPort, frame.payload);
+    if (frame.payload.kind === 'lacp') return this.#onLacp(member, frame.payload);
+    if (frame.payload.kind === 'stp' && this.#stp) return this.#onBpdu(member, frame.payload);
+    // Ausgestellter Port im Channel: nimmt nichts an (verhindert Schleifen bei falscher Verkabelung).
+    if (this.#suspendedPort(member)) return;
+    const inPort = this.#rep(member);
     // Steuermeldungen der Leitung (802.11-Anmeldung) gehen nie weiter.
     if (frame.payload.kind === 'link') return this.#onLinkControl(inPort, frame);
     if (frame.payload.kind === 'ppp') return;
@@ -352,9 +382,167 @@ export class SwitchNode implements SimNode {
       return;
     }
     for (const port of device.interfaces) {
-      if (port.index === inPort || !this.#member(port.index, vlan) || this.#state(port.index) !== 'forwarding') continue;
+      if (port.index === inPort || !this.#isLogical(port.index) || !this.#member(port.index, vlan) || this.#state(port.index) !== 'forwarding') continue;
       this.#send(port.index, frame, vlan);
     }
+  }
+
+  // --- Link Aggregation (Port-Channel, LACP nach IEEE 802.1AX) ----------------------
+
+  /** Stellen zwei Ports dasselbe ein (Pflicht im selben Channel)? */
+  static #sameSwitchport(a: NetInterface | undefined, b: NetInterface | undefined): boolean {
+    if (!a || !b) return false;
+    if (!!a.trunk !== !!b.trunk) return false;
+    if (!a.trunk) return (a.vlan ?? 1) === (b.vlan ?? 1);
+    return (a.nativeVlan ?? 1) === (b.nativeVlan ?? 1) && JSON.stringify(a.allowedVlans ?? null) === JSON.stringify(b.allowedVlans ?? null);
+  }
+
+  #partnerOf(port: number) {
+    const p = this.#lacpPartner.get(port);
+    return p && p.expires > this.ctx.now && p.key !== 0 ? p : undefined;
+  }
+
+  /** Zustand eines Ports im Channel; null = gehört keinem Channel an. */
+  #channelStatus(port: number): { status: ChannelPortStatus; reason?: ChannelSuspendReason } | null {
+    const device = this.#device;
+    const iface = device?.interfaces[port];
+    if (!device || !iface?.channel) return null;
+    if (!this.ctx.isConnected(port) || iface.shutdown) return { status: 'down' };
+    const members = channelMembers(device, iface.channel);
+    if (!SwitchNode.#sameSwitchport(device.interfaces[members[0]!], iface)) return { status: 'suspended', reason: 'config' };
+    if ((iface.channelMode ?? 'active') === 'on') return { status: 'bundled' };
+    const partner = this.#partnerOf(port);
+    if (!partner) return { status: 'suspended', reason: 'noPartner' };
+    // Alle gebündelten Ports müssen zum selben Partner führen; der erste mit Partner gibt ihn vor.
+    for (const m of members) {
+      if ((device.interfaces[m]?.channelMode ?? 'active') === 'on') continue;
+      const reference = this.#partnerOf(m);
+      if (!reference) continue;
+      if (reference.system !== partner.system || reference.key !== partner.key) return { status: 'suspended', reason: 'otherPartner' };
+      break;
+    }
+    return { status: 'bundled' };
+  }
+
+  #suspendedPort(port: number): boolean {
+    return this.#channelStatus(port)?.status === 'suspended';
+  }
+
+  /** Vertreter eines gebündelten Ports: der erste gebündelte Port seines Channels; sonst der Port selbst. */
+  #rep(port: number): number {
+    const device = this.#device;
+    const channel = device?.interfaces[port]?.channel;
+    if (!device || !channel || this.#channelStatus(port)?.status !== 'bundled') return port;
+    return channelMembers(device, channel).find((m) => this.#channelStatus(m)?.status === 'bundled') ?? port;
+  }
+
+  /** Zählt der Port als eigener (logischer) Port? Nicht für weitere gebündelte und ausgestellte Ports. */
+  #isLogical(port: number): boolean {
+    return !this.#suspendedPort(port) && this.#rep(port) === port;
+  }
+
+  /** Ausgehender Port für einen Rahmen an einen (logischen) Port. */
+  #egress(port: number, frame: EthernetFrame): number {
+    const device = this.#device;
+    const channel = device?.interfaces[port]?.channel;
+    if (!device || !channel || this.#channelStatus(port)?.status !== 'bundled') return port;
+    const bundled = channelMembers(device, channel).filter((m) => this.#channelStatus(m)?.status === 'bundled');
+    if (bundled.length < 2) return port;
+    let hash = 0;
+    for (const ch of frame.src + frame.dst) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+    return bundled[hash % bundled.length]!;
+  }
+
+  #startLacp() {
+    if (this.#lacpRunning || !this.#usesLacp()) return;
+    this.#lacpRunning = true;
+    const tick = () => {
+      if (!this.#usesLacp()) {
+        this.#lacpRunning = false;
+        this.#noteChannels();
+        return;
+      }
+      const device = this.#device;
+      for (const iface of device?.interfaces ?? []) {
+        const mode = iface.channelMode ?? 'active';
+        if (!iface.channel || mode === 'on' || !this.ctx.isConnected(iface.index) || iface.shutdown) continue;
+        // Passiv: antwortet erst, wenn der Partner LACPDUs schickt.
+        if (mode === 'passive' && !this.#partnerOf(iface.index)) continue;
+        this.#sendLacp(iface.index);
+      }
+      this.#noteChannels();
+      this.ctx.schedule(LACP_INTERVAL, tick);
+    };
+    this.ctx.schedule(0, tick);
+  }
+
+  #usesLacp(): boolean {
+    return !!this.#device?.interfaces.some((i) => i.channel && (i.channelMode ?? 'active') !== 'on');
+  }
+
+  #sendLacp(port: number) {
+    const device = this.#device;
+    const iface = device?.interfaces[port];
+    if (!device || !iface?.channel) return;
+    const partner = this.#partnerOf(port);
+    const status = this.#channelStatus(port)?.status;
+    // Activity (aktiv), Timeout (kurz), Aggregation, dazu Sync/Collecting/Distributing, wenn gebündelt.
+    const actorState = ((iface.channelMode ?? 'active') === 'active' ? 1 : 0) | 2 | 4 | (status === 'bundled' ? 8 | 16 | 32 : 0) | (partner ? 0 : 64);
+    const pdu: LacpPdu = {
+      kind: 'lacp',
+      actorSystem: device.interfaces[0]?.mac ?? '00:00:00:00:00:00',
+      actorKey: iface.channel,
+      actorPort: port + 1,
+      actorState,
+      partnerSystem: partner?.system ?? '00:00:00:00:00:00',
+      partnerKey: partner?.key ?? 0,
+      partnerPort: partner?.port ?? 0,
+      partnerState: partner?.state ?? 0,
+    };
+    this.ctx.transmit(port, { src: iface.mac, dst: LACP_MAC, payload: pdu });
+  }
+
+  #onLacp(port: number, pdu: LacpPdu) {
+    const iface = this.#device?.interfaces[port];
+    // Ohne Channel ignoriert der Port LACPDUs (der Partner bleibt dann ausgestellt).
+    if (!iface?.channel || (iface.channelMode ?? 'active') === 'on') return;
+    const known = this.#partnerOf(port);
+    this.#lacpPartner.set(port, { system: pdu.actorSystem, key: pdu.actorKey, port: pdu.actorPort, state: pdu.actorState, expires: this.ctx.now + LACP_TIMEOUT });
+    // Passiver Port oder neuer Partner: sofort antworten, damit der Channel ohne Wartezeit steht.
+    if (!known) this.#sendLacp(port);
+    this.#startLacp();
+    this.#noteChannels();
+  }
+
+  /** Änderungen im Channel melden; gelernte Adressen verwerfen, weil sich Wege geändert haben. */
+  #noteChannels() {
+    const device = this.#device;
+    if (!device) return;
+    let changed = false;
+    for (const iface of device.interfaces) {
+      const s = this.#channelStatus(iface.index);
+      const key = s ? `${s.status}|${s.reason ?? ''}` : '';
+      if ((this.#channelNoted.get(iface.index) ?? '') === key) continue;
+      this.#channelNoted.set(iface.index, key);
+      changed = true;
+      if (!s || s.status === 'down') continue;
+      this.ctx.print(s.status === 'bundled' ? 'lacp.bundled' : `lacp.suspended.${s.reason}`, { channel: iface.channel!, port: iface.index + 1 });
+    }
+    if (changed) this.#table.clear();
+  }
+
+  #channelState(): ChannelState[] {
+    const device = this.#device;
+    if (!device) return [];
+    const channels = [...new Set(device.interfaces.flatMap((i) => (i.channel ? [i.channel] : [])))].sort((a, b) => a - b);
+    return channels.map((channel) => ({
+      channel,
+      ports: channelMembers(device, channel).map((port) => {
+        const s = this.#channelStatus(port)!;
+        const partner = this.#partnerOf(port);
+        return { port, ...s, ...(partner ? { partner: partner.system } : {}) };
+      }),
+    }));
   }
 
   #vlanNoted = new Map<string, number>();
@@ -426,7 +614,7 @@ export class SwitchNode implements SimNode {
       return;
     }
     for (const port of device.interfaces) {
-      if (!this.#member(port.index, vlan) || this.#state(port.index) !== 'forwarding') continue;
+      if (!this.#isLogical(port.index) || !this.#member(port.index, vlan) || this.#state(port.index) !== 'forwarding') continue;
       this.#send(port.index, frame, vlan);
     }
   }
@@ -438,12 +626,14 @@ export class SwitchNode implements SimNode {
       .sort((a, b) => a.vlan - b.vlan || a.port - b.port || a.mac.localeCompare(b.mac));
     const storm = this.storm;
     const acls = this.#aclState();
-    const extra = { ...(storm ? { storm } : {}), ...(acls.length ? { acls } : {}) };
+    const channels = this.#channelState();
+    const extra = { ...(storm ? { storm } : {}), ...(acls.length ? { acls } : {}), ...(channels.length ? { channels } : {}) };
     if (!this.#stp) return { macTable, ...extra };
     const device = this.#device;
     const ports = (device?.interfaces ?? [])
       .filter((p) => this.ctx.isConnected(p.index))
-      .map((p) => ({ port: p.index, role: this.#roles.get(p.index) ?? 'designated', state: this.#state(p.index) }));
+      .filter((p) => this.ctx.isConnected(p.index))
+      .map((p) => ({ port: p.index, role: this.#roles.get(this.#rep(p.index)) ?? 'designated', state: this.#state(p.index) }));
     const stp: StpState = { bridgeId: this.#bridgeId(), rootId: this.#rootId || this.#bridgeId(), rootPort: this.#rootPort, rootCost: this.#rootCost, ports };
     return { macTable, stp, ...extra };
   }

@@ -259,6 +259,22 @@ export const DEMOS: readonly Demo[] = [
       { highlight: 'Firewall', window: { device: 'Firewall', tab: 'firewall' } },
     ] },
   {
+    id: 'portChannel',
+    file: 'port-channel.json',
+    topic: 'switching',
+    layers: [2],
+    actions: [{ at: 4000, device: 'PC Büro', command: 'ping 192.168.1.22' }],
+    check: { kind: 'ping', device: 'PC Büro' },
+    until: 12_000,
+    tour: [
+      { sim: false, highlight: 'Switch Stock 1' },
+      { highlight: 'Switch Stock 1', window: { device: 'Switch Stock 1', tab: 'switching' } },
+      { sim: true, pause: false, highlight: 'Switch Stock 2' },
+      { action: { at: 0, device: 'PC Büro', command: 'ping 192.168.1.22' }, highlight: 'PC Labor' },
+      { highlight: 'Switch Stock 1' },
+    ],
+  },
+  {
     id: 'firewallZones',
     file: 'firewall-zonen.json',
     topic: 'security',

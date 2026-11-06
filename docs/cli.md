@@ -67,6 +67,7 @@ Switch(config-ext-nacl)#
 | `show ip nat translations` | NAT-Tabelle (Router) |
 | `show mac address-table` | MAC-Tabelle (Switch, Simulation) |
 | `show vlan brief` | Angelegte VLANs mit ihren Ports; Ports in fehlenden VLANs als inaktiv (Switch) |
+| `show etherchannel summary` | Port-Channels mit Zustand der Ports: P gebündelt, s ausgestellt, D ohne Link (Switch) |
 | `show interfaces trunk` | Trunks mit Native VLAN, erlaubten und aktiven VLANs (Switch) |
 | `show interfaces status` | Ports mit Status und VLAN (Switch) |
 | `show spanning-tree` | Root-Bridge, Port-Rollen und -Zustände (Switch) |
@@ -212,6 +213,11 @@ interface port24
  switchport trunk allowed vlan 10,20      ! nur diese VLANs (add/remove/except/all/none)
  switchport trunk native vlan 99          ! VLAN ohne Tag
  description Uplink zum Router
+!
+interface range port7-8
+ channel-group 1 mode active   ! Port-Channel mit LACP (passive; on = ohne LACP); no channel-group
+interface port-channel 1       ! stellt alle Ports des Channels auf einmal ein
+ switchport mode trunk
 !
 interface vlan 1               ! Verwaltungsadresse (Layer-2-Switch)
  ip address 192.168.1.2/24

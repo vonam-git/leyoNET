@@ -11,6 +11,7 @@ import {
   addDhcpReservation,
   removeDhcpReservation,
   type DhcpReservation,
+  type ChannelMode,
   setInterfaceRelay,
   addDevice,
   addDnsRecord,
@@ -101,6 +102,7 @@ import {
   setSubinterface,
   setSvi,
   setVlanName,
+  setPortChannel,
   setLoopback,
   removeLoopback,
   createVlan,
@@ -1072,6 +1074,10 @@ class Editor {
 
   removeLoopback(id: string, n: number): TopologyError | null {
     return this.#applyForm(removeLoopback(this.topology, id, n));
+  }
+
+  setPortChannel(id: string, index: number, channel: number | null, mode: ChannelMode = 'active'): TopologyError | null {
+    return this.#applyForm(setPortChannel(this.topology, id, index, channel, mode));
   }
 
   createVlan(id: string, vlan: number): TopologyError | null {

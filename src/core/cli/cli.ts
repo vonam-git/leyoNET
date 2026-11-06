@@ -39,6 +39,8 @@ import {
   usedVlans,
   vlanExists,
   setDefaultGateway,
+  setPortChannel,
+  channelMembers,
   setLoopback,
   removeLoopback,
   addStaticNat,
@@ -456,6 +458,7 @@ const COMMANDS: Command[] = [
   { modes: EXEC, types: SWITCHES, syntax: 'show mac address-table', help: 'MAC forwarding table', run: ({ device, env }) => ok(showMacTable(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show vlan brief', help: 'VLAN summary', run: ({ device }) => ok(showVlanBrief(device)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show vlan', help: 'VLAN summary', run: ({ device }) => ok(showVlanBrief(device)) },
+  { modes: EXEC, types: ['switch', 'l3switch'], syntax: 'show etherchannel summary', help: 'Port-channels with the state of their ports', run: ({ device, env }) => ok(showEtherchannel(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show interfaces trunk', help: 'Trunk ports with allowed and native VLANs', run: ({ device, env }) => ok(showTrunks(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show interfaces status', help: 'Port status', run: ({ device, env }) => ok(showInterfacesStatus(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show spanning-tree', help: 'Spanning tree state', run: ({ device, env }) => ok(showSpanningTree(device, env)) },
@@ -480,6 +483,7 @@ const COMMANDS: Command[] = [
     help: 'Select or create a VLAN interface (SVI; on a layer-2 switch the management address)',
     run: (call) => enterInterface(call, `vlan${call.args[0]}`),
   },
+  { modes: ['config'], types: ['switch', 'l3switch'], syntax: 'interface port-channel <num>', help: 'Configure all ports of a port-channel', run: (call) => enterChannel(call, Number(call.args[0])) },
   {
     modes: ['config'],
     types: SWITCHES,
@@ -802,6 +806,18 @@ const COMMANDS: Command[] = [
       return next === undefined ? { ok: false, error: { code: 'invalidVlan' } } : setTrunkAllowed(t, call.device.id, p, next);
     }),
   },
+  {
+    modes: ['if'],
+    types: ['switch', 'l3switch'],
+    syntax: 'channel-group <num> mode <word>',
+    help: 'Bundle this port: mode active | passive (LACP) or on (without LACP)',
+    run: (call) => {
+      const mode = call.args[1]!.toLowerCase();
+      if (mode !== 'active' && mode !== 'passive' && mode !== 'on') return ok(['% Mode must be active, passive or on']);
+      return forPorts(call, (t, p) => setPortChannel(t, call.device.id, p, Number(call.args[0]), mode));
+    },
+  },
+  { modes: ['if'], types: ['switch', 'l3switch'], syntax: 'no channel-group', help: 'Remove the port from its port-channel', run: (call) => forPorts(call, (t, p) => setPortChannel(t, call.device.id, p, null)) },
   { modes: ['if'], types: SWITCHES, syntax: 'no switchport trunk allowed vlan', help: 'All VLANs on this trunk', run: (call) => forPorts(call, (t, p) => setTrunkAllowed(t, call.device.id, p, null)) },
   { modes: ['if'], types: SWITCHES, syntax: 'switchport trunk native vlan <vlan>', help: 'VLAN sent without a tag on this trunk', run: (call) => forPorts(call, (t, p) => setTrunkNative(t, call.device.id, p, Number(call.args[0]))) },
   { modes: ['if'], types: SWITCHES, syntax: 'no switchport trunk native vlan', help: 'Native VLAN 1', run: (call) => forPorts(call, (t, p) => setTrunkNative(t, call.device.id, p, 1)) },
@@ -1105,6 +1121,9 @@ function splitCidr(cidr: string): [string, string] {
 
 function enterInterface(call: Call, name: string): Partial<CliOutput> {
   const { device, env, session } = call;
+  // «interface port-channel1» (auch po1): alle Ports des Channels auf einmal.
+  const po = /^(?:port-channel|po)\s*(\d+)$/i.exec(name.trim());
+  if (po && (device.type === 'switch' || device.type === 'l3switch')) return enterChannel(call, Number(po[1]));
   const ref = parseIfaceName(device, name);
   if (!ref) return ok([`% Unknown interface: ${name}`]);
   let topology: Topology | undefined;
@@ -1125,6 +1144,13 @@ function enterInterface(call: Call, name: string): Partial<CliOutput> {
     topology = created.value;
   }
   return { session: { ...session, mode: 'if', targets: [ifaceIdOf(ref)] }, ...(topology ? { topology } : {}) };
+}
+
+/** Port-Channel: Befehle gelten für alle seine Ports (wie bei Cisco das logische Interface). */
+function enterChannel(call: Call, channel: number): Partial<CliOutput> {
+  const members = channelMembers(call.device, channel);
+  if (!members.length) return ok([`% Port-channel ${channel} has no ports. Use "channel-group ${channel} mode active" on the ports first.`]);
+  return { session: { ...call.session, mode: 'if', targets: members } };
 }
 
 /** «interface range port1-4» oder «port1-4,port7». */
@@ -1669,6 +1695,30 @@ export function formatVlanList(list: number[]): string {
   return parts.join(',') || 'none';
 }
 
+function showEtherchannel(device: Device, env: CliEnv): string[] {
+  const channels = [...new Set(device.interfaces.flatMap((i) => (i.channel ? [i.channel] : [])))].sort((a, b) => a - b);
+  if (!channels.length) return ['(no port-channels)'];
+  const live = env.state?.channels;
+  const flag = (port: number) => {
+    const s = live?.flatMap((c) => c.ports).find((p) => p.port === port);
+    if (!s) return 'D';
+    return s.status === 'bundled' ? 'P' : s.status === 'suspended' ? 's' : 'D';
+  };
+  const rows = channels.map((channel) => {
+    const members = channelMembers(device, channel);
+    const mode = device.interfaces[members[0]!]?.channelMode ?? 'active';
+    const up = members.some((m) => flag(m) === 'P');
+    return [String(channel), `Po${channel}(${live ? (up ? 'SU' : 'SD') : '-'})`, mode === 'on' ? '-' : 'LACP', members.map((m) => `${cliIfaceName(device, m)}(${live ? flag(m) : mode})`).join(' ')];
+  });
+  return [
+    'Flags:  D - down   P - bundled in port-channel   s - suspended',
+    '        S - layer 2   U - in use',
+    ...(live ? [] : ['(state only while the simulation runs; showing the configured mode)']),
+    '',
+    ...table(['Group', 'Port-channel', 'Protocol', 'Ports'], rows),
+  ];
+}
+
 function showTrunks(device: Device, env: CliEnv): string[] {
   const trunks = device.interfaces.filter((p) => p.trunk);
   if (!trunks.length) return ['(no trunk ports)'];
@@ -1765,6 +1815,7 @@ export function runningConfig(device: Device): string[] {
         if (p.allowedVlans) lines.push(` switchport trunk allowed vlan ${formatVlanList(p.allowedVlans)}`);
       }
       else if (p.vlan && p.vlan !== 1) lines.push(' switchport mode access', ` switchport access vlan ${p.vlan}`);
+      if (p.channel) lines.push(` channel-group ${p.channel} mode ${p.channelMode ?? 'active'}`);
       if (p.aclIn) lines.push(` ip access-group ${p.aclIn} in`);
     } else {
       if (p.ip && p.mask) lines.push(` ip address ${p.ip}/${parseMask(p.mask)}`);

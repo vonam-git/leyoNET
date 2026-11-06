@@ -115,10 +115,14 @@ describe('Kabel', () => {
     });
   });
 
-  it('verhindert Kabel zu sich selbst und doppelte Direktverbindungen', () => {
+  it('verhindert Kabel zu sich selbst; mehrere Kabel zwischen denselben Geräten sind erlaubt (Port-Channel, Schleife)', () => {
     const t = twoClientsOneSwitch();
     expect(connect(t, 'd3', 'd3')).toMatchObject({ ok: false, error: { code: 'sameDevice' } });
-    expect(connect(t, 'd3', 'd1')).toMatchObject({ ok: false, error: { code: 'alreadyConnected' } });
+    // Der Client hat nur einen Anschluss: kein zweites Kabel möglich.
+    expect(connect(t, 'd3', 'd1')).toMatchObject({ ok: false, error: { code: 'noFreeInterface' } });
+    const s2 = add(t, 'switch', 'Switch 2').topology;
+    const first = unwrap(connect(s2, 'd3', 'd6'));
+    expect(unwrap(connect(first.topology, 'd3', 'd6')).topology.cables.filter((c) => [c.a.device, c.b.device].sort().join() === 'd3,d6')).toHaveLength(2);
   });
 
   it('entfernt beim Löschen eines Geräts dessen Kabel', () => {

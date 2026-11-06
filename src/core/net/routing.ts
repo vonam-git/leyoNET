@@ -120,6 +120,18 @@ export function interfaceAddresses(device: Device): IfaceAddress[] {
   ];
 }
 
+/** VRF eines logischen Interfaces; undefined = globale Tabelle. */
+export function vrfOfIface(device: Device, id: number): string | undefined {
+  const ref = decodeIface(id);
+  if (ref.kind === 'port') return device.interfaces[ref.port]?.vrf;
+  if (ref.kind === 'sub') return device.subinterfaces?.find((s) => s.parent === ref.port && s.vlan === ref.vlan)?.vrf;
+  if (ref.kind === 'svi') return device.svis?.find((s) => s.vlan === ref.vlan)?.vrf;
+  return device.loopbacks?.find((l) => l.id === ref.id)?.vrf;
+}
+
+export const VRF_NAME = /^[A-Za-z0-9_-]{1,32}$/;
+export const MAX_VRFS = 16;
+
 /** Längster Präfix gewinnt; bei Gleichstand die kleinere administrative Distanz, dann die zuerst eingetragene. */
 export function lookupRoute(routes: readonly Route[], dst: number): Route | undefined {
   let best: Route | undefined;
@@ -135,8 +147,9 @@ export function lookupRoute(routes: readonly Route[], dst: number): Route | unde
  * das Standardgateway und bei Vermittlungsrechnern die statischen Routen.
  * `unusable` nennt statische Routen, deren Gateway in keinem angeschlossenen Netz liegt.
  */
-export function buildRoutes(device: Device): { routes: Route[]; unusable: number[] } {
-  const connected: Route[] = interfaceAddresses(device).map((i) => ({
+export function buildRoutes(device: Device, vrf?: string): { routes: Route[]; unusable: number[] } {
+  // Jede VRF hat ihre eigene Tabelle: nur ihre Anschlüsse und ihre statischen Routen.
+  const connected: Route[] = interfaceAddresses(device).filter((i) => vrfOfIface(device, i.index) === vrf).map((i) => ({
     network: networkOf(i.ip, i.prefix),
     prefix: i.prefix,
     iface: i.index,
@@ -159,10 +172,11 @@ export function buildRoutes(device: Device): { routes: Route[]; unusable: number
 
   // Layer-3-Switch mit «no ip routing»: nur die eigenen Netze, keine Routen.
   if (device.type === 'l3switch' && device.ipRouting === false) return { routes, unusable };
-  // Automatisches Routing: Die Simulation berechnet die Routen selbst, eigene statische ruhen.
-  if (routingModeOf(device) === 'auto') return { routes, unusable };
+  // Automatisches Routing: Die Simulation berechnet die Routen selbst, eigene statische ruhen (nur global).
+  if (!vrf && routingModeOf(device) === 'auto') return { routes, unusable };
 
-  (device.routes ?? []).forEach((r, n) => {
+  const statics = vrf ? (device.vrfs?.find((v) => v.name === vrf)?.routes ?? []) : (device.routes ?? []);
+  statics.forEach((r, n) => {
     const network = parseIp(r.network);
     const prefix = parseMask(r.mask);
     const gateway = r.gateway ? parseIp(r.gateway) : null;
@@ -183,7 +197,7 @@ export interface RouteIssue {
 }
 
 /** Prüft eine statische Route vor dem Eintragen. */
-export function checkStaticRoute(device: Device, route: StaticRoute): RouteIssue | null {
+export function checkStaticRoute(device: Device, route: StaticRoute, vrf?: string): RouteIssue | null {
   const network = parseIp(route.network);
   if (network === null) return { code: 'invalidIp', field: 'network', params: { value: route.network } };
   const prefix = parseMask(route.mask);
@@ -200,7 +214,8 @@ export function checkStaticRoute(device: Device, route: StaticRoute): RouteIssue
   }
   if (route.iface !== undefined && !logicalInterfaces(device).includes(route.iface)) return { code: 'unknownInterface', field: 'iface' };
   if (!route.gateway && route.iface === undefined) return { code: 'routeNeedsTarget', field: 'gateway' };
-  const duplicate = (device.routes ?? []).some((r) => r.network === route.network && parseMask(r.mask) === prefix);
+  const existing = vrf ? (device.vrfs?.find((v) => v.name === vrf)?.routes ?? []) : (device.routes ?? []);
+  const duplicate = existing.some((r) => r.network === route.network && parseMask(r.mask) === prefix);
   if (duplicate) return { code: 'duplicateRoute', field: 'network', params: { net: `${route.network}/${prefix}` } };
   return null;
 }

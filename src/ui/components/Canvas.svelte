@@ -6,6 +6,7 @@
   import { SHOP_MIME } from '../dnd';
   import { SHOP } from '../shop';
   import { protocolClass, protocolOf } from '../packets';
+  import { parallelOffset } from '../cableGeometry';
   import { layersOf } from '../osiSteps';
   import { DEVICE_SPECS, hasCli } from '../../core';
   import { openCli } from '../state/cli.svelte';
@@ -94,15 +95,20 @@
       const to = getDevice(editor.topology, entry.to.device);
       if (!from || !to) return [];
       const raw = Math.min(1, Math.max(0, (sim.now - entry.sent) / (entry.arrives - entry.sent)));
+      // Parallele Kabel: das Paket läuft auf seinem Kabel.
+      const cable = editor.topology.cables.find((c) => c.id === entry.cable);
+      const shift = cable ? parallelOffset(editor.topology, cable, from.position, to.position) : { x: 0, y: 0 };
+      const p = { x: from.position.x + shift.x, y: from.position.y + shift.y };
+      const q = { x: to.position.x + shift.x, y: to.position.y + shift.y };
       // Nicht unter den Gerätesymbolen verschwinden: Weg zwischen den Rändern der Symbole.
-      const length = Math.hypot(to.position.x - from.position.x, to.position.y - from.position.y);
+      const length = Math.hypot(q.x - p.x, q.y - p.y);
       const edge = length > 110 ? 42 / length : 0;
       const progress = edge + (1 - 2 * edge) * raw;
       return [
         {
           id: entry.id,
-          x: from.position.x + (to.position.x - from.position.x) * progress,
-          y: from.position.y + (to.position.y - from.position.y) * progress,
+          x: p.x + (q.x - p.x) * progress,
+          y: p.y + (q.y - p.y) * progress,
           protocol: protocolClass(protocolOf(entry.frame)),
           label: protocolOf(entry.frame),
           layers: osiView ? layersOf(editor.topology, entry).layers : [],

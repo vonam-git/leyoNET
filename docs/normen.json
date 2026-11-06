@@ -240,6 +240,17 @@
       "geprueft": "2026-10-30"
     },
     {
+      "id": "IEEE 802.1AX",
+      "auch": [
+        "IEEE 802.3ad"
+      ],
+      "organisation": "IEEE",
+      "verwendung": "Link Aggregation, LACP (Port-Channel)",
+      "aktuell": "IEEE 802.1AX-2020",
+      "bemerkung": "LACP stand früher als Klausel 43 in IEEE 802.3ad; seit 2008 eigene Norm 802.1AX. LACPDU-Format (Version 1) unverändert.",
+      "geprueft": "2026-11-06"
+    },
+    {
       "id": "IEEE 802.1X",
       "organisation": "IEEE",
       "verwendung": "EAPOL (EtherType 0x888e) beim WLAN-Handshake",
