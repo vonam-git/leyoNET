@@ -258,8 +258,11 @@ class Editor {
   #fitPending = true;
   #messageId = 0;
 
+  /** Nur ansehen (z.B. fremde Session beobachten): nichts lässt sich ändern. */
+  viewOnly = $state(false);
+
   get editable() {
-    return this.mode === 'design';
+    return this.mode === 'design' && !this.viewOnly;
   }
 
   /** Simulation läuft. */

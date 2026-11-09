@@ -10,6 +10,12 @@ import { examMode, type SeatStatus } from './exam.svelte';
 
 const CODE_KEY = 'netzwerk-simulator.session';
 const CLASS_KEY = 'netzwerk-simulator.class';
+/** Schreib-Token der eigenen Session (zufällig, technisch notwendig: nur dieses Gerät schreibt). */
+const WRITER_KEY = 'netzwerk-simulator.writer';
+/** Lebenszeichen an den Server, damit kein zweites Gerät die Session übernimmt. */
+export const PING_MS = 20_000;
+/** Beim Ansehen einer fremden Session so oft neu laden. */
+export const WATCH_MS = 5_000;
 
 export interface ServerConfig {
   policy: { modes: { design: boolean; action: boolean; doc: boolean }; pro: boolean; sessionHours: number };
@@ -31,12 +37,12 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(method: string, path: string, body?: unknown, token?: string): Promise<T> {
+export async function api<T>(method: string, path: string, body?: unknown, token?: string, extra: Record<string, string> = {}): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`/api/${path}`, {
       method,
-      headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extra },
       body: body !== undefined ? JSON.stringify(body) : undefined,
       credentials: 'omit',
       cache: 'no-store',
@@ -83,8 +89,26 @@ export interface LoadedProject {
   snapshots?: Snapshot[];
 }
 
+/** Fremde Session ansehen: Code, Stand und ob jemand daran arbeitet. */
+export interface Watching {
+  code: string;
+  /** Admin-Token (Prüfungsplatz im Cockpit) oder leer (Ansehen mit dem Session-Code). */
+  admin?: string;
+  label?: string;
+  updated: number | null;
+  connected: boolean;
+  error?: string;
+}
+
 class SessionStore {
   code = $state<string | null>(read(CODE_KEY));
+  #writer: string | null = read(WRITER_KEY);
+  /** Ein anderes Gerät hat die Session übernommen: hier wird nicht mehr gespeichert. */
+  takenOver = $state(false);
+  locked = $state(false);
+  watching = $state<Watching | null>(null);
+  #watchTimer: ReturnType<typeof setInterval> | undefined;
+  #onWatch: ((p: LoadedProject) => void) | null = null;
   classCode = $state<string | null>(read(CLASS_KEY));
   classLabel = $state<string | null>(null);
   expires = $state<number | null>(null);
@@ -103,6 +127,7 @@ class SessionStore {
   constructor() {
     // Prüfung: alle 20 Sekunden speichern bzw. den Stand des Platzes abfragen (Zeit, Verlängerung, Ende).
     if (typeof window !== 'undefined') {
+      setInterval(() => void this.#ping(), PING_MS);
       setInterval(() => {
         if (!examMode.active?.server || !this.code || examMode.active.server.state === 'closed') return;
         if (!this.#pending && this.#last) this.#pending = this.#last;
@@ -111,10 +136,33 @@ class SessionStore {
     }
   }
 
+  #headers(): Record<string, string> {
+    return this.#writer ? { 'X-Leyonet-Writer': this.#writer } : {};
+  }
+
+  #setWriter(token: string | null | undefined) {
+    if (token === undefined) return;
+    this.#writer = token;
+    write(WRITER_KEY, token);
+  }
+
+  /** Lebenszeichen: Solange es kommt, kann kein anderes Gerät die Session übernehmen. */
+  async #ping() {
+    if (!this.code || !this.#writer || this.takenOver || this.watching) return;
+    try {
+      const data = await api<{ locked: boolean }>('POST', `sessions/${this.code}/ping`, undefined, undefined, this.#headers());
+      this.locked = data.locked;
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'sessionTakenOver') this.takenOver = true;
+    }
+  }
+
   /** Prüfung mit Platz-Code beitreten; bei laufender Prüfung wird die Session des Platzes übernommen. */
   async joinExam(seatCode: string): Promise<ExamJoin> {
-    const data = await api<ExamJoin>('POST', 'exams/join', { seatCode });
+    const data = await api<ExamJoin & { writer?: string }>('POST', 'exams/join', { seatCode, ...(this.#writer ? { writer: this.#writer } : {}) });
     if (data.session) {
+      this.#setWriter(data.writer);
+      this.takenOver = false;
       this.code = data.session;
       this.classCode = null;
       this.classLabel = null;
@@ -140,16 +188,28 @@ class SessionStore {
     try {
       return await this.open(this.code);
     } catch (error) {
+      // Offen an einem anderen Gerät oder gesperrt: Code behalten, aber hier nichts speichern.
+      if (error instanceof ApiError && (error.status === 409 || error.status === 423)) {
+        this.takenOver = true;
+        this.locked = error.data.locked === true;
+        return null;
+      }
       // Während einer Server-Prüfung den Code behalten (z.B. kurz offline); sonst vergessen.
       if (!(examMode.active?.server && !(error instanceof ApiError && error.status === 404))) this.#forget();
       return null;
     }
   }
 
-  async open(code: string): Promise<LoadedProject> {
-    const data = await api<{ code: string; expires: number; classCode: string | null; project: unknown }>('GET', `sessions/${encodeURIComponent(code)}`);
+  /** Session zum Weiterarbeiten öffnen (holt das Schreibrecht, bei gesperrter Session mit PIN). */
+  async open(code: string, pin?: string): Promise<LoadedProject> {
+    const own = code.toUpperCase().replace(/[^A-Z0-9]/g, '') === (this.code ?? '').replace('-', '');
+    const headers = { ...(own ? this.#headers() : {}), ...(pin ? { 'X-Leyonet-Pin': pin } : {}) };
+    const data = await api<{ code: string; expires: number; classCode: string | null; project: unknown; writer?: string; locked?: boolean }>('GET', `sessions/${encodeURIComponent(code)}`, undefined, undefined, headers);
     const parsed = parseProject(JSON.stringify(data.project));
     if (!parsed.ok) throw new ApiError(400, 'invalidProject');
+    this.#setWriter(data.writer);
+    this.takenOver = false;
+    this.locked = !!data.locked;
     this.code = data.code;
     this.expires = data.expires;
     this.classCode = data.classCode;
@@ -160,10 +220,13 @@ class SessionStore {
 
   /** Neuer Code für den aktuellen Stand, optional einer Klasse zugeordnet. */
   async create(projectJson: string, classCode: string | null = this.classCode): Promise<string> {
-    const data = await api<{ code: string; expires: number; classCode: string | null }>('POST', 'sessions', {
+    const data = await api<{ code: string; expires: number; classCode: string | null; writer?: string }>('POST', 'sessions', {
       project: JSON.parse(projectJson),
       ...(classCode ? { classCode } : {}),
     });
+    this.#setWriter(data.writer);
+    this.takenOver = false;
+    this.locked = false;
     this.code = data.code;
     this.expires = data.expires;
     this.classCode = data.classCode;
@@ -181,6 +244,8 @@ class SessionStore {
 
   /** Änderungen gesammelt nach kurzer Pause hochladen; leere Projekte legen keine Session an. */
   schedule(projectJson: string, hasContent: boolean) {
+    // Beim Ansehen oder nach Übernahme durch ein anderes Gerät nichts speichern.
+    if (this.watching || this.takenOver) return;
     if (!this.code && !hasContent) return;
     this.#pending = projectJson;
     if (examMode.active?.server && this.code) {
@@ -206,7 +271,9 @@ class SessionStore {
     this.status = 'saving';
     try {
       if (this.code) {
-        const data = await api<{ expires: number; exam?: SeatStatus }>('PUT', `sessions/${this.code}`, { project: JSON.parse(json) });
+        const data = await api<{ expires: number; exam?: SeatStatus; writer?: string; locked?: boolean }>('PUT', `sessions/${this.code}`, { project: JSON.parse(json) }, undefined, this.#headers());
+        this.#setWriter(data.writer);
+        if (data.locked !== undefined) this.locked = data.locked;
         this.expires = data.expires;
         this.#lastSave = Date.now();
         this.lastSaved = this.#lastSave;
@@ -222,6 +289,13 @@ class SessionStore {
         this.#pending = null;
         examMode.updateServer((error.data.exam as SeatStatus | undefined) ?? { state: 'closed', until: null, now: Date.now(), title: '', seat: '' });
         this.status = 'saved';
+        return;
+      }
+      // Ein anderes Gerät arbeitet jetzt in dieser Session: nichts mehr überschreiben.
+      if (error instanceof ApiError && error.code === 'sessionTakenOver') {
+        this.#pending = null;
+        this.takenOver = true;
+        this.status = 'error';
         return;
       }
       if (error instanceof ApiError && (error.code === 'storageFull' || error.code === 'tooLarge')) this.problem = error.code;
@@ -242,8 +316,65 @@ class SessionStore {
   async remove() {
     const code = this.code;
     if (!code) return;
-    await api('DELETE', `sessions/${code}`).catch(() => undefined);
+    await api('DELETE', `sessions/${code}`, undefined, undefined, this.#headers()).catch(() => undefined);
     this.#forget();
+  }
+
+  /** Eigene Session mit PIN sperren: Ein anderes Gerät kann sie dann nur mit der PIN übernehmen. */
+  async lock(pin: string) {
+    if (!this.code) return;
+    await api('POST', `sessions/${this.code}/lock`, { pin }, undefined, this.#headers());
+    this.locked = true;
+  }
+
+  async unlock() {
+    if (!this.code) return;
+    await api('DELETE', `sessions/${this.code}/lock`, undefined, undefined, this.#headers());
+    this.locked = false;
+  }
+
+  /** Nach Übernahme durch ein anderes Gerät: den eigenen Stand unter einem neuen Code sichern. */
+  async saveAsNew(projectJson: string): Promise<string> {
+    this.#forget();
+    return this.create(projectJson, null);
+  }
+
+  // --- Ansehen (Lehrperson) -------------------------------------------------------------
+
+  /**
+   * Fremde Session nur ansehen und laufend neu laden. Mit Admin-Token über die Admin-Schnittstelle
+   * (Prüfungsplatz), sonst mit dem Session-Code. Schreibt nie und verdrängt niemanden.
+   */
+  async watch(code: string, onLoad: (p: LoadedProject) => void, admin?: string, label?: string) {
+    this.stopWatch();
+    this.#onWatch = onLoad;
+    this.watching = { code, updated: null, connected: false, ...(admin ? { admin } : {}), ...(label ? { label } : {}) };
+    await this.#refreshWatch();
+    this.#watchTimer = setInterval(() => void this.#refreshWatch(), WATCH_MS);
+  }
+
+  async #refreshWatch() {
+    const w = this.watching;
+    if (!w) return;
+    try {
+      const path = w.admin ? `admin/sessions/${encodeURIComponent(w.code)}` : `sessions/${encodeURIComponent(w.code)}?watch=1`;
+      const data = await api<{ project: unknown; updated?: number; connected?: boolean }>('GET', path, undefined, w.admin);
+      if (!this.watching || this.watching.code !== w.code) return;
+      const changed = data.updated !== w.updated;
+      this.watching = { ...w, updated: data.updated ?? null, connected: !!data.connected, error: undefined };
+      if (!changed) return;
+      const parsed = parseProject(JSON.stringify(data.project));
+      if (parsed.ok) this.#onWatch?.(parsed);
+    } catch (error) {
+      if (this.watching) this.watching = { ...this.watching, error: error instanceof ApiError ? error.code : 'error' };
+    }
+  }
+
+  stopWatch() {
+    clearInterval(this.#watchTimer);
+    this.#watchTimer = undefined;
+    this.watching = null;
+    this.#onWatch = null;
   }
 
   /** Neue, leere Session beginnen; die alte bleibt bis zum Ablauf unter ihrem Code erreichbar. */
@@ -253,6 +384,9 @@ class SessionStore {
 
   #forget() {
     this.code = null;
+    this.#setWriter(null);
+    this.takenOver = false;
+    this.locked = false;
     this.expires = null;
     this.classCode = null;
     this.classLabel = null;

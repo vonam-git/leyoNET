@@ -5,6 +5,7 @@
   import { editor } from '../state/editor.svelte';
   import { session, ApiError } from '../state/session.svelte';
   import { ensureProjectFeatures } from '../actions';
+  import { startWatch } from '../watch';
   import Modal from './Modal.svelte';
 
   /**
@@ -17,6 +18,12 @@
   let classCode = $state('');
   let message = $state<{ kind: 'ok' | 'error'; text: string } | null>(null);
   let busy = $state(false);
+  /** Gesperrte Session: PIN abfragen; offen an anderem Gerät: Ansehen anbieten. */
+  let needPin = $state(false);
+  let pin = $state('');
+  let inUse = $state(false);
+  let lockPin = $state('');
+  let watchCode = $state('');
 
   const project = () => serializeProject(editor.topology, editor.tasks, editor.snapshots);
   const until = $derived(
@@ -25,7 +32,7 @@
 
   function errorText(error: unknown): string {
     const code = error instanceof ApiError ? error.code : 'error';
-    return t(`session.error.${['unknownSession', 'unknownClass', 'rateLimited', 'offline'].includes(code) ? code : 'other'}`);
+    return t(`session.error.${['unknownSession', 'unknownClass', 'rateLimited', 'offline', 'wrongPin', 'sessionInUse', 'sessionLocked', 'invalidPin'].includes(code) ? code : 'other'}`);
   }
 
   async function run(action: () => Promise<string>) {
@@ -42,11 +49,37 @@
 
   const resume = () =>
     run(async () => {
-      const loaded = await session.open(resumeCode);
-      editor.replace(loaded.topology, { undoable: true, tasks: loaded.tasks ?? null, snapshots: loaded.snapshots ?? [] });
-      ensureProjectFeatures();
+      try {
+        const loaded = await session.open(resumeCode, needPin ? pin : undefined);
+        editor.replace(loaded.topology, { undoable: true, tasks: loaded.tasks ?? null, snapshots: loaded.snapshots ?? [] });
+        ensureProjectFeatures();
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 423 && error.code !== 'wrongPin') needPin = true;
+        if (error instanceof ApiError && error.status === 409) inUse = true;
+        throw error;
+      }
       resumeCode = '';
+      needPin = false;
+      inUse = false;
+      pin = '';
       return t('session.resumed', { code: session.code ?? '' });
+    });
+
+  async function watch(code: string) {
+    if (await startWatch(code)) onclose();
+  }
+
+  const lock = () =>
+    run(async () => {
+      await session.lock(lockPin);
+      lockPin = '';
+      return t('session.lockedOk');
+    });
+
+  const unlock = () =>
+    run(async () => {
+      await session.unlock();
+      return t('session.unlockedOk');
     });
 
   const join = () =>
@@ -98,6 +131,37 @@
   <form onsubmit={(e) => (e.preventDefault(), resume())}>
     <input bind:value={resumeCode} placeholder="ABCD-2345" maxlength="14" use:codeInput aria-label={t('session.code')} class="code" autocomplete="off" />
     <button type="submit" disabled={busy || !resumeCode.trim()}>{t('session.resume')}</button>
+  </form>
+  {#if needPin}
+    <p class="muted">{t('session.needPin')}</p>
+    <form onsubmit={(e) => (e.preventDefault(), resume())}>
+      <input bind:value={pin} type="password" inputmode="numeric" maxlength="8" pattern={"[0-9]{4,8}"} aria-label={t('session.pin')} autocomplete="off" />
+      <button type="submit" disabled={busy || pin.length < 4}>{t('session.resume')}</button>
+    </form>
+  {/if}
+  {#if inUse}
+    <p class="muted">{t('session.inUse')} <button onclick={() => watch(resumeCode)}>{t('session.watch')}</button></p>
+  {/if}
+
+  {#if session.code && !session.takenOver}
+    <h3>{t('session.lockTitle')}</h3>
+    {#if session.locked}
+      <p class="ok">🔒 {t('session.locked')}</p>
+      <button onclick={unlock} disabled={busy}>{t('session.unlock')}</button>
+    {:else}
+      <p class="muted">{t('session.lockHint')}</p>
+      <form onsubmit={(e) => (e.preventDefault(), lock())}>
+        <input bind:value={lockPin} type="password" inputmode="numeric" maxlength="8" pattern={"[0-9]{4,8}"} aria-label={t('session.pin')} autocomplete="new-password" />
+        <button type="submit" disabled={busy || !/^\d{4,8}$/.test(lockPin)}>{t('session.lock')}</button>
+      </form>
+    {/if}
+  {/if}
+
+  <h3>{t('session.watchTitle')}</h3>
+  <p class="muted">{t('session.watchHint')}</p>
+  <form onsubmit={(e) => (e.preventDefault(), watch(watchCode))}>
+    <input bind:value={watchCode} placeholder="ABCD-2345" maxlength="14" use:codeInput aria-label={t('session.watchTitle')} class="code" autocomplete="off" />
+    <button type="submit" disabled={busy || !watchCode.trim()}>{t('session.watch')}</button>
   </form>
 
   <h3>{t('session.classTitle')}</h3>

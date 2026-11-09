@@ -62,6 +62,40 @@ test('Router über die Befehlszeile konfigurieren (OSPF)', async ({ page }) => {
   await expect(page.getByLabel('IP-Adresse von eth0')).toHaveValue('10.1.1.1');
 });
 
+test('Befehlszeile: Fokus, mehrzeilig einfügen, Verlauf über den Moduswechsel, verschiebbar', async ({ page }) => {
+  await page.getByRole('button', { name: 'P2' }).click();
+  await page.getByRole('dialog', { name: 'Funktionsumfang' }).getByRole('radio', { name: /Profi/ }).click();
+  await page.keyboard.press('Escape');
+  await shop(page, 'Router', /^Router 2 Port/);
+  await page.getByRole('complementary', { name: 'Eigenschaften' }).getByRole('button', { name: /Befehlszeile \(CLI\)/ }).first().click();
+  const cli = page.getByLabel('CLI-Befehl eingeben');
+  await expect(cli).toBeFocused();
+  // Ganze Konfiguration auf einmal einfügen: jede Zeile wird ausgeführt.
+  await cli.evaluate((el) => {
+    const data = new DataTransfer();
+    data.setData('text/plain', 'enable\nconf t\n! Kommentar\ninterface eth0\n ip address 10.9.9.1/24\nend\n');
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  });
+  await expect(page.getByLabel('IP-Adresse von eth0')).toHaveValue('10.9.9.1');
+  // Fenster am Kopf verschieben.
+  const win = page.getByRole('dialog', { name: /Befehlszeile/ });
+  const head = win.locator('header');
+  const before = (await win.boundingBox())!;
+  const h = (await head.boundingBox())!;
+  await page.mouse.move(h.x + 60, h.y + h.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(h.x + 260, h.y + h.height / 2 + 80, { steps: 4 });
+  await page.mouse.up();
+  const after = (await win.boundingBox())!;
+  expect(after.x - before.x).toBeGreaterThan(150);
+  // Verlauf bleibt nach Simulation und zurück in den Entwurf.
+  await page.getByRole('radio', { name: 'Simulation' }).click();
+  await page.getByRole('radio', { name: 'Entwurf' }).click();
+  await page.getByRole('complementary', { name: 'Eigenschaften' }).getByRole('button', { name: /Befehlszeile \(CLI\)/ }).first().click();
+  await cli.press('ArrowUp');
+  await expect(cli).toHaveValue('end');
+});
+
 test('SSH vom PC zum Router in der Simulation', async ({ page }) => {
   await openProject(page, example('router-on-a-stick'));
   await page.getByRole('radio', { name: 'Simulation' }).click();

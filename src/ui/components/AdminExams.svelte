@@ -12,7 +12,18 @@
    * drucken und verteilen, starten, Nachteilsausgleich je Platz, beenden,
    * automatisch auswerten oder alle Abgaben herunterladen.
    */
-  let { call, notify, version = 0 }: { version?: number; call: <T>(method: string, path: string, body?: unknown) => Promise<T>; notify: (kind: 'ok' | 'error', text: string) => void } = $props();
+  let {
+    call,
+    notify,
+    version = 0,
+    onwatch,
+  }: {
+    version?: number;
+    call: <T>(method: string, path: string, body?: unknown) => Promise<T>;
+    notify: (kind: 'ok' | 'error', text: string) => void;
+    /** Platz live ansehen (nur lesen). */
+    onwatch?: (session: string, label: string) => void;
+  } = $props();
 
   interface Seat {
     id: string;
@@ -22,6 +33,9 @@
     state: 'waiting' | 'open' | 'closed';
     joined: boolean;
     saved: number | null;
+    /** Gerät hat sich in der letzten Minute gemeldet. */
+    online?: boolean;
+    session?: string | null;
   }
   interface Exam {
     id: string;
@@ -257,7 +271,7 @@
   <p class="muted">{t(`admin.exams.help.${open.state}`)}</p>
   <table>
     <thead>
-      <tr><th>{t('exam.seatWord')}</th><th>{t('admin.exams.code')}</th><th>{t('admin.exams.state')}</th><th>{t('admin.exams.saved')}</th><th>{t('admin.exams.until')}</th><th>{t('admin.exams.extra')}</th></tr>
+      <tr><th>{t('exam.seatWord')}</th><th>{t('admin.exams.code')}</th><th>{t('admin.exams.state')}</th><th>{t('admin.exams.saved')}</th><th>{t('admin.exams.until')}</th><th>{t('admin.exams.extra')}</th><th>{t('admin.exams.live')}</th></tr>
     </thead>
     <tbody>
       {#each seatList as s (s.id)}
@@ -272,6 +286,11 @@
             <button title={t('admin.exams.extraAdd', { n: 5 })} onclick={() => act(`seats/${s.id}/extra`, { minutes: 5 })}>+5′</button>
             <button title={t('admin.exams.extraAdd', { n: 15 })} onclick={() => act(`seats/${s.id}/extra`, { minutes: 15 })}>+15′</button>
             <button title={t('admin.exams.extraRemove')} disabled={!s.extra} onclick={() => act(`seats/${s.id}/extra`, { minutes: -5 })}>−5′</button>
+          </td>
+          <td class="actions">
+            <span class="dot" class:on={s.online} title={s.online ? t('admin.exams.online') : t('admin.exams.offline')} aria-label={s.online ? t('admin.exams.online') : t('admin.exams.offline')}></span>
+            <button disabled={!s.session || !onwatch} title={t('admin.exams.watchHint')} onclick={() => s.session && onwatch?.(s.session, `${open?.label ?? ''} · ${t('exam.seatWord')} ${s.id}`)}>👁 {t('admin.exams.watch')}</button>
+            <button disabled={!s.joined} title={t('admin.exams.releaseHint')} onclick={() => act(`seats/${s.id}/release`, {}, t('admin.exams.releaseConfirm', { seat: s.id }))}>{t('admin.exams.release')}</button>
           </td>
         </tr>
       {/each}
@@ -324,6 +343,17 @@
   }
   .actions button {
     padding: 1px 6px;
+  }
+  .dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--border);
+    margin-right: 4px;
+  }
+  .dot.on {
+    background: #16a34a;
   }
   .extra {
     color: #b45309;

@@ -15,10 +15,16 @@ let server;
 let base;
 const project = (n = 1) => ({ meta: { format: 'netzwerk-simulator', version: 1 }, topology: { devices: Array.from({ length: n }, (_, i) => ({ id: `d${i + 1}` })), cables: [], nextId: n + 1 }, configuration: {} });
 
+/** Schreib-Tokens wie im Browser: aus Antworten merken und bei Sessions mitschicken. */
+const writers = new Map();
+const sessionOf = (url) => (/\/api\/sessions\/([^/?]+)/.exec(url)?.[1] ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
 async function call(method, url, body, token) {
+  const key = sessionOf(url);
+  const writer = key && writers.get(key);
   const res = await fetch(base + url, {
     method,
-    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(writer ? { 'X-Leyonet-Writer': writer } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
@@ -28,6 +34,8 @@ async function call(method, url, body, token) {
   } catch {
     data = text;
   }
+  const owner = data && typeof data === 'object' && data.writer ? String(data.code ?? data.session ?? key).toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
+  if (owner) writers.set(owner, data.writer);
   return { status: res.status, data, headers: res.headers };
 }
 
@@ -74,6 +82,49 @@ test('Codes: normalisiert und ohne verwechselbare Zeichen', () => {
   assert.equal(normalizeCode('k7f2 9qxm'), 'K7F2-9QXM');
   assert.equal(normalizeCode('K7F2-9QX0'), null);
   assert.equal(normalizeCode('../etc'), null);
+});
+
+/** Wie ein zweites Gerät: ohne das Schreib-Token des ersten. */
+async function foreign(method, url, body, headers = {}) {
+  const res = await fetch(base + url, { method, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined });
+  return { status: res.status, data: await res.json().catch(() => null) };
+}
+
+test('Session nur an einem Gerät offen, Ansehen, Sperre mit PIN', async () => {
+  const { code, writer } = (await call('POST', '/api/sessions', { project: project(1) })).data;
+  assert.match(writer, /^[A-Za-z0-9_-]{30,}$/);
+  // Zweites Gerät: verbunden ist das erste, also kein Schreibrecht, aber Ansehen geht.
+  assert.equal((await foreign('GET', `/api/sessions/${code}`)).data.error, 'sessionInUse');
+  const watched = await foreign('GET', `/api/sessions/${code}?watch=1`);
+  assert.equal(watched.status, 200);
+  assert.equal(watched.data.watch, true);
+  assert.equal(watched.data.writer, undefined);
+  assert.equal(watched.data.connected, true);
+  assert.equal((await foreign('PUT', `/api/sessions/${code}`, { project: project(5) })).status, 409);
+  assert.equal((await foreign('DELETE', `/api/sessions/${code}`)).status, 409);
+  assert.equal((await foreign('POST', `/api/sessions/${code}/ping`)).status, 409);
+  assert.equal((await call('POST', `/api/sessions/${code}/ping`)).data.ok, true);
+  // Sperren: nur mit gültiger PIN.
+  assert.equal((await call('POST', `/api/sessions/${code}/lock`, { pin: '12' })).status, 400);
+  assert.equal((await call('POST', `/api/sessions/${code}/lock`, { pin: '4711' })).data.locked, true);
+  assert.equal((await foreign('POST', `/api/sessions/${code}/lock`, { pin: '0000' })).status, 409);
+  // Gerät weg (nicht mehr verbunden): ohne PIN gesperrt, mit falscher PIN abgewiesen, mit richtiger übernommen.
+  const { _leases } = require('./app.cjs');
+  _leases.clear();
+  assert.equal((await foreign('GET', `/api/sessions/${code}`)).data.error, 'sessionLocked');
+  assert.equal((await foreign('GET', `/api/sessions/${code}`, undefined, { 'X-Leyonet-Pin': '1234' })).data.error, 'wrongPin');
+  const taken = await foreign('GET', `/api/sessions/${code}`, undefined, { 'X-Leyonet-Pin': '4711' });
+  assert.equal(taken.status, 200);
+  assert.ok(taken.data.writer && taken.data.writer !== writer);
+  assert.equal(taken.data.locked, true);
+  // Das erste Gerät hat das Schreibrecht verloren.
+  assert.equal((await call('PUT', `/api/sessions/${code}`, { project: project(2) })).data.error, 'sessionTakenOver');
+  // Zu viele falsche PINs: vorübergehend gesperrt.
+  _leases.clear();
+  for (let i = 0; i < 5; i++) await foreign('GET', `/api/sessions/${code}`, undefined, { 'X-Leyonet-Pin': '9999' });
+  assert.equal((await foreign('GET', `/api/sessions/${code}`, undefined, { 'X-Leyonet-Pin': '4711' })).status, 429);
+  // Entsperren nur mit Schreibrecht.
+  assert.equal((await foreign('DELETE', `/api/sessions/${code}/lock`, undefined, { 'X-Leyonet-Writer': taken.data.writer })).data.locked, false);
 });
 
 test('Session anlegen, laden, ändern, löschen', async () => {
@@ -192,11 +243,24 @@ test('Prüfung: Plätze mit Code, warten, starten, speichern, Nachteilsausgleich
   const put = await call('PUT', `/api/sessions/${join.session}`, { project: work });
   assert.equal(put.status, 200);
   assert.equal(put.data.exam.state, 'open');
-  // Nochmals beitreten (anderes Gerät): dieselbe Session mit dem gespeicherten Stand.
+  // Zweites Gerät, solange das erste verbunden ist: abgewiesen (ein Platz ist nur einmal offen).
+  const other = await call('POST', '/api/exams/join', { seatCode: seat1.code });
+  assert.equal(other.status, 409);
+  assert.equal(other.data.error, 'seatInUse');
+  // Dasselbe Gerät (mit seinem Token) kommt wieder hinein.
+  const same = (await call('POST', '/api/exams/join', { seatCode: seat1.code, writer: join.writer })).data;
+  assert.equal(same.session, join.session);
+  assert.equal(same.writer, join.writer);
+  // Lehrperson sieht den Platz als verbunden und gibt ihn frei; dann übernimmt ein anderes Gerät mit dem Stand.
+  const online = (await call('GET', `/api/admin/exams/${exam.id}`, null, token)).data.seats.find((s) => s.id === '01');
+  assert.equal(online.online, true);
+  assert.equal(online.session, join.session);
+  await call('POST', `/api/admin/exams/${exam.id}/seats/01/release`, {}, token);
   const again = (await call('POST', '/api/exams/join', { seatCode: seat1.code })).data;
   assert.equal(again.session, join.session);
   assert.equal(again.fresh, false);
   assert.equal(again.project.topology.devices.length, 3);
+  assert.notEqual(again.writer, join.writer);
   // Lernende können ihre Abgabe nicht löschen.
   assert.equal((await call('DELETE', `/api/sessions/${join.session}`)).status, 403);
 

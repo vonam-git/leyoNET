@@ -7,6 +7,7 @@
   import { featureName } from '../labels';
   import { normalizePolicy, ui } from '../state/ui.svelte';
   import AdminExams from './AdminExams.svelte';
+  import { startWatch } from '../watch';
   import Modal from './Modal.svelte';
 
   /**
@@ -340,7 +341,7 @@
         {/each}
       {/if}
     {:else if tab === 'exams'}
-      <AdminExams {call} version={examsVersion} notify={(kind, text) => (message = { kind, text })} />
+      <AdminExams {call} version={examsVersion} notify={(kind, text) => (message = { kind, text })} onwatch={async (code, label) => { if (token && (await startWatch(code, token, label))) onclose(); }} />
     {:else if tab === 'classes'}
       <form class="row" onsubmit={createClass}>
         <input bind:value={label} maxlength="40" placeholder={t('admin.classLabelPlaceholder')} aria-label={t('admin.classLabel')} required />
@@ -390,7 +391,10 @@
                   <td>{when(s.updated)}</td>
                   <td>{s.devices} / {s.cables}</td>
                   <td>{score(reviews[s.code])}</td>
-                  <td class="actions"><button onclick={() => loadSession(s.code)}>{t('admin.open')}</button></td>
+                  <td class="actions">
+                    <button onclick={() => loadSession(s.code)}>{t('admin.open')}</button>
+                    <button title={t('admin.exams.watchHint')} onclick={async () => { if (token && (await startWatch(s.code, token, s.code))) onclose(); }}>👁 {t('admin.exams.watch')}</button>
+                  </td>
                 </tr>
               {/each}
             </tbody>

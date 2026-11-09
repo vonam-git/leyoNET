@@ -21,6 +21,7 @@
   import StormBanner from './components/StormBanner.svelte';
   import TaskPanel from './components/TaskPanel.svelte';
   import ExamBanner from './components/ExamBanner.svelte';
+  import SessionBanner from './components/SessionBanner.svelte';
   import { examMode } from './state/exam.svelte';
   import Toast from './components/Toast.svelte';
   import ToolBar from './components/ToolBar.svelte';
@@ -197,6 +198,7 @@
     </div>
     <main>
       <ExamBanner />
+      <SessionBanner />
       {#if editor.acting}
         <SimControls />
         <StormBanner />

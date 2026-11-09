@@ -52,7 +52,10 @@ Läuft leyoNET als Webversion mit Node-Server (siehe [plesk.md](plesk.md)), geht
 1. **Admin-Konsole → Prüfungen:** Prüfungsdatei und Schlüssel hochladen, Bezeichnung (z.B. «INF22a LB3»), Plätze und Minuten. Bei einer Prüfung mit Varianten gibt es je Variante einen Platz.
 2. **Platzkarten drucken:** eine Karte je Platz mit Platz-Code (z.B. `K7QX-3MPA`), Adresse und Anleitung. Karten an die Plätze legen.
 3. Die Lernenden öffnen leyoNET, **Datei → Prüfung beitreten …** und tippen den Platz-Code ein. Vor dem Start warten sie; danach erhält jeder Platz seine Variante, der Prüfungsmodus beginnt.
-4. **Starten.** Die Tabelle zeigt je Platz: beigetreten, zuletzt gespeichert, Ende. Der Stand wird **alle 20 Sekunden** automatisch gespeichert (und beim Schliessen der Seite). Ein Neuladen oder ein Absturz kostet höchstens diese 20 Sekunden; mit demselben Platz-Code geht es auf jedem Rechner weiter.
+4. **Starten.** Das **Prüfungscockpit** zeigt je Platz: beigetreten, zuletzt gespeichert, Ende und **Live**: ein grüner Punkt, solange das Gerät verbunden ist (es meldet sich alle 20 Sekunden). Der Stand wird **alle 20 Sekunden** automatisch gespeichert (und beim Schliessen der Seite). Ein Neuladen kostet höchstens diese 20 Sekunden.
+   - **Nur einmal offen:** Ein Platz ist nur an einem Gerät offen. Tippt jemand denselben Platz-Code an einem zweiten Rechner ein, solange der erste verbunden ist, wird das abgewiesen («Platz schon offen»). Dasselbe Gerät kommt nach einem Neuladen ohne Weiteres wieder hinein.
+   - **Freigeben:** Ist ein Browser abgestürzt oder wechselt jemand den Rechner, gibt die Lehrperson den Platz mit «Freigeben» frei. Danach tritt die Person am neuen Gerät mit demselben Platz-Code bei und arbeitet mit dem gespeicherten Stand weiter; das alte Gerät kann nicht mehr speichern. Nach einer Minute ohne Lebenszeichen ist ein Platz ohnehin wieder frei.
+   - **Ansehen:** «👁 Ansehen» zeigt den Stand eines Platzes live (alle 5 Sekunden neu, nur lesen). So lässt sich prüfen, ob alles funktioniert, oder eine Person begleiten. Das eigene Projekt kommt mit «Beenden» zurück.
 5. **Nachteilsausgleich** je Platz: «+5′», «+15′» (vor oder während der Prüfung, auch nach Ablauf – der Platz öffnet dann wieder), «−5′» zum Korrigieren.
 6. Ist die Zeit eines Platzes um, nimmt der Server nichts mehr an: Der letzte Stand ist **automatisch abgegeben**, die Lernenden sehen «Abgegeben». «Für alle beenden» beendet alle Plätze sofort.
 7. **Automatisch auswerten:** alle Abgaben werden mit dem hinterlegten Schlüssel korrigiert (wie unten beschrieben, mit Nachkorrektur, CSV und Berichten). **Abgaben herunterladen** speichert eine Datei mit allen Abgaben und dem Schlüssel (`abgaben-….json`); «Abgaben auswerten» liest sie später wieder.
@@ -72,6 +75,12 @@ Die Lernenden müssen dir also nichts schicken; der Platz-Code ist zugleich ihre
 - Die Lernenden erhalten nur die Prüfungsdatei (ohne Lösungen). Der Platz-Code ist wie ein Passwort: Wer ihn kennt, arbeitet an diesem Platz.
 - Prüfung, Abgaben und Platz-Codes werden **60 Tage** nach dem Anlegen gelöscht (Aufbewahrung für Einsicht und Rekurs) oder sofort mit «Löschen».
 - Gesperrt werden auf dem Server auch das Löschen der Session und das Speichern nach Ablauf (30 Sekunden Kulanz für die letzte Übertragung).
+
+### Übungen begleiten (ohne Prüfung)
+
+- **Mit dem Session-Code:** Datei → Online-Session → «Session ansehen» und den Code der lernenden Person eingeben. Der Stand erscheint live und nur lesend; die Person arbeitet ungestört weiter. Der Balken oben zeigt, ob ihr Gerät verbunden ist.
+- **Klassen-Sessions:** In der Admin-Konsole bei der Klasse «👁 Ansehen» neben jeder Session.
+- **Eigene Session sperren:** Lernende (und Lehrpersonen) können ihre Session unter Datei → Online-Session mit einer **PIN** (4 bis 8 Ziffern) sperren. Wer den Code kennt, kann dann nur noch ansehen; weiterarbeiten an einem anderen Gerät geht nur mit der PIN. Auch ohne Sperre arbeitet immer nur **ein** Gerät in einer Session: Öffnet ein zweites Gerät den Code, während das erste verbunden ist, kann es nur ansehen.
 
 ## Auswerten
 

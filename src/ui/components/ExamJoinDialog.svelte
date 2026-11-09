@@ -61,7 +61,7 @@
       onclose();
     } catch (error) {
       const c = error instanceof ApiError ? error.code : 'other';
-      message = t(`exam.join.error.${['unknownSeat', 'rateLimited', 'offline'].includes(c) ? c : 'other'}`);
+      message = t(`exam.join.error.${['unknownSeat', 'rateLimited', 'offline', 'seatInUse'].includes(c) ? c : 'other'}`);
       waiting = null;
     } finally {
       busy = false;
