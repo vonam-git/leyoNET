@@ -5,6 +5,7 @@ import { setLocale } from '../i18n';
 import { CATALOG } from './catalog';
 import { OUT_DIR, buildSheet } from '../../scripts/arbeitsblaetter/erzeugen.mjs';
 import { SHEETS } from '../../scripts/arbeitsblaetter/inhalt.mjs';
+import { catalogSheets } from './catalogSheets';
 
 setLocale('de');
 
@@ -18,7 +19,8 @@ interface Sheet {
   entries: string[];
   sections: Section[];
 }
-const sheets = SHEETS as Sheet[];
+// Von Hand geschriebene Blätter (Module) und automatisch erzeugte (Übungen ohne Modulreihe).
+const sheets = [...(SHEETS as Sheet[]), ...(catalogSheets() as Sheet[])];
 
 describe('Arbeitsblätter (PDF) zu den Katalog-Übungen', () => {
   it('jede Übung mit Arbeitsblatt hat ein Blatt, jedes Blatt passt zu seinen Übungen', () => {
@@ -44,6 +46,10 @@ describe('Arbeitsblätter (PDF) zu den Katalog-Übungen', () => {
         expect(typeof check === 'object' ? check.points : check).toBe(expected);
       });
     }
+  });
+
+  it('jede Übung hat ein Arbeitsblatt', () => {
+    expect(CATALOG.filter((e) => !e.sheet).map((e) => e.id)).toEqual([]);
   });
 
   it.each(sheets.map((s) => s.file))('%s: eingechecktes PDF passt zum Inhalt (npm run arbeitsblaetter), Musterlösung lässt sich erzeugen', async (file) => {

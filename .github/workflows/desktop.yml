@@ -2,6 +2,11 @@
 # als Entwurf eines GitHub-Release ab. Auslösen: Tag "v0.2.0" pushen oder
 # auf GitHub unter Actions → Desktop → "Run workflow".
 #
+# Release-Text: docs/releases/<Tag>.md (z.B. docs/releases/v1.2.0.md), sonst ein kurzer Standardtext.
+# Danach legt der Auftrag «dateinamen» Kopien mit festen Namen ab (leyoNET-Windows-Setup.exe …)
+# und die Arbeitsblätter als ZIP; die Website verlinkt auf
+# https://github.com/vonam-git/leyoNET/releases/latest/download/<fester Name>.
+#
 # Hinweis: Die Installer sind nicht signiert. Windows (SmartScreen) und macOS
 # (Gatekeeper) warnen deshalb beim ersten Start; siehe docs/desktop.md.
 name: Desktop
@@ -65,13 +70,64 @@ jobs:
       # Prüft Code und Lizenzen und erzeugt THIRD_PARTY_NOTICES.md für das Paket.
       - run: npm run release
 
+      # Tag-Name nur über die Umgebung (nicht in den Befehl eingesetzt), Pfad bleibt in docs/releases/.
+      - name: Release-Text
+        id: notes
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          file="docs/releases/${TAG}.md"
+          {
+            echo 'body<<LEYONET_NOTES_EOF'
+            if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && -f "$file" ]]; then cat "$file"; else echo 'Installer für Windows (.msi/.exe), macOS (.dmg) und Linux (.deb/.AppImage/.rpm). Nicht signiert, siehe docs/desktop.md.'; fi
+            echo
+            echo 'LEYONET_NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('desktop-{0}', github.run_number) }}
           releaseName: 'leyoNET ${{ github.ref_type == ''tag'' && github.ref_name || format(''Test {0}'', github.run_number) }}'
-          releaseBody: 'Installer für Windows (.msi/.exe), macOS (.dmg) und Linux (.deb/.AppImage/.rpm). Nicht signiert, siehe docs/desktop.md.'
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: true
           prerelease: ${{ github.ref_type != 'tag' }}
           args: ${{ matrix.args }}
+
+  # Feste Dateinamen für die Downloads der Website (ohne Versionsnummer) und die Arbeitsblätter als ZIP.
+  dateinamen:
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Kopien mit festen Namen hochladen
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p dl out
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dl --pattern '*.exe' --pattern '*.msi' --pattern '*.dmg' --pattern '*.AppImage' --pattern '*.deb' --pattern '*.rpm'
+          for f in dl/*; do
+            case "$f" in
+              *-setup.exe) n=leyoNET-Windows-Setup.exe ;;
+              *.msi) n=leyoNET-Windows.msi ;;
+              *.dmg) n=leyoNET-macOS.dmg ;;
+              *.AppImage) n=leyoNET-Linux.AppImage ;;
+              *.deb) n=leyoNET-Linux.deb ;;
+              *.rpm) n=leyoNET-Linux.rpm ;;
+              *) continue ;;
+            esac
+            cp "$f" "out/$n"
+          done
+          # Nur die Blätter für Lernende (Musterlösungen sind nicht im Repo).
+          (cd docs/arbeitsblaetter && zip -q -X ../../out/leyoNET-Arbeitsblaetter.zip *.pdf README.md)
+          cp release/leyonet.html out/leyonet.html
+          (cd out && sha256sum leyoNET-* leyonet.html > SHA256SUMS.txt)
+          ls -l out
+          gh release upload "$TAG" out/* --repo "$GITHUB_REPOSITORY" --clobber

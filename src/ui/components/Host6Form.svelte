@@ -50,8 +50,8 @@
   <h3>IPv6</h3>
   <fieldset class="mode">
     <legend class="visually-hidden">{t('ipv6.mode')}</legend>
-    <label><input type="radio" bind:group={auto} value={false} /> {t('ipv6.mode.manual')}</label>
-    <label><input type="radio" bind:group={auto} value={true} /> {t('ipv6.mode.auto')}</label>
+    <label><input type="radio" bind:group={auto} value={false} /> ✎ {t('ipv6.mode.manual')}</label>
+    <label><input type="radio" bind:group={auto} value={true} /> ⟳ {t('ipv6.mode.auto')}</label>
   </fieldset>
   {#if auto}
     <p class="muted">{t('ipv6.autoExplain')}</p>
@@ -85,18 +85,38 @@
     margin: 16px 0 8px;
     font-size: 0.85rem;
   }
+  /* Umschalter fest / automatisch: gleich wie bei IPv4, deutlich als zwei Zustände erkennbar. */
   .mode {
-    display: flex;
-    gap: 14px;
-    margin: 0 0 8px;
-    padding: 0;
-    border: none;
+    display: inline-flex;
+    margin: 0 0 10px;
+    padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg, var(--surface));
     font-size: 0.85rem;
   }
   .mode label {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .mode label:has(input:checked) {
+    color: var(--surface);
+    background: var(--accent);
+    font-weight: 600;
+  }
+  .mode label:has(input:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+  .mode input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
   }
   .field {
     display: grid;

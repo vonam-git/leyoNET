@@ -11,3 +11,6 @@ normen-bericht.md
 
 # Musterlösungen der Arbeitsblätter nur lokal (npm run arbeitsblaetter), nicht im öffentlichen Repo
 docs/arbeitsblaetter/*_mL.pdf
+# Website: Impressum und Datenschutz mit Kontaktdaten nur auf dem Server (Vorlagen: *.vorlage.html)
+website/httpdocs/impressum.html
+website/httpdocs/datenschutz.html

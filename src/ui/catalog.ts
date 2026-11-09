@@ -33,7 +33,7 @@ import {
   setDefaultGateway,
 } from '../core';
 import { t } from '../i18n';
-import { Start, goal, task, unwrap, type CatalogEntry } from './catalogKit';
+import { Start, generalSheet, goal, task, unwrap, type CatalogEntry } from './catalogKit';
 import { M117 } from './catalogM117';
 import { M129 } from './catalogM129';
 import { M145 } from './catalogM145';
@@ -41,7 +41,7 @@ import { ADVANCED } from './catalogAdvanced';
 
 export type { CatalogEntry } from './catalogKit';
 
-export const CATALOG: CatalogEntry[] = [
+const ENTRIES: CatalogEntry[] = [
   {
     id: 'two-pcs',
     stars: 1,
@@ -987,3 +987,6 @@ export const CATALOG: CatalogEntry[] = [
   ...M129,
   ...M145,
 ];
+
+/** Alle Übungen; die ohne Modulreihe bekommen ein automatisch erzeugtes Arbeitsblatt (catalogSheets.ts). */
+export const CATALOG: CatalogEntry[] = ENTRIES.map((e) => (e.series || e.sheet ? e : { ...e, sheet: generalSheet(e.id) }));

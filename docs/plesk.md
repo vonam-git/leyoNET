@@ -108,11 +108,17 @@ Ist der Stand auf `develop` gut, wird er nach `main` übernommen (Pull Request a
 
 ## leyonet.ch: Auftritt und Programm
 
-- **leyonet.ch** (Hauptdomain): der Auftritt mit Übersicht und Downloads, reine statische Dateien (nicht in diesem Repo). Dokumentstamm `httpdocs`, kein Node.js.
+- **leyonet.ch** (Hauptdomain): der Auftritt mit Übersicht und Downloads, reine statische Dateien im Ordner [`website/`](../website/), kein Node.js. Siehe [unten](#website-leyonetch).
 - **app.leyonet.ch** (Subdomain): das Programm wie oben beschrieben, mit Branch **`main`** (stabile Version für Klassen und Prüfungen).
 - **beta.leyonet.ch** mit Branch `develop` als Testumgebung: Umgebungsvariable `LEYONET_CHANNEL=beta`, eigenes `ADMIN_PASSWORD` und eigenes `DATA_DIR`. Oben steht dann «Testversion», und Suchmaschinen nehmen die Seite nicht auf. Keine Prüfungen auf beta durchführen: Nach einem Push kann dort etwas vorübergehend nicht funktionieren.
 - Ablauf: auf beta testen; läuft es, Pull Request `develop` → `main`, dann bei app.leyonet.ch *Pull Updates*.
 - Für jede Subdomain SSL/TLS mit Let's Encrypt aktivieren (oder ein Wildcard-Zertifikat für `*.leyonet.ch`).
+
+## Website leyonet.ch
+
+Die Website liegt im Repo unter [`website/httpdocs/`](../website/httpdocs/) (Startseite, Impressum, Datenschutz, Bilder, `.htaccess` mit Sicherheits-Köpfen; nur eigene Dateien, keine fremden Dienste). Die Downloads sind **Links auf GitHub-Releases** mit festen Dateinamen, z.B. `https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Windows-Setup.exe`. Bei einer neuen Version wird nichts hochgeladen: Sobald der Release veröffentlicht ist, zeigen die Links auf die neuen Dateien. Die festen Namen legt der Workflow `desktop.yml` (Auftrag «dateinamen») an.
+
+Einrichten in Plesk und Ablauf bei neuen Versionen: [`website/ANLEITUNG.md`](../website/ANLEITUNG.md). Kurz: bei leyonet.ch *Git* mit Branch `main` und Bereitstellungspfad `leyonet-repo`, Dokumentstamm `leyonet-repo/website/httpdocs`.
 
 ## Ohne Node.js (nur statisch)
 

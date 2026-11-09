@@ -39,6 +39,7 @@
 
 {#if device}
   <div class="window" bind:this={el} role="dialog" aria-labelledby="cli-title" tabindex="-1" {onkeydown} style:left={cliWindow.x !== undefined ? `${cliWindow.x}px` : undefined} style:top={cliWindow.y !== undefined ? `${cliWindow.y}px` : undefined}>
+    <!-- svelte-ignore a11y_no_static_element_interactions (Ziehen mit der Maus; Tastatur: Fenster bleibt bedienbar) -->
     <header onpointerdown={onHeadDown} onpointermove={onHeadMove} onpointerup={onHeadUp} onpointercancel={onHeadUp} title={t('desktop.dragHint')}>
       <h2 id="cli-title">{t('cli.title', { name: device.name })}</h2>
       <span class="hint">{t('cli.hint')}</span>
