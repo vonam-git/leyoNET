@@ -26,7 +26,22 @@ class SviRouter extends RouterNode {
   protected override outbound(inIface: IfaceAddress, outIface: IfaceAddress, packet: Ipv4Packet): Ipv4Packet | null {
     const device = this.ctx.device();
     if (device?.ipRouting === false || device?.type === 'switch') return null;
+    if (!this.#svisAllow(inIface.index, 'in', packet) || !this.#svisAllow(outIface.index, 'out', packet)) return null;
     return super.outbound(inIface, outIface, packet);
+  }
+
+  /** Pakete aus dem VLAN an den Switch selbst (Ping an die SVI, DHCP an das Relay) prüft die eingehende Liste. */
+  protected override localAllowed(index: number, packet: Ipv4Packet): boolean {
+    return this.#svisAllow(index, 'in', packet);
+  }
+
+  /** Zugriffsliste am VLAN-Interface (in/out); ohne Zuweisung geht alles durch. */
+  #svisAllow(index: number, direction: 'in' | 'out', packet: Ipv4Packet): boolean {
+    const ref = decodeIface(index);
+    if (ref.kind !== 'svi') return true;
+    const svi = this.ctx.device()?.svis?.find((s) => s.vlan === ref.vlan);
+    const name = direction === 'in' ? svi?.aclIn : svi?.aclOut;
+    return !name || this.owner.aclCheck(name, { dst: '', src: '', payload: packet } as unknown as EthernetFrame, `Vlan${ref.vlan} ${direction}`);
   }
 
   /** VXLAN: Pakete an UDP 4789 der eigenen Adresse auspacken und ins VLAN geben. */

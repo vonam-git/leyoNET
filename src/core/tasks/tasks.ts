@@ -3,8 +3,8 @@
 // Dynamische Prüfungen (Ping, HTTP, DHCP, E-Mail) laufen in einer eigenen,
 // frischen Simulation des aktuellen Netzes und sind deshalb wiederholbar.
 
-import { DEVICE_TYPES } from '../model/devices';
-import { cablesOf, otherEnd, vlanColor } from '../model/topology';
+import { DEVICE_TYPES, isSwitchType } from '../model/devices';
+import { cablesOf, otherEnd, vlanColor, vlanExists } from '../model/topology';
 import { linkStatus, mediumOf } from '../model/links';
 import { costOf } from '../model/costs';
 import { duplicateAddresses } from '../model/duplicates';
@@ -49,6 +49,10 @@ export type Check =
   | { type: 'linkUp'; a: string; b: string; medium?: Medium }
   /** VLAN ist mit Farbe dokumentiert. */
   | { type: 'vlanDocumented'; vlan: number }
+  /** Endgerät hängt an einem Switch-Port, der als Access-Port in diesem VLAN läuft (VLAN existiert dort). */
+  | { type: 'hostVlan'; device: string; vlan: number }
+  /** Verbindung zwischen zwei Switches ist auf beiden Seiten ein Trunk, der diese VLANs überträgt. */
+  | { type: 'trunk'; a: string; b: string; vlans?: number[] }
   /** Geräte mit diesen Namen (und optional diesem Typ) sind vorhanden. */
   | { type: 'device'; names: string[]; deviceType?: DeviceType }
   /** Ein Anschluss des Geräts hat diese feste Adresse mit Präfix, z.B. "10.33.0.1/22". */
@@ -67,6 +71,11 @@ export type Check =
   | { type: 'answer'; kind?: 'choice'; options?: string[]; accept?: string[] }
   /** Bewertet die Lehrperson von Hand (Nachkorrektur). */
   | { type: 'manual' };
+
+/** Feste IPv4-Adresse eines Zielgeräts: erster Anschluss, sonst erstes VLAN-Interface (Switch), sonst irgendein Anschluss oder Subinterface. */
+function staticIpv4(device: Device): string | undefined {
+  return device.interfaces[0]?.ip ?? device.svis?.find((s) => s.ip)?.ip ?? device.interfaces.find((i) => i.ip)?.ip ?? device.subinterfaces?.find((s) => s.ip)?.ip;
+}
 
 const TAG_COLOR_NAMES: readonly TagColor[] = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'gray'];
 
@@ -93,6 +102,8 @@ export const CHECK_TYPES = [
   'budget',
   'linkUp',
   'vlanDocumented',
+  'hostVlan',
+  'trunk',
   'device',
   'address',
   'dhcpServer',
@@ -355,7 +366,7 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       // Projekt nur mit IPv6: Zielgerät über seine IPv6-Adresse (fest oder per SLAAC/DHCPv6 bezogen).
       const v6 = topology.ipMode === 'ipv6';
       const fixed6 = targetDevice?.interfaces[0]?.ipv6 && !targetDevice.ipv6Auto ? targetDevice.interfaces[0].ipv6.split('/')[0] : undefined;
-      const target = targetDevice ? (v6 ? fixed6 : targetDevice.interfaces[0]?.ip) : check.to;
+      const target = targetDevice ? (v6 ? fixed6 : staticIpv4(targetDevice)) : check.to;
       if (targetDevice && !target && !(v6 ? targetDevice.ipv6Auto : targetDevice.dhcp)) return fail(id, 'noAddress', { name: targetDevice.name });
       const sim = bootedSimulation(topology);
       const learned6 = () => sim.getDeviceState(targetDevice!.id).ipv6?.addresses.find((a) => a.origin === 'slaac' || a.origin === 'dhcpv6')?.address;
@@ -373,7 +384,7 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       if (!from) return missing(check.from);
       const targetDevice = need(check.to);
       const sim = bootedSimulation(topology);
-      const address = targetDevice ? (targetDevice.interfaces[0]?.ip ?? sim.getDeviceState(targetDevice.id).address?.ip) : check.to;
+      const address = targetDevice ? (staticIpv4(targetDevice) ?? sim.getDeviceState(targetDevice.id).address?.ip) : check.to;
       // Ohne Adresse ist das Ziel ohnehin nicht erreichbar; das zählt aber nicht als gelöst.
       if (!address) return fail(id, 'noAddress', { name: check.to });
       sim.ping(from.id, address);
@@ -519,6 +530,45 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       if (check.medium && mediumOf(cable) !== check.medium) return fail(id, 'wrongMedium', { a: a.name, b: b.name, medium: check.medium });
       const status = linkStatus(topology, cable);
       return status.up ? { id, passed: true } : fail(id, 'linkDown', { a: a.name, b: b.name, reason: status.reason ?? '' });
+    }
+    case 'hostVlan': {
+      const host = need(check.device);
+      if (!host) return missing(check.device);
+      const cable = cablesOf(topology, host.id).find((c) => {
+        const far = topology.devices.find((d) => d.id === otherEnd(c, host.id).device);
+        return far && isSwitchType(far.type);
+      });
+      if (!cable) return fail(id, 'noSwitchPort', { name: host.name });
+      const end = otherEnd(cable, host.id);
+      const sw = topology.devices.find((d) => d.id === end.device)!;
+      const port = sw.interfaces[end.iface];
+      const vlan = port?.vlan ?? 1;
+      if (port?.trunk) return fail(id, 'hostOnTrunk', { name: host.name, switch: sw.name });
+      if (vlan !== check.vlan || !vlanExists(sw, vlan)) return fail(id, 'wrongHostVlan', { name: host.name, vlan: check.vlan, actual: vlanExists(sw, vlan) ? vlan : '–' });
+      return { id, passed: true };
+    }
+    case 'trunk': {
+      const a = need(check.a);
+      const b = need(check.b);
+      if (!a) return missing(check.a);
+      if (!b) return missing(check.b);
+      const cables = cablesOf(topology, a.id).filter((c) => otherEnd(c, a.id).device === b.id);
+      if (!cables.length) return fail(id, 'notConnected', { a: a.name, b: b.name });
+      const carries = (d: Device, iface: number, vlan: number) => {
+        const port = d.interfaces[iface];
+        if (isSwitchType(d.type)) return !!port?.trunk && (!port.allowedVlans || port.allowedVlans.includes(vlan)) && vlanExists(d, vlan);
+        // Router (Router-on-a-Stick): Subinterface mit diesem VLAN am Anschluss.
+        return !!d.subinterfaces?.some((s) => s.parent === iface && s.vlan === vlan);
+      };
+      const ok = cables.some((c) => {
+        const ea = c.a.device === a.id ? c.a : c.b;
+        const eb = c.a.device === a.id ? c.b : c.a;
+        const vlans = check.vlans ?? [];
+        const trunkA = isSwitchType(a.type) ? !!a.interfaces[ea.iface]?.trunk : true;
+        const trunkB = isSwitchType(b.type) ? !!b.interfaces[eb.iface]?.trunk : true;
+        return trunkA && trunkB && vlans.every((v) => carries(a, ea.iface, v) && carries(b, eb.iface, v));
+      });
+      return ok ? { id, passed: true } : fail(id, 'noTrunk', { a: a.name, b: b.name, vlans: (check.vlans ?? []).join(', ') || '–' });
     }
     case 'vlanDocumented': {
       return vlanColor(topology, check.vlan) ? { id, passed: true } : fail(id, 'vlanUndocumented', { vlan: check.vlan });
@@ -734,6 +784,21 @@ export function readTasks(value: unknown, invalid: (path: string) => never, read
         case 'linkUp': {
           if (c.medium !== undefined && !(MEDIA as readonly unknown[]).includes(c.medium)) invalid(`${cp}.medium`);
           check = { type, a: str(c.a, `${cp}.a`), b: str(c.b, `${cp}.b`), ...(c.medium ? { medium: c.medium as Medium } : {}) };
+          break;
+        }
+        case 'hostVlan': {
+          const vlan = optNum(c.vlan, `${cp}.vlan`);
+          if (vlan === undefined || vlan < 1 || vlan > 4094) invalid(`${cp}.vlan`);
+          check = { type, device: str(c.device, `${cp}.device`), vlan: vlan! };
+          break;
+        }
+        case 'trunk': {
+          let vlans: number[] | undefined;
+          if (c.vlans !== undefined) {
+            if (!Array.isArray(c.vlans) || c.vlans.length > 64 || !c.vlans.every((v) => Number.isInteger(v) && v >= 1 && v <= 4094)) invalid(`${cp}.vlans`);
+            vlans = c.vlans as number[];
+          }
+          check = { type, a: str(c.a, `${cp}.a`), b: str(c.b, `${cp}.b`), ...(vlans ? { vlans } : {}) };
           break;
         }
         case 'vlanDocumented': {

@@ -151,6 +151,9 @@ export function usedFeatures(t: Topology): string[] {
     if (d.vlanNames?.length) used.add('net.vlan');
     if (d.wlan?.mesh) used.add('net.wlanMesh');
     if (d.cli?.ssh) used.add('net.ssh');
+    if (d.dhcpPools?.length) used.add('service.dhcp');
+    if (d.svis?.some((v) => v.dhcpRelay)) used.add('net.dhcpRelay');
+    if (d.svis?.some((v) => v.aclIn || v.aclOut)) used.add('net.acl');
     for (const i of d.interfaces) {
       // Von Hand gesetzte MAC (ab Werk immer 02:00:…).
       if (!i.mac.startsWith('02:00:')) used.add('net.macEdit');

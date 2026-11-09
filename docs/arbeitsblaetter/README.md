@@ -1,6 +1,6 @@
 # Arbeitsblätter zu den Modulen 117 und 129
 
-Ausfüllbare PDFs zu den Übungen der Reiter **«M117»** und **«M129»** im Aufgaben-Katalog (Werkzeuge » Aufgaben-Katalog). Die Lernenden füllen die Felder direkt im PDF aus (Browser, Adobe Acrobat Reader oder eine andere PDF-App) und geben das PDF zusammen mit ihren Projektdateien ab. Die Musterlösungen (`_mL.pdf`) stehen bewusst nicht im öffentlichen Repo; `npm run arbeitsblaetter` erzeugt sie lokal.
+Ausfüllbare PDFs zu den Übungen der Reiter **«M117»**, **«M129»** und **«M145»** im Aufgaben-Katalog (Werkzeuge » Aufgaben-Katalog). Die Lernenden füllen die Felder direkt im PDF aus (Browser, Adobe Acrobat Reader oder eine andere PDF-App) und geben das PDF zusammen mit ihren Projektdateien ab. Die Musterlösungen (`_mL.pdf`) stehen bewusst nicht im öffentlichen Repo; `npm run arbeitsblaetter` erzeugt sie lokal.
 
 | Arbeitsblatt | Übungen im Katalog | Sterne |
 |---|---|---|
@@ -15,9 +15,21 @@ Ausfüllbare PDFs zu den Übungen der Reiter **«M117»** und **«M129»** im Au
 
 | Arbeitsblatt | Übungen im Katalog | Sterne |
 |---|---|---|
-| [M129_UE01_Subnetting](M129_UE01_Subnetting.pdf) | UE01 Subnetting, Aufträge 1–3: vier gleich grosse Subnetze, VLSM, Fehlersuche | ★★ ★★★★ ★★★ |
-| [M129_UE02_Routing](M129_UE02_Routing.pdf) | UE02 Routing, Aufträge 1–3: drei Router statisch, Internet mit NAT, Verwaltungsnetz und SSH | ★★★ ★★★★ ★★★ |
-| [M129_UE03_Protokollanalyse](M129_UE03_Protokollanalyse.pdf) | UE03 Protokollanalyse, Aufträge 1–3: ICMP und TTL, DHCP, ARP/DNS/HTTP | ★★ ★★★ ★★★★ |
+| [M129_Subnetting](M129_Subnetting.pdf) | Subnetting, Aufträge 1–3: vier gleich grosse Subnetze, VLSM, Fehlersuche | ★★ ★★★★ ★★★ |
+| [M129_Routing](M129_Routing.pdf) | Routing, Aufträge 1–3: drei Router statisch, Internet mit NAT, Verwaltungsnetz und SSH | ★★★ ★★★★ ★★★ |
+| [M129_Protokollanalyse](M129_Protokollanalyse.pdf) | Protokollanalyse, Aufträge 1–3: ICMP und TTL, DHCP, ARP/DNS/HTTP | ★★ ★★★ ★★★★ |
+| [M145_UE02_Netzwerk_OldSchool](M145_UE02_Netzwerk_OldSchool.pdf) | Zwei Netze mit einem Router | ★ |
+| [M145_UE03_Portbasiertes_VLAN](M145_UE03_Portbasiertes_VLAN.pdf) | VLAN 10 und 20 an einem Switch | ★★ |
+| [M145_UE04_Trunk_VLAN](M145_UE04_Trunk_VLAN.pdf) | Trunk über zwei Stockwerke | ★★★ |
+| [M145_UE05_VLAN_Theorie_Check](M145_UE05_VLAN_Theorie_Check.pdf) | Broadcast verfolgen, natives VLAN | ★★★ |
+| [M145_UE06_Router_on_a_Stick](M145_UE06_Router_on_a_Stick.pdf) | Subinterfaces, Inter-VLAN-Routing | ★★★ |
+| [M145_UE07_Layer_3_Switch](M145_UE07_Layer_3_Switch.pdf) | SVIs und «ip routing» | ★★★ |
+| [M145_UE07b_Layer_3_Switch_mit_ACL](M145_UE07b_Layer_3_Switch_mit_ACL.pdf) | Zugriffslisten an den SVIs | ★★★★ |
+| [M145_UE08_DHCP](M145_UE08_DHCP.pdf) | DHCP-Pools auf dem L3-Switch | ★★★ |
+| [M145_UE09_DHCP_extern](M145_UE09_DHCP_extern.pdf) | Zentraler Server mit Relay | ★★★★ |
+| [M145_UE10_Three_Tier](M145_UE10_Three_Tier.pdf) | Core, Distribution, Access mit OSPF | ★★★★★ |
+| [M145_UE11_Collapsed_Core](M145_UE11_Collapsed_Core.pdf) | KMU-Netz mit Spanning Tree | ★★★★ |
+| [M145_Zusatzuebungen](M145_Zusatzuebungen.pdf) | Fehlersuche, Management-VLAN, Port-Channel | ★★★★ ★★★ ★★★★ |
 
 Die praktische Prüfung (LB3) entsteht in leyoNET selbst: **Werkzeuge » Prüfung erstellen …**, siehe [pruefungen.md](../pruefungen.md).
 
@@ -26,7 +38,7 @@ Die praktische Prüfung (LB3) entsteht in leyoNET selbst: **Werkzeuge » Prüfun
 Jedes Blatt endet mit dem Abschnitt «Abgabe»:
 
 1. Das ausgefüllte PDF speichern als `<Blatt>_Nachname.pdf`.
-2. Jedes Projekt in leyoNET mit Strg+S speichern; Projektname z.B. `M06C_UE03_A1_Nachname`.
+2. Jedes Projekt in leyoNET mit Strg+S speichern; Projektname z.B. `M06C_UE03_A1_Nachname` oder `M145_UE04_Trunk_VLAN_Nachname`.
 3. Beides über den Weg abgeben, den die Lehrperson vorgibt (z.B. Abgabeordner in Teams oder Moodle).
 
 Die Lehrperson wertet die Projektdateien mit **«Abgaben auswerten …»** im Aufgabenbereich aus (alle Dateien auf einmal, Ergebnis als CSV). leyoNET sammelt selbst keine Abgaben und speichert keine Namen.
@@ -37,7 +49,7 @@ Wo die ursprünglichen Unterlagen Adressen aus dem öffentlichen Internet verwen
 
 ## Ändern und neu erzeugen
 
-Der Inhalt steht in [`scripts/arbeitsblaetter/inhalt.mjs`](../../scripts/arbeitsblaetter/inhalt.mjs) (Modul 129: [`inhaltM129.mjs`](../../scripts/arbeitsblaetter/inhaltM129.mjs)), das Layout in [`erzeugen.mjs`](../../scripts/arbeitsblaetter/erzeugen.mjs). Nach einer Änderung:
+Der Inhalt steht in [`scripts/arbeitsblaetter/inhalt.mjs`](../../scripts/arbeitsblaetter/inhalt.mjs) (Modul 129: [`inhaltM129.mjs`](../../scripts/arbeitsblaetter/inhaltM129.mjs), Modul 145: [`inhaltM145.mjs`](../../scripts/arbeitsblaetter/inhaltM145.mjs)), das Layout in [`erzeugen.mjs`](../../scripts/arbeitsblaetter/erzeugen.mjs). Nach einer Änderung:
 
 ```bash
 npm run arbeitsblaetter

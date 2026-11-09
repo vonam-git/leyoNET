@@ -8,6 +8,7 @@
   import CpeConfig from './CpeConfig.svelte';
   import DeviceBasics from './DeviceBasics.svelte';
   import DhcpServerForm from './DhcpServerForm.svelte';
+  import DhcpPoolConfig from './DhcpPoolConfig.svelte';
   import FirewallConfig from './FirewallConfig.svelte';
   import AclConfig from './AclConfig.svelte';
   import VrfConfig from './VrfConfig.svelte';
@@ -76,7 +77,7 @@
     if (hasRoutingTable(d.type) && role !== 'endpoint') list.push('routing');
     if (d.type === 'cpe') list.push('dhcp');
     if (((isRouterLike(d.type) || d.type === 'cpe') && ui.has('net.nat')) || (d.type === 'internet' && ui.has('net.cgnat'))) list.push('nat');
-    if (isRouterLike(d.type) && ui.has('net.dhcpRelay')) list.push('relay');
+    if ((isRouterLike(d.type) || d.type === 'l3switch') && (ui.has('net.dhcpRelay') || ui.has('service.dhcp'))) list.push('relay');
     if (canFirewall(d.type) && (ui.has('net.firewall') || d.type === 'firewall')) list.push('firewall');
     if (canAccessList(d.type) && ui.has('net.acl')) list.push('acl');
     if (canVrf(d.type) && ui.has('net.vrf')) list.push('vrf');
@@ -281,7 +282,7 @@
         {:else if tab === 'vpn'}
           <VpnConfig {device} />
         {:else if tab === 'relay'}
-          <RouterConfig {device} part="relay" />
+          <DhcpPoolConfig {device} />
         {:else if tab === 'switching'}
           <SwitchConfig {device} />
           {#if device.type === 'l3switch' && ui.has('net.vxlan')}<VxlanConfig {device} />{/if}

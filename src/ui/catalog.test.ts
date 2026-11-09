@@ -45,6 +45,8 @@ import {
 import { setLocale } from '../i18n';
 import { CATALOG } from './catalog';
 import { LAB_ANSWERS, solveLab2, solveRouting1, solveRouting2, solveRouting3, solveSub1, solveSub2, solveSub3 } from './catalogM129';
+import { ADVANCED_ANSWERS, solveDatacenter, solveGuest, solveLoopback, solveVrf } from './catalogAdvanced';
+import { M145_ANSWERS, solveFaults, solveLag, solveMgmt, solveUe02, solveUe03, solveUe04, solveUe06, solveUe07, solveUe07b, solveUe08, solveUe09, solveUe10, solveUe11 } from './catalogM145';
 import { readdressUe03, solveHolzer, solveUe03a1, solveUe04a1, solveUe04a2, solveUe05, solveWatch1, solveWatch2 } from './catalogM117';
 
 setLocale('de');
@@ -86,7 +88,7 @@ const LOGS: Record<string, (t: Topology) => readonly PacketLogEntry[]> = {
 };
 
 /** Antworten auf Fragen (Ziel «answer») in den Musterlösungen. */
-const ANSWERS: Record<string, Record<string, string>> = { ...LAB_ANSWERS, 'm129-routing-a3': { 'ziel-5': 'show ip route', 'ziel-6': '192.168.2.2' } };
+const ANSWERS: Record<string, Record<string, string>> = { ...LAB_ANSWERS, ...M145_ANSWERS, ...ADVANCED_ANSWERS, 'm129-routing-a3': { 'ziel-5': 'show ip route', 'ziel-6': '192.168.2.2' } };
 
 /** Musterlösungen: Jede Aufgabe muss lösbar sein. */
 const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
@@ -109,6 +111,24 @@ const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
   'm129-lab-a1': (t) => t,
   'm129-lab-a2': solveLab2,
   'm129-lab-a3': (t) => t,
+  'loopback-ospf': solveLoopback,
+  'acl-guest': solveGuest,
+  'vrf-customers': solveVrf,
+  datacenter: solveDatacenter,
+  'm145-ue02': solveUe02,
+  'm145-ue03': solveUe03,
+  'm145-ue04': solveUe04,
+  'm145-ue05': (t) => t,
+  'm145-ue06': solveUe06,
+  'm145-ue07': solveUe07,
+  'm145-ue07b': solveUe07b,
+  'm145-ue08': solveUe08,
+  'm145-ue09': solveUe09,
+  'm145-ue10': solveUe10,
+  'm145-ue11': solveUe11,
+  'm145-x1': solveFaults,
+  'm145-x2': solveMgmt,
+  'm145-x3': solveLag,
   'sniff-arp': (t) => t,
   'budget-office': (t) => {
     const added = unwrap(addDevice(t, 'switch', 'Switch', { x: 0, y: 0 }, { ports: 8, sfpSlots: 0 }));

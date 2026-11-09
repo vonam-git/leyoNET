@@ -4,7 +4,7 @@
 import { readTasks, type Check, type TaskSet } from '../core';
 import { t } from '../i18n';
 
-export type FieldKind = 'device' | 'devices' | 'text' | 'number' | 'deviceType' | 'protocol' | 'choice' | 'pairs' | 'values' | 'alternatives';
+export type FieldKind = 'device' | 'devices' | 'text' | 'number' | 'deviceType' | 'protocol' | 'choice' | 'pairs' | 'values' | 'alternatives' | 'numbers';
 
 export interface FieldSpec {
   key: string;
@@ -92,6 +92,15 @@ export const CHECK_FIELDS: Record<Check['type'], FieldSpec[]> = {
     { key: 'medium', kind: 'choice', optional: true, options: ['tp', 'fiber', 'wireless', 'serial', 'coax', 'dsl', 'cellular'] },
   ],
   vlanDocumented: [{ key: 'vlan', kind: 'number' }],
+  hostVlan: [
+    { key: 'device', kind: 'device' },
+    { key: 'vlan', kind: 'number' },
+  ],
+  trunk: [
+    { key: 'a', kind: 'device' },
+    { key: 'b', kind: 'device' },
+    { key: 'vlans', kind: 'numbers', optional: true },
+  ],
   device: [
     { key: 'names', kind: 'devices', label: 'deviceNames' },
     { key: 'deviceType', kind: 'deviceType', optional: true },
@@ -213,6 +222,10 @@ export function fromDraft(draft: TaskDraft): { ok: true; tasks: TaskSet } | { ok
       if (spec.kind === 'number') {
         if (!/^\d+$/.test(value)) return { ok: false, error: { goal: i, field: spec.key, code: 'notANumber' } };
         check[spec.key] = Number(value);
+      } else if (spec.kind === 'numbers') {
+        const list = value.split(',').map((x) => x.trim()).filter(Boolean);
+        if (!list.every((x) => /^\d+$/.test(x))) return { ok: false, error: { goal: i, field: spec.key, code: 'notANumber' } };
+        check[spec.key] = list.map(Number);
       } else if (spec.kind === 'devices' || spec.kind === 'values') {
         check[spec.key] = value.split(',').map((s) => s.trim()).filter(Boolean);
       } else if (spec.kind === 'alternatives') {

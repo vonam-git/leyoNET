@@ -73,6 +73,8 @@ Statische Prüfungen schauen nur auf das gebaute Netz. **Dynamische** Prüfungen
 | `budget` | `max` (CHF) | die Richtpreise aller Geräte, Kabel und Module zusammen höchstens `max` ergeben |
 | `linkUp` | `a`, `b`, `medium`? (`tp`, `fiber`, `wireless`, `serial`, `coax`, `dsl`, `cellular`) | die beiden Geräte direkt verbunden sind, die Verbindung aktiv ist (keine abgeschalteten Ports, passende Kapselung …) und optional die Art stimmt |
 | `vlanDocumented` | `vlan` (Nummer) | das VLAN unter **Werkzeuge → VLANs** einen Namen und eine Farbe hat |
+| `hostVlan` | `device`, `vlan` | das Endgerät an einem Access-Port in diesem VLAN hängt (VLAN auf dem Switch angelegt) |
+| `trunk` | `a`, `b`, optional `vlans` (Liste) | die Verbindung zwischen zwei Switches auf beiden Seiten ein Trunk ist und diese VLANs überträgt (bei einem Router: Subinterfaces mit diesen VLANs) |
 | `device` | `names` (Liste), `deviceType`? | Geräte mit diesen Namen vorhanden sind (optional alle vom Typ) |
 | `address` | `device`, `address` (z.B. `"10.33.0.1/22"`) | ein Anschluss des Geräts genau diese Adresse mit diesem Präfix hat |
 | `dhcpServer` | `device`, `start`, `end`, `gateway`?, `dns`? | der DHCP-Server mit diesem Bereich (und optional diesen Optionen) eingerichtet ist |

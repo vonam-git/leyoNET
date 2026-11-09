@@ -294,6 +294,27 @@ export const DEMOS: readonly Demo[] = [
     ],
   },
   {
+    id: 'datacenter',
+    file: 'rechenzentrum.json',
+    topic: 'routing',
+    layers: [2, 3, 4],
+    actions: [
+      { at: 14_000, device: 'Web 1', command: 'ping 192.168.10.12' },
+      { at: 15_000, device: 'DB 1', command: 'ping 192.168.20.12' },
+    ],
+    check: { kind: 'ping', device: 'Web 1' },
+    until: 26_000,
+    tour: [
+      { sim: false, highlight: 'Spine 1' },
+      { highlight: 'Leaf 1', window: { device: 'Leaf 1', tab: 'routing' } },
+      { highlight: 'Leaf 2', window: { device: 'Leaf 2', tab: 'switching' } },
+      { sim: true, pause: false, highlight: 'Spine 2' },
+      { action: { at: 0, device: 'Web 1', command: 'ping 192.168.10.12' }, highlight: 'Web 2' },
+      { action: { at: 0, device: 'DB 1', command: 'ping 192.168.20.12' }, highlight: 'DB 2' },
+      { highlight: 'Leaf 1', window: { device: 'Leaf 1', tab: 'state' } },
+    ],
+  },
+  {
     id: 'portChannel',
     file: 'port-channel.json',
     topic: 'switching',

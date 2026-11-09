@@ -70,20 +70,23 @@ import {
   setRipng,
   setAccessList,
   setPortAccessList,
+  setSviAccessList,
+  setDhcpPool,
+  setDhcpExcluded,
   setFirewall,
   firewallZone,
 } from '../model/topology';
 import { formatAclRule, formatFirewallRule, parseRule } from './rules';
 import type { FirewallConfig } from '../model/security';
 import { ipv6Links } from '../sim/ip6';
-import type { BgpConfig, CliConfig, Device, DeviceType, Ospf6Config, RipngConfig, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, Topology } from '../model/types';
+import type { BgpConfig, CliConfig, Device, DhcpPool, DeviceType, Ospf6Config, RipngConfig, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, Topology } from '../model/types';
 import { formatIp, maskToText, networkOf, parseIp, parseMask } from '../net/ipv4';
 import { formatCidr6, formatIp6, parseCidr6, parseIp6 } from '../net/ipv6';
 import { buildRoutes, decodeIface, logicalInterfaces, vrfOfIface, type Route } from '../net/routing';
 import type { DeviceState } from '../sim/simulation';
 import { cliIfaceName, ifaceIdOf, parseIfaceName, usesPortNames } from './names';
 
-export type CliMode = 'user' | 'enable' | 'config' | 'if' | 'vlan' | 'line' | 'router-ospf' | 'router-rip' | 'router-bgp' | 'router-ospf6' | 'router-ripng' | 'acl' | 'nve';
+export type CliMode = 'user' | 'enable' | 'config' | 'if' | 'vlan' | 'line' | 'router-ospf' | 'router-rip' | 'router-bgp' | 'router-ospf6' | 'router-ripng' | 'acl' | 'nve' | 'dhcp';
 
 export interface CliSession {
   device: string;
@@ -94,6 +97,8 @@ export interface CliSession {
   vlan?: number;
   /** Name der Zugriffsliste im ACL-Modus. */
   acl?: string;
+  /** Name des DHCP-Pools im DHCP-Modus. */
+  pool?: string;
   /** Nächste Eingabe ist ein Passwort (verdeckt eingeben). */
   awaiting?: 'enable-password';
   /** Über SSH angemeldet (sonst Konsole). */
@@ -163,6 +168,8 @@ export function prompt(topology: Topology, session: CliSession): string {
       return `${name}(config-ext-nacl)#`;
     case 'nve':
       return `${name}(config-if-nve)#`;
+    case 'dhcp':
+      return `${name}(dhcp-config)#`;
   }
 }
 
@@ -196,7 +203,7 @@ const L3: DeviceType[] = ['router', 'firewall', 'l3switch'];
 const L3_AND_SWITCH: DeviceType[] = [...L3, 'switch'];
 const EXEC: CliMode[] = ['user', 'enable'];
 const ROUTER_MODES: CliMode[] = ['router-ospf', 'router-rip', 'router-bgp', 'router-ospf6', 'router-ripng'];
-const CONFIG_ALL: CliMode[] = ['config', 'if', 'vlan', 'line', 'acl', 'nve', ...ROUTER_MODES];
+const CONFIG_ALL: CliMode[] = ['config', 'if', 'vlan', 'line', 'acl', 'nve', 'dhcp', ...ROUTER_MODES];
 
 /** Kurze Erklärungen für Schlüsselwörter mitten in einem Befehl (für «?»). */
 const KEYWORD_HELP: Record<string, string> = {
@@ -414,6 +421,23 @@ function onlySvis(call: Call): boolean {
   return targets.length > 0 && targets.every((id) => decodeIface(id).kind === 'svi');
 }
 
+/** «ip access-group»: an Ports nur «in»; an VLAN-Interfaces «in» und «out». */
+function accessGroup(call: Call, direction: 'in' | 'out' | 'both', name: string | null): Partial<CliOutput> {
+  const targets = call.session.targets ?? [];
+  const steps = targets.map((id) => (t: Topology): Result<Topology> => {
+    const ref = decodeIface(id);
+    if (ref.kind === 'svi') {
+      if (direction !== 'both') return setSviAccessList(t, call.device.id, ref.vlan, direction, name);
+      const first = setSviAccessList(t, call.device.id, ref.vlan, 'in', null);
+      return first.ok ? setSviAccessList(first.value, call.device.id, ref.vlan, 'out', null) : first;
+    }
+    if (ref.kind !== 'port' || direction === 'out') return { ok: false, error: { code: 'notAclCapable' } };
+    return setPortAccessList(t, call.device.id, id, name);
+  });
+  if (direction === 'out' && targets.some((id) => decodeIface(id).kind !== 'svi')) return ok(['% Outgoing access lists only on VLAN interfaces (interface vlan N)']);
+  return applyAll(call.env.topology, steps);
+}
+
 function forPorts(call: Call, step: (t: Topology, port: number) => Result<Topology>): Partial<CliOutput> {
   const targets = call.session.targets ?? [];
   if (!targets.every(isPortTarget)) return ok(['% Not supported on this interface']);
@@ -445,6 +469,7 @@ function exitMode(session: CliSession): Partial<CliOutput> {
     case 'router-ripng':
     case 'acl':
     case 'nve':
+    case 'dhcp':
       return { session: { device: session.device, mode: 'config', ...(session.remote ? { remote: true } : {}) } };
     case 'config':
       return { session: { device: session.device, mode: 'enable', ...(session.remote ? { remote: true } : {}) } };
@@ -483,6 +508,8 @@ const COMMANDS: Command[] = [
   { modes: EXEC, syntax: 'show version', help: 'Software version', run: ({ device }) => ok(showVersion(device)) },
   { modes: ['enable'], syntax: 'show running-config', help: 'Current operating configuration', run: ({ device }) => ok(runningConfig(device)) },
   { modes: EXEC, types: L3, syntax: 'show ip route', help: 'IP routing table', run: ({ device, env }) => ok(showIpRoute(device, env)) },
+  { modes: EXEC, types: L3, syntax: 'show ip dhcp pool', help: 'DHCP pools of this device', run: ({ device }) => ok(showDhcpPools(device)) },
+  { modes: EXEC, types: L3, syntax: 'show ip dhcp binding', help: 'Addresses handed out by the DHCP pools', run: ({ env }) => ok(showDhcpBinding(env)) },
   {
     modes: EXEC,
     types: L3,
@@ -932,6 +959,21 @@ const COMMANDS: Command[] = [
   // --- Zugriffslisten (Switches) ---------------------------------------------
   { modes: EXEC, types: SWITCHES, syntax: 'show access-lists', help: 'Access lists with hit counters', run: ({ device, env }) => ok(showAccessLists(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show ip access-lists', help: 'Access lists with hit counters', run: ({ device, env }) => ok(showAccessLists(device, env)) },
+  // --- DHCP-Pools (Router, Layer-3-Switch) ----------------------------------
+  { modes: ['config', 'dhcp'], types: L3, syntax: 'ip dhcp pool <word>', help: 'Create or edit a DHCP pool', run: (call) => enterPool(call, call.args[0]!) },
+  { modes: ['config'], types: L3, syntax: 'no ip dhcp pool <word>', help: 'Delete a DHCP pool', run: ({ device, env, args }) => apply(setDhcpPool(env.topology, device.id, args[0]!, null)) },
+  { modes: ['config'], types: L3, syntax: 'ip dhcp excluded-address <ip> <ip>', help: 'Never hand out these addresses (from to)', run: ({ device, env, args }) => apply(setDhcpExcluded(env.topology, device.id, args[0]!, args[1]!)) },
+  { modes: ['config'], types: L3, syntax: 'ip dhcp excluded-address <ip>', help: 'Never hand out this address', run: ({ device, env, args }) => apply(setDhcpExcluded(env.topology, device.id, args[0]!, undefined)) },
+  { modes: ['config'], types: L3, syntax: 'no ip dhcp excluded-address <ip> <ip>', help: 'Remove an excluded range', run: ({ device, env, args }) => apply(setDhcpExcluded(env.topology, device.id, args[0]!, args[1]!, true)) },
+  { modes: ['config'], types: L3, syntax: 'no ip dhcp excluded-address <ip>', help: 'Remove an excluded address', run: ({ device, env, args }) => apply(setDhcpExcluded(env.topology, device.id, args[0]!, undefined, true)) },
+  { modes: ['dhcp'], types: L3, syntax: 'network <ip> <mask>', help: 'Network of this pool (e.g. network 192.168.10.0 255.255.255.0)', run: (call) => poolChange(call, { network: call.args[0]!, mask: call.args[1]! }) },
+  { modes: ['dhcp'], types: L3, syntax: 'network <cidr>', help: 'Network of this pool (e.g. network 192.168.10.0/24)', run: (call) => { const [n = '', m = ''] = call.args[0]!.split('/'); return poolChange(call, { network: n, mask: m }); } },
+  { modes: ['dhcp'], types: L3, syntax: 'default-router <ip>', help: 'Gateway handed out to clients', run: (call) => poolChange(call, { gateway: call.args[0]! }) },
+  { modes: ['dhcp'], types: L3, syntax: 'no default-router', help: 'Hand out no gateway', run: (call) => poolChange(call, { gateway: undefined }) },
+  { modes: ['dhcp'], types: L3, syntax: 'dns-server <ip>', help: 'DNS server handed out to clients', run: (call) => poolChange(call, { dns: call.args[0]! }) },
+  { modes: ['dhcp'], types: L3, syntax: 'no dns-server', help: 'Hand out no DNS server', run: (call) => poolChange(call, { dns: undefined }) },
+  { modes: ['dhcp'], types: L3, syntax: 'lease <num>', help: 'Lease time in days', run: (call) => poolChange(call, { leaseTime: Number(call.args[0]) * 24 * 3600 }) },
+  { modes: ['dhcp'], types: L3, syntax: 'lease <num> <num>', help: 'Lease time in days and hours', run: (call) => poolChange(call, { leaseTime: (Number(call.args[0]) * 24 + Number(call.args[1])) * 3600 }) },
   { modes: ['config', 'acl'], types: SWITCHES, syntax: 'ip access-list extended <word>', help: 'Create or edit a named access list', run: (call) => enterAcl(call, call.args[0]!) },
   {
     modes: ['config'],
@@ -944,9 +986,11 @@ const COMMANDS: Command[] = [
   { modes: ['acl'], syntax: 'deny <text>', help: 'deny <ip|tcp|udp|icmp> <src> <dst> [eq <port>]', run: (call) => aclRule(call, `deny ${call.args[0]!}`) },
   { modes: ['acl'], syntax: 'no <num>', help: 'Remove the entry with this sequence number', run: (call) => removeAclRule(call, Number(call.args[0])) },
   { modes: ['acl'], syntax: 'remark <text>', help: 'Comment (not stored)', run: () => ok() },
-  { modes: ['if'], types: SWITCHES, syntax: 'ip access-group <word> in', help: 'Filter incoming packets on this port', run: (call) => forPorts(call, (t, p) => setPortAccessList(t, call.device.id, p, call.args[0]!)) },
-  { modes: ['if'], types: SWITCHES, syntax: 'no ip access-group <word> in', help: 'No access list on this port', run: (call) => forPorts(call, (t, p) => setPortAccessList(t, call.device.id, p, null)) },
-  { modes: ['if'], types: SWITCHES, syntax: 'no ip access-group', help: 'No access list on this port', run: (call) => forPorts(call, (t, p) => setPortAccessList(t, call.device.id, p, null)) },
+  { modes: ['if'], types: SWITCHES, syntax: 'ip access-group <word> in', help: 'Filter incoming packets (port, or traffic from the VLAN on an SVI)', run: (call) => accessGroup(call, 'in', call.args[0]!) },
+  { modes: ['if'], types: SWITCHES, syntax: 'ip access-group <word> out', help: 'Filter packets routed into the VLAN (SVI only)', run: (call) => accessGroup(call, 'out', call.args[0]!) },
+  { modes: ['if'], types: SWITCHES, syntax: 'no ip access-group <word> in', help: 'Remove the incoming access list', run: (call) => accessGroup(call, 'in', null) },
+  { modes: ['if'], types: SWITCHES, syntax: 'no ip access-group <word> out', help: 'Remove the outgoing access list', run: (call) => accessGroup(call, 'out', null) },
+  { modes: ['if'], types: SWITCHES, syntax: 'no ip access-group', help: 'Remove all access lists here', run: (call) => accessGroup(call, 'both', null) },
   // --- Firewall (Router und Firewall) -----------------------------------------
   { modes: EXEC, types: ROUTERS, syntax: 'show firewall', help: 'Firewall rules with hit counters', run: ({ device, env }) => ok(showFirewall(device, env)) },
   { modes: ['config'], types: ROUTERS, syntax: 'firewall default <word>', help: 'allow | deny when no rule matches', run: (call) => firewallDefault(call, call.args[0]!) },
@@ -964,6 +1008,43 @@ const COMMANDS: Command[] = [
 ];
 
 // --- Zugriffslisten und Firewall ---------------------------------------------------
+
+function enterPool(call: Call, name: string): Partial<CliOutput> {
+  const { device, env, session } = call;
+  const next: CliSession = { device: session.device, mode: 'dhcp', pool: name, ...(session.remote ? { remote: true } : {}) };
+  if (device.dhcpPools?.some((p) => p.name === name)) return { session: next };
+  const created = setDhcpPool(env.topology, device.id, name, { name });
+  return created.ok ? { topology: created.value, session: next } : { lines: [errorLine(created.error)] };
+}
+
+function poolChange(call: Call, change: Partial<DhcpPool>): Partial<CliOutput> {
+  const { device, env, session } = call;
+  const pool = device.dhcpPools?.find((p) => p.name === session.pool);
+  if (!pool) return ok(['% DHCP pool no longer exists']);
+  const next = { ...pool, ...change } as DhcpPool;
+  for (const key of Object.keys(change) as (keyof DhcpPool)[]) if (change[key] === undefined) delete next[key];
+  return apply(setDhcpPool(env.topology, device.id, pool.name, next));
+}
+
+function showDhcpPools(device: Device): string[] {
+  const pools = device.dhcpPools ?? [];
+  if (!pools.length) return ['(no DHCP pools)'];
+  const lines: string[] = [];
+  for (const p of pools) {
+    lines.push(`Pool ${p.name} :`, `  Network        : ${p.network ? `${p.network}/${parseMask(p.mask ?? '')}` : '(not set)'}`, `  Default router : ${p.gateway ?? '-'}`, `  DNS server     : ${p.dns ?? '-'}`, `  Lease          : ${Math.round((p.leaseTime ?? 86400) / 3600)} h`);
+  }
+  const excluded = device.dhcpExcluded ?? [];
+  if (excluded.length) lines.push('Excluded addresses:', ...excluded.map((e) => `  ${e.start}${e.end ? ` - ${e.end}` : ''}`));
+  return lines;
+}
+
+function showDhcpBinding(env: CliEnv): string[] {
+  const leases = (env.state as { dhcpLeases?: { ip: string; mac: string; expires: number }[] } | undefined)?.dhcpLeases;
+  if (!env.state) return ['% Bindings are only known while the simulation is running'];
+  if (!leases?.length) return ['(no bindings)'];
+  const now = env.now ?? 0;
+  return table(['IP address', 'Hardware address', 'Expires in'], leases.map((l) => [l.ip, l.mac, `${Math.max(0, Math.round((l.expires - now) / 1000))} s`]));
+}
 
 function enterAcl(call: Call, name: string): Partial<CliOutput> {
   const { device, env, session } = call;
@@ -997,12 +1078,16 @@ function showAccessLists(device: Device, env: CliEnv): string[] {
   const lines: string[] = [];
   for (const acl of acls) {
     const live = env.state?.acls?.find((a) => a.name === acl.name);
-    const ports = device.interfaces.filter((i) => i.aclIn === acl.name).map((i) => cliIfaceName(device, i.index));
-    lines.push(`Extended IP access list ${acl.name}${ports.length ? `  (in: ${ports.join(', ')})` : ''}`);
+    const ports = [
+      ...device.interfaces.filter((i) => i.aclIn === acl.name).map((i) => `${cliIfaceName(device, i.index)} in`),
+      ...(device.svis ?? []).flatMap((v) => [...(v.aclIn === acl.name ? [`vlan${v.vlan} in`] : []), ...(v.aclOut === acl.name ? [`vlan${v.vlan} out`] : [])]),
+    ];
+    lines.push(`Extended IP access list ${acl.name}${ports.length ? `  (${ports.join(', ')})` : ''}`);
     acl.rules.forEach((rule, i) => lines.push(`    ${(i + 1) * 10} ${formatAclRule(rule)}${live ? ` (${live.hits[i] ?? 0} matches)` : ''}`));
     lines.push(`    (implicit deny ip any any${live ? `, ${live.implicitDeny} matches` : ''})`);
   }
-  const dangling = [...new Set(device.interfaces.map((i) => i.aclIn).filter((n): n is string => !!n && !acls.some((a) => a.name === n)))];
+  const bound = [...device.interfaces.map((i) => i.aclIn), ...(device.svis ?? []).flatMap((v) => [v.aclIn, v.aclOut])];
+  const dangling = [...new Set(bound.filter((n): n is string => !!n && !acls.some((a) => a.name === n)))];
   for (const name of dangling) lines.push(`% Access list ${name} is applied but does not exist (everything passes)`);
   return lines;
 }
@@ -1933,6 +2018,14 @@ export function runningConfig(device: Device): string[] {
     }
     for (const acl of device.acls ?? []) lines.push('!', `ip access-list extended ${acl.name}`, ...acl.rules.map((r) => ` ${formatAclRule(r)}`));
   }
+  for (const e of device.dhcpExcluded ?? []) lines.push(`ip dhcp excluded-address ${e.start}${e.end ? ` ${e.end}` : ''}`);
+  for (const p of device.dhcpPools ?? []) {
+    lines.push('!', `ip dhcp pool ${p.name}`);
+    if (p.network && p.mask) lines.push(` network ${p.network} ${p.mask}`);
+    if (p.gateway) lines.push(` default-router ${p.gateway}`);
+    if (p.dns) lines.push(` dns-server ${p.dns}`);
+    if (p.leaseTime !== undefined && p.leaseTime !== 86400) lines.push(` lease ${Math.floor(p.leaseTime / 86400)} ${Math.floor((p.leaseTime % 86400) / 3600)}`);
+  }
   lines.push('!');
   for (const p of device.interfaces) {
     lines.push(`interface ${cliIfaceName(device, p.index)}`);
@@ -1984,6 +2077,8 @@ export function runningConfig(device: Device): string[] {
     if (s.vrf) lines.push(` vrf forwarding ${s.vrf}`);
     if (s.ip && s.mask) lines.push(` ip address ${s.ip}/${parseMask(s.mask)}`);
     if (s.dhcpRelay) lines.push(` ip helper-address ${s.dhcpRelay}`);
+    if (s.aclIn) lines.push(` ip access-group ${s.aclIn} in`);
+    if (s.aclOut) lines.push(` ip access-group ${s.aclOut} out`);
     if (s.ipv6) lines.push(` ipv6 address ${s.ipv6}`);
     if (s.dhcp6) lines.push(' ipv6 nd managed-config-flag');
     if (s.dns6) lines.push(` ipv6 nd ra dns server ${s.dns6}`);

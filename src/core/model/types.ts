@@ -181,6 +181,10 @@ export interface Vrf {
 export interface Svi {
   vlan: number;
   vrf?: string;
+  /** Zugriffsliste für Pakete aus dem VLAN («ip access-group NAME in»), auch an den Switch selbst. */
+  aclIn?: string;
+  /** Zugriffsliste für Pakete, die ins VLAN geroutet werden («ip access-group NAME out»). */
+  aclOut?: string;
   ip?: string;
   mask?: string;
   dhcpRelay?: string;
@@ -215,6 +219,10 @@ export interface Device {
   dhcp?: boolean;
   /** Nur Rechner: DHCP-Server-Dienst. */
   dhcpServer?: DhcpServerConfig;
+  /** Router, Firewall, Layer-3-Switch: DHCP-Pools je Netz (Cisco-Stil). */
+  dhcpPools?: DhcpPool[];
+  /** Router, Firewall, Layer-3-Switch: von den Pools ausgeschlossene Adressen. */
+  dhcpExcluded?: DhcpExcluded[];
   /** Nur Rechner: DNS-Server-Dienst mit seiner Zone. */
   dnsServer?: DnsServerConfig;
   /** Nur Rechner: Webserver mit seinen Seiten. */
@@ -510,6 +518,24 @@ export interface DhcpReservation {
   /** MAC-Adresse in Grossbuchstaben, z.B. "02:00:00:00:05:00". */
   mac: string;
   ip: string;
+}
+
+/** DHCP-Pool auf einem Router oder Layer-3-Switch («ip dhcp pool NAME»). Vergeben wird das ganze Netz ohne ausgeschlossene Adressen. */
+export interface DhcpPool {
+  name: string;
+  /** Netz, z.B. "192.168.10.0", und Maske in Punktschreibweise. Fehlt, solange «network» noch nicht gesetzt ist. */
+  network?: string;
+  mask?: string;
+  gateway?: string;
+  dns?: string;
+  /** Gültigkeit in Sekunden; fehlt = 1 Tag wie auf Cisco-Geräten. */
+  leaseTime?: number;
+}
+
+/** Ausgeschlossener Adressbereich («ip dhcp excluded-address A [B]»). */
+export interface DhcpExcluded {
+  start: string;
+  end?: string;
 }
 
 export interface DhcpScope {

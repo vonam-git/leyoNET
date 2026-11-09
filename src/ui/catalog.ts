@@ -36,6 +36,8 @@ import { t } from '../i18n';
 import { Start, goal, task, unwrap, type CatalogEntry } from './catalogKit';
 import { M117 } from './catalogM117';
 import { M129 } from './catalogM129';
+import { M145 } from './catalogM145';
+import { ADVANCED } from './catalogAdvanced';
 
 export type { CatalogEntry } from './catalogKit';
 
@@ -167,7 +169,7 @@ export const CATALOG: CatalogEntry[] = [
   },
   {
     id: 'vlans',
-    stars: 4,
+    stars: 3,
     features: ['net.vlan', 'net.stp', 'net.subinterfaces', 'device.l3switch'],
     build() {
       const s = new Start()
@@ -186,7 +188,7 @@ export const CATALOG: CatalogEntry[] = [
         .host('Unterricht 2', '10.0.0.4', '24');
       return {
         topology: s.topology,
-        tasks: task('vlans', 4, [
+        tasks: task('vlans', 3, [
           goal('vlans', 1, { type: 'ping', from: 'Verwaltung 1', to: 'Verwaltung 2' }),
           goal('vlans', 2, { type: 'ping', from: 'Unterricht 1', to: 'Unterricht 2' }),
           goal('vlans', 3, { type: 'noPing', from: 'Verwaltung 1', to: 'Unterricht 1' }),
@@ -197,7 +199,7 @@ export const CATALOG: CatalogEntry[] = [
   },
   {
     id: 'router-on-a-stick',
-    stars: 4,
+    stars: 3,
     features: ['net.vlan', 'net.stp', 'net.subinterfaces', 'device.l3switch'],
     build() {
       const s = new Start()
@@ -211,7 +213,7 @@ export const CATALOG: CatalogEntry[] = [
         .host('PC VLAN 20', '192.168.20.10', '24', '192.168.20.1');
       return {
         topology: s.topology,
-        tasks: task('roas', 4, [
+        tasks: task('roas', 3, [
           goal('roas', 1, { type: 'connected', a: 'Router', b: 'Switch' }),
           goal('roas', 2, { type: 'deviceCount', deviceType: 'router', max: 1 }),
           goal('roas', 3, { type: 'ping', from: 'PC VLAN 10', to: '192.168.10.1' }),
@@ -222,7 +224,7 @@ export const CATALOG: CatalogEntry[] = [
   },
   {
     id: 'l3-campus',
-    stars: 5,
+    stars: 4,
     features: ['net.vlan', 'net.stp', 'net.subinterfaces', 'device.l3switch'],
     build() {
       const s = new Start()
@@ -243,7 +245,7 @@ export const CATALOG: CatalogEntry[] = [
         });
       return {
         topology: s.topology,
-        tasks: task('l3', 5, [
+        tasks: task('l3', 4, [
           goal('l3', 1, { type: 'deviceCount', deviceType: 'l3switch', min: 1 }),
           goal('l3', 2, { type: 'connected', a: 'Core', b: 'Gebäude A' }),
           goal('l3', 3, { type: 'connected', a: 'Core', b: 'Gebäude B' }),
@@ -980,6 +982,8 @@ export const CATALOG: CatalogEntry[] = [
       };
     },
   },
+  ...ADVANCED,
   ...M117,
   ...M129,
+  ...M145,
 ];

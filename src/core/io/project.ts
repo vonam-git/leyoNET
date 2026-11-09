@@ -1,6 +1,7 @@
 import { DEVICE_SPECS, canAutoRoute, isDeviceType, isRouterLike, isSwitchType } from '../model/devices';
 import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME } from '../net/routing';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
+import { MAX_DHCP_EXCLUDED, MAX_DHCP_POOLS, canDhcpPool, checkDhcpPool, normalizePool } from '../net/dhcp';
 import { MAC_PATTERN } from '../model/mac';
 import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
 import { ACL_NAME, MAX_ACLS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
@@ -8,6 +9,7 @@ import { MAX_GROUP_SIZE } from '../model/devices';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
 import { logicalInterfaces, sviId, vrfOfIface } from '../net/routing';
 import type {
+  DhcpPool,
   Cable,
   Device,
   DhcpServerConfig,
@@ -449,6 +451,36 @@ function readDevice(v: unknown, path: string): Device {
     if (typeof o.dhcp !== 'boolean') throw new Invalid(`${path}.dhcp`);
     if (o.dhcp) device.dhcp = true;
   }
+  if (o.dhcpPools !== undefined) {
+    if (!canDhcpPool(device.type)) throw new Invalid(`${path}.dhcpPools`);
+    const list = arr(o.dhcpPools, `${path}.dhcpPools`);
+    if (list.length > MAX_DHCP_POOLS) throw new Invalid(`${path}.dhcpPools`);
+    const names = new Set<string>();
+    device.dhcpPools = list.map((raw, i) => {
+      const p = `${path}.dhcpPools[${i}]`;
+      const po = obj(raw, p);
+      const pool: DhcpPool = { name: str(po.name, `${p}.name`) };
+      if (po.network !== undefined) pool.network = str(po.network, `${p}.network`);
+      if (po.mask !== undefined) pool.mask = str(po.mask, `${p}.mask`);
+      if (po.gateway !== undefined) pool.gateway = str(po.gateway, `${p}.gateway`);
+      if (po.dns !== undefined) pool.dns = str(po.dns, `${p}.dns`);
+      if (po.leaseTime !== undefined) pool.leaseTime = int(po.leaseTime, `${p}.leaseTime`);
+      if (checkDhcpPool(pool) || names.has(pool.name) || (pool.network === undefined) !== (pool.mask === undefined)) throw new Invalid(p);
+      names.add(pool.name);
+      return normalizePool(pool);
+    });
+  }
+  if (o.dhcpExcluded !== undefined) {
+    if (!canDhcpPool(device.type)) throw new Invalid(`${path}.dhcpExcluded`);
+    const list = arr(o.dhcpExcluded, `${path}.dhcpExcluded`);
+    if (list.length > MAX_DHCP_EXCLUDED) throw new Invalid(`${path}.dhcpExcluded`);
+    device.dhcpExcluded = list.map((raw, i) => {
+      const p = `${path}.dhcpExcluded[${i}]`;
+      const e = obj(raw, p);
+      const start = ip(e.start, `${p}.start`);
+      return { start, ...(e.end !== undefined ? { end: ip(e.end, `${p}.end`) } : {}) };
+    });
+  }
   if (o.dhcpServer !== undefined) {
     const p = `${path}.dhcpServer`;
     const s = obj(o.dhcpServer, p);
@@ -670,6 +702,12 @@ function readDevice(v: unknown, path: string): Device {
       }
       if (si.dhcp6 !== undefined && bool(si.dhcp6, `${p}.dhcp6`)) svi.dhcp6 = true;
       if (si.dns6 !== undefined) svi.dns6 = ip6(si.dns6, `${p}.dns6`);
+      for (const key of ['aclIn', 'aclOut'] as const) {
+        if (si[key] === undefined) continue;
+        const name = str(si[key], `${p}.${key}`);
+        if (!ACL_NAME.test(name)) throw new Invalid(`${p}.${key}`);
+        svi[key] = name;
+      }
       return svi;
     });
   }

@@ -32,6 +32,7 @@ const siteFields = (prefix, s) => [
 ];
 
 import { M129_SHEETS } from './inhaltM129.mjs';
+import { M145_SHEETS } from './inhaltM145.mjs';
 
 export const SHEETS = [
   {
@@ -507,4 +508,5 @@ export const SHEETS = [
     ],
   },
   ...M129_SHEETS,
+  ...M145_SHEETS,
 ];

@@ -600,10 +600,16 @@ export class SwitchNode implements SimNode {
 
   /** Zugriffsliste am Eingangsport prüfen («ip access-group NAME in»). Fehlt die Liste, geht alles durch. */
   #aclAllows(inPort: number, frame: EthernetFrame): boolean {
-    const device = this.#device;
-    const name = device?.interfaces[inPort]?.aclIn;
-    if (!name) return true;
-    const acl = device?.acls?.find((a) => a.name === name);
+    const name = this.#device?.interfaces[inPort]?.aclIn;
+    return !name || this.aclCheck(name, frame, `Port ${inPort + 1}`);
+  }
+
+  /**
+   * Rahmen gegen die benannte Liste prüfen, Treffer zählen und Verworfenes melden.
+   * `where` ist der Port oder das VLAN-Interface (für die Meldung). Fehlt die Liste, geht alles durch.
+   */
+  aclCheck(name: string, frame: EthernetFrame, where: string): boolean {
+    const acl = this.#device?.acls?.find((a) => a.name === name);
     if (!acl) return true;
     const verdict = aclVerdict(acl, frame);
     if (!verdict) return true;
@@ -614,7 +620,7 @@ export class SwitchNode implements SimNode {
     }
     if (verdict.rule >= 0) counter.hits[verdict.rule] = (counter.hits[verdict.rule] ?? 0) + 1;
     else counter.implicitDeny++;
-    if (!verdict.allowed) this.ctx.print('acl.denied', { acl: name, port: inPort + 1, what: verdict.what, src: verdict.src, rule: verdict.rule >= 0 ? String(verdict.rule + 1) : 'deny' });
+    if (!verdict.allowed) this.ctx.print('acl.denied', { acl: name, port: where, what: verdict.what, src: verdict.src, rule: verdict.rule >= 0 ? String(verdict.rule + 1) : 'deny' });
     return verdict.allowed;
   }
 

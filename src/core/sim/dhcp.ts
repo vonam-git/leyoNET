@@ -32,6 +32,13 @@ export interface DhcpHost {
   interfaces(): IfaceAddress[];
   sendIp(dst: string, payload: UdpDatagram, options?: SendOptions): void;
   sendUnconfiguredBroadcast(index: number, payload: UdpDatagram): void;
+  /** Broadcast über genau diesen Anschluss (Router mit mehreren Netzen). */
+  broadcastOn?(index: number, payload: UdpDatagram, src: string): void;
+}
+
+/** Liegt die Adresse in einem ausgeschlossenen Bereich? */
+function isExcluded(scope: ResolvedScope, ip: number): boolean {
+  return !!scope.excluded?.some(([a, b]) => ip >= a && ip <= b);
 }
 
 const datagram = (srcPort: number, dstPort: number, payload: DhcpMessage): UdpDatagram => ({
@@ -211,12 +218,41 @@ export class DhcpClient {
   }
 }
 
-/** DHCP-Server-Dienst eines Rechners. Er vergibt nur Adressen aus seinem eigenen Netz (kein Relay). */
+/** Woraus ein Server vergibt: Bereich, eigene Adresse (Absender) und Gültigkeit für eine Anfrage. */
+export interface DhcpSource {
+  resolve(packet: Ipv4Packet, msg: DhcpMessage, index: number): { scope: ResolvedScope; own: IfaceAddress; leaseTime: number } | null;
+}
+
+/**
+ * DHCP-Server (RFC 2131). Ohne eigene Quelle: der Dienst eines Rechners, der aus
+ * seinem eigenen Netz vergibt (und über Relays aus weiteren Bereichen). Router und
+ * Layer-3-Switches geben eine Quelle mit, die ihre Pools («ip dhcp pool») liefert.
+ */
 export class DhcpServer {
   #leases = new Map<string, LeaseRecord>();
   #offers = new Map<string, LeaseRecord>();
+  readonly #source: DhcpSource;
 
-  constructor(private readonly host: DhcpHost) {}
+  constructor(
+    private readonly host: DhcpHost,
+    source?: DhcpSource,
+  ) {
+    this.#source = source ?? {
+      resolve: (packet, msg) => {
+        const device = this.#ctx.device();
+        const config = device?.dhcpServer;
+        const own = this.host.interfaces()[0];
+        if (!config || device.dhcp || !own) return null;
+        // Über ein Relay gibt giaddr das Netz des Clients an; bei der Erneuerung seine eigene Adresse.
+        const scope = scopeFor(device, msg.giaddr ?? (packet.src !== '0.0.0.0' ? packet.src : undefined));
+        if (!scope) {
+          if (msg.giaddr) this.#ctx.print('dhcpServer.noScope', { relay: msg.giaddr });
+          return null;
+        }
+        return { scope, own, leaseTime: config.leaseTime };
+      },
+    };
+  }
 
   get #ctx() {
     return this.host.ctx;
@@ -229,17 +265,10 @@ export class DhcpServer {
       .sort((a, b) => (parseIp(a.ip) ?? 0) - (parseIp(b.ip) ?? 0));
   }
 
-  onMessage(packet: Ipv4Packet, msg: DhcpMessage) {
-    const device = this.#ctx.device();
-    const config = device?.dhcpServer;
-    const own = this.host.interfaces()[0];
-    if (!config || device.dhcp || !own) return;
-    // Über ein Relay gibt giaddr das Netz des Clients an; bei der Erneuerung seine eigene Adresse.
-    const scope = scopeFor(device, msg.giaddr ?? (packet.src !== '0.0.0.0' ? packet.src : undefined));
-    if (!scope) {
-      if (msg.giaddr) this.#ctx.print('dhcpServer.noScope', { relay: msg.giaddr });
-      return;
-    }
+  onMessage(packet: Ipv4Packet, msg: DhcpMessage, index = -1) {
+    const resolved = this.#source.resolve(packet, msg, index);
+    if (!resolved) return;
+    const { scope, own, leaseTime } = resolved;
     const { start, end } = scope;
     const ownIp = formatIp(own.ip);
     const mac = msg.clientMac;
@@ -252,7 +281,7 @@ export class DhcpServer {
       }
       this.#offers.set(mac, { mac, ip: formatIp(ip), expires: this.#ctx.now + OFFER_HOLD });
       this.#ctx.print(msg.giaddr ? 'dhcpServer.offerRelayed' : 'dhcpServer.offer', { ip: formatIp(ip), mac, relay: msg.giaddr ?? '' });
-      this.#reply('offer', msg, formatIp(ip), '255.255.255.255', scope);
+      this.#reply('offer', msg, formatIp(ip), '255.255.255.255', scope, own, leaseTime);
     } else if (msg.op === 'request') {
       // Der Client hat sich für einen anderen Server entschieden.
       if (msg.serverIp && msg.serverIp !== ownIp) {
@@ -263,18 +292,18 @@ export class DhcpServer {
       const value = parseIp(requested);
       const known = this.#offers.get(mac)?.ip === requested || this.#leases.get(mac)?.ip === requested;
       const reserved = scope.reserved.get(mac.toUpperCase());
-      const inRange = value !== null && (value === reserved || (value >= start && value <= end && !this.#reservedForOther(scope, value, mac)));
+      const inRange = value !== null && (value === reserved || (value >= start && value <= end && !this.#reservedForOther(scope, value, mac) && !isExcluded(scope, value)));
       const valid = inRange && known && !this.#takenByOther(requested, mac);
       const replyTo = packet.src === '0.0.0.0' ? '255.255.255.255' : packet.src;
       if (!valid) {
         this.#ctx.print('dhcpServer.nak', { ip: requested, mac });
-        this.#reply('nak', msg, undefined, replyTo, scope);
+        this.#reply('nak', msg, undefined, replyTo, scope, own, leaseTime);
         return;
       }
       this.#offers.delete(mac);
-      this.#leases.set(mac, { mac, ip: requested, expires: this.#ctx.now + config.leaseTime * 1000 });
+      this.#leases.set(mac, { mac, ip: requested, expires: this.#ctx.now + leaseTime * 1000 });
       this.#ctx.print('dhcpServer.ack', { ip: requested, mac });
-      this.#reply('ack', msg, requested, replyTo, scope);
+      this.#reply('ack', msg, requested, replyTo, scope, own, leaseTime);
     } else if (msg.op === 'release') {
       const lease = this.#leases.get(mac);
       if (lease && lease.ip === packet.src) {
@@ -304,18 +333,15 @@ export class DhcpServer {
     const now = this.#ctx.now;
     for (const previous of [this.#leases.get(mac), this.#offers.get(mac)]) {
       const ip = previous && previous.expires > now ? parseIp(previous.ip) : null;
-      if (ip !== null && ip >= start && ip <= end && !this.#reservedForOther(scope, ip, mac)) return ip;
+      if (ip !== null && ip >= start && ip <= end && !this.#reservedForOther(scope, ip, mac) && !isExcluded(scope, ip)) return ip;
     }
     for (let ip = start; ip <= end; ip++) {
-      if (ip !== ownIp && !this.#reservedForOther(scope, ip, mac) && !this.#takenByOther(formatIp(ip), mac)) return ip;
+      if (ip !== ownIp && !isExcluded(scope, ip) && !this.#reservedForOther(scope, ip, mac) && !this.#takenByOther(formatIp(ip), mac)) return ip;
     }
     return null;
   }
 
-  #reply(op: DhcpOp, request: DhcpMessage, yourIp: string | undefined, to: string, scope: ResolvedScope) {
-    const config = this.#ctx.device()?.dhcpServer;
-    const own = this.host.interfaces()[0];
-    if (!config || !own) return;
+  #reply(op: DhcpOp, request: DhcpMessage, yourIp: string | undefined, to: string, scope: ResolvedScope, own: IfaceAddress, leaseTime: number) {
     const message: DhcpMessage = {
       kind: 'dhcp',
       op,
@@ -328,13 +354,14 @@ export class DhcpServer {
         : {
             yourIp,
             mask: maskToText(scope.prefix),
-            leaseTime: config.leaseTime,
+            leaseTime,
             ...(scope.gateway ? { gateway: scope.gateway } : {}),
             ...(scope.dns ? { dns: scope.dns } : {}),
           }),
     };
     // Antworten auf weitergeleitete Anfragen gehen an das Relay (Port 67), das sie im Client-Netz verteilt.
     if (request.giaddr) this.host.sendIp(request.giaddr, datagram(DHCP_SERVER_PORT, DHCP_SERVER_PORT, message));
+    else if (to === '255.255.255.255' && this.host.broadcastOn) this.host.broadcastOn(own.index, datagram(DHCP_SERVER_PORT, DHCP_CLIENT_PORT, message), formatIp(own.ip));
     else this.host.sendIp(to, datagram(DHCP_SERVER_PORT, DHCP_CLIENT_PORT, message));
   }
 }

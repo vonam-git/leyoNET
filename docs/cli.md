@@ -256,6 +256,10 @@ no ip access-list extended GAESTE     ! Liste löschen (Zuweisungen bleiben, las
 interface port1
  ip access-group GAESTE in            ! eingehend am Port prüfen
  no ip access-group GAESTE in
+interface vlan 10                     ! Layer-3-Switch: am VLAN-Interface
+ ip access-group VLAN10-IN in         ! alles aus dem VLAN (auch an den Switch selbst, z.B. DHCP)
+ ip access-group VLAN10-OUT out       ! alles, was ins VLAN geroutet wird
+ no ip access-group                   ! beide entfernen
 ```
 
 | Teil | Möglichkeiten |
@@ -276,6 +280,23 @@ no firewall                                    ! Firewall entfernen, alles geht 
 ```
 
 Eine Regel: `allow|deny <ip|tcp|udp|icmp> <Quelle> <Ziel> [port <n>] [in <Anschluss>]`. Adressen wie bei den ACLs (`any`, `host A`, Wildcard, Präfix oder einfach eine Adresse). Ohne `in` gilt die Regel für alle Eingänge. Auf einem Router ohne Firewall legt der erste Befehl eine an (Standard `allow`). Die Firewall als Gerät hat ab Werk `default deny` und je eine Regel «von innen erlaubt» für LAN, DMZ und OPT.
+
+### DHCP-Pools (Router, Firewall, Layer-3-Switch)
+
+```
+ip dhcp excluded-address 192.168.10.1 192.168.10.9   ! nie vergeben
+ip dhcp pool VLAN10
+ network 192.168.10.0 255.255.255.0                  ! auch 192.168.10.0/24
+ default-router 192.168.10.1
+ dns-server 198.51.100.53
+ lease 1 12                                          ! 1 Tag 12 Stunden (Standard 1 Tag)
+!
+no ip dhcp pool VLAN10
+show ip dhcp pool
+show ip dhcp binding                                 ! vergebene Adressen (Simulation)
+```
+
+Der Pool, in dessen Netz das Interface liegt, an dem die Anfrage ankommt, vergibt die Adresse; über ein Relay entscheidet die GIADDR. Steht am Interface ein Relay («ip helper-address»), geht die Anfrage an den Server, nicht an den Pool. Eigene Interface-Adressen vergibt ein Pool nie.
 
 ### Layer-3-Switch
 

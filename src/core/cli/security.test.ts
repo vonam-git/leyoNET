@@ -75,7 +75,7 @@ describe('CLI: Zugriffslisten auf dem Switch', () => {
     expect(config).toContain('ip access-list extended GAESTE\n permit tcp 192.168.10.0 0.0.0.255 host 192.168.10.80 eq 80\n permit udp any any eq 53');
     expect(config).toContain('interface port1\n ip access-group GAESTE in');
     const show = run(topology, sw, ['show access-lists']).output.join('\n');
-    expect(show).toContain('Extended IP access list GAESTE  (in: port1)');
+    expect(show).toContain('Extended IP access list GAESTE  (port1 in)');
     expect(show).toContain('    20 permit udp any any eq 53');
   });
 

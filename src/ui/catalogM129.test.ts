@@ -19,7 +19,7 @@ function pings(t: Topology, from: string, target: string) {
   return replies(sim, byName(t, from));
 }
 
-describe('Arbeitsblatt M129 UE02 Routing: Abnahme', () => {
+describe('Arbeitsblatt M129 Routing: Abnahme', () => {
   const net = solveRouting2(solveRouting1(start('m129-routing-a1')));
   it.each([
     ['Router1', '192.168.2.2'],
@@ -41,14 +41,14 @@ describe('Arbeitsblatt M129 UE02 Routing: Abnahme', () => {
   });
 });
 
-describe('Arbeitsblatt M129 UE01 Subnetting', () => {
+describe('Arbeitsblatt M129 Subnetting', () => {
   it('Lösung von Auftrag 1: alle Abteilungen erreichen sich', () => {
     const t = solveSub1(start('m129-sub-a1'));
     expect(pings(t, 'PC Verwaltung 1', '192.168.40.203')).toBe(4);
   });
 });
 
-describe('Arbeitsblatt M129 UE03 Protokollanalyse: Zahlen', () => {
+describe('Arbeitsblatt M129 Protokollanalyse: Zahlen', () => {
   it('ICMP, TTL, DHCP, DNS und HTTP wie in der Musterlösung', () => {
     const t = solveLab2(start('m129-lab-a1'));
     const sim = new Simulation(t);

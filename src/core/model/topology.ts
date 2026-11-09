@@ -1,4 +1,4 @@
-import { checkDhcpScope, checkDhcpServer, normalizeDhcpServer, normalizeScope } from '../net/dhcp';
+import { MAX_DHCP_EXCLUDED, MAX_DHCP_POOLS, canDhcpPool, checkDhcpPool, checkDhcpScope, checkDhcpServer, normalizeDhcpServer, normalizePool, normalizeScope } from '../net/dhcp';
 import { checkDnsRecord, isValidName, normalizeName, normalizeRecord } from '../net/dns';
 import { isValidPath } from '../net/http';
 import { checkMailAccount, checkMailbox } from '../net/mail';
@@ -10,6 +10,8 @@ import { macFor, normalizeMac } from './mac';
 import { MAX_ACLS, MAX_VPN_TUNNELS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type VpnTunnel } from './security';
 import { formatCidr6, formatIp6, isLinkLocal6, isLoopback6, isMulticast6, isUnspecified6, networkOf6, parseCidr6, parseIp6 } from '../net/ipv6';
 import type {
+  DhcpExcluded,
+  DhcpPool,
   Cable,
   Device,
   DeviceType,
@@ -100,6 +102,9 @@ export type ErrorCode =
   | 'firewallPortNeedsProtocol'
   | 'invalidNetwork'
   | 'tooMany'
+  | 'invalidPoolName'
+  | 'unknownPool'
+  | 'notDhcpPoolCapable'
   | 'vpnKeyLength'
   | 'notFirewallCapable'
   | 'invalidAclName'
@@ -912,6 +917,49 @@ export function configureHost(t: Topology, id: string, input: HostConfigInput): 
       };
     }),
   );
+}
+
+/** DHCP-Pool anlegen oder ändern (gleicher Name ersetzt); null als Pool entfernt den Pool mit diesem Namen. */
+export function setDhcpPool(t: Topology, id: string, name: string, pool: DhcpPool | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canDhcpPool(device.type)) return fail('notDhcpPoolCapable');
+  const list = device.dhcpPools ?? [];
+  const exists = list.some((p) => p.name === name);
+  if (pool === null) {
+    if (!exists) return fail('unknownPool', { name });
+    const rest = list.filter((p) => p.name !== name);
+    return ok(updateDevice(t, id, (d) => (rest.length ? { ...d, dhcpPools: rest } : without(d, 'dhcpPools'))));
+  }
+  const issue = checkDhcpPool(pool);
+  if (issue) return { ok: false, error: { code: issue.code as ErrorCode, params: issue.params, field: issue.field } };
+  if (!exists && list.length >= MAX_DHCP_POOLS) return fail('tooMany', { max: MAX_DHCP_POOLS });
+  const next = normalizePool(pool);
+  const pools = exists ? list.map((p) => (p.name === name ? next : p)) : [...list, next];
+  return ok(updateDevice(t, id, (d) => ({ ...d, dhcpPools: pools })));
+}
+
+/** Ausgeschlossene Adressen der DHCP-Pools ergänzen («ip dhcp excluded-address A [B]») oder entfernen (`remove`). */
+export function setDhcpExcluded(t: Topology, id: string, start: string, end: string | undefined, remove = false): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canDhcpPool(device.type)) return fail('notDhcpPoolCapable');
+  const a = parseIp(start.trim());
+  if (a === null) return { ok: false, error: { code: 'invalidIp', params: { value: start.trim() }, field: 'start' } };
+  const endText = end?.trim() || undefined;
+  const b = endText !== undefined ? parseIp(endText) : a;
+  if (b === null) return { ok: false, error: { code: 'invalidIp', params: { value: endText ?? '' }, field: 'end' } };
+  if (b < a) return { ok: false, error: { code: 'dhcpRangeOrder', field: 'end' } };
+  const entry: DhcpExcluded = { start: formatIp(a), ...(b !== a ? { end: formatIp(b) } : {}) };
+  const list = device.dhcpExcluded ?? [];
+  const same = (e: DhcpExcluded) => e.start === entry.start && (e.end ?? e.start) === (entry.end ?? entry.start);
+  if (remove) {
+    const rest = list.filter((e) => !same(e));
+    return ok(updateDevice(t, id, (d) => (rest.length ? { ...d, dhcpExcluded: rest } : without(d, 'dhcpExcluded'))));
+  }
+  if (list.some(same)) return ok(t);
+  if (list.length >= MAX_DHCP_EXCLUDED) return fail('tooMany', { max: MAX_DHCP_EXCLUDED });
+  return ok(updateDevice(t, id, (d) => ({ ...d, dhcpExcluded: [...list, entry] })));
 }
 
 /** Richtet den DHCP-Server-Dienst eines Rechners ein oder entfernt ihn (`null`). */
@@ -2215,6 +2263,22 @@ export function setPortAccessList(t: Topology, id: string, iface: number, name: 
     updateDevice(t, id, (d) => ({
       ...d,
       interfaces: d.interfaces.map((i) => (i.index !== iface ? i : name === null ? without(i, 'aclIn') : { ...i, aclIn: name })),
+    })),
+  );
+}
+
+/** Zugriffsliste an ein VLAN-Interface (SVI) binden: «in» = aus dem VLAN, «out» = ins VLAN; null entfernt. */
+export function setSviAccessList(t: Topology, id: string, vlan: number, direction: 'in' | 'out', name: string | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canAccessList(device.type)) return fail('notAclCapable');
+  if (!device.svis?.some((s) => s.vlan === vlan)) return fail('unknownSubinterface');
+  if (name !== null && !/^[A-Za-z0-9_-]{1,32}$/.test(name)) return { ok: false, error: { code: 'invalidAclName', field: 'name', params: { value: name.slice(0, 40) } } };
+  const key = direction === 'in' ? 'aclIn' : 'aclOut';
+  return ok(
+    updateDevice(t, id, (d) => ({
+      ...d,
+      svis: (d.svis ?? []).map((s) => (s.vlan !== vlan ? s : name === null ? without(s, key) : { ...s, [key]: name })),
     })),
   );
 }

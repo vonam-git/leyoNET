@@ -44,6 +44,10 @@ import {
   setDhcpServer,
   setInterfaceAddress,
   setSfpSlotCount,
+  setSviAccessList,
+  setDhcpPool,
+  setDhcpExcluded,
+  type DhcpPool,
   setDefaultGateway,
   setInterfaceCount,
   suggestName,
@@ -1018,6 +1022,18 @@ class Editor {
   /** Zugriffsliste eines Switches anlegen/ersetzen; `rules: null` löscht sie. */
   setAccessList(id: string, name: string, rules: FirewallRule[] | null): TopologyError | null {
     return this.#applyForm(setAccessList(this.topology, id, name, rules));
+  }
+
+  setDhcpPool(id: string, name: string, pool: DhcpPool | null): TopologyError | null {
+    return this.#applyForm(setDhcpPool(this.topology, id, name, pool));
+  }
+
+  setDhcpExcluded(id: string, start: string, end: string | undefined, remove = false): TopologyError | null {
+    return this.#applyForm(setDhcpExcluded(this.topology, id, start, end, remove));
+  }
+
+  setSviAccessList(id: string, vlan: number, direction: 'in' | 'out', name: string | null): TopologyError | null {
+    return this.#applyForm(setSviAccessList(this.topology, id, vlan, direction, name));
   }
 
   setPortAccessList(id: string, iface: number, name: string | null): TopologyError | null {

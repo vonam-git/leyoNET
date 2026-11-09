@@ -37,7 +37,7 @@ const port = (t: Topology, name: string, index: number, cidr: string) => {
 const route = (t: Topology, name: string, network: string, mask: string, gateway: string) => unwrap(addStaticRoute(t, id(t, name), { network, mask, gateway }));
 const link = (t: Topology, a: string, b: string, ports: { a?: number; b?: number } = {}) => unwrap(connect(t, id(t, a), id(t, b), 'tp', ports)).topology;
 
-// --- UE01 Subnetting ------------------------------------------------------------------------
+// --- Subnetting ------------------------------------------------------------------------
 
 /** Auftrag 1: 192.168.40.0/24 in vier gleich grosse Subnetze (/26). Router .1, PCs .10 und .11 im Subnetz. */
 export const SUB_DEPTS = [
@@ -138,7 +138,7 @@ export function sub3Broken(): Topology {
 
 export const solveSub3 = (_t: Topology): Topology => solveSub1(sub1Start().topology);
 
-// --- UE02 Statisches Routing mit drei Routern ----------------------------------------------
+// --- Statisches Routing mit drei Routern ----------------------------------------------
 
 /**
  * LAN1 192.168.1.0/24, Transfer 192.168.2.0/30, LAN3 192.168.3.0/24,
@@ -237,7 +237,7 @@ export function solveRouting3(topology: Topology): Topology {
   return t;
 }
 
-// --- UE03 Protokollanalyse ------------------------------------------------------------------
+// --- Protokollanalyse ------------------------------------------------------------------
 
 /**
  * Labornetz: Intranet 192.168.1.0/24 (PC W11 .11, Server Intranet .2
@@ -322,7 +322,7 @@ export const M129: CatalogEntry[] = [
     stars: 2,
     level: 1,
     series: 'm129',
-    sheet: 'M129_UE01_Subnetting',
+    sheet: 'M129_Subnetting',
     build: () => {
       const key = 'm129suba1';
       return {
@@ -344,7 +344,7 @@ export const M129: CatalogEntry[] = [
     stars: 4,
     level: 2,
     series: 'm129',
-    sheet: 'M129_UE01_Subnetting',
+    sheet: 'M129_Subnetting',
     build: () => {
       const key = 'm129suba2';
       return {
@@ -368,7 +368,7 @@ export const M129: CatalogEntry[] = [
     stars: 3,
     level: 2,
     series: 'm129',
-    sheet: 'M129_UE01_Subnetting',
+    sheet: 'M129_Subnetting',
     build: () => {
       const key = 'm129suba3';
       return {
@@ -389,7 +389,7 @@ export const M129: CatalogEntry[] = [
     stars: 3,
     level: 2,
     series: 'm129',
-    sheet: 'M129_UE02_Routing',
+    sheet: 'M129_Routing',
     build: () => {
       const key = 'm129routinga1';
       return {
@@ -416,7 +416,7 @@ export const M129: CatalogEntry[] = [
     stars: 4,
     level: 2,
     series: 'm129',
-    sheet: 'M129_UE02_Routing',
+    sheet: 'M129_Routing',
     build: () => {
       const key = 'm129routinga2';
       return {
@@ -437,7 +437,7 @@ export const M129: CatalogEntry[] = [
     stars: 3,
     level: 2,
     series: 'm129',
-    sheet: 'M129_UE02_Routing',
+    sheet: 'M129_Routing',
     build: () => {
       const key = 'm129routinga3';
       const base = solveRouting2(solveRouting1(routingStart(true).topology));
@@ -462,7 +462,7 @@ export const M129: CatalogEntry[] = [
     stars: 2,
     level: 2,
     series: 'm129',
-    sheet: 'M129_UE03_Protokollanalyse',
+    sheet: 'M129_Protokollanalyse',
     build: () => {
       const key = 'm129laba1';
       return {
@@ -484,7 +484,7 @@ export const M129: CatalogEntry[] = [
     stars: 3,
     level: 2,
     series: 'm129',
-    sheet: 'M129_UE03_Protokollanalyse',
+    sheet: 'M129_Protokollanalyse',
     build: () => {
       const key = 'm129laba2';
       return {
@@ -505,7 +505,7 @@ export const M129: CatalogEntry[] = [
     stars: 4,
     level: 2,
     series: 'm129',
-    sheet: 'M129_UE03_Protokollanalyse',
+    sheet: 'M129_Protokollanalyse',
     build: () => {
       const key = 'm129laba3';
       return {

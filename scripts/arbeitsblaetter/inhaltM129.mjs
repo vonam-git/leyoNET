@@ -14,15 +14,15 @@ const subnetFields = (prefix, s) => [
 ];
 
 export const M129_SHEETS = [
-  // --- UE01 Subnetting ---------------------------------------------------------------------
+  // --- Subnetting ---------------------------------------------------------------------
   {
     ...M129,
-    file: 'M129_UE01_Subnetting',
+    file: 'M129_Subnetting',
     block: 'IP-Subnetting',
-    title: 'UE01: IP-Subnetting',
+    title: 'IP-Subnetting',
     subtitle: 'Netze aufteilen, nach Bedarf planen, Fehler finden · Richtzeit 90 Minuten',
     entries: ['m129-sub-a1', 'm129-sub-a2', 'm129-sub-a3'],
-    projects: ['M129_UE01_A1', 'M129_UE01_A2', 'M129_UE01_A3'],
+    projects: ['M129_Subnetting_A1', 'M129_Subnetting_A2', 'M129_Subnetting_A3'],
     intro: [
       { p: 'Ein Unternehmen bekommt meist einen einzigen Adressblock. Mit **Subnetting** teilt man ihn in kleinere Netze auf: Jede Abteilung erhält ihr eigenes Netz, der Router verbindet sie. Dazu «leiht» man Bits aus dem Host-Teil der Adresse für den Netz-Teil.' },
       { tip: 'Hilfsmittel in leyoNET: Werkzeuge » Subnetzrechner. Rechne zuerst selbst und kontrolliere danach.' },
@@ -32,7 +32,7 @@ export const M129_SHEETS = [
         id: 'a1',
         heading: 'Auftrag 1 – Vier gleich grosse Subnetze',
         stars: 2,
-        catalog: 'UE01 Subnetting – Auftrag 1: Vier gleich grosse Subnetze',
+        catalog: 'Subnetting – Auftrag 1: Vier gleich grosse Subnetze',
         blocks: [
           { p: 'Die Firma erhält das Netz **192.168.40.0/24** und braucht vier gleich grosse Subnetze, in dieser Reihenfolge: Verwaltung, Produktion, Verkauf, Lager. Kabel und Geräte sind im Startnetz vorbereitet.' },
           {
@@ -82,7 +82,7 @@ export const M129_SHEETS = [
         id: 'a2',
         heading: 'Auftrag 2 – Subnetze nach Bedarf (VLSM)',
         stars: 4,
-        catalog: 'UE01 Subnetting – Auftrag 2: Subnetze nach Bedarf (VLSM)',
+        catalog: 'Subnetting – Auftrag 2: Subnetze nach Bedarf (VLSM)',
         blocks: [
           { p: 'Gleich grosse Subnetze verschwenden oft Adressen. Mit **VLSM** (Variable Length Subnet Mask) bekommt jedes Netz genau die Grösse, die es braucht. Aus **10.20.0.0/24** sollen entstehen:' },
           {
@@ -140,7 +140,7 @@ export const M129_SHEETS = [
         id: 'a3',
         heading: 'Auftrag 3 – Fehlersuche im Firmennetz',
         stars: 3,
-        catalog: 'UE01 Subnetting – Auftrag 3: Fehlersuche im Firmennetz',
+        catalog: 'Subnetting – Auftrag 3: Fehlersuche im Firmennetz',
         blocks: [
           { p: 'Das Netz aus Auftrag 1 ist aufgebaut, doch einige PCs erreichen sich nicht. Bei den PCs sind **vier Einstellungen falsch**; Router und Kabel stimmen. Gehe systematisch vor: Zuerst die Warnungen in leyoNET beachten, dann mit **ipconfig** die Einstellungen lesen, mit **ping** testen und die Adressen mit dem Subnetzrechner prüfen.' },
           { h: 'Gefundene Fehler' },
@@ -186,15 +186,15 @@ export const M129_SHEETS = [
     ],
   },
 
-  // --- UE02 Statisches Routing ---------------------------------------------------------------
+  // --- Statisches Routing ---------------------------------------------------------------
   {
     ...M129,
-    file: 'M129_UE02_Routing',
+    file: 'M129_Routing',
     block: 'Statisches Routing',
-    title: 'UE02: Statisches Routing mit drei Routern',
+    title: 'Statisches Routing mit drei Routern',
     subtitle: 'Adressen, statische Routen, NAT und Verwaltungszugang · Richtzeit 2 × 90 Minuten',
     entries: ['m129-routing-a1', 'm129-routing-a2', 'm129-routing-a3'],
-    projects: ['M129_UE02_A1', 'M129_UE02_A2', 'M129_UE02_A3'],
+    projects: ['M129_Routing_A1', 'M129_Routing_A2', 'M129_Routing_A3'],
     intro: [
       { p: 'Drei Router verbinden vier Netze und führen ins Internet. Du richtest sie in leyoNET ein, im Fenster des Routers oder auf seiner **Befehlszeile** (Doppelklick auf den Router). Wichtig: **Router-Adressen werden immer fest eingetragen**, nie per DHCP, damit sie stets unter derselben Adresse erreichbar sind. Üblich ist die erste oder letzte Adresse des Netzes.' },
       {
@@ -216,7 +216,7 @@ export const M129_SHEETS = [
         id: 'a1',
         heading: 'Auftrag 1 – Drei Router statisch verbinden',
         stars: 3,
-        catalog: 'UE02 Routing – Auftrag 1: Drei Router statisch verbinden',
+        catalog: 'Routing – Auftrag 1: Drei Router statisch verbinden',
         blocks: [
           { p: 'Richte die Anschlüsse aller drei Router und die beiden PCs (PC LAN1 192.168.1.10, PC LAN3 192.168.3.10) ein. Trage danach **statische Routen** ein, kein automatisches Routing.' },
           { h: 'Transfernetze berechnen' },
@@ -276,7 +276,7 @@ export const M129_SHEETS = [
         id: 'a2',
         heading: 'Auftrag 2 – Ins Internet mit NAT',
         stars: 4,
-        catalog: 'UE02 Routing – Auftrag 2: Ins Internet mit NAT',
+        catalog: 'Routing – Auftrag 2: Ins Internet mit NAT',
         blocks: [
           { p: 'Die LANs sollen ins Internet. Router3 braucht dafür eine **Standardroute zum Provider** (203.0.113.2) und muss die privaten Absenderadressen übersetzen: **Source-NAT mit Masquerade**, das heisst «nimm die Adresse des ausgehenden Anschlusses».' },
           {
@@ -324,7 +324,7 @@ export const M129_SHEETS = [
         id: 'a3',
         heading: 'Auftrag 3 – Verwaltungsnetz und SSH',
         stars: 3,
-        catalog: 'UE02 Routing – Auftrag 3: Verwaltungsnetz und SSH',
+        catalog: 'Routing – Auftrag 3: Verwaltungsnetz und SSH',
         blocks: [
           { p: 'Router werden selten an der Konsole eingerichtet, sondern über das Netz. Dafür bekommen sie einen eigenen Anschluss in einem **Verwaltungsnetz** 192.168.56.0/24. Das Admin-Notebook (192.168.56.10/24) meldet sich per **SSH** an.' },
           {
@@ -364,15 +364,15 @@ export const M129_SHEETS = [
     ],
   },
 
-  // --- UE03 Protokollanalyse -------------------------------------------------------------------
+  // --- Protokollanalyse -------------------------------------------------------------------
   {
     ...M129,
-    file: 'M129_UE03_Protokollanalyse',
+    file: 'M129_Protokollanalyse',
     block: 'Protokollanalyse',
-    title: 'UE03: Protokollanalyse',
+    title: 'Protokollanalyse',
     subtitle: 'ICMP, TTL, DHCP, ARP, DNS und HTTP untersuchen · Richtzeit 3 × 45 Minuten',
     entries: ['m129-lab-a1', 'm129-lab-a2', 'm129-lab-a3'],
-    projects: ['M129_UE03_A1', 'M129_UE03_A2', 'M129_UE03_A3'],
+    projects: ['M129_Protokollanalyse_A1', 'M129_Protokollanalyse_A2', 'M129_Protokollanalyse_A3'],
     intro: [
       { p: 'Ein **Netzwerkprotokoll** legt fest, in welchem Format und in welcher Reihenfolge Geräte Daten austauschen. Mit einem **Protokollanalysator** zeichnet man den Verkehr auf und untersucht jedes Paket Schicht für Schicht. In leyoNET ist das die **Paketliste** mit Filtern, OSI-Ansicht und Hex-Ansicht; sie zeichnet in der Simulation alles auf.' },
       { box: '**Rechtliches:** Netzwerkverkehr anderer Personen darf man nur mit deren Zustimmung mitschneiden. Wer ohne Wissen der Betroffenen aufzeichnet, verletzt ihre Persönlichkeitsrechte. In leyoNET ist das kein Problem: Alles ist simuliert.' },
@@ -394,7 +394,7 @@ export const M129_SHEETS = [
         id: 'a1',
         heading: 'Auftrag 1 – ICMP und TTL',
         stars: 2,
-        catalog: 'UE03 Protokollanalyse – Auftrag 1: ICMP und TTL',
+        catalog: 'Protokollanalyse – Auftrag 1: ICMP und TTL',
         blocks: [
           { p: 'Starte die Simulation. Pinge von PC W11 zuerst die Firewall (**ping 192.168.1.1**), dann den Webserver in der DMZ (**ping 10.10.1.20**). Filtere die Paketliste mit **icmp** und klicke ein Paket an.' },
           {
@@ -464,7 +464,7 @@ export const M129_SHEETS = [
         id: 'a2',
         heading: 'Auftrag 2 – DHCP',
         stars: 3,
-        catalog: 'UE03 Protokollanalyse – Auftrag 2: DHCP',
+        catalog: 'Protokollanalyse – Auftrag 2: DHCP',
         blocks: [
           { p: 'Das Notebook Gast hat noch keine Adresse. Stelle es auf **automatisch (DHCP)**, starte die Simulation und filtere die Paketliste mit **dhcp**.' },
           {
@@ -507,7 +507,7 @@ export const M129_SHEETS = [
         id: 'a3',
         heading: 'Auftrag 3 – ARP, DNS und HTTP',
         stars: 4,
-        catalog: 'UE03 Protokollanalyse – Auftrag 3: ARP, DNS und HTTP',
+        catalog: 'Protokollanalyse – Auftrag 3: ARP, DNS und HTTP',
         blocks: [
           { p: 'PC W11 ruft **http://web.labor.example/** auf. Damit der ganze Ablauf sichtbar wird, löschst du vorher auf PC W11 die Caches: **arp -d** und **ipconfig /flushdns**. Danach im Browser die Adresse eingeben und laden.' },
           {

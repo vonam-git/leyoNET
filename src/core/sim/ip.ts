@@ -1,3 +1,5 @@
+import { DhcpServer, type DhcpHost } from './dhcp';
+import { poolScopeFor } from '../net/dhcp';
 import type { Device, StaticNat, Topology } from '../model/types';
 import { routingModeOf } from '../model/devices';
 import { autoRoutes } from '../net/autoroute';
@@ -442,6 +444,7 @@ export class IpNode implements SimNode {
       // Endgerät mit Firewall: eingehende Pakete prüfen (Broadcasts und DHCP-Antworten sind immer erlaubt).
       const dhcpReply = packet.payload.kind === 'udp' && packet.payload.dstPort === DHCP_CLIENT_PORT;
       if (this.guardsSelf(packet.src) && !broadcast && !dhcpReply && !this.firewall.allows(packet, index)) return;
+      if (!this.localAllowed(index, packet)) return;
       this.#deliver(packet, broadcast, index, srcMac);
     }
     else if (this.forwarding && iface) this.#forward(iface, packet);
@@ -480,6 +483,11 @@ export class IpNode implements SimNode {
     if (dst === null) return;
     if (this.isOwn(dst)) return this.#deliver(packet, false, -1);
     this.#forward({ index: -1, mac: '', ip: parseIp(via) ?? 0, prefix: 29 }, packet);
+  }
+
+  /** Darf ein Paket an das Gerät selbst zugestellt werden (z.B. Zugriffsliste am VLAN-Interface)? */
+  protected localAllowed(_index: number, _packet: Ipv4Packet): boolean {
+    return true;
   }
 
   /** Eingehende Übersetzung (NAT) vor der Zustellung; null = nichts zu übersetzen. */
@@ -971,6 +979,43 @@ export class RouterNode extends ForwardingNode {
   /** Site-to-Site-VPN (IPsec). */
   readonly vpn: Vpn;
 
+  /** DHCP-Server aus den Pools («ip dhcp pool»). */
+  readonly pools: DhcpServer;
+
+  /**
+   * Pools: Anfragen direkt am Interface bedient der Pool im Netz dieses Interfaces,
+   * weitergeleitete (giaddr) der Pool im Netz des Relays. Absender ist die Interface-Adresse.
+   */
+  #poolServer(ctx: NodeContext): DhcpServer {
+    const self = this;
+    const host: DhcpHost = {
+      get ctx() {
+        return ctx;
+      },
+      interfaces: () => self.interfaces(),
+      sendIp: (dst, payload) => self.sendIp(dst, payload),
+      sendUnconfiguredBroadcast: (index, payload) => self.sendUnconfiguredBroadcast(index, payload),
+      broadcastOn: (index, payload, src) => self.sendUnconfiguredBroadcast(index, payload, src),
+    };
+    return new DhcpServer(host, {
+      resolve: (packet, msg, index) => {
+        const device = ctx.device();
+        if (!device?.dhcpPools?.length) return null;
+        const all = self.interfaces();
+        const own = msg.giaddr ? (all.find((i) => formatIp(i.ip) === packet.dst) ?? all.find((i) => i.index === index)) : all.find((i) => i.index === index);
+        if (!own) return null;
+        const client = msg.giaddr ? parseIp(msg.giaddr) : own.ip;
+        if (client === null) return null;
+        const found = poolScopeFor(device, client, all.map((i) => i.ip));
+        if (!found) {
+          if (msg.giaddr) ctx.print('dhcpServer.noScope', { relay: msg.giaddr });
+          return null;
+        }
+        return { scope: found.scope, own, leaseTime: found.leaseTime };
+      },
+    });
+  }
+
   constructor(ctx: NodeContext) {
     super(ctx);
     const seq = deviceSeq(ctx.device()?.id ?? 'd0');
@@ -986,6 +1031,7 @@ export class RouterNode extends ForwardingNode {
       seq,
     );
     startSshServer(this, ctx);
+    this.pools = this.#poolServer(ctx);
     this.ppp = new PppLinks(
       ctx,
       (port, control) => this.sendFrame(port, { src: '', dst: '', payload: control }),
@@ -1154,7 +1200,8 @@ export class RouterNode extends ForwardingNode {
 
   override state(): object {
     const vpn = this.vpn.state();
-    return { ...super.state(), nat: this.natEntries(), ...(this.ppp.status().length ? { ppp: this.ppp.status() } : {}), ...(vpn.length ? { vpn } : {}) };
+    const leases = this.pools.leases();
+    return { ...super.state(), ...(leases.length ? { dhcpLeases: leases } : {}), nat: this.natEntries(), ...(this.ppp.status().length ? { ppp: this.ppp.status() } : {}), ...(vpn.length ? { vpn } : {}) };
   }
 
   /**
@@ -1171,6 +1218,8 @@ export class RouterNode extends ForwardingNode {
     if (fromClient) {
       const device = this.ctx.device();
       const server = device && relayOf(device, index);
+      // Eigene Pools, wenn am Interface kein Relay eingetragen ist (oder die Anfrage von einem Relay kommt).
+      if (device?.dhcpPools?.length && (!server || msg.giaddr)) return this.pools.onMessage(packet, msg, index);
       const own = this.interfaces().find((i) => i.index === index);
       if (!server || !own || msg.giaddr) return;
       this.ctx.print('relay.forward', { op: msg.op, server });

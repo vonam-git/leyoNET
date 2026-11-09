@@ -59,7 +59,12 @@
   const removeAcl = (name: string) => report(editor.setAccessList(device.id, name, null));
   const bind = (iface: number, value: string) => report(editor.setPortAccessList(device.id, iface, value || null));
   const what = (r: FirewallRule) => (r.protocol === 'any' ? t('firewall.anyProtocol') : r.protocol.toUpperCase()) + (r.port ? ` ${r.port}` : '');
-  const usedOn = (name: string) => device.interfaces.filter((i) => i.aclIn === name).map((i) => interfaceLabel(device, i.index));
+  const bindSvi = (vlan: number, direction: 'in' | 'out', value: string) => report(editor.setSviAccessList(device.id, vlan, direction, value || null));
+  const svis = $derived(device.type === 'l3switch' ? (device.svis ?? []) : []);
+  const usedOn = (name: string) => [
+    ...device.interfaces.filter((i) => i.aclIn === name).map((i) => interfaceLabel(device, i.index)),
+    ...svis.flatMap((v) => [...(v.aclIn === name ? [`Vlan${v.vlan} in`] : []), ...(v.aclOut === name ? [`Vlan${v.vlan} out`] : [])]),
+  ];
 </script>
 
 <section class="acl" data-help="acl">
@@ -160,6 +165,25 @@
             {#if port.aclIn && !acls.some((a) => a.name === port.aclIn)}<option value={port.aclIn}>{t('acl.missing', { name: port.aclIn })}</option>{/if}
           </select>
         </label>
+      {/each}
+    </div>
+  {/if}
+  {#if svis.length && (acls.length || svis.some((v) => v.aclIn || v.aclOut))}
+    <h4>{t('acl.svis')}</h4>
+    <p class="muted">{t('acl.svisHint')}</p>
+    <div class="ports">
+      {#each svis as v (v.vlan)}
+        {#each ['in', 'out'] as const as dir (dir)}
+          {@const current = dir === 'in' ? v.aclIn : v.aclOut}
+          <label>
+            <span>Vlan{v.vlan} {dir}</span>
+            <select value={current ?? ''} disabled={!editor.editable} onchange={(e) => bindSvi(v.vlan, dir, e.currentTarget.value)}>
+              <option value="">{t('acl.none')}</option>
+              {#each acls as acl (acl.name)}<option value={acl.name}>{acl.name}</option>{/each}
+              {#if current && !acls.some((a) => a.name === current)}<option value={current}>{t('acl.missing', { name: current })}</option>{/if}
+            </select>
+          </label>
+        {/each}
       {/each}
     </div>
   {/if}
