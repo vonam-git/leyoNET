@@ -3,7 +3,7 @@
 # auf GitHub unter Actions → Desktop → "Run workflow".
 #
 # Release-Text: docs/releases/<Tag>.md (z.B. docs/releases/v1.2.0.md), sonst ein kurzer Standardtext.
-# Danach legt der Auftrag «dateinamen» Kopien mit festen Namen ab (leyoNET-windows-setup.exe …)
+# Danach legt der Auftrag «dateinamen» Kopien mit festen Namen ab (leyoNET-Windows-Setup.exe …)
 # und die Arbeitsblätter als ZIP; die Website verlinkt auf
 # https://github.com/vonam-git/leyoNET/releases/latest/download/<fester Name>.
 #
@@ -115,12 +115,12 @@ jobs:
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dl --pattern '*.exe' --pattern '*.msi' --pattern '*.dmg' --pattern '*.AppImage' --pattern '*.deb' --pattern '*.rpm'
           for f in dl/*; do
             case "$f" in
-              *-setup.exe) n=leyoNET-windows-setup.exe ;;
-              *.msi) n=leyoNET-windows.msi ;;
-              *.dmg) n=leyoNET-macos.dmg ;;
-              *.AppImage) n=leyoNET-linux.AppImage ;;
-              *.deb) n=leyoNET-linux.deb ;;
-              *.rpm) n=leyoNET-linux.rpm ;;
+              *-setup.exe) n=leyoNET-Windows-Setup.exe ;;
+              *.msi) n=leyoNET-Windows.msi ;;
+              *.dmg) n=leyoNET-macOS.dmg ;;
+              *.AppImage) n=leyoNET-Linux.AppImage ;;
+              *.deb) n=leyoNET-Linux.deb ;;
+              *.rpm) n=leyoNET-Linux.rpm ;;
               *) continue ;;
             esac
             cp "$f" "out/$n"
@@ -128,5 +128,6 @@ jobs:
           # Nur die Blätter für Lernende (Musterlösungen sind nicht im Repo).
           (cd docs/arbeitsblaetter && zip -q -X ../../out/leyoNET-Arbeitsblaetter.zip *.pdf README.md)
           cp release/leyonet.html out/leyonet.html
+          (cd out && sha256sum leyoNET-* leyonet.html > SHA256SUMS.txt)
           ls -l out
           gh release upload "$TAG" out/* --repo "$GITHUB_REPOSITORY" --clobber

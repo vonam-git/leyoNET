@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>leyoNET – Netzwerk-Simulator für den Informatik-Unterricht</title>
+  <meta name="description" content="leyoNET ist ein kostenloser Netzwerk-Simulator für den Informatik-Unterricht: Netze bauen, Pakete Schicht für Schicht verfolgen, Übungen automatisch prüfen. Im Browser, offline oder als App – ohne Konto und ohne Tracking.">
+  <link rel="canonical" href="https://leyonet.ch/">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#ffffff">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://leyonet.ch/">
+  <meta property="og:title" content="leyoNET – Netzwerke bauen, simulieren und verstehen">
+  <meta property="og:description" content="Kostenloser Netzwerk-Simulator für den Informatik-Unterricht. Im Browser, offline oder als App – ohne Konto und ohne Tracking.">
+  <meta property="og:image" content="https://leyonet.ch/img/og.png">
+  <meta property="og:locale" content="de_CH">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="css/site.css">
+  <script src="js/site.js" defer></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "leyoNET",
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "Windows, macOS, Linux, Webbrowser",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CHF" },
+    "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+    "url": "https://leyonet.ch/",
+    "inLanguage": ["de", "en"]
+  }
+  </script>
+</head>
+<body>
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="#ansicht">Ansicht</a></li>
+          <li><a href="#unterricht">Unterricht</a></li>
+          <li><a href="#technik">Technik</a></li>
+          <li><a href="#download">Download</a></li>
+        </ul>
+      </nav>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+
+  <main id="inhalt">
+    <!-- Hero: eine kleine, echte Abfolge – Ping über einen Router, mit Paketliste -->
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="hero-text">
+          <h1>Netzwerke bauen, simulieren und verstehen.</h1>
+          <p class="lead">leyoNET ist ein Netzwerk-Simulator für den Informatik-Unterricht. Geräte verkabeln, Adressen vergeben, und dann zusehen, wie jedes Paket über die Leitung geht – vom ersten ARP bis zur Antwort.</p>
+          <div class="cta">
+            <a class="btn btn-ink" href="https://app.leyonet.ch/">Im Browser starten</a>
+            <a class="btn btn-line" href="#download">Herunterladen</a>
+          </div>
+          <ul class="facts">
+            <li>Kostenlos und quelloffen</li>
+            <li>Läuft auch offline</li>
+            <li>Ohne Konto, ohne Tracking</li>
+          </ul>
+        </div>
+
+        <figure class="sim" aria-label="Beispiel: PC 1 pingt einen Server in einem anderen Netz">
+          <div class="sim-canvas">
+            <svg viewBox="0 0 640 230" class="topo" role="img" aria-labelledby="topo-title">
+              <title id="topo-title">PC 1 und Switch im Netz 192.168.1.0/24, Router, Server im Netz 192.168.2.0/24</title>
+              <rect class="zone zone-a" x="12" y="14" width="350" height="200" rx="10"/>
+              <text class="zone-label zone-a-label" x="26" y="38">Schulzimmer 192.168.1.0/24</text>
+              <rect class="zone zone-b" x="452" y="14" width="176" height="200" rx="10"/>
+              <text class="zone-label zone-b-label" x="466" y="38">Server 192.168.2.0/24</text>
+
+              <line class="cable" x1="84" y1="118" x2="222" y2="118"/>
+              <line class="cable" x1="258" y1="118" x2="390" y2="118"/>
+              <line class="cable" x1="430" y1="118" x2="532" y2="118"/>
+              <g class="ports">
+                <circle cx="96" cy="118" r="4"/><circle cx="210" cy="118" r="4"/>
+                <circle cx="270" cy="118" r="4"/><circle cx="378" cy="118" r="4"/>
+                <circle cx="442" cy="118" r="4"/><circle cx="520" cy="118" r="4"/>
+              </g>
+              <text class="port" x="104" y="110">eth0</text>
+              <text class="port" x="185" y="110">P1</text>
+              <text class="port" x="278" y="110">P2</text>
+              <text class="port" x="344" y="110">eth0</text>
+              <text class="port" x="450" y="110">eth1</text>
+              <text class="port" x="490" y="110">eth0</text>
+
+              <!-- PC -->
+              <g class="dev dev-pc" transform="translate(48 96)">
+                <rect x="0" y="4" width="28" height="20" rx="2"/><path d="M8 30h12M14 24v6"/><rect x="31" y="2" width="8" height="28" rx="1.5"/>
+              </g>
+              <text class="name" x="66" y="160" text-anchor="middle">PC 1</text>
+              <text class="ip" x="66" y="176" text-anchor="middle">192.168.1.10/24</text>
+              <!-- Switch -->
+              <g class="dev dev-sw" transform="translate(222 104)">
+                <rect x="0" y="0" width="36" height="28" rx="5"/><path d="M8 10h20l-5-4M28 18H8l5 4"/>
+              </g>
+              <text class="name" x="240" y="160" text-anchor="middle">Switch 1</text>
+              <!-- Router -->
+              <g class="dev dev-r" transform="translate(410 118)">
+                <circle r="20"/><path d="M-6-6l-7-7m0 0h5m-5 0v5M6-6l7-7m0 0h-5m5 0v5M-6 6l-7 7m0 0h5m-5 0v-5M6 6l7 7m0 0h-5m5 0v-5"/>
+              </g>
+              <text class="name" x="410" y="160" text-anchor="middle">Router 1</text>
+                            <!-- Server -->
+              <g class="dev dev-srv" transform="translate(538 96)">
+                <rect x="0" y="0" width="26" height="40" rx="3"/><path d="M6 9h14M6 16h14M6 23h14"/><circle cx="13" cy="32" r="2.4"/>
+              </g>
+              <text class="name" x="551" y="160" text-anchor="middle">Server</text>
+              <text class="ip" x="551" y="176" text-anchor="middle">192.168.2.20/24</text>
+
+              <circle class="packet" r="7" cx="96" cy="118" opacity="0"/>
+            </svg>
+          </div>
+          <div class="sim-list" role="log" aria-live="off">
+            <div class="sim-head"><span>Nr.</span><span>Von → Nach</span><span>Protokoll</span><span>Info</span></div>
+            <ol class="rows"></ol>
+            <p class="sim-console"><span class="prompt">C:\&gt;</span> <span class="console-text">ping 192.168.2.20</span></p>
+          </div>
+          <figcaption class="visually-hidden">Animation: PC 1 fragt per ARP nach dem Router, schickt eine ICMP-Echo-Anfrage über Switch und Router an den Server und erhält die Antwort.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Echte Ansichten aus dem Programm -->
+    <section id="ansicht" class="views">
+      <div class="wrap">
+        <h2>So sieht es aus</h2>
+        <p class="section-lead">Echte Bildschirmfotos, keine Entwürfe. Alles läuft im Browserfenster, ohne Installation.</p>
+        <div class="tabs" role="tablist" aria-label="Ansichten">
+          <button role="tab" id="tab-entwurf" aria-controls="panel-views" aria-selected="true" data-img="entwurf" data-caption="Entwurf: Geräte aus dem Shop ziehen, verkabeln, Netze als farbige Bereiche dokumentieren. Hier ein Layer-3-Switch mit drei VLANs.">Entwurf</button>
+          <button role="tab" id="tab-simulation" aria-controls="panel-views" aria-selected="false" data-img="simulation" data-caption="Simulation: Ping über einen Router. Die Paketliste zeigt jeden Rahmen, die Detailansicht seine Schichten aus echten Bytes.">Simulation</button>
+          <button role="tab" id="tab-geraet" aria-controls="panel-views" aria-selected="false" data-img="geraetefenster" data-caption="Gerätefenster: Routingtabelle, OSPF-Nachbarn und ARP-Tabelle eines Routers, während OSPF-Hellos durchs Netz laufen.">Gerätefenster</button>
+          <button role="tab" id="tab-katalog" aria-controls="panel-views" aria-selected="false" data-img="katalog" data-caption="Aufgaben-Katalog: Übungen von einem bis fünf Sternen. Was gelöst ist, bleibt markiert.">Katalog</button>
+        </div>
+        <figure class="shot" id="panel-views" role="tabpanel" aria-labelledby="tab-entwurf">
+          <div class="window">
+            <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span><em>app.leyonet.ch</em></div>
+            <img src="img/entwurf-1x.webp" srcset="img/entwurf-1x.webp 1440w, img/entwurf.webp 2880w" sizes="(min-width: 1180px) 1100px, 100vw" width="1440" height="880" alt="leyoNET im Entwurf mit einem Layer-3-Switch, drei VLANs und farbigen Bereichen" loading="lazy">
+          </div>
+          <figcaption>Entwurf: Geräte aus dem Shop ziehen, verkabeln, Netze als farbige Bereiche dokumentieren. Hier ein Layer-3-Switch mit drei VLANs.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Zahlen: was heute drin ist -->
+    <section class="numbers" aria-labelledby="numbers-title">
+      <div class="wrap">
+        <h2 id="numbers-title" class="visually-hidden">leyoNET in Zahlen</h2>
+        <dl class="counters">
+          <div><dt>Übungen mit automatischer Prüfung</dt><dd data-count="70" data-suffix="+">70+</dd></div>
+          <div><dt>fertige Demo-Netze, viele Schritt für Schritt</dt><dd data-count="35">35</dd></div>
+          <div><dt>Gerätetypen vom Notebook bis zum Provider</dt><dd data-count="12">12</dd></div>
+          <div><dt>zitierte Normen: RFC, IEEE 802, ITU-T</dt><dd data-count="64">64</dd></div>
+          <div><dt>automatische Tests vor jeder Version</dt><dd data-count="640" data-suffix="+">640+</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- Für den Unterricht -->
+    <section id="unterricht" class="teach">
+      <div class="wrap">
+        <h2>Gemacht für den Unterricht</h2>
+        <p class="section-lead">Vom ersten Lehrjahr bis zur Fachhochschule. Lehrpersonen bestimmen, was sichtbar ist, und bekommen die Korrektur abgenommen.</p>
+
+        <div class="teach-grid">
+          <article class="teach-item">
+            <h3>Fünf Profile, ein Programm</h3>
+            <p>Einsteiger sehen nur PCs, Switch, Router und DHCP. Mit jedem Profil kommt mehr dazu – bis BGP. Lehrpersonen verteilen ihre Auswahl als Datei.</p>
+            <ol class="ladder" aria-label="Funktionsprofile">
+              <li><b>P1</b> Einstieg <span>PCs, Switch, Router, Server, DHCP</span></li>
+              <li><b>P2</b> Grundlagen <span>WLAN, Internet, DNS, Web, statische Routen</span></li>
+              <li><b>P3</b> Fortgeschritten <span>VLANs, Trunks, STP, NAT, Firewall, Loopbacks, Befehlszeile</span></li>
+              <li><b>P4</b> Profi <span>OSPF, RIP, IPv6 mit OSPFv3, Layer-3-Switch, ACLs, LACP, VPN, Hex-Ansicht, pcap</span></li>
+              <li><b>P5</b> Studium <span>alles, inklusive BGP, VRF und VXLAN</span></li>
+            </ol>
+          </article>
+
+          <article class="teach-item">
+            <h3>Übungen, die sich selbst prüfen</h3>
+            <p>Jede Übung hat Lernziele wie «PC 1 erreicht den Webserver». Ein Klick auf «Prüfen» zeigt, was erfüllt ist, und gibt Tipps zum Rest. Zu jeder Übung gibt es ein ausfüllbares Arbeitsblatt als PDF, dazu ganze Reihen für die Module 117, 129 und 145: <a class="link" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Arbeitsblaetter.zip">alle Arbeitsblätter (ZIP)</a>.</p>
+            <p>Eigene Aufgaben entstehen im Formular – oder aus einer fertigen Lösung: leyoNET schlägt die Ziele mit Punkten vor.</p>
+          </article>
+
+          <article class="teach-item">
+            <h3>Prüfungen ohne Korrekturstapel</h3>
+            <p>Jeder Platz bekommt einen eigenen Code und auf Wunsch eine eigene Variante. Gespeichert wird alle 20 Sekunden, abgegeben automatisch, wenn die Zeit um ist.</p>
+            <p>Nachteilsausgleich gibt es je Platz mit einem Klick. Die Auswertung rechnet Punkte und Note nach Schweizer Skala, mit Teilpunkten, Folgefehlern und Platz für die Nachkorrektur.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Technik nach OSI-Schichten -->
+    <section id="technik" class="tech">
+      <div class="wrap tech-grid">
+        <div class="tech-intro">
+          <h2>Was im Netz wirklich passiert</h2>
+          <p>Jeder Rahmen besteht aus echten Bytes, kodiert nach Standard. Die Paketansicht packt ihn Schicht für Schicht aus, die Hex-Ansicht markiert jedes Feld, und mit dem Export öffnet Wireshark denselben Mitschnitt.</p>
+          <ul class="tech-points">
+            <li>Anzeigefilter wie in Wireshark: <code>icmp and ip.dst == 192.168.2.20</code></li>
+            <li>Befehlszeile für Router und Switches im Stil von FRRouting, mit Tab und <code>?</code></li>
+            <li>Zeitlupe und Einzelschritt: Pakete wandern als Punkte über die Kabel</li>
+            <li>Kabel beschädigen, Ports abschalten, Fehler suchen</li>
+          </ul>
+        </div>
+        <ol class="osi" aria-label="Protokolle nach OSI-Schicht">
+          <li class="l7"><span class="n">7</span><span class="name">Anwendung</span><ul class="protos"><li>HTTP/1.1</li><li>DNS</li><li>DHCP</li><li>DHCPv6</li><li>SMTP</li><li>POP3</li><li>IMAP</li><li>SSH</li></ul></li>
+          <li class="l4"><span class="n">4</span><span class="name">Transport</span><ul class="protos"><li>TCP</li><li>Drei-Wege-Handshake</li><li>Sequenznummern</li><li>Wiederholung</li><li>UDP</li></ul></li>
+          <li class="l3"><span class="n">3</span><span class="name">Vermittlung</span><ul class="protos"><li>IPv4</li><li>IPv6</li><li>ICMP</li><li>NAT und PAT</li><li>CGNAT</li><li>DS-Lite</li><li>OSPF und OSPFv3</li><li>RIP und RIPng</li><li>BGP</li><li>VRF</li><li>IPsec mit IKEv2</li><li>Firewall</li></ul></li>
+          <li class="l2"><span class="n">2</span><span class="name">Sicherung</span><ul class="protos"><li>Ethernet</li><li>ARP</li><li>Neighbor Discovery</li><li>VLAN 802.1Q</li><li>LACP</li><li>VXLAN</li><li>Spanning Tree</li><li>WLAN 802.11</li><li>PPP</li><li>PPPoE</li></ul></li>
+          <li class="l1"><span class="n">1</span><span class="name">Bitübertragung</span><ul class="protos"><li>Twisted Pair</li><li>Glasfaser</li><li>Funk</li><li>Koax mit DOCSIS</li><li>DSL</li><li>GPON</li><li>LTE</li><li>seriell</li></ul></li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Datenschutz und Offenheit -->
+    <section class="open">
+      <div class="wrap open-grid">
+        <div>
+          <h2>Keine Konten. Keine Cookies. Kein Tracking.</h2>
+          <p>leyoNET speichert nur Netzwerk-Konfigurationen, nie Namen. Die Datei lädt nichts aus dem Internet nach, nicht einmal eine Schrift. Die Einzeldatei und die Desktop-App übertragen gar nichts; die Webversion speichert nur technische Daten ohne Namen und löscht sie automatisch. Was genau gespeichert wird, steht in der <a class="link" href="datenschutz.html">Datenschutzerklärung</a>.</p>
+          <p>Der Quellcode ist offen (AGPL-3.0). Jede Version durchläuft vor der Veröffentlichung eine Prüfung auf Tracker, externe Ressourcen, Sicherheits-Header und Lizenzen.</p>
+          <p><a class="link" href="https://github.com/vonam-git/leyoNET">Quellcode auf GitHub</a></p>
+        </div>
+        <pre class="console" aria-label="Auszug aus der Sicherheitsrichtlinie der Datei"><span class="c">&lt;!-- leyonet.html --&gt;</span>
+Content-Security-Policy:
+  default-src 'none';
+  connect-src 'none';
+  img-src data: blob:;
+  form-action 'none';
+
+<span class="ok">✓</span> keine Cookies
+<span class="ok">✓</span> kein Tracker
+<span class="ok">✓</span> keine externen Ressourcen</pre>
+      </div>
+    </section>
+
+    <!-- Geschichte -->
+    <section class="story" aria-labelledby="story-title">
+      <div class="wrap story-grid">
+        <svg class="mark" viewBox="0 0 64 64" role="img" aria-label="Das Symbol: ein l und ein y aus Netzwerkknoten">
+          <g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 13v30"/><path d="M29 25l11 14 13-14M40 39l-8 14"/></g>
+          <g fill="currentColor"><circle cx="13" cy="13" r="4"/><circle cx="13" cy="43" r="4"/><circle cx="29" cy="25" r="4"/><circle cx="53" cy="25" r="4"/><circle cx="32" cy="53" r="4"/></g>
+        </svg>
+        <div>
+          <h2 id="story-title">Aus dem Schulzimmer</h2>
+          <p>Mark unterrichtet Netzwerktechnik. Jahrelang hat er mit seinen Klassen Kabel gezogen, Pings verschickt und Broadcast-Stürme heraufbeschworen, meistens absichtlich. Irgendwann war klar: Es braucht ein Werkzeug, das moderner ist, einfach im Browser läuft und sich trotzdem lokal installieren lässt.</p>
+          <p>Zusammen mit seinem Bruder Mika entstand das Grundgerüst; seither kommt Idee um Idee aus dem Unterricht dazu. Programmiert wird mit Hilfe künstlicher Intelligenz – die Ideen, die Erfahrung und die Verantwortung liegen bei Mark und Mika.</p>
+          <p>Und der Name? «leyo» sind die Anfangsbuchstaben von Marks Kindern. Das Symbol zeigt ein «l» und ein «y» aus Netzwerkknoten: «ly» für «love you». Jedes gute Netz braucht starke Verbindungen.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Download -->
+    <section id="download" class="download">
+      <div class="wrap">
+        <h2>Loslegen</h2>
+        <p class="section-lead">Überall dasselbe Programm. Version <span data-version>1.2.0</span>.</p>
+        <ul class="dl-list">
+          <li class="dl-main">
+            <div><h3>Im Browser</h3><p>Sofort starten, Arbeitsstand unter einem Code speichern, Klassen und Prüfungen über den Server.</p></div>
+            <a class="btn btn-ink" href="https://app.leyonet.ch/">app.leyonet.ch öffnen</a>
+          </li>
+          <li>
+            <div><h3>Einzeldatei</h3><p>Eine HTML-Datei, die überall läuft: Doppelklick genügt. Ideal für USB-Sticks und Prüfungsrechner ohne Internet.</p></div>
+            <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyonet.html">leyonet.html <small>ca. 2 MB</small></a>
+          </li>
+          <li>
+            <div><h3>Windows</h3><p>Windows 10 und 11. Installationsprogramm oder MSI für die Verteilung im Schulnetz.</p></div>
+            <span class="dl-buttons">
+              <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Windows-Setup.exe">Setup (.exe) <small>ca. 4 MB</small></a>
+              <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Windows.msi">MSI <small>ca. 5 MB</small></a>
+            </span>
+          </li>
+          <li>
+            <div><h3>macOS</h3><p>Für Apple Silicon und Intel (ab macOS 10.15).</p></div>
+            <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-macOS.dmg">macOS (.dmg) <small>ca. 5 MB</small></a>
+          </li>
+          <li>
+            <div><h3>Linux</h3><p>AppImage läuft ohne Installation; Pakete für Debian/Ubuntu und Fedora.</p></div>
+            <span class="dl-buttons">
+              <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Linux.AppImage">AppImage <small>ca. 80 MB</small></a>
+              <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Linux.deb">.deb <small>ca. 2 MB</small></a>
+              <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Linux.rpm">.rpm <small>ca. 2 MB</small></a>
+            </span>
+          </li>
+        </ul>
+        <p class="note">Die Dateien kommen direkt von GitHub. Prüfsummen (SHA-256) zum Vergleichen: <a class="link" href="https://github.com/vonam-git/leyoNET/releases/latest/download/SHA256SUMS.txt">SHA256SUMS.txt</a>. Alle Versionen und Änderungen: <a class="link" href="https://github.com/vonam-git/leyoNET/releases">GitHub Releases</a>. Die Installationsprogramme sind noch nicht signiert. Windows zeigt beim ersten Start «Der Computer wurde durch Windows geschützt»: <em>Weitere Informationen → Trotzdem ausführen</em>. Auf dem Mac beim ersten Mal mit Rechtsklick → <em>Öffnen</em> starten oder unter <em>Systemeinstellungen → Datenschutz &amp; Sicherheit → Dennoch öffnen</em>. Meldet macOS «beschädigt», hilft im Terminal <code>xattr -cr /Applications/leyoNET.app</code>.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET wird von Mark und Mika in der Schweiz entwickelt.</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="impressum.html">Impressum</a></li>
+        <li><a href="datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

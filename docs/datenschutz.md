@@ -84,7 +84,7 @@ Auch ein vorgeschaltetes CDN oder ein Reverse-Proxy kann protokollieren.
 
 ## Website leyonet.ch
 
-Die Website (`website/`) ist eine einzelne statische Seite: keine Cookies, keine Skripte, kein Tracking, keine Schriften oder Bilder von fremden Servern (CSP `default-src 'none'`). Die Downloads sind Links auf die Releases bei GitHub; erst wer darauf klickt, verbindet sich mit github.com, und dort gilt die Datenschutzerklärung von GitHub. Die Seite sagt das im Abschnitt «Datenschutz». Wie bei jedem Webserver kann das Hosting (Plesk) Zugriffe im Server-Log festhalten; diese Logs gehören zum Hosting, nicht zu leyoNET.
+Die Website (`website/httpdocs/`) besteht aus statischen Seiten: keine Cookies, kein Tracking, keine Schriften, Skripte oder Bilder von fremden Servern. Die Downloads sind Links auf die Releases bei GitHub; erst wer darauf klickt, verbindet sich mit github.com, und dort gilt die Datenschutzerklärung von GitHub. Die Datenschutzerklärung der Website (`datenschutz.html`) sagt das im Abschnitt «Downloads». Wie bei jedem Webserver kann das Hosting (Plesk) Zugriffe im Server-Log festhalten; diese Logs gehören zum Hosting, nicht zu leyoNET.
 
 ## Prüfung bei jedem Release
 

@@ -13,7 +13,7 @@ GitHub baut die Installer automatisch:
   ```
 - **Zum Testen ohne Tag**: auf GitHub *Actions → Desktop → Run workflow*.
 
-Den Text des Releases liest der Workflow aus `docs/releases/<Tag>.md` (z.B. [`docs/releases/v1.2.0.md`](releases/v1.2.0.md)); fehlt die Datei, steht ein kurzer Standardtext da. Nach dem Bau legt der Auftrag «dateinamen» Kopien mit festen Namen dazu (`leyoNET-windows-setup.exe`, `leyoNET-windows.msi`, `leyoNET-macos.dmg`, `leyoNET-linux.AppImage`, `.deb`, `.rpm`, dazu `leyonet.html` und `leyoNET-Arbeitsblaetter.zip`); auf diese verlinkt die Website leyonet.ch über `releases/latest/download/…`.
+Den Text des Releases liest der Workflow aus `docs/releases/<Tag>.md` (z.B. [`docs/releases/v1.2.0.md`](releases/v1.2.0.md)); fehlt die Datei, steht ein kurzer Standardtext da. Nach dem Bau legt der Auftrag «dateinamen» Kopien mit festen Namen dazu (`leyoNET-Windows-Setup.exe`, `leyoNET-Windows.msi`, `leyoNET-macOS.dmg`, `leyoNET-Linux.AppImage`, `.deb`, `.rpm`, dazu `leyonet.html` und `leyoNET-Arbeitsblaetter.zip`); auf diese verlinkt die Website leyonet.ch über `releases/latest/download/…`.
 
 Nach 10–20 Minuten liegt unter *Releases* ein **Entwurf** mit allen Dateien. Prüfen und dann veröffentlichen: Erst danach zeigen die Links der Website auf die neue Version.
 

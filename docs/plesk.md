@@ -116,16 +116,9 @@ Ist der Stand auf `develop` gut, wird er nach `main` übernommen (Pull Request a
 
 ## Website leyonet.ch
 
-Die Website liegt im Repo unter `website/` (eine Seite, Logo, `.htaccess` mit Sicherheits-Headern; keine Skripte, keine fremden Ressourcen). Die Downloads sind **Links auf GitHub-Releases** mit festen Dateinamen, z.B. `https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-windows-setup.exe`. Bei einer neuen Version muss darum nichts hochgeladen werden: Sobald der Release auf GitHub veröffentlicht ist, zeigen die Links auf die neuen Dateien. Die festen Namen legt der Workflow `desktop.yml` (Auftrag «dateinamen») an.
+Die Website liegt im Repo unter [`website/httpdocs/`](../website/httpdocs/) (Startseite, Impressum, Datenschutz, Bilder, `.htaccess` mit Sicherheits-Köpfen; nur eigene Dateien, keine fremden Dienste). Die Downloads sind **Links auf GitHub-Releases** mit festen Dateinamen, z.B. `https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Windows-Setup.exe`. Bei einer neuen Version wird nichts hochgeladen: Sobald der Release veröffentlicht ist, zeigen die Links auf die neuen Dateien. Die festen Namen legt der Workflow `desktop.yml` (Auftrag «dateinamen») an.
 
-Einrichten in Plesk (einmalig, bei der Domain leyonet.ch):
-
-1. **Git** → Repository hinzufügen: `https://github.com/vonam-git/leyoNET.git`, Branch **`main`**, Bereitstellung automatisch, Bereitstellungspfad `httpdocs`.
-2. **Hosting & DNS → Hosting** (bzw. *Hosting-Einstellungen*): Dokumentstamm auf **`httpdocs/website`** setzen. So ist nur der Ordner `website/` öffentlich.
-3. SSL/TLS mit Let's Encrypt aktivieren.
-4. Alte, von Hand hochgeladene Installer in `httpdocs` löschen.
-
-Änderungen an der Website: auf `develop` ändern, mit `main` zusammenführen, in Plesk *Git → Pull Updates* (bzw. *Jetzt bereitstellen*). Bei reinem Nginx die Header aus `website/.htaccess` unter *Zusätzliche nginx-Anweisungen* eintragen.
+Einrichten in Plesk und Ablauf bei neuen Versionen: [`website/ANLEITUNG.md`](../website/ANLEITUNG.md). Kurz: bei leyonet.ch *Git* mit Branch `main` und Bereitstellungspfad `leyonet-repo`, Dokumentstamm `leyonet-repo/website/httpdocs`.
 
 ## Ohne Node.js (nur statisch)
 
