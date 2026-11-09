@@ -143,7 +143,7 @@ export const ADVANCED: CatalogEntry[] = [
     id: 'vrf-customers',
     features: ['net.vrf', 'net.cli'],
     stars: 4,
-    level: 4,
+    level: 5,
     build: () => ({
       topology: vrfStart(),
       tasks: task('vrfCustomers', 4, [

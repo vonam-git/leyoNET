@@ -5,7 +5,8 @@ import { DHCP_CLIENT_PORT, DHCP_SERVER_PORT, type DhcpMessage, type DhcpOp, type
 import type { SendOptions } from './ip';
 import type { NodeContext } from './simulation';
 
-export const DISCOVER_TIMEOUT = 2000;
+/** Erste Wartezeit auf ein Offer; danach verdoppelt (4 s, 8 s, 16 s) wie in RFC 2131, Abschnitt 4.1. */
+export const DISCOVER_TIMEOUT = 4000;
 export const DISCOVER_ATTEMPTS = 3;
 export const REQUEST_TIMEOUT = 2000;
 /** So lange hält der Server eine angebotene Adresse für den Client frei. */
@@ -101,7 +102,7 @@ export class DhcpClient {
       0,
       datagram(DHCP_CLIENT_PORT, DHCP_SERVER_PORT, { kind: 'dhcp', op: 'discover', xid, clientMac: this.#mac }),
     );
-    this.#ctx.schedule(DISCOVER_TIMEOUT, () => {
+    this.#ctx.schedule(DISCOVER_TIMEOUT * 2 ** (this.#attempt - 1), () => {
       if (round !== this.#round || this.#state !== 'selecting' || xid !== this.#xid) return;
       if (this.#attempt < DISCOVER_ATTEMPTS) return this.#discover();
       this.#state = 'idle';

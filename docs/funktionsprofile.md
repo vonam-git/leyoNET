@@ -10,9 +10,9 @@ Die Auswahl öffnet sich über den Profil-Chip in der Werkzeugleiste oder **Werk
 |---|---|---|
 | 1 Einstieg | 1. Lehrjahr | PC, Notebook, Switch, Router, Server, automatisches Routing, DHCP, Paketliste, OSI-Ansicht, IP-Rechner, Bereiche, Snapshots, Aufgaben erstellen |
 | 2 Grundlagen | 1.–2. Lehrjahr | Access Point, Internet, Internet-Box (CPE), Glasfaser, WLAN, DNS, Web, Ports abschalten, statische Routen, Adressanzeige, Stockwerke, Kosten |
-| 3 Fortgeschritten | 2.–3. Lehrjahr | Client-Gruppen, Firewall als Gerät, Modems, Zugangsleitungen, E-Mail, Kabelschäden, VLANs, STP, WLAN-Mesh/Roaming, DHCP-Relay, NAT, Firewall, CLI, Racks, Preise im Shop, MAC-Adressen ändern |
-| 4 Profi | 3.–4. Lehrjahr | Zugriffslisten (ACL) auf Switches, IPv6 (SLAAC, DHCPv6, Neighbor Discovery), DS-Lite, VPN (IPsec), L3-Switch, serielle Leitungen, Subinterfaces, statisches NAT, CGNAT, SSH, RIP, OSPF, Hex-Ansicht, pcap-Export |
-| 5 Studium | Fachhochschule | BGP |
+| 3 Fortgeschritten | 2.–3. Lehrjahr | Client-Gruppen, Firewall als Gerät, Modems, Zugangsleitungen, E-Mail, Kabelschäden, VLANs, STP, WLAN-Mesh/Roaming, DHCP-Relay, NAT, Firewall, CLI, Loopbacks, Racks, Preise im Shop, MAC-Adressen ändern |
+| 4 Profi | 3.–4. Lehrjahr, Modul 145 | Layer-3-Switch, Zugriffslisten (ACL) auf Ports und VLAN-Interfaces, Subinterfaces, Port-Channel (LACP), IPv6 (SLAAC, DHCPv6, Neighbor Discovery), DS-Lite, VPN (IPsec), serielle Leitungen, statisches NAT, CGNAT, SSH, RIP, OSPF, Hex-Ansicht, pcap-Export |
+| 5 Studium | Fachhochschule, Rechenzentrum und Provider | BGP, VRF (mehrere Routingtabellen), VXLAN (Leaf-Spine) |
 
 Die genaue Zuordnung steht in [`src/ui/features.ts`](../src/ui/features.ts).
 

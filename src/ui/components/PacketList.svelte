@@ -2,7 +2,7 @@
   import { tick } from 'svelte';
   import { t } from '../../i18n';
   import { exportPcap } from '../actions';
-  import { parseFilter, protocolClass, protocolOf, toRow } from '../packets';
+  import { parseFilter, protocolClass, protocolOf, tcpConversation, tcpStreamKey, tcpStreams, toRow } from '../packets';
   import { editor } from '../state/editor.svelte';
   import { simStore } from '../state/sim.svelte';
   import { ui } from '../state/ui.svelte';
@@ -36,9 +36,24 @@
   const log = $derived((simStore.tick, [...(simStore.sim?.getPacketLog() ?? [])]));
   const protocols = $derived([...new Set(log.map((e) => protocolOf(e.frame)))].sort());
   const selected = $derived(selectedId === null ? undefined : log.find((e) => e.id === selectedId));
+  // TCP-Verbindungen wie in Wireshark nummeriert (Filter «tcp.stream == N»).
+  const streams = $derived(tcpStreams(log));
+  const followed = $derived.by(() => {
+    const m = /^\s*tcp\.stream\s*==\s*(\d+)\s*$/i.exec(expression);
+    if (!m) return null;
+    const key = [...streams].find(([, n]) => n === Number(m[1]))?.[0];
+    return key ? { key, ...tcpConversation(log, key) } : null;
+  });
+
+  /** Ganze Verbindung des gewählten TCP-Pakets zeigen (wie «Follow TCP Stream»). */
+  function follow(entry: (typeof log)[number]) {
+    const key = tcpStreamKey(entry.frame);
+    const n = key !== null ? streams.get(key) : undefined;
+    if (n !== undefined) expression = `tcp.stream == ${n}`;
+  }
   const matching = $derived(
     log.filter((entry) => {
-      if (parsedFilter.ok && parsedFilter.test && !parsedFilter.test(entry, editor.topology)) return false;
+      if (parsedFilter.ok && parsedFilter.test && !parsedFilter.test(entry, editor.topology, streams)) return false;
       if (protocol && protocolOf(entry.frame) !== protocol) return false;
       if (!device) return true;
       if (direction === 'sent') return entry.from.device === device;
@@ -136,6 +151,15 @@
     {/each}
     <span id="filter-error" class="error" role="status">{parsedFilter.ok ? '' : parsedFilter.error}</span>
   </div>
+  {#if followed}
+    <p class="stream" role="status">
+      <strong>{t('packets.stream.title', { pair: followed.key.replace('|', ' ⇄ ') })}</strong>
+      <span class:ok={followed.handshake}>{followed.handshake ? '✓' : '…'} {t('packets.stream.handshake')}</span>
+      <span>{t('packets.stream.data', { n: followed.data })}</span>
+      <span class:ok={followed.fin}>{followed.reset ? t('packets.stream.reset') : followed.fin ? `✓ ${t('packets.stream.closed')}` : t('packets.stream.open')}</span>
+      <button class="chip" onclick={() => (expression = '')}>{t('packets.stream.leave')}</button>
+    </p>
+  {/if}
 
   <div class="body">
   <div class="scroller" bind:this={scroller} bind:clientHeight={viewport} onscroll={() => (scrollTop = scroller.scrollTop)}>
@@ -198,7 +222,7 @@
   {#if selected}
     <div class="detail-pane" bind:this={detailPane} style:width={ui.sizes.details ? `${ui.sizes.details}px` : null}>
       <Splitter name="details" edge="left" current={() => detailPane?.offsetWidth ?? 360} label={t('splitter.details')} />
-      <PacketDetails entry={selected} onclose={() => (selectedId = null)} />
+      <PacketDetails entry={selected} onclose={() => (selectedId = null)} onfollow={tcpStreamKey(selected.frame) !== null ? () => follow(selected) : undefined} />
     </div>
   {/if}
   </div>
@@ -364,5 +388,19 @@
   }
   .muted {
     color: var(--muted);
+  }
+  .stream {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    align-items: center;
+    margin: 0;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    background: var(--warning-soft);
+    border-bottom: 1px solid var(--border);
+  }
+  .stream .ok {
+    color: var(--success, #15803d);
   }
 </style>

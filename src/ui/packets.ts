@@ -180,7 +180,58 @@ export function toRow(topology: Topology, entry: PacketLogEntry): PacketRow {
 
 // --- Anzeigefilter ---------------------------------------------------------------
 
-type Predicate = (entry: PacketLogEntry, topology: Topology) => boolean;
+/** Nummern der TCP-Verbindungen wie in Wireshark (tcp.stream), in der Reihenfolge des ersten Pakets. */
+export type StreamIndex = Map<string, number>;
+type Predicate = (entry: PacketLogEntry, topology: Topology, streams?: StreamIndex) => boolean;
+
+/** Schlüssel einer TCP-Verbindung: beide Endpunkte (Adresse:Port), unabhängig von der Richtung. */
+export function tcpStreamKey(frame: EthernetFrame): string | null {
+  const seg = transportOf(frame);
+  if (!seg || seg.kind !== 'tcp') return null;
+  const p = frame.payload;
+  const ip = ipv4Of(frame) ?? (p.kind === 'ipv6' ? p : null);
+  if (!ip) return null;
+  const a = `${ip.src}:${seg.srcPort}`;
+  const b = `${ip.dst}:${seg.dstPort}`;
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
+/** Verbindungen im Mitschnitt nummerieren (0, 1, 2 …). */
+export function tcpStreams(log: readonly PacketLogEntry[]): StreamIndex {
+  const streams: StreamIndex = new Map();
+  for (const e of log) {
+    const key = tcpStreamKey(e.frame);
+    if (key !== null && !streams.has(key)) streams.set(key, streams.size);
+  }
+  return streams;
+}
+
+/** Ablauf einer TCP-Verbindung zusammengefasst: Aufbau (3-Way-Handshake), Daten, Abbau. */
+export function tcpConversation(log: readonly PacketLogEntry[], key: string): { handshake: boolean; data: number; fin: boolean; reset: boolean; packets: number } {
+  let syn = false;
+  let synAck = false;
+  let ack = false;
+  let data = 0;
+  let fin = false;
+  let reset = false;
+  let packets = 0;
+  const seen = new Set<object>();
+  for (const e of log) {
+    if (tcpStreamKey(e.frame) !== key || seen.has(e.frame.payload)) continue;
+    // Jedes Segment nur einmal zählen, auch wenn Switches es weiterreichen.
+    seen.add(e.frame.payload);
+    const seg = transportOf(e.frame) as TcpSegment;
+    packets++;
+    const f = new Set(seg.flags);
+    if (f.has('SYN') && !f.has('ACK')) syn = true;
+    else if (f.has('SYN') && f.has('ACK') && syn) synAck = true;
+    else if (synAck && f.has('ACK') && !ack) ack = true;
+    if (seg.data) data++;
+    if (f.has('FIN')) fin = true;
+    if (f.has('RST')) reset = true;
+  }
+  return { handshake: syn && synAck && ack, data, fin, reset, packets };
+}
 
 export interface FilterResult {
   ok: boolean;
@@ -219,6 +270,8 @@ const PROTOCOL_WORDS: Record<string, (proto: string, frame: EthernetFrame) => bo
   rip: (p) => p === 'RIP' || p === 'RIPng',
   ripng: (p) => p === 'RIPng',
   stp: (p) => p === 'STP',
+  lacp: (p) => p === 'LACP',
+  vxlan: (p) => p === 'VXLAN',
   ppp: (p) => p.startsWith('PPP'),
   wlan: (p) => p === '802.11',
   wifi: (p) => p === '802.11',
@@ -246,7 +299,7 @@ function ports(frame: EthernetFrame): number[] {
 /**
  * Filter lesen: Protokollnamen (arp, dhcp, http …), Vergleiche
  * (ip.addr == 10.0.0.1, ip.src, ip.dst, eth.addr, port == 80, tcp.port, udp.port,
- * vlan == 10), «host PC1» (Gerätename), «lost», verknüpft mit and/or/not
+ * vlan == 10, tcp.stream == 0, tcp.flags.syn == 1), «host PC1» (Gerätename), «lost», verknüpft mit and/or/not
  * (auch &&, ||, !) und Klammern.
  */
 export function parseFilter(text: string): FilterResult {
@@ -271,7 +324,7 @@ export function parseFilter(text: string): FilterResult {
     }
     if (lower === '!' || lower === 'not') {
       const inner = primary();
-      return (e, topo) => !inner(e, topo);
+      return (e, topo, streams) => !inner(e, topo, streams);
     }
     if (lower === 'lost') return (e) => e.status === 'lost';
     if (lower === 'host') {
@@ -286,7 +339,7 @@ export function parseFilter(text: string): FilterResult {
       const value = next();
       if (value === undefined) return fail(t('filter.error.value', { field }));
       const v = value.toLowerCase();
-      const compare = (test: Predicate): Predicate => (negate ? (e, topo) => !test(e, topo) : test);
+      const compare = (test: Predicate): Predicate => (negate ? (e, topo, streams) => !test(e, topo, streams) : test);
       const ip = (e: PacketLogEntry) => ipv4Of(e.frame);
       const ip6 = (e: PacketLogEntry) => (e.frame.payload.kind === 'ipv6' ? e.frame.payload : null);
       const same6 = (a: string | undefined) => !!a && normalizeIp6(a) === normalizeIp6(value);
@@ -323,6 +376,25 @@ export function parseFilter(text: string): FilterResult {
         }
         case 'vlan':
           return compare((e) => e.frame.vlan === Number(value));
+        case 'tcp.stream': {
+          if (!/^\d+$/.test(value)) return fail(t('filter.error.value', { field }));
+          const n = Number(value);
+          return compare((e, _topo, streams) => {
+            const key = tcpStreamKey(e.frame);
+            return key !== null && streams?.get(key) === n;
+          });
+        }
+        case 'tcp.flags.syn':
+        case 'tcp.flags.ack':
+        case 'tcp.flags.fin':
+        case 'tcp.flags.rst': {
+          const flag = field.split('.')[2]!.toUpperCase() as TcpSegment['flags'][number];
+          const want = v === '1' || v === 'true';
+          return compare((e) => {
+            const seg = transportOf(e.frame);
+            return !!seg && seg.kind === 'tcp' && seg.flags.includes(flag) === want;
+          });
+        }
         case 'proto':
         case 'protocol':
           return compare((e) => protocolOf(e.frame).toLowerCase() === v);
@@ -341,7 +413,7 @@ export function parseFilter(text: string): FilterResult {
       next();
       const right = primary();
       const l = left;
-      left = (e, topo) => l(e, topo) && right(e, topo);
+      left = (e, topo, streams) => l(e, topo, streams) && right(e, topo, streams);
     }
     return left;
   }
@@ -352,7 +424,7 @@ export function parseFilter(text: string): FilterResult {
       next();
       const right = and();
       const l = left;
-      left = (e, topo) => l(e, topo) || right(e, topo);
+      left = (e, topo, streams) => l(e, topo, streams) || right(e, topo, streams);
     }
     return left;
   }
