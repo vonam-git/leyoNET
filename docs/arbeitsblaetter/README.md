@@ -1,6 +1,6 @@
 # Arbeitsblätter zu allen Übungen
 
-Ausfüllbare PDFs zu **allen** Übungen im Aufgaben-Katalog (Werkzeuge » Aufgaben-Katalog): von Hand geschrieben zu den Reitern **«M117»**, **«M129»** und **«M145»**, automatisch aus dem Katalog erzeugt zu allen übrigen Übungen (Reiter «Alle»). Die Lernenden füllen die Felder direkt im PDF aus (Browser, Adobe Acrobat Reader oder eine andere PDF-App) und geben das PDF zusammen mit ihren Projektdateien ab. Die Musterlösungen (`_mL.pdf`) stehen bewusst nicht im öffentlichen Repo; `npm run arbeitsblaetter` erzeugt sie lokal.
+Ausfüllbare PDFs zu **allen** Übungen im Aufgaben-Katalog (Werkzeuge » Aufgaben-Katalog): von Hand geschrieben zu den Reitern **«M117»**, **«M129»** und **«M145»**, automatisch aus dem Katalog erzeugt zu allen übrigen Übungen (Reiter «Alle»). Die Lernenden füllen die Felder direkt im PDF aus (Browser, Adobe Acrobat Reader oder eine andere PDF-App) und geben das PDF zusammen mit ihren Projektdateien ab. Die Musterlösungen (`_mL.pdf`) stehen bewusst nicht im öffentlichen Repo, damit Lernende sie nicht einfach finden. **Lehrpersonen erhalten sie auf Anfrage per E-Mail** (Adresse im Impressum auf [leyonet.ch](https://leyonet.ch/impressum.html)); wer das Repo klont, erzeugt sie mit `npm run arbeitsblaetter` auch selbst.
 
 | Arbeitsblatt | Übungen im Katalog | Sterne |
 |---|---|---|
