@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDnsRecord, setDhcpServer, setDnsServerEnabled, setRoutingMode } from '../model/topology';
+import { addDnsRecord, createVlan, setDhcpServer, setDnsServerEnabled, setPortTrunk, setPortVlan, setRoutingMode } from '../model/topology';
 import { NetBuilder, unwrap } from '../sim/testing';
 import { FAULT_KINDS, injectFaults } from './faults';
 import { evaluateGoal } from './tasks';
@@ -55,7 +55,34 @@ describe('Fehlersuche: Fehler einbauen', () => {
     const original = sites();
     const seen = new Set<string>();
     for (let seed = 1; seed <= 40; seed++) for (const f of injectFaults(original, { seed, count: 5 }).faults) seen.add(f.kind);
-    expect([...seen].sort()).toEqual([...FAULT_KINDS].sort());
+    expect([...seen].sort()).toEqual(FAULT_KINDS.filter((k) => k !== 'accessVlan' && k !== 'trunkVlan').sort());
+  });
+
+  it('VLAN-Fehler: Access-Port im falschen VLAN, Trunk lässt ein VLAN nicht durch', () => {
+    const n = new NetBuilder();
+    const s1 = n.add('switch', 'SW1');
+    const s2 = n.add('switch', 'SW2');
+    const hosts = [n.host('PC A', '192.168.10.10'), n.host('PC B', '192.168.20.10'), n.host('PC C', '192.168.10.11'), n.host('PC D', '192.168.20.11')];
+    n.link(hosts[0]!, s1);
+    n.link(hosts[1]!, s1);
+    n.link(hosts[2]!, s2);
+    n.link(hosts[3]!, s2);
+    n.link(s1, s2);
+    for (const sw of [s1, s2]) {
+      n.apply((t) => createVlan(t, sw, 10));
+      n.apply((t) => createVlan(t, sw, 20));
+      n.apply((t) => setPortVlan(t, sw, 0, 10));
+      n.apply((t) => setPortVlan(t, sw, 1, 20));
+      n.apply((t) => setPortTrunk(t, sw, 2, true));
+    }
+    const original = n.topology;
+    const { topology, faults } = injectFaults(original, { seed: 5, count: 2, kinds: ['accessVlan', 'trunkVlan'] });
+    expect(faults.map((f) => f.kind).sort()).toEqual(['accessVlan', 'trunkVlan']);
+    for (const f of faults) {
+      const goal = { id: f.kind, text: '', check: f.check };
+      expect(evaluateGoal(topology, goal).passed, f.kind).toBe(false);
+      expect(evaluateGoal(original, goal).passed, f.kind).toBe(true);
+    }
   });
 
   it('Auswahl der Arten', () => {

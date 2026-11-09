@@ -13,14 +13,18 @@ import {
   setDhcpServer,
   setInterfaceAddress,
   setInterfaceShutdown,
+  setPortVlan,
   setRoutingMode,
+  setTrunkAllowed,
+  usedVlans,
+  vlanExists,
 } from '../model/topology';
 import type { Device, Topology } from '../model/types';
 import { formatIp, networkOf, parseIp, parseMask } from '../net/ipv4';
 import type { Check } from './tasks';
 
-export type FaultKind = 'hostMask' | 'hostGateway' | 'routerIp' | 'routing' | 'portShutdown' | 'cable' | 'dhcpGateway' | 'dhcpDns' | 'dnsRecord';
-export const FAULT_KINDS: readonly FaultKind[] = ['hostMask', 'hostGateway', 'routerIp', 'routing', 'portShutdown', 'cable', 'dhcpGateway', 'dhcpDns', 'dnsRecord'];
+export type FaultKind = 'hostMask' | 'hostGateway' | 'routerIp' | 'routing' | 'portShutdown' | 'cable' | 'dhcpGateway' | 'dhcpDns' | 'dnsRecord' | 'accessVlan' | 'trunkVlan';
+export const FAULT_KINDS: readonly FaultKind[] = ['hostMask', 'hostGateway', 'routerIp', 'routing', 'portShutdown', 'cable', 'dhcpGateway', 'dhcpDns', 'dnsRecord', 'accessVlan', 'trunkVlan'];
 
 export interface Fault {
   kind: FaultKind;
@@ -193,8 +197,39 @@ function candidates(topology: Topology): Candidate[] {
     const a = topology.devices.find((d) => d.id === cable.a.device);
     const b = topology.devices.find((d) => d.id === cable.b.device);
     if (!a || !b) continue;
-    const [host, sw, port] = ENDPOINT.has(a.type) && b.type === 'switch' ? [a, b, cable.b.iface] : ENDPOINT.has(b.type) && a.type === 'switch' ? [b, a, cable.a.iface] : [null, null, -1];
+    // Trunk zwischen zwei Switches: ein benutztes VLAN nicht mehr erlauben.
+    const isSw = (d: Device) => d.type === 'switch' || d.type === 'l3switch';
+    if (isSw(a) && isSw(b) && a.interfaces[cable.a.iface]?.trunk && b.interfaces[cable.b.iface]?.trunk && !a.interfaces[cable.a.iface]?.allowedVlans) {
+      const shared = usedVlans(a).filter((v) => v !== 1 && usedVlans(b).includes(v) && vlanExists(a, v) && vlanExists(b, v));
+      const vlan = shared[shared.length - 1];
+      if (vlan !== undefined) {
+        out.push({
+          kind: 'trunkVlan',
+          device: a.name,
+          apply: (t) => {
+            const r = setTrunkAllowed(t, a.id, cable.a.iface, usedVlans(a).filter((v) => v !== vlan));
+            return r.ok ? { topology: r.value, params: { other: b.name, vlan: String(vlan) }, check: { type: 'trunk', a: a.name, b: b.name, vlans: [vlan] } } : null;
+          },
+        });
+      }
+    }
+    const [host, sw, port] = ENDPOINT.has(a.type) && isSw(b) ? [a, b, cable.b.iface] : ENDPOINT.has(b.type) && isSw(a) ? [b, a, cable.a.iface] : [null, null, -1];
     if (!host || !sw) continue;
+    // Access-Port im falschen VLAN (nur wenn der Switch mehrere VLANs nutzt).
+    const vlan = sw.interfaces[port]?.vlan ?? 1;
+    const others = usedVlans(sw).filter((v) => v !== vlan && vlanExists(sw, v));
+    if (!sw.interfaces[port]?.trunk && vlan !== 1 && others.length) {
+      out.push({
+        kind: 'accessVlan',
+        device: host.name,
+        apply: (t) => {
+          const wrong = others[0]!;
+          const r = setPortVlan(t, sw.id, port, wrong);
+          return r.ok ? { topology: r.value, params: { switch: sw.name, wrong: String(wrong), right: String(vlan) }, check: { type: 'hostVlan', device: host.name, vlan } } : null;
+        },
+      });
+    }
+    if (sw.type !== 'switch') continue;
     out.push({
       kind: 'portShutdown',
       device: sw.name,

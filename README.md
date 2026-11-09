@@ -53,7 +53,8 @@ Dann **`release/leyonet.html`** doppelklicken – fertig, ohne Installation und 
 | v0.10 | **Prüfungen in der Webversion**: Platz-Codes und Platzkarten, Start/Ende durch die Lehrperson, Speichern alle 20 s, automatische Abgabe, Nachteilsausgleich je Platz, automatische Auswertung, Abgaben als Datei, Namensliste nur im Browser | ✅ |
 | v0.10.3 | MAC-Adressen ändern und doppelte MAC vorführen (Warnung, «MAC springt» am Switch, Demo), Adapter und MAC in der Schnellansicht, Bereiche in der Grösse verstellbar, Simulation zurücksetzen und Schritt zurück | ✅ |
 | v1.0 | **Erste öffentliche Version** mit Website [leyonet.ch](https://leyonet.ch), Webversion [app.leyonet.ch](https://app.leyonet.ch), Installern für Windows, macOS und Linux; Testumgebung mit `LEYONET_CHANNEL=beta`, Schutz der Webversion vor Überlastung | ✅ |
-| **v1.1** | **IPv6 vollständig**: DNS vollwertig (A, AAAA, CNAME, MX, TXT, NS, PTR, Weiterleitung, `nslookup -type`), DNS-Server per RDNSS/DHCPv6, Web, Mail und SSH über IPv6, Firewall für IPv6, IPv6 auf Layer-3-Switches (SVIs), **OSPFv3** und **RIPng**; macOS-Installer ad hoc signiert | ✅ |
+| v1.1 | **IPv6 vollständig**: DNS vollwertig (A, AAAA, CNAME, MX, TXT, NS, PTR, Weiterleitung, `nslookup -type`), DNS-Server per RDNSS/DHCPv6, Web, Mail und SSH über IPv6, Firewall für IPv6, IPv6 auf Layer-3-Switches (SVIs), **OSPFv3** und **RIPng**; macOS-Installer ad hoc signiert | ✅ |
+| **v1.2** | **Rechenzentrum und Campus**: VLAN-Datenbank, Trunk mit erlaubten und nativem VLAN, Port-Channel (LACP), Loopbacks, VRF, VXLAN, Firewall als Gerät, ACLs an Ports und VLAN-Interfaces, DHCP-Pools auf Router und L3-Switch; Demo Leaf-Spine mit BGP und VXLAN; Reihe **M145** mit Arbeitsblättern, Katalogsuche mit Themen; Befehlszeile verschiebbar mit Einfügen ganzer Konfigurationen und Verlauf; Paketfilter «TCP-Verbindung folgen»; Prüfungscockpit live (Platz nur einmal offen, ansehen, freigeben), Session-Sperre mit PIN | ✅ |
 
 ## Entwicklung
 

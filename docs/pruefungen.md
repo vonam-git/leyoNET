@@ -26,7 +26,7 @@ Die Lernenden sehen also nur, *was* zu tun ist und wie viele Punkte ein Teil gib
 - **leer** – alles selbst aufbauen;
 - **nur Geräte** – Geräte mit Namen, ohne Kabel und Einstellungen;
 - **aktuelles Netz** – so, wie es ist;
-- **Fehlersuche** – das aktuelle, funktionierende Netz mit zufälligen Fehlern, für jeden Platz andere (falsche Maske, falsches Gateway, Router-Adresse geändert, automatisches Routing aus, Port abgeschaltet, Kabel fehlt, DHCP gibt falsches Gateway oder falschen DNS-Server, DNS-Eintrag falsch). Zu jedem Fehler kommt ein Ziel mit 2 Punkten dazu; der Schlüssel nennt die Fehler je Platz.
+- **Fehlersuche** – das aktuelle, funktionierende Netz mit zufälligen Fehlern, für jeden Platz andere (falsche Maske, falsches Gateway, Router-Adresse geändert, automatisches Routing aus, Port abgeschaltet, Kabel fehlt, DHCP gibt falsches Gateway oder falschen DNS-Server, DNS-Eintrag falsch, Access-Port im falschen VLAN, Trunk lässt ein VLAN nicht durch). Zu jedem Fehler kommt ein Ziel mit 2 Punkten dazu; der Schlüssel nennt die Fehler je Platz.
 
 **Prüfung aus einer Musterlösung:** Lösung bauen, im Aufgabeneditor «Ziele aus diesem Netz vorschlagen». leyoNET schlägt Ziele mit Punkten und Teilen vor (Geräte, Adressen, Gateways, DHCP, DNS, Bereiche, Verbindungen, Webseiten). Streichen, gewichten, dann «Als Prüfung speichern».
 
