@@ -7,8 +7,8 @@ import { DEVICE_SPECS, ROUTER_REF, formatIp, networkOf, parseIp, parseMask, type
 import { t } from '../i18n';
 import type { GoalDraft } from './taskForm';
 
-const ROUTERS = new Set<DeviceType>(['router', 'l3switch']);
-const DEVICE_ORDER: DeviceType[] = ['router', 'l3switch', 'switch', 'accesspoint', 'server', 'pc', 'notebook'];
+const ROUTERS = new Set<DeviceType>(['router', 'firewall', 'l3switch']);
+const DEVICE_ORDER: DeviceType[] = ['router', 'firewall', 'l3switch', 'switch', 'accesspoint', 'server', 'pc', 'notebook'];
 
 const netOf = (d: Device): string | null => {
   const ip = d.interfaces[0]?.ip ? parseIp(d.interfaces[0].ip) : null;

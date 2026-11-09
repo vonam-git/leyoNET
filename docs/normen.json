@@ -186,6 +186,10 @@
       "titel": "Internet Key Exchange Protocol Version 2 (IKEv2)",
       "verwendung": "Tunnelaufbau des VPN (UDP 500)"
     },
+    "7348": {
+      "titel": "Virtual eXtensible Local Area Network (VXLAN): A Framework for Overlaying Virtualized Layer 2 Networks over Layer 3 Networks",
+      "verwendung": "VXLAN (VTEP, UDP 4789, VNI)"
+    },
     "8106": {
       "titel": "IPv6 Router Advertisement Options for DNS Configuration",
       "verwendung": "RDNSS: DNS-Server im Router Advertisement"
@@ -238,6 +242,17 @@
       "aktuell": "IEEE 802.1D-2004",
       "bemerkung": "Bridging und Spanning Tree sind seit 802.1Q-2014 auch in 802.1Q beschrieben. Das BPDU-Format von STP (Version 0) ist unverändert.",
       "geprueft": "2026-10-30"
+    },
+    {
+      "id": "IEEE 802.1AX",
+      "auch": [
+        "IEEE 802.3ad"
+      ],
+      "organisation": "IEEE",
+      "verwendung": "Link Aggregation, LACP (Port-Channel)",
+      "aktuell": "IEEE 802.1AX-2020",
+      "bemerkung": "LACP stand früher als Klausel 43 in IEEE 802.3ad; seit 2008 eigene Norm 802.1AX. LACPDU-Format (Version 1) unverändert.",
+      "geprueft": "2026-11-06"
     },
     {
       "id": "IEEE 802.1X",

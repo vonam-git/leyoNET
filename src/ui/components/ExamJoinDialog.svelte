@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { codeInput } from '../codeInput';
   import { chooseVariant, parseProject } from '../../core';
   import { t } from '../../i18n';
   import { ensureProjectFeatures } from '../actions';
@@ -60,7 +61,7 @@
       onclose();
     } catch (error) {
       const c = error instanceof ApiError ? error.code : 'other';
-      message = t(`exam.join.error.${['unknownSeat', 'rateLimited', 'offline'].includes(c) ? c : 'other'}`);
+      message = t(`exam.join.error.${['unknownSeat', 'rateLimited', 'offline', 'seatInUse'].includes(c) ? c : 'other'}`);
       waiting = null;
     } finally {
       busy = false;
@@ -73,7 +74,7 @@
     <p class="muted">{t('exam.join.hint')}</p>
     <label for="seat-code">{t('exam.join.code')}</label>
     <!-- svelte-ignore a11y_autofocus -->
-    <input id="seat-code" bind:value={code} placeholder="ABCD-2345" maxlength="12" autocomplete="off" spellcheck="false" autofocus />
+    <input id="seat-code" bind:value={code} placeholder="ABCD-2345" maxlength="14" use:codeInput autocomplete="off" spellcheck="false" autofocus />
     {#if waiting}<p class="wait" role="status">⏳ {t('exam.join.waiting', { title: waiting })}</p>{/if}
     {#if message}<p class="error" role="alert">{message}</p>{/if}
   </form>

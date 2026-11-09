@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_SPECS, MAX_NAME_LENGTH, convert, copperPorts, devicePrice, floorsOf, hasCli, isRackable, type Device } from '../../core';
+  import { DEVICE_SPECS, MAX_NAME_LENGTH, MAX_SFP_SLOTS, canHaveSfp, convert, copperPorts, devicePrice, floorsOf, hasCli, isRackable, type Device } from '../../core';
   import { t } from '../../i18n';
   import { roleLabel, typeLabel } from '../labels';
   import { openCli } from '../state/cli.svelte';
@@ -16,6 +16,7 @@
   const spec = $derived(DEVICE_SPECS[device.type]);
   const floors = $derived(floorsOf(editor.topology));
   const copper = $derived(copperPorts(device).length);
+  const sfpSlots = $derived(device.interfaces.filter((i) => i.sfpSlot).length);
   const racks = $derived((editor.topology.areas ?? []).filter((a) => a.kind === 'rack'));
   const money = (chf: number) => `${ui.currency} ${new Intl.NumberFormat('de-CH', { maximumFractionDigits: 0 }).format(convert(chf, ui.currency))}`;
   const id = `name-${Math.random().toString(36).slice(2, 7)}`;
@@ -80,6 +81,17 @@
       <button aria-label={t('inspector.portLess')} disabled={copper <= spec.minInterfaces} onclick={() => editor.setInterfaceCount(device.id, copper - 1)}>−</button>
       <output aria-live="polite">{copper}</output>
       <button aria-label={t('inspector.portMore')} disabled={copper >= spec.maxInterfaces} onclick={() => editor.setInterfaceCount(device.id, copper + 1)}>+</button>
+    </div>
+  </div>
+{/if}
+
+{#if full && canHaveSfp(device.type) && editor.editable && ui.has('medium.fiber')}
+  <div class="field">
+    <span id="{id}-sfp">{t('inspector.sfpCount')}</span>
+    <div class="stepper" role="group" aria-labelledby="{id}-sfp">
+      <button aria-label={t('inspector.sfpLess')} disabled={sfpSlots <= 0} onclick={() => editor.setSfpSlotCount(device.id, sfpSlots - 1)}>−</button>
+      <output aria-live="polite">{sfpSlots}</output>
+      <button aria-label={t('inspector.sfpMore')} disabled={sfpSlots >= MAX_SFP_SLOTS} onclick={() => editor.setSfpSlotCount(device.id, sfpSlots + 1)}>+</button>
     </div>
   </div>
 {/if}

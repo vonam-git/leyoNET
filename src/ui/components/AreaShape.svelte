@@ -3,6 +3,7 @@
   import { t } from '../../i18n';
   import { editor } from '../state/editor.svelte';
   import { TAG_HEX } from '../tags';
+  import RichText from './RichText.svelte';
 
   /** Farbiger Bereich im Dokumentationsmodus, z.B. ein Subnetz mit Titel und Netzinfos. */
   let {
@@ -39,7 +40,7 @@
   }
 </script>
 
-<g class="area" class:selected class:interactive class:faded class:rack={area.kind === 'rack'} style:--area={color}>
+<g class="area" class:selected class:interactive class:faded class:rack={area.kind === 'rack'} class:note={area.kind === 'note'} style:--area={color}>
   <rect
     class="body"
     x={area.x}
@@ -53,7 +54,15 @@
     onpointerdown={(e) => interactive && onmove(e, area)}
     {onkeydown}
   />
-  {#if area.kind === 'rack'}
+  {#if area.kind === 'note'}
+    <!-- Textfeld: Titel und gegliederter Text; der Text lässt Klicks zum Verschieben durch. -->
+    <text class="title" x={area.x + 14} y={area.y + 24}>{area.title}</text>
+    {#if area.note}
+      <foreignObject x={area.x + 8} y={area.y + 32} width={Math.max(0, area.width - 16)} height={Math.max(0, area.height - 40)}>
+        <div class="note-text" xmlns="http://www.w3.org/1999/xhtml"><RichText text={area.note} /></div>
+      </foreignObject>
+    {/if}
+  {:else if area.kind === 'rack'}
     <!-- 19-Zoll-Schrank: Seitenschienen mit Lochreihe, Titel oben. -->
     <rect class="rail" x={area.x + 6} y={area.y + 34} width="8" height={area.height - 42} />
     <rect class="rail" x={area.x + area.width - 14} y={area.y + 34} width="8" height={area.height - 42} />
@@ -115,6 +124,36 @@
     stroke-width: 2;
     stroke-dasharray: 10 6;
     outline: none;
+  }
+  .note .title {
+    fill: var(--text);
+  }
+  .note .body {
+    fill: color-mix(in srgb, var(--area) 18%, var(--surface));
+    stroke-dasharray: none;
+    stroke-width: 1.5;
+    filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.15));
+  }
+  .note.selected .body {
+    stroke-width: 3;
+  }
+  .note-text {
+    pointer-events: none;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text);
+    overflow: hidden;
+    height: 100%;
+    padding: 0 6px;
+    overflow-wrap: anywhere;
+  }
+  .note-text :global(p) {
+    margin: 0 0 4px;
+  }
+  .note-text :global(ul),
+  .note-text :global(ol) {
+    margin: 0 0 4px;
+    padding-left: 18px;
   }
   .rack .body {
     fill: #111827;

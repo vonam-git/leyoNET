@@ -17,6 +17,8 @@ import {
   suggestName,
   copperPorts,
   type Result,
+  insertSfpModule,
+  setSfpSlotCount,
 } from './topology';
 import type { DeviceType, Topology } from './types';
 
@@ -40,9 +42,9 @@ describe('Geräte', () => {
     expect(pc.id).toBe('d1');
     expect(sw.id).toBe('d2');
     expect(getDevice(t, 'd1')!.interfaces).toHaveLength(1);
-    // Switch: 8 RJ45-Ports, danach 2 SFP-Einschübe für Glasfaser.
+    // Switch: 8 RJ45-Ports; SFP-Einschübe nur auf Wunsch.
     expect(copperPorts(getDevice(t, 'd2')!)).toHaveLength(8);
-    expect(getDevice(t, 'd2')!.interfaces.slice(8).map((i) => i.sfpSlot)).toEqual([true, true]);
+    expect(getDevice(t, 'd2')!.interfaces).toHaveLength(8);
   });
 
   it('erzeugt deterministische, eindeutige MAC-Adressen', () => {
@@ -115,10 +117,14 @@ describe('Kabel', () => {
     });
   });
 
-  it('verhindert Kabel zu sich selbst und doppelte Direktverbindungen', () => {
+  it('verhindert Kabel zu sich selbst; mehrere Kabel zwischen denselben Geräten sind erlaubt (Port-Channel, Schleife)', () => {
     const t = twoClientsOneSwitch();
     expect(connect(t, 'd3', 'd3')).toMatchObject({ ok: false, error: { code: 'sameDevice' } });
-    expect(connect(t, 'd3', 'd1')).toMatchObject({ ok: false, error: { code: 'alreadyConnected' } });
+    // Der Client hat nur einen Anschluss: kein zweites Kabel möglich.
+    expect(connect(t, 'd3', 'd1')).toMatchObject({ ok: false, error: { code: 'noFreeInterface' } });
+    const s2 = add(t, 'switch', 'Switch 2').topology;
+    const first = unwrap(connect(s2, 'd3', 'd6'));
+    expect(unwrap(connect(first.topology, 'd3', 'd6')).topology.cables.filter((c) => [c.a.device, c.b.device].sort().join() === 'd3,d6')).toHaveLength(2);
   });
 
   it('entfernt beim Löschen eines Geräts dessen Kabel', () => {
@@ -183,9 +189,30 @@ describe('IP-Konfiguration', () => {
   });
 });
 
+describe('SFP-Einschübe', () => {
+  it('sind optional: hinzufügen, entfernen und beim Einstecken ergänzen', () => {
+    let t = add(emptyTopology(), 'switch', 'S1').topology;
+    expect(getDevice(t, 'd1')!.interfaces.some((i) => i.sfpSlot)).toBe(false);
+    t = unwrap(setSfpSlotCount(t, 'd1', 2));
+    expect(getDevice(t, 'd1')!.interfaces.filter((i) => i.sfpSlot)).toHaveLength(2);
+    const macs = getDevice(t, 'd1')!.interfaces.map((i) => i.mac);
+    expect(new Set(macs).size).toBe(macs.length);
+    t = unwrap(setSfpSlotCount(t, 'd1', 0));
+    expect(getDevice(t, 'd1')!.interfaces).toHaveLength(8);
+    // Modul aus der Palette: Einschub entsteht automatisch.
+    t = unwrap(insertSfpModule(t, 'd1', '10G-SR')).topology;
+    expect(getDevice(t, 'd1')!.interfaces.filter((i) => i.sfpSlot && i.sfp)).toHaveLength(1);
+    // Ein Einschub mit Modul wird nicht entfernt.
+    expect(setSfpSlotCount(t, 'd1', 0)).toMatchObject({ ok: false });
+    expect(setSfpSlotCount(t, 'd1', 9)).toMatchObject({ ok: false });
+    t = add(t, 'pc', 'PC').topology;
+    expect(setSfpSlotCount(t, 'd2', 1)).toMatchObject({ ok: false });
+  });
+});
+
 describe('Anzahl Ports', () => {
   it('erweitert mit passenden MAC-Adressen', () => {
-    const t = add(emptyTopology(), 'router', 'R1').topology;
+    const t = unwrap(setSfpSlotCount(add(emptyTopology(), 'router', 'R1').topology, 'd1', 1));
     const more = unwrap(setInterfaceCount(t, 'd1', 3));
     // Der SFP-Einschub behält seine MAC und rückt ans Ende; der neue Port erhält eine freie.
     expect(getDevice(more, 'd1')!.interfaces.map((i) => [i.index, i.mac, !!i.sfpSlot])).toEqual([

@@ -22,7 +22,7 @@ import type { FirewallState } from './firewall';
 import type { VpnState } from './vpn';
 import { EventQueue } from './queue';
 import { L3SwitchNode } from './l3switch';
-import { ModemNode, SwitchNode, type MacEntry, type ModemState, type StormState, type StpState } from './switch';
+import { ModemNode, SwitchNode, type AclState, type ChannelState, type MacEntry, type ModemState, type StormState, type StpState } from './switch';
 import { CpeNode } from './cpe';
 
 /** Übertragungszeit pro Kabel in Millisekunden (virtuelle Zeit). */
@@ -84,6 +84,10 @@ export interface DeviceState {
   stp?: StpState;
   /** Switch im Broadcast-Sturm (Schleife ohne Spanning Tree). */
   storm?: StormState;
+  /** Switch: Treffer der Zugriffslisten (ACL). */
+  acls?: AclState[];
+  /** Switch: Port-Channels mit Zustand der Ports. */
+  channels?: ChannelState[];
   /** Client-Gruppe: Adressen der einzelnen Rechner. */
   group?: GroupMemberState[];
   /** Modem: Zustand der Zugangsleitung. */
@@ -257,12 +261,12 @@ export class Simulation {
   }
 
   /** Startet "ping <ziel>" auf einem Endgerät oder (aus der Befehlszeile) auf einem Router/Layer-3-Switch. */
-  ping(deviceId: string, target: string, member = 1) {
+  ping(deviceId: string, target: string, member = 1, vrf?: string) {
     const node = this.#node(deviceId);
     if (node instanceof HostNode) node.ping(target);
     else if (node instanceof ClientGroupNode) node.member(member)?.ping(target);
-    else if (node instanceof RouterNode) node.ping(target);
-    else if (node instanceof L3SwitchNode) node.router.ping(target);
+    else if (node instanceof RouterNode) node.ping(target, vrf);
+    else if (node instanceof L3SwitchNode) node.router.ping(target, vrf);
   }
 
   traceroute(deviceId: string, target: string, member = 1) {
@@ -331,15 +335,15 @@ export class Simulation {
     if (!device) return undefined;
     const ctx = this.#context(id);
     const node: SimNode =
-      device.type === 'switch' || device.type === 'accesspoint'
+      device.type === 'accesspoint'
         ? new SwitchNode(ctx)
-        : device.type === 'l3switch'
+        : device.type === 'l3switch' || device.type === 'switch'
           ? new L3SwitchNode(ctx)
         : device.type === 'modem'
           ? new ModemNode(ctx)
           : device.type === 'cpe'
             ? new CpeNode(ctx)
-          : device.type === 'router'
+          : device.type === 'router' || device.type === 'firewall'
             ? new RouterNode(ctx)
             : device.type === 'internet'
               ? new InternetNode(ctx)

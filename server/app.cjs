@@ -82,6 +82,12 @@ const dirs = {
 /** Prüfungen: Aufbewahrung der Abgaben, Gnadenfrist fürs letzte Speichern, Grenzen. */
 const EXAM_DAYS = 60;
 const EXAM_GRACE_MS = 30_000;
+/** Ein Gerät gilt als verbunden, solange es sich innerhalb dieser Zeit gemeldet hat (Speichern oder Ping alle 20 s). */
+const LEASE_MS = 60_000;
+/** PIN zum Sperren einer Session: 4 bis 8 Ziffern. */
+const PIN = /^\d{4,8}$/;
+const PIN_FAILS = 5;
+const PIN_WINDOW_MS = 10 * 60_000;
 const MAX_EXAM_SEATS = 60;
 const MAX_EXAM_MINUTES = 600;
 
@@ -328,6 +334,76 @@ function checkPassword(given) {
   return crypto.timingSafeEqual(a, b);
 }
 
+// --- Schreibrecht einer Session ------------------------------------------------------
+//
+// Nur ein Gerät schreibt: Wer eine Session öffnet, erhält ein zufälliges Schreib-Token
+// (nur sein Hash liegt in der Session). Ist das Gerät verbunden (meldet sich alle 20 s),
+// kann kein anderes übernehmen. Eine gesperrte Session übernimmt ein anderes Gerät nur
+// mit der PIN. Ansehen («watch») geht mit dem Code immer, aber nur lesend.
+
+/** Letzte Meldung des schreibenden Geräts je Session (nur im Arbeitsspeicher). */
+const leases = new Map();
+const pinFails = new Map();
+
+const digest = (value) => crypto.createHash('sha256').update(String(value)).digest();
+const sameHash = (a, b) => typeof a === 'string' && typeof b === 'string' && a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+const writerHash = (token) => digest(token).toString('base64url');
+
+function writerOf(req) {
+  const token = req.headers['x-leyonet-writer'];
+  return typeof token === 'string' && /^[A-Za-z0-9_-]{20,64}$/.test(token) ? token : '';
+}
+
+function isWriter(item, token) {
+  return !!token && sameHash(item.writer, writerHash(token));
+}
+
+function connected(code, now = Date.now()) {
+  const seen = leases.get(code);
+  return seen !== undefined && now - seen < LEASE_MS;
+}
+
+function pinHash(pin, salt) {
+  return crypto.scryptSync(String(pin), salt, 32).toString('base64url');
+}
+
+/** PIN prüfen; nach zu vielen Fehlversuchen für diese Session vorübergehend gesperrt. */
+function checkPin(code, item, pin) {
+  if (!item.lock) return 'ok';
+  const now = Date.now();
+  const fails = pinFails.get(code);
+  if (fails && now - fails.since < PIN_WINDOW_MS && fails.count >= PIN_FAILS) return 'tooMany';
+  if (typeof pin !== 'string' || !PIN.test(pin)) return pin ? 'wrong' : 'missing';
+  if (sameHash(pinHash(pin, item.lock.salt), item.lock.hash)) {
+    pinFails.delete(code);
+    return 'ok';
+  }
+  const next = fails && now - fails.since < PIN_WINDOW_MS ? { since: fails.since, count: fails.count + 1 } : { since: now, count: 1 };
+  pinFails.set(code, next);
+  return 'wrong';
+}
+
+/**
+ * Schreibrecht holen: das eigene Token gilt weiter; sonst nur, wenn gerade kein anderes
+ * Gerät verbunden ist (und bei gesperrter Session mit PIN). Liefert das (neue) Token.
+ */
+function claimWriter(code, item, token, pin) {
+  const now = Date.now();
+  if (isWriter(item, token)) {
+    leases.set(code, now);
+    return { token, item };
+  }
+  if (connected(code, now)) return { error: 'sessionInUse', status: 409 };
+  const pinState = checkPin(code, item, pin);
+  if (pinState === 'tooMany') return { error: 'rateLimited', status: 429 };
+  if (pinState !== 'ok') return { error: pinState === 'wrong' ? 'wrongPin' : 'sessionLocked', status: 423 };
+  const fresh = crypto.randomBytes(24).toString('base64url');
+  const next = { ...item, writer: writerHash(fresh) };
+  store('sessions', code, next);
+  leases.set(code, now);
+  return { token: fresh, item: next };
+}
+
 function isAdmin(req) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
@@ -343,7 +419,10 @@ function isAdmin(req) {
 
 /** Abgelaufenes löschen: Sessions und Rückmeldungen über das Verzeichnis, ohne alles zu lesen. */
 async function cleanup() {
+  // Lebenszeichen und PIN-Fehlversuche nicht unbegrenzt behalten.
   const now = Date.now();
+  for (const [code, seen] of leases) if (now - seen > LEASE_MS) leases.delete(code);
+  for (const [code, f] of pinFails) if (now - f.since > PIN_WINDOW_MS) pinFails.delete(code);
   for (const kind of Object.keys(indexes)) {
     for (const [key, m] of indexes[kind]) if (!(m.expires > now)) drop(kind, key);
   }
@@ -582,7 +661,7 @@ function examSummary(exam, withSeats = false) {
     seats: withSeats
       ? exam.seats.map((s) => {
           const session = sessions.get(s.id);
-          return { id: s.id, code: s.code, extra: s.extra || 0, until: s.until || null, state: seatState(exam, s, now), joined: !!session, saved: session ? session.updated : null };
+          return { id: s.id, code: s.code, extra: s.extra || 0, until: s.until || null, state: seatState(exam, s, now), joined: !!session, saved: session ? session.updated : null, online: session ? connected(session.code, now) : false, session: session ? session.code : null };
         })
       : exam.seats.length,
     joined: withSeats ? undefined : entries('sessions').filter((x) => x.exam && x.exam.id === exam.id).length,
@@ -639,20 +718,66 @@ async function api(req, res, url) {
       let code = newCode();
       while (indexes.sessions.has(code) || fs.existsSync(fileFor(dirs.sessions, code))) code = newCode();
       const now = Date.now();
-      const item = { code, created: now, updated: now, expires: now + ttl, classCode, project: body.project };
+      const writer = crypto.randomBytes(24).toString('base64url');
+      const item = { code, created: now, updated: now, expires: now + ttl, classCode, project: body.project, writer: writerHash(writer) };
       store('sessions', code, item);
-      return json(res, 201, { code, expires: item.expires, classCode });
+      leases.set(code, now);
+      return json(res, 201, { code, expires: item.expires, classCode, writer });
     }
 
     const code = normalizeCode(parts[1]);
-    if (!code || parts.length !== 2) return fail(res, 404, 'unknownSession');
+    if (!code || parts.length > 3) return fail(res, 404, 'unknownSession');
     const item = loadSession(code);
     if (!item) return fail(res, 404, 'unknownSession');
+    const token = writerOf(req);
+    const about = (it) => ({ locked: !!it.lock, connected: connected(code) });
 
-    if (method === 'GET') return json(res, 200, { code, expires: item.expires, classCode: item.classCode, project: item.project });
+    // Lebenszeichen des schreibenden Geräts (alle 20 s), damit kein zweites übernimmt.
+    if (parts[2] === 'ping' && method === 'POST') {
+      if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
+      leases.set(code, Date.now());
+      return json(res, 200, { ok: true, ...about(item) });
+    }
+    // Sperren mit PIN (nur das schreibende Gerät); Prüfungsplätze lassen sich nicht sperren.
+    if (parts[2] === 'lock') {
+      if (item.exam) return fail(res, 403, 'examSession');
+      if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
+      if (method === 'POST') {
+        const body = await readBody(req);
+        if (typeof body.pin !== 'string' || !PIN.test(body.pin)) return fail(res, 400, 'invalidPin');
+        const salt = crypto.randomBytes(16).toString('base64url');
+        store('sessions', code, { ...item, lock: { salt, hash: pinHash(body.pin, salt) } });
+        return json(res, 200, { locked: true });
+      }
+      if (method === 'DELETE') {
+        const { lock: _lock, ...rest } = item;
+        store('sessions', code, rest);
+        return json(res, 200, { locked: false });
+      }
+      return fail(res, 405, 'methodNotAllowed');
+    }
+    if (parts.length !== 2) return fail(res, 404, 'unknownSession');
+
+    if (method === 'GET') {
+      const base = { code, expires: item.expires, classCode: item.classCode, project: item.project };
+      // Nur ansehen (z.B. Lehrperson): kein Schreibrecht, verdrängt niemanden.
+      if (url.searchParams.get('watch') === '1') return json(res, 200, { ...base, updated: item.updated, watch: true, ...about(item) });
+      const pin = req.headers['x-leyonet-pin'];
+      const claimed = claimWriter(code, item, token, typeof pin === 'string' ? pin : '');
+      if (claimed.error) return json(res, claimed.status, { error: claimed.error, ...about(item) });
+      return json(res, 200, { ...base, writer: claimed.token, ...about(claimed.item) });
+    }
     if (method === 'PUT') {
       const body = await readBody(req);
       if (!validProject(body.project)) return fail(res, 400, 'invalidProject');
+      // Ältere Sessions ohne Schreib-Token übernimmt das erste Gerät, das speichert.
+      if (item.writer && !isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
+      let writer = null;
+      if (!item.writer) {
+        writer = crypto.randomBytes(24).toString('base64url');
+        item.writer = writerHash(writer);
+      }
+      leases.set(code, Date.now());
       const now = Date.now();
       // Prüfungs-Session: nur speichern, solange die Zeit des Platzes läuft (plus kurze Gnadenfrist).
       if (item.exam) {
@@ -661,19 +786,22 @@ async function api(req, res, url) {
         if (!exam || !seat) return fail(res, 404, 'unknownSession');
         if (!exam.started || now > seat.until + EXAM_GRACE_MS) return json(res, 423, { error: 'examClosed', exam: seatStatus(exam, seat) });
         store('sessions', code, { ...item, project: body.project, updated: now });
-        return json(res, 200, { code, expires: item.expires, exam: seatStatus(exam, seat) });
+        return json(res, 200, { code, expires: item.expires, exam: seatStatus(exam, seat), ...(writer ? { writer } : {}) });
       }
       // Die Frist läuft ab der letzten Änderung (Arbeit geht nicht mitten in der Lektion verloren).
       const before = indexes.sessions.get(code);
       if (!fits(projectSize(body.project) - (before ? before.size : 0))) return fail(res, 507, 'storageFull');
       const next = { ...item, project: body.project, updated: now, expires: now + ttl };
       store('sessions', code, next);
-      return json(res, 200, { code, expires: next.expires });
+      return json(res, 200, { code, expires: next.expires, ...(writer ? { writer } : {}), ...about(next) });
     }
     if (method === 'DELETE') {
       // Abgaben einer Prüfung löscht nur der Admin.
       if (item.exam) return fail(res, 403, 'examSession');
+      // Löschen darf nur das schreibende Gerät (sonst könnte jeder mit dem Code fremde Arbeit löschen).
+      if (item.writer && !isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
       drop('sessions', code);
+      leases.delete(code);
       return json(res, 200, { deleted: true });
     }
     return fail(res, 405, 'methodNotAllowed');
@@ -703,7 +831,10 @@ async function api(req, res, url) {
       store('sessions', code, session);
       fresh = true;
     }
-    return json(res, 200, { exam: status, session: session.code, fresh, variant: seat.variant || null, project: session.project });
+    // Ein Platz ist nur an einem Gerät offen; ein zweiter Browser wartet, bis die Lehrperson freigibt.
+    const claimed = claimWriter(session.code, session, typeof body.writer === 'string' ? body.writer : '', '');
+    if (claimed.error) return json(res, 409, { error: 'seatInUse', exam: status });
+    return json(res, 200, { exam: status, session: session.code, fresh, variant: seat.variant || null, project: claimed.item.project, writer: claimed.token });
   }
 
   // --- Klassen beitreten ---
@@ -888,8 +1019,9 @@ async function admin(req, res, parts, method) {
     const code = normalizeCode(parts[1]);
     const item = code && loadSession(code);
     if (!item) return fail(res, 404, 'unknownSession');
-    if (method === 'GET') return json(res, 200, { code, project: item.project, classCode: item.classCode });
+    if (method === 'GET') return json(res, 200, { code, project: item.project, classCode: item.classCode, updated: item.updated, connected: connected(code), locked: !!item.lock });
     if (method === 'DELETE') {
+      leases.delete(code);
       drop('sessions', code);
       return json(res, 200, { ok: true });
     }
@@ -977,6 +1109,19 @@ async function adminExams(req, res, parts, method) {
     saveExam(exam);
     return json(res, 200, examSummary(exam, true));
   }
+  // Platz freigeben: z.B. Browser abgestürzt, die Person arbeitet an einem anderen Gerät weiter.
+  if (parts[1] === 'seats' && parts[3] === 'release' && method === 'POST') {
+    const seat = exam.seats.find((s) => s.id === parts[2]);
+    if (!seat) return fail(res, 404, 'unknownSeat');
+    const known = entries('sessions').find((x) => x.exam && x.exam.id === exam.id && x.exam.seat === seat.id);
+    const item = known && loadSession(known.code);
+    if (item) {
+      const { writer: _w, ...rest } = item;
+      store('sessions', item.code, rest);
+      leases.delete(item.code);
+    }
+    return json(res, 200, examSummary(exam, true));
+  }
   // Abgaben für die Auswertung, mit entschlüsseltem Schlüssel.
   if (parts[1] === 'submissions' && method === 'GET') {
     const key = exam.key ? decryptKey(exam.key) : null;
@@ -1059,4 +1204,5 @@ function createServer() {
   return server;
 }
 
-module.exports = { createServer, normalizeCode, newCode, cleanup, DATA_DIR, ADMIN_PASSWORD };
+// `_leases` nur für Tests (Gerät «verschwindet»).
+module.exports = { createServer, normalizeCode, newCode, cleanup, DATA_DIR, ADMIN_PASSWORD, _leases: leases };

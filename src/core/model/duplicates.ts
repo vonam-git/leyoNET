@@ -1,4 +1,4 @@
-import { decodeIface, subifId, sviId } from '../net/routing';
+import { decodeIface, loopbackId, subifId, sviId, vrfOfIface } from '../net/routing';
 import { isBridge } from './topology';
 import type { Device, Topology } from './types';
 
@@ -39,9 +39,9 @@ export function duplicateAddresses(topology: Topology, live?: ReadonlyMap<string
     if (!ip) return;
     const ref = decodeIface(iface);
     const port = ref.kind === 'sub' ? ref.port : iface;
-    // Gleiche Adresse auf zwei Schnittstellen desselben Geräts ist immer ein Fehler.
-    const segment = ref.kind === 'svi' ? find(device.id) : find(node(device, port));
-    for (const key of [`${segment}|${ip}`, `dev:${device.id}|${ip}|${iface}`]) {
+    // Gleiche Adresse auf zwei Schnittstellen desselben Geräts ist ein Fehler, ausser in verschiedenen VRFs.
+    const segment = ref.kind === 'svi' || ref.kind === 'loopback' ? find(`${device.id}|${vrfOfIface(device, iface) ?? ''}`) : find(node(device, port));
+    for (const key of [`${segment}|${ip}`, `dev:${device.id}|${ip}|${vrfOfIface(device, iface) ?? ''}|${iface}`]) {
       const list = seen.get(key) ?? [];
       list.push(`${device.id}#${ip}`);
       seen.set(key, list);
@@ -56,6 +56,7 @@ export function duplicateAddresses(topology: Topology, live?: ReadonlyMap<string
     for (const iface of device.interfaces) note(device, iface.index, iface.ip);
     for (const sub of device.subinterfaces ?? []) note(device, subifId(sub.parent, sub.vlan), sub.ip);
     for (const svi of device.svis ?? []) note(device, sviId(svi.vlan), svi.ip);
+    for (const lo of device.loopbacks ?? []) note(device, loopbackId(lo.id), lo.ip);
   }
 
   const result = new Set<string>();
@@ -67,11 +68,11 @@ export function duplicateAddresses(topology: Topology, live?: ReadonlyMap<string
   const perDevice = new Map<string, number>();
   for (const key of seen.keys()) {
     if (!key.startsWith('dev:')) continue;
-    const [dev, ip] = key.slice(4).split('|');
-    const id = `${dev}#${ip}`;
+    const [dev, ip, vrf] = key.slice(4).split('|');
+    const id = `${dev}#${ip}|${vrf}`;
     perDevice.set(id, (perDevice.get(id) ?? 0) + 1);
   }
-  for (const [id, count] of perDevice) if (count > 1) result.add(id);
+  for (const [id, count] of perDevice) if (count > 1) result.add(id.slice(0, id.lastIndexOf('|')));
   return result;
 }
 

@@ -1,6 +1,6 @@
 # Befehlszeile (CLI) für Router und Switches
 
-Router, Switches und Layer-3-Switches lassen sich zusätzlich zu den Formularen über eine Befehlszeile konfigurieren. Die Syntax ist an **FRRouting (vtysh)** angelehnt, mit den aus dem Unterricht bekannten Modi. Es ist eine eigene, vereinfachte Nachbildung (siehe [Lizenzen](#lizenzen)).
+Router, Firewalls, Switches und Layer-3-Switches lassen sich zusätzlich zu den Formularen über eine Befehlszeile konfigurieren. Die Syntax ist an **FRRouting (vtysh)** angelehnt, mit den aus dem Unterricht bekannten Modi. Es ist eine eigene, vereinfachte Nachbildung (siehe [Lizenzen](#lizenzen)).
 
 ## Zugang
 
@@ -27,17 +27,23 @@ Router>                    enable
 Router#                    configure terminal
 Router(config)#            interface eth0          vlan 10          line vty               router ospf | rip | bgp 65001 | ospf6 | ripng
 Router(config-if)#         Router(config-vlan)#    Router(config-line)#   Router(config-router)#
+Switch(config)#            ip access-list extended NAME
+Switch(config-ext-nacl)#
 ```
 
 `exit` geht eine Stufe zurück, `end` direkt zu `Router#`, `disable` zurück zu `Router>`.
+
+**Direkt wechseln (wie bei Cisco):** Ein Befehl des globalen Konfigurationsmodus funktioniert auch in jedem Untermodus. Er verlässt den Untermodus und wird global ausgeführt. So geht man von `vlan 10` direkt zu `vlan 20`, von `interface port1` direkt zu `interface port2` oder aus dem VLAN-Modus zu `interface port3`, ohne `exit`.
 
 ## Interface-Namen
 
 | Gerät | Namen |
 |---|---|
-| Router | `eth0`, `eth1` …; Subinterfaces `eth0.10` (VLAN 10); serielle Ports `serial0`, `serial1` … (auch `se0`, `s0/0/0`) |
+| Firewall | wie Router; in Firewall-Regeln nach `in` auch die Zone: `wan`, `lan`, `dmz`, `opt1` … |
+| Router | `loopback0` … `loopback99` (auch `lo0`); `eth0`, `eth1` …; Subinterfaces `eth0.10` (VLAN 10); serielle Ports `serial0`, `serial1` … (auch `se0`, `s0/0/0`) |
 | Switch | `port1`, `port2` … (wie auf der Frontplatte); auch `gi0/1` oder `fa0/1`. SFP-Einschübe für Glasfaser zählen separat: `sfp1`, `sfp2` … (auch `te0/1`) |
 | Layer-3-Switch | wie Switch, dazu `vlan10` bzw. `interface vlan 10` |
+| Switch (Verwaltung) | `interface vlan 1` (oder ein anderes VLAN) als Verwaltungsadresse |
 
 ## Befehle
 
@@ -60,9 +66,16 @@ Router(config-if)#         Router(config-vlan)#    Router(config-line)#   Router
 | `show ip arp` | ARP-Tabelle (nur in der Simulation) |
 | `show ip nat translations` | NAT-Tabelle (Router) |
 | `show mac address-table` | MAC-Tabelle (Switch, Simulation) |
-| `show vlan brief` | VLANs mit ihren Ports (Switch) |
+| `show vlan brief` | Angelegte VLANs mit ihren Ports; Ports in fehlenden VLANs als inaktiv (Switch) |
+| `show vrf`, `show ip route vrf NAME` | VRFs mit ihren Interfaces, Routingtabelle einer VRF |
+| `ping vrf NAME <Adresse>` | Ping über die Tabelle einer VRF (Simulation) |
+| `show nve vni`, `show nve peers` | VXLAN-Segmente und andere VTEPs mit gelernten MAC-Adressen (Layer-3-Switch) |
+| `show etherchannel summary` | Port-Channels mit Zustand der Ports: P gebündelt, s ausgestellt, D ohne Link (Switch) |
+| `show interfaces trunk` | Trunks mit Native VLAN, erlaubten und aktiven VLANs (Switch) |
 | `show interfaces status` | Ports mit Status und VLAN (Switch) |
 | `show spanning-tree` | Root-Bridge, Port-Rollen und -Zustände (Switch) |
+| `show access-lists` (auch `show ip access-lists`) | Zugriffslisten mit Ports und Treffern (Switch) |
+| `show firewall` | Firewall-Regeln mit Trefferzählern, blockierte Pakete, gemerkte Verbindungen (Router, Firewall) |
 | `ping 192.168.1.10` | vier Echo-Anfragen vom Gerät aus (Simulation) |
 | `write memory` | «speichert» (die Konfiguration gilt ohnehin sofort) |
 
@@ -94,6 +107,14 @@ interface eth0.10              ! Router-on-a-Stick: Subinterface für VLAN 10
  ip address 192.168.10.1/24
 !
 no interface eth0.10           ! Subinterface löschen
+vrf definition KUNDE-A         ! VRF: eigene Routingtabelle (auch: ip vrf KUNDE-A)
+interface eth2
+ vrf forwarding KUNDE-A        ! Interface in die VRF (no vrf forwarding = global)
+ip route vrf KUNDE-A 0.0.0.0/0 10.9.0.2
+no vrf definition KUNDE-A
+interface loopback0            ! Loopback (auch lo0), immer aktiv; auch auf Firewall und Layer-3-Switch
+ ip address 10.255.0.1/32      ! höchste Loopback-Adresse = Router-ID; OSPF kündigt sie als /32 an
+no interface loopback0
 ip route 0.0.0.0/0 10.0.0.2
 ip route 172.16.0.0 255.255.0.0 eth1
 no ip route 172.16.0.0/16
@@ -184,8 +205,12 @@ Ein Netz wird nur angekündigt, wenn es in der Routingtabelle steht.
 ```
 spanning-tree                  ! Spanning Tree ein
 spanning-tree priority 4096
-vlan 10
+vlan 10                        ! VLAN anlegen
  name Verwaltung
+vlan 20                        ! direkt zum nächsten VLAN
+ name Schulung
+vlan 30,40-42                  ! mehrere auf einmal anlegen
+no vlan 42                     ! löschen (Ports darin werden inaktiv)
 !
 interface range port1-4
  switchport mode access
@@ -193,8 +218,85 @@ interface range port1-4
 !
 interface port24
  switchport mode trunk
+ switchport trunk allowed vlan 10,20      ! nur diese VLANs (add/remove/except/all/none)
+ switchport trunk native vlan 99          ! VLAN ohne Tag
  description Uplink zum Router
+!
+interface range port7-8
+ channel-group 1 mode active   ! Port-Channel mit LACP (passive; on = ohne LACP); no channel-group
+interface port-channel 1       ! stellt alle Ports des Channels auf einmal ein
+ switchport mode trunk
+!
+vlan 10
+ vn-segment 10010              ! VXLAN: VLAN 10 über VNI 10010 (Layer-3-Switch)
+interface nve1
+ source-interface loopback0
+ member vni 10010 peer-ip 10.255.0.2      ! anderer VTEP (Ingress Replication)
+!
+interface vlan 1               ! Verwaltungsadresse (Layer-2-Switch)
+ ip address 192.168.1.2/24
+ip default-gateway 192.168.1.1
 ```
+
+**VLAN-Datenbank:** Ein Switch leitet nur angelegte VLANs weiter, auch auf Trunks. `switchport access vlan 30` legt ein fehlendes VLAN an und meldet `% Access VLAN does not exist. Creating vlan 30` (wie Cisco). Ein Switch, der ein VLAN nur über Trunks weitergibt, braucht `vlan 30` trotzdem. Dateien vor Version 1.2 haben keine Liste; dort gelten alle verwendeten VLANs als angelegt, bis man das erste VLAN anlegt oder löscht.
+
+### Zugriffslisten (Switch und Layer-3-Switch)
+
+Benannte, erweiterte ACLs wie bei Cisco. Zustandslos, erste passende Regel gilt, am Ende implizit `deny ip any any`; ARP, STP und IPv6 Neighbor Discovery gehen immer durch.
+
+```
+ip access-list extended GAESTE        ! anlegen oder bearbeiten
+ remark nur DNS und Web               ! Kommentar (wird nicht gespeichert)
+ permit udp any any eq 53
+ permit tcp 192.168.10.0 0.0.0.255 host 192.168.10.80 eq 80
+ deny icmp any any
+ no 30                                ! Eintrag 30 löschen (Nummern 10, 20, 30 …)
+!
+no ip access-list extended GAESTE     ! Liste löschen (Zuweisungen bleiben, lassen dann alles durch)
+interface port1
+ ip access-group GAESTE in            ! eingehend am Port prüfen
+ no ip access-group GAESTE in
+interface vlan 10                     ! Layer-3-Switch: am VLAN-Interface
+ ip access-group VLAN10-IN in         ! alles aus dem VLAN (auch an den Switch selbst, z.B. DHCP)
+ ip access-group VLAN10-OUT out       ! alles, was ins VLAN geroutet wird
+ no ip access-group                   ! beide entfernen
+```
+
+| Teil | Möglichkeiten |
+|---|---|
+| Protokoll | `ip` (alle), `tcp`, `udp`, `icmp` |
+| Adresse | `any`, `host 192.168.10.80`, `192.168.10.0 0.0.0.255` (Wildcard-Maske), `192.168.10.0/24`, IPv6 `host 2001:db8::1` oder `2001:db8:1::/64` |
+| Port | `eq 80` (nur TCP/UDP, Zielport) |
+
+### Firewall (Router und Firewall)
+
+```
+firewall default deny                          ! Standardregel: allow | deny
+firewall rule allow tcp any 192.168.2.80 port 80 in eth0
+firewall rule 1 deny icmp any any in dmz       ! Zahl zuerst: an dieser Stelle einfügen
+no firewall rule 2                             ! Regel 2 löschen
+no firewall stateful                           ! zustandslos (firewall stateful = wieder zustandsbehaftet)
+no firewall                                    ! Firewall entfernen, alles geht durch
+```
+
+Eine Regel: `allow|deny <ip|tcp|udp|icmp> <Quelle> <Ziel> [port <n>] [in <Anschluss>]`. Adressen wie bei den ACLs (`any`, `host A`, Wildcard, Präfix oder einfach eine Adresse). Ohne `in` gilt die Regel für alle Eingänge. Auf einem Router ohne Firewall legt der erste Befehl eine an (Standard `allow`). Die Firewall als Gerät hat ab Werk `default deny` und je eine Regel «von innen erlaubt» für LAN, DMZ und OPT.
+
+### DHCP-Pools (Router, Firewall, Layer-3-Switch)
+
+```
+ip dhcp excluded-address 192.168.10.1 192.168.10.9   ! nie vergeben
+ip dhcp pool VLAN10
+ network 192.168.10.0 255.255.255.0                  ! auch 192.168.10.0/24
+ default-router 192.168.10.1
+ dns-server 198.51.100.53
+ lease 1 12                                          ! 1 Tag 12 Stunden (Standard 1 Tag)
+!
+no ip dhcp pool VLAN10
+show ip dhcp pool
+show ip dhcp binding                                 ! vergebene Adressen (Simulation)
+```
+
+Der Pool, in dessen Netz das Interface liegt, an dem die Anfrage ankommt, vergibt die Adresse; über ein Relay entscheidet die GIADDR. Steht am Interface ein Relay («ip helper-address»), geht die Anfrage an den Server, nicht an den Pool. Eigene Interface-Adressen vergibt ein Pool nie.
 
 ### Layer-3-Switch
 

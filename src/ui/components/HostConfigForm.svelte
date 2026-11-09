@@ -93,8 +93,8 @@
   <AdapterInfo {device} />
   <fieldset class="mode">
     <legend class="visually-hidden">{t('address.mode')}</legend>
-    <label><input type="radio" bind:group={dhcp} value={false} /> {t('address.mode.static')}</label>
-    <label><input type="radio" bind:group={dhcp} value={true} /> {t('address.mode.dhcp')}</label>
+    <label><input type="radio" bind:group={dhcp} value={false} /> ✎ {t('address.mode.static')}</label>
+    <label><input type="radio" bind:group={dhcp} value={true} /> ⟳ {t('address.mode.dhcp')}</label>
   </fieldset>
   {#if dhcp}
     <p class="muted">{t('config.dhcpExplain')}</p>
@@ -162,18 +162,38 @@
     align-items: center;
     gap: 4px;
   }
+  /* Umschalter statisch / DHCP: deutlich als zwei Zustände erkennbar. */
   .mode {
-    display: flex;
-    gap: 14px;
-    margin: 0 0 8px;
-    padding: 0;
-    border: none;
+    display: inline-flex;
+    margin: 0 0 10px;
+    padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg, var(--surface));
     font-size: 0.85rem;
   }
   .mode label {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .mode label:has(input:checked) {
+    color: var(--surface);
+    background: var(--accent);
+    font-weight: 600;
+  }
+  .mode label:has(input:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+  .mode input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
   }
   h3 {
     margin: 16px 0 8px;

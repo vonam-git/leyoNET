@@ -189,8 +189,8 @@ class SimStore {
     this.#record((sim) => sim.runCommand(deviceId, line));
   }
 
-  ping(deviceId: string, target: string) {
-    this.#record((sim) => sim.ping(deviceId, target));
+  ping(deviceId: string, target: string, vrf?: string) {
+    this.#record((sim) => sim.ping(deviceId, target, 1, vrf));
   }
 
   ssh(deviceId: string, target: string, user: string, password: string) {

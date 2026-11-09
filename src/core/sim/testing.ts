@@ -26,6 +26,7 @@ import {
 } from '../model/topology';
 import type { DeviceType, DhcpScope, DhcpServerConfig, DnsType, Medium, Topology } from '../model/types';
 import type { PacketLogEntry } from './simulation';
+import type { DeviceOptions } from '../model/topology';
 import { asIpv4View } from './frames';
 
 export function unwrap<T>(r: Result<T>): T {
@@ -36,8 +37,8 @@ export function unwrap<T>(r: Result<T>): T {
 export class NetBuilder {
   topology: Topology = emptyTopology();
 
-  add(type: DeviceType, name: string): string {
-    const { topology, id } = unwrap(addDevice(this.topology, type, name, { x: 0, y: 0 }));
+  add(type: DeviceType, name: string, options?: DeviceOptions): string {
+    const { topology, id } = unwrap(addDevice(this.topology, type, name, { x: 0, y: 0 }, options));
     this.topology = topology;
     return id;
   }
@@ -153,6 +154,7 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
   const tag = entry.frame.vlan !== undefined ? ` [VLAN ${entry.frame.vlan}]` : '';
   if (p.kind === 'arp') return `${route}${tag} ARP ${p.op} ${p.targetIp}`;
   if (p.kind === 'stp') return `${route} STP root=${p.rootId} cost=${p.cost}`;
+  if (p.kind === 'lacp') return `${route} LACP key=${p.actorKey} port=${p.actorPort}`;
   if (p.kind === 'ppp') return `${route} PPP ${p.protocol.toUpperCase()} ${p.code}`;
   if (p.kind === 'link') return `${route} ${p.tech.toUpperCase()} ${p.message}`;
   if (p.kind === 'ipv6') {
@@ -180,6 +182,7 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
     if (msg.kind === 'rip') return `${route} RIP ${msg.command} ${msg.entries.map((e) => `${e.network}/${e.metric}`).join(',')}`;
     if (msg.kind === 'ripng') return `${route} RIPng ${msg.command} ${msg.entries.map((e) => `${e.prefix}/${e.length}:${e.metric}`).join(',')}`;
     if (msg.kind === 'dhcpv6') return `${route} DHCPv6 ${msg.type}`;
+    if (msg.kind === 'vxlan') return `${route} VXLAN vni=${msg.vni} ${p.src}>${p.dst} [${describe(topology, { ...entry, frame: msg.frame }).slice(route.length + 1)}]`;
     if (msg.kind === 'ike') return `${route} IKEv2 ${msg.exchange}${msg.response ? ' response' : ''}${msg.notify ? ` ${msg.notify}` : ''}`;
     return `${route} DHCP ${msg.op} ${p.src}>${p.dst}`;
   }

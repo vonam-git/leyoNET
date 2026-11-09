@@ -23,10 +23,16 @@ const { createServer } = require('./app.cjs');
 let server;
 let base;
 
+/** Schreib-Tokens wie im Browser: aus Antworten merken und bei Sessions mitschicken. */
+const writers = new Map();
+const sessionOf = (url) => (/\/api\/sessions\/([^/?]+)/.exec(url)?.[1] ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
 async function call(method, url, body, headers = {}) {
+  const key = sessionOf(url);
+  const writer = key && writers.get(key);
   const res = await fetch(base + url, {
     method,
-    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers },
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(headers), ...(writer ? { 'X-Leyonet-Writer': writer } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
@@ -36,6 +42,8 @@ async function call(method, url, body, headers = {}) {
   } catch {
     data = text;
   }
+  const owner = data && typeof data === 'object' && data.writer ? String(data.code ?? data.session ?? key).toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
+  if (owner) writers.set(owner, data.writer);
   return { status: res.status, data };
 }
 

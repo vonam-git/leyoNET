@@ -29,6 +29,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('device.pc', 'devices', 1),
   f('device.switch', 'devices', 1),
   f('device.router', 'devices', 1),
+  f('device.firewall', 'devices', 3),
   f('device.server', 'devices', 1),
   f('device.accesspoint', 'devices', 2),
   f('device.internet', 'devices', 2),
@@ -59,6 +60,11 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('net.staticNat', 'network', 4),
   f('net.cgnat', 'network', 4),
   f('net.firewall', 'network', 3),
+  f('net.acl', 'network', 4),
+  f('net.loopback', 'network', 3),
+  f('net.lag', 'network', 4),
+  f('net.vrf', 'network', 5),
+  f('net.vxlan', 'network', 5),
   f('net.vpn', 'network', 4),
   f('net.ipv6', 'network', 4),
   f('net.dsLite', 'network', 4),
@@ -136,17 +142,26 @@ export function usedFeatures(t: Topology): string[] {
     if (d.routingMode === 'auto') used.add('routing.auto');
     if (d.ipv6Auto || d.gateway6 || d.routes6?.length) used.add('net.ipv6');
     if (d.dsLite || d.aftr) used.add('net.dsLite');
-    if (d.firewall) used.add('net.firewall');
+    if (d.firewall && d.type !== 'firewall') used.add('net.firewall');
+    if (d.acls?.length) used.add('net.acl');
+    if (d.loopbacks?.length) used.add('net.loopback');
+    if (d.vrfs?.length) used.add('net.vrf');
+    if (d.vxlan) used.add('net.vxlan');
     if (d.vpn?.length) used.add('net.vpn');
     if (d.vlanNames?.length) used.add('net.vlan');
     if (d.wlan?.mesh) used.add('net.wlanMesh');
     if (d.cli?.ssh) used.add('net.ssh');
+    if (d.dhcpPools?.length) used.add('service.dhcp');
+    if (d.svis?.some((v) => v.dhcpRelay)) used.add('net.dhcpRelay');
+    if (d.svis?.some((v) => v.aclIn || v.aclOut)) used.add('net.acl');
     for (const i of d.interfaces) {
       // Von Hand gesetzte MAC (ab Werk immer 02:00:…).
       if (!i.mac.startsWith('02:00:')) used.add('net.macEdit');
       if (i.trunk || (i.vlan && i.vlan !== 1)) used.add('net.vlan');
       if (i.nat) used.add('net.nat');
       if (i.dhcpRelay) used.add('net.dhcpRelay');
+      if (i.aclIn) used.add('net.acl');
+      if (i.channel) used.add('net.lag');
       if (i.serial) used.add('medium.serial');
       if (i.cgnat) used.add('net.cgnat');
       if (i.sfp) used.add('medium.fiber');

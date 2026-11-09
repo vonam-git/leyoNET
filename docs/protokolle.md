@@ -8,6 +8,8 @@ Der Simulator sendet Pakete, die den Standards folgen. Jeder Rahmen lässt sich 
 |---|---|---|---|
 | 1 | Ethernet-PHY, 802.11-Funk, DOCSIS, GPON, DSL, LTE | IEEE 802.3, 802.11, ITU-T | Nur als Beschreibung (Medium, Rate, Modulation); keine Bitfehler ausser «beschädigtes Kabel» |
 | 2 | Ethernet II, 802.1Q | IEEE 802.3, 802.1Q | Ohne Präambel und FCS, wie in den meisten Mitschnitten |
+| 2–4 | VXLAN | RFC 7348 | Innerer Ethernet-Rahmen in UDP 4789 mit VNI; VTEPs aus fester Liste (Ingress Replication), MAC-Lernen im Datenpfad; kein EVPN, keine Multicast-Gruppen |
+| 2 | LACP | IEEE 802.1AX | LACPDU (Slow Protocols, 0x8809) mit Actor/Partner, kurze Zeiten (1 s, Partner gilt 3 s); keine Prioritäten, kein Marker-Protokoll; Verteilung nach Hash der MAC-Adressen |
 | 2 | STP | IEEE 802.1D | Verkürzte Zeiten; Ports zu Endgeräten leiten sofort weiter (wie PortFast) |
 | 2 | ARP, Gratuitous ARP, Proxy-ARP | RFC 826, RFC 5227 | – |
 | 2 | 802.11 Management, EAPOL | IEEE 802.11, 802.11i | Authentication, Association/Reassociation und 4-Way-Handshake als Ablauf; keine echte Verschlüsselung |
@@ -19,14 +21,14 @@ Der Simulator sendet Pakete, die den Standards folgen. Jeder Rahmen lässt sich 
 | 3 | ICMPv6, Neighbor Discovery | RFC 4443, RFC 4861 | Echo, Destination Unreachable, Time Exceeded; Neighbor und Router Solicitation/Advertisement statt ARP; kein MLD (Multicast-Gruppen ohne Anmeldung), kein Redirect; Router Advertisements alle 30 s |
 | 3 | SLAAC | RFC 4862 | Adresse aus Präfix (/64) und EUI-64; Duplicate Address Detection optimistisch (Adresse sofort nutzbar, Konflikt wird gemeldet); keine Privacy-Adressen |
 | 3 | DS-Lite | RFC 6333, RFC 2473 | IPv4 in IPv6 (Next Header 4) von der Internet-Box (B4) zum AFTR, dort CGNAT; Tunneladressen 192.0.0.1/192.0.0.2 nur intern |
-| 3 | OSPFv2 | RFC 2328 | Router-LSAs und externe LSAs (Redistribution), keine Summary-LSAs zwischen Areas, kein DR/BDR (Nachbarn wie Punkt-zu-Punkt); Hello 2 s statt 10 s |
+| 3 | OSPFv2 | RFC 2328 | Router-LSAs und externe LSAs (Redistribution), keine Summary-LSAs zwischen Areas, kein DR/BDR (Nachbarn wie Punkt-zu-Punkt); Hello 2 s statt 10 s; hängt ein Datenbankabgleich (verlorenes DBD/LSR/LSU), wird er nach zwei Hello-Intervallen wiederholt; Hellos aus einem fremden Subnetz bilden keine Nachbarschaft |
 | 3 | OSPFv3 | RFC 5340 | Wie OSPFv2, aber über IPv6 (Next Header 89, ff02::5, Absender Link-Local); Anschlüsse statt Netze, Router-LSAs plus Intra-Area-Prefix-LSAs, AS-External-LSAs; Prüfsumme über den IPv6-Pseudo-Header; Router-ID ohne IPv4 aus der MAC; keine Link-LSAs, kein DR/BDR |
 | 3 | NAT: PAT, statisches SNAT, DNAT (Portweiterleitung, statisch), 1:1-NAT, CGNAT | RFC 3022, RFC 6598 | Endpunktunabhängige Zuordnung; keine Application Layer Gateways; SNAT und DNAT merken sich Verbindungen für die Antworten |
 | 3 | Firewall (Paketfilter) | – | Regeln der Reihe nach, erste passende gilt, sonst Standardregel; zustandsbehaftet über Protokoll, Adressen und Ports (Zeitlimit 5 Minuten), zugehörige ICMP-Fehler dürfen zurück. Router filtern weitergeleitete Pakete nach DNAT und vor SNAT, Endgeräte eingehende; Broadcasts und DHCP-Antworten sind ausgenommen |
 | 3 | IPsec ESP (Tunnelmodus) | RFC 4301, RFC 4303 | Ganzes IPv4-Paket in ESP (IP-Protokoll 50) zwischen den Router-Adressen; SPI, Sequenznummer und 16 Byte ICV im Mitschnitt, Nutzlast nur verwürfelt (keine echte Verschlüsselung); kein Anti-Replay-Fenster, kein NAT-Traversal; Tunnelverkehr umgeht NAT |
 | 4 | UDP | RFC 768 | – |
 | 4 | TCP | RFC 9293 | Drei-Wege-Handshake, Sequenznummern in Bytes, MSS 1460, Wiederholung nach 1 s (höchstens dreimal), FIN/RST; feste Fenstergrösse, keine Staukontrolle |
-| 7 | DHCP | RFC 2131, RFC 2132 | Discover/Offer/Request/Ack, Relay (giaddr); Erneuerung nach halber Lease-Dauer; feste Zuweisungen (Reservierung nach MAC-Adresse, auch ausserhalb des Bereichs) |
+| 7 | DHCP | RFC 2131, RFC 2132 | Discover/Offer/Request/Ack, Relay (giaddr); ohne Antwort wiederholt der Client das Discover nach 4 s und 8 s (doppelte Wartezeit, RFC 2131 Abschnitt 4.1) und meldet nach dem dritten Versuch «kein Server»; Erneuerung nach halber Lease-Dauer; feste Zuweisungen (Reservierung nach MAC-Adresse, auch ausserhalb des Bereichs); Pools auf Router und Layer-3-Switch («ip dhcp pool», ausgeschlossene Adressen); Offer und Ack gehen als Broadcast (Client ohne Adresse) |
 | 7 | DHCPv6 | RFC 9915 | Solicit/Advertise/Request/Reply mit IA_NA, DUID-LL aus der MAC; Server im Router (M-Flag im Router Advertisement), Adressen ab ::100; kein Relay, keine Präfix-Delegation |
 | 7 | DNS | RFC 1034, RFC 1035, RFC 3596 | Einträge A, AAAA, CNAME (auch Ketten), MX mit Vorrang, TXT, NS, PTR (in-addr.arpa, ip6.arpa); autorisierende Antworten aus der Zone, Weiterleitung an einen anderen DNS-Server mit Cache («nicht autorisierend»), NXDOMAIN, NODATA und SERVFAIL; Client-Cache nach TTL; `nslookup -type=…`. Keine Zonenübertragung, kein DNSSEC, keine eigene Rekursion über die Root-Server |
 | 7 | HTTP/1.1 | RFC 9112 | GET, Content-Length in Bytes (UTF-8), Bilder als Binärdaten; kein HTTPS |

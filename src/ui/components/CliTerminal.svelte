@@ -2,6 +2,7 @@
   import { tick } from 'svelte';
   import { complete, execute, getDevice, prompt as promptOf, startSession, type CliSession } from '../../core';
   import { t } from '../../i18n';
+  import { cliHistory, MAX_PASTE, pastedLines, rememberCommand } from '../state/cli.svelte';
   import { editor } from '../state/editor.svelte';
   import { simStore } from '../state/sim.svelte';
 
@@ -38,7 +39,10 @@
   // svelte-ignore state_referenced_locally
   let lines = $state<Line[]>([...intro.map((text) => ({ text, kind: 'out' as const })), ...started.lines.map((text) => ({ text, kind: 'out' as const }))]);
   let line = $state('');
-  let history = $state<string[]>([]);
+  // Verlauf bleibt für die Dauer der Sitzung je Gerät erhalten (auch nach Moduswechsel).
+  // svelte-ignore state_referenced_locally
+  const historyKey = `${remote ? 'ssh' : 'con'}:${deviceId}`;
+  let history = $state<string[]>(cliHistory(historyKey));
   let historyIndex = -1;
   let output: HTMLDivElement | undefined = $state();
   let input: HTMLInputElement | undefined = $state();
@@ -61,9 +65,65 @@
     if (output) atBottom = output.scrollTop + output.clientHeight >= output.scrollHeight - 24;
   }
 
+  // Fokus direkt in die Eingabe, damit man sofort tippen kann; nach dem Öffnen
+  // per Menü oder Doppelklick holt sich sonst die Zeichenfläche den Fokus zurück.
   $effect(() => {
-    input?.focus();
+    if (!input) return;
+    input.focus();
+    const later = setTimeout(() => input?.focus(), 50);
+    return () => clearTimeout(later);
   });
+
+  /** Klick in die Ausgabe setzt den Fokus in die Eingabe, ausser man markiert gerade Text. */
+  function focusInput() {
+    if (window.getSelection()?.toString()) return;
+    input?.focus();
+  }
+
+  /** Mehrere Zeilen (z.B. eine ganze Konfiguration) nacheinander ausführen. */
+  function runAll(text: string) {
+    const all = pastedLines(text);
+    const list = all.slice(0, MAX_PASTE);
+    atBottom = true;
+    for (const l of list) {
+      if (closed) break;
+      if (session.awaiting === 'enable-password') {
+        onsend?.('********');
+        run(l, '');
+        continue;
+      }
+      onsend?.(l);
+      run(l, l);
+    }
+    if (all.length > list.length) lines = [...lines, { text: `% Paste truncated after ${MAX_PASTE} lines`, kind: 'out' }];
+    if (list.length) history = rememberCommand(historyKey, list[list.length - 1]!);
+  }
+
+  function onpaste(event: ClipboardEvent) {
+    const text = event.clipboardData?.getData('text/plain') ?? '';
+    if (!/[\r\n]/.test(text.replace(/[\r\n]+$/, ''))) return; // eine Zeile: normal einfügen
+    event.preventDefault();
+    runAll(line + text);
+    line = '';
+  }
+
+  /** Rechtsklick fügt wie in PuTTY die Zwischenablage ein. */
+  async function oncontextmenu(event: MouseEvent) {
+    if (closed || !navigator.clipboard?.readText) return;
+    event.preventDefault();
+    let text = '';
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      lines = [...lines, { text: `% ${t('cli.pasteDenied')}`, kind: 'out' }];
+      return;
+    }
+    input?.focus();
+    if (/[\r\n]/.test(text.replace(/[\r\n]+$/, ''))) {
+      runAll(line + text);
+      line = '';
+    } else line += text.replace(/[\r\n]+$/, '');
+  }
 
   function env() {
     const state = simStore.sim && editor.acting ? simStore.sim.getDeviceState(deviceId) : undefined;
@@ -117,7 +177,7 @@
     if (result.action?.kind === 'ping') {
       if (editor.acting && simStore.sim) {
         pingFrom = simStore.sim.getDeviceState(deviceId).console.length;
-        simStore.ping(deviceId, result.action.target);
+        simStore.ping(deviceId, result.action.target, result.action.vrf);
       } else {
         lines = [...lines, { text: '% Ping needs the running simulation (action mode)', kind: 'out' }];
       }
@@ -143,7 +203,7 @@
       run(text, '');
       return;
     }
-    if (text.trim()) history = [...history.filter((h) => h !== text), text].slice(-50);
+    if (text.trim()) history = rememberCommand(historyKey, text);
     onsend?.(text);
     run(text, text);
   }
@@ -174,7 +234,8 @@
   }
 </script>
 
-<div class="cli">
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+<div class="cli" {oncontextmenu} onclick={focusInput}>
   <div class="output" bind:this={output} {onscroll} role="log" aria-live="polite" aria-label={t('cli.output', { name: device?.name ?? '' })}>
     {#if lines.length === 0}
       <p class="hint">{t('cli.welcome')}</p>
@@ -193,6 +254,7 @@
       bind:this={input}
       bind:value={line}
       {onkeydown}
+      {onpaste}
       type={secret ? 'password' : 'text'}
       disabled={closed}
       autocomplete="off"

@@ -23,7 +23,7 @@
 
 <dl class="facts">
   <dt>{t('inspector.type')}</dt>
-  <dd>{t(area.kind === 'rack' ? 'areaPreset.rack' : 'area.type')}</dd>
+  <dd>{t(area.kind === 'rack' ? 'areaPreset.rack' : area.kind === 'note' ? 'shop.area-note' : 'area.type')}</dd>
 </dl>
 
 <label class="field">
@@ -48,6 +48,13 @@
   </div>
 </div>
 
+{#if area.kind === 'note'}
+  <label class="field">
+    <span>{t('area.noteText')}</span>
+    <textarea class="text" rows="10" maxlength="4000" disabled={!canEdit} onchange={(e) => set({ note: e.currentTarget.value || undefined })}>{area.note ?? ''}</textarea>
+  </label>
+  <p class="hint">{t('area.noteFormat')}</p>
+{:else}
 <label class="field">
   <span>{t('area.network')}</span>
   <input
@@ -80,6 +87,7 @@
   <span>{t('area.vlan')}</span>
   <input value={area.vlan ?? ''} inputmode="numeric" placeholder="10" disabled={!canEdit} onchange={(e) => setVlan(e.currentTarget.value)} />
 </label>
+{/if}
 
 {#if floors.length > 1}
   <label class="field">
@@ -95,10 +103,12 @@
   </label>
 {/if}
 
+{#if area.kind !== 'note'}
 <label class="field">
   <span>{t('area.note')}</span>
-  <textarea rows="5" maxlength="2000" disabled={!canEdit} onchange={(e) => set({ note: e.currentTarget.value || undefined })}>{area.note ?? ''}</textarea>
+  <textarea rows="5" maxlength="4000" disabled={!canEdit} onchange={(e) => set({ note: e.currentTarget.value || undefined })}>{area.note ?? ''}</textarea>
 </label>
+{/if}
 
 {#if canEdit}
   <div class="buttons">
@@ -108,6 +118,14 @@
 {/if}
 
 <style>
+  .hint {
+    color: var(--muted);
+    font-size: 0.75rem;
+    margin: -2px 0 8px;
+  }
+  .text {
+    font-family: inherit;
+  }
   .facts {
     display: grid;
     grid-template-columns: auto 1fr;

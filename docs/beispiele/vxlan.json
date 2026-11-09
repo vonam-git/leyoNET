@@ -1,0 +1,353 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "l3switch",
+        "name": "Leaf Zürich",
+        "position": {
+          "x": 300,
+          "y": 240
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "vlan": 10
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:01:01",
+            "vlan": 100
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:01:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:01:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:01:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:01:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:01:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:01:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:01:08",
+            "sfpSlot": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:01:09",
+            "sfpSlot": true
+          },
+          {
+            "index": 10,
+            "mac": "02:00:00:00:01:0A",
+            "sfpSlot": true
+          },
+          {
+            "index": 11,
+            "mac": "02:00:00:00:01:0B",
+            "sfpSlot": true
+          }
+        ],
+        "vlanDb": [
+          10,
+          100
+        ],
+        "svis": [
+          {
+            "vlan": 100,
+            "ip": "10.0.1.1",
+            "mask": "255.255.255.252"
+          }
+        ],
+        "loopbacks": [
+          {
+            "id": 0,
+            "ip": "10.255.0.1",
+            "mask": "255.255.255.255"
+          }
+        ],
+        "routingMode": "dynamic",
+        "ospf": {
+          "networks": [
+            {
+              "network": "10.0.0.0",
+              "mask": "255.0.0.0",
+              "area": 0
+            }
+          ]
+        },
+        "vxlan": {
+          "vnis": [
+            {
+              "vni": 10010,
+              "peers": [
+                "10.255.0.2"
+              ],
+              "vlan": 10
+            }
+          ],
+          "source": 200000
+        }
+      },
+      {
+        "id": "d2",
+        "type": "l3switch",
+        "name": "Leaf Bern",
+        "position": {
+          "x": 740,
+          "y": 240
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "vlan": 10
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:02:01",
+            "vlan": 100
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:02:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:02:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:02:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:02:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:02:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:02:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:02:08",
+            "sfpSlot": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:02:09",
+            "sfpSlot": true
+          },
+          {
+            "index": 10,
+            "mac": "02:00:00:00:02:0A",
+            "sfpSlot": true
+          },
+          {
+            "index": 11,
+            "mac": "02:00:00:00:02:0B",
+            "sfpSlot": true
+          }
+        ],
+        "vlanDb": [
+          10,
+          100
+        ],
+        "svis": [
+          {
+            "vlan": 100,
+            "ip": "10.0.2.1",
+            "mask": "255.255.255.252"
+          }
+        ],
+        "loopbacks": [
+          {
+            "id": 0,
+            "ip": "10.255.0.2",
+            "mask": "255.255.255.255"
+          }
+        ],
+        "routingMode": "dynamic",
+        "ospf": {
+          "networks": [
+            {
+              "network": "10.0.0.0",
+              "mask": "255.0.0.0",
+              "area": 0
+            }
+          ]
+        },
+        "vxlan": {
+          "vnis": [
+            {
+              "vni": 10010,
+              "peers": [
+                "10.255.0.1"
+              ],
+              "vlan": 10
+            }
+          ],
+          "source": 200000
+        }
+      },
+      {
+        "id": "d3",
+        "type": "router",
+        "name": "Spine",
+        "position": {
+          "x": 520,
+          "y": 100
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ip": "10.0.1.2",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:03:01",
+            "ip": "10.0.2.2",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:03:02",
+            "sfpSlot": true
+          }
+        ],
+        "routingMode": "dynamic",
+        "ospf": {
+          "networks": [
+            {
+              "network": "10.0.0.0",
+              "mask": "255.0.0.0",
+              "area": 0
+            }
+          ]
+        }
+      },
+      {
+        "id": "d4",
+        "type": "pc",
+        "name": "PC Zürich",
+        "position": {
+          "x": 160,
+          "y": 380
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ip": "192.168.10.11",
+            "mask": "255.255.255.0"
+          }
+        ]
+      },
+      {
+        "id": "d5",
+        "type": "pc",
+        "name": "PC Bern",
+        "position": {
+          "x": 880,
+          "y": 380
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ip": "192.168.10.22",
+            "mask": "255.255.255.0"
+          }
+        ]
+      }
+    ],
+    "cables": [
+      {
+        "id": "c6",
+        "a": {
+          "device": "d4",
+          "iface": 0
+        },
+        "b": {
+          "device": "d1",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c7",
+        "a": {
+          "device": "d5",
+          "iface": 0
+        },
+        "b": {
+          "device": "d2",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c8",
+        "a": {
+          "device": "d1",
+          "iface": 1
+        },
+        "b": {
+          "device": "d3",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c9",
+        "a": {
+          "device": "d2",
+          "iface": 1
+        },
+        "b": {
+          "device": "d3",
+          "iface": 1
+        }
+      }
+    ],
+    "nextId": 11,
+    "areas": [
+      {
+        "id": "a10",
+        "title": "VLAN 10 · 192.168.10.0/24 (VNI 10010)",
+        "color": "green",
+        "x": 60,
+        "y": 320,
+        "width": 920,
+        "height": 130,
+        "vlan": 10,
+        "network": "192.168.10.0/24"
+      }
+    ]
+  },
+  "configuration": {}
+}

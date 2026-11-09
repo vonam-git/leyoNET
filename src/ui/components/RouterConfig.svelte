@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cableAt, parseMask, subifId, type Device, type SerialEncapsulation } from '../../core';
+  import { cableAt, isRouterLike, parseMask, subifId, type Device, type SerialEncapsulation } from '../../core';
   import { t } from '../../i18n';
   import { interfaceLabel } from '../labels';
   import { autosave } from '../autosave';
@@ -11,6 +11,7 @@
   import Icon from './Icon.svelte';
   import ScopeBadge from './ScopeBadge.svelte';
   import SubinterfaceConfig from './SubinterfaceConfig.svelte';
+  import LoopbackConfig from './LoopbackConfig.svelte';
 
   /**
    * Router und Internet-Knoten. `part` wählt einen Teil (rechts im Inspektor nur
@@ -218,8 +219,12 @@
   </ul>
 {/if}
 
-{#if show('interfaces') && !compact && device.type === 'router' && ui.has('net.subinterfaces')}
+{#if show('interfaces') && !compact && isRouterLike(device.type) && ui.has('net.subinterfaces')}
   <SubinterfaceConfig {device} />
+{/if}
+
+{#if show('interfaces') && !compact && isRouterLike(device.type) && ui.has('net.loopback')}
+  <LoopbackConfig {device} />
 {/if}
 
 {#if show('nat') && device.type === 'internet' && ui.has('net.cgnat')}
@@ -240,7 +245,7 @@
   </svelte:element>
 {/if}
 
-{#if show('nat') && (device.type === 'router' || device.type === 'cpe') && ui.has('net.nat')}
+{#if show('nat') && (isRouterLike(device.type) || device.type === 'cpe') && ui.has('net.nat')}
   <svelte:element this={box} class="section" open={part ? undefined : device.interfaces.some((i) => i.nat)} data-help="nat">
   <svelte:element this={head}>{t('nat.title')}</svelte:element>
   <p class="muted small-text">{t('nat.hint')}</p>

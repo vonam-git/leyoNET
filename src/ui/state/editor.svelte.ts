@@ -11,6 +11,7 @@ import {
   addDhcpReservation,
   removeDhcpReservation,
   type DhcpReservation,
+  type ChannelMode,
   setInterfaceRelay,
   addDevice,
   addDnsRecord,
@@ -42,6 +43,11 @@ import {
   setCableLoss,
   setDhcpServer,
   setInterfaceAddress,
+  setSfpSlotCount,
+  setSviAccessList,
+  setDhcpPool,
+  setDhcpExcluded,
+  type DhcpPool,
   setDefaultGateway,
   setInterfaceCount,
   suggestName,
@@ -79,6 +85,9 @@ import {
   setProjectTitle,
   setIpMode,
   setFirewall,
+  setAccessList,
+  setPortAccessList,
+  type FirewallRule,
   addVpnTunnel,
   removeVpnTunnel,
   type FirewallConfig,
@@ -98,6 +107,22 @@ import {
   setSubinterface,
   setSvi,
   setVlanName,
+  setVxlanSource,
+  setVniVlan,
+  addVniPeer,
+  removeVniPeer,
+  addVrf,
+  removeVrf,
+  setInterfaceVrf,
+  addVrfRoute,
+  removeVrfRoute,
+  setPortChannel,
+  setLoopback,
+  removeLoopback,
+  createVlan,
+  deleteVlan,
+  setTrunkAllowed,
+  setTrunkNative,
   setWifiClient,
   setWlan,
   updateArea,
@@ -233,8 +258,11 @@ class Editor {
   #fitPending = true;
   #messageId = 0;
 
+  /** Nur ansehen (z.B. fremde Session beobachten): nichts lässt sich ändern. */
+  viewOnly = $state(false);
+
   get editable() {
-    return this.mode === 'design';
+    return this.mode === 'design' && !this.viewOnly;
   }
 
   /** Simulation läuft. */
@@ -470,7 +498,8 @@ class Editor {
 
   /** Für Formulare: Fehler zurückgeben statt melden, damit sie beim betroffenen Feld erscheinen. */
   #applyForm(result: Result<Topology>): TopologyError | null {
-    if (!this.editable) return null;
+    // In der Simulation nicht still verwerfen, sondern sagen, warum nichts gespeichert wird.
+    if (!this.editable) return { code: 'notEditable' };
     if (!result.ok) return result.error;
     this.#commit(result.value);
     return null;
@@ -641,6 +670,12 @@ class Editor {
   replugCable(id: string, end: 'a' | 'b', iface: number) {
     if (!this.editable) return;
     const next = this.#check(replugCable(this.topology, id, end, iface));
+    if (next) this.#commit(next);
+  }
+
+  setSfpSlotCount(id: string, count: number) {
+    if (!this.editable) return;
+    const next = this.#check(setSfpSlotCount(this.topology, id, count));
     if (next) this.#commit(next);
   }
 
@@ -987,6 +1022,27 @@ class Editor {
     return this.#applyForm(setFirewall(this.topology, id, config));
   }
 
+  /** Zugriffsliste eines Switches anlegen/ersetzen; `rules: null` löscht sie. */
+  setAccessList(id: string, name: string, rules: FirewallRule[] | null): TopologyError | null {
+    return this.#applyForm(setAccessList(this.topology, id, name, rules));
+  }
+
+  setDhcpPool(id: string, name: string, pool: DhcpPool | null): TopologyError | null {
+    return this.#applyForm(setDhcpPool(this.topology, id, name, pool));
+  }
+
+  setDhcpExcluded(id: string, start: string, end: string | undefined, remove = false): TopologyError | null {
+    return this.#applyForm(setDhcpExcluded(this.topology, id, start, end, remove));
+  }
+
+  setSviAccessList(id: string, vlan: number, direction: 'in' | 'out', name: string | null): TopologyError | null {
+    return this.#applyForm(setSviAccessList(this.topology, id, vlan, direction, name));
+  }
+
+  setPortAccessList(id: string, iface: number, name: string | null): TopologyError | null {
+    return this.#applyForm(setPortAccessList(this.topology, id, iface, name));
+  }
+
   addVpnTunnel(id: string, tunnel: VpnTunnel): TopologyError | null {
     return this.#applyForm(addVpnTunnel(this.topology, id, tunnel));
   }
@@ -1046,6 +1102,70 @@ class Editor {
 
   setIpRouting(id: string, enabled: boolean) {
     this.#edit(setIpRouting(this.topology, id, enabled));
+  }
+
+  setLoopback(id: string, n: number, ip: string, mask: string): TopologyError | null {
+    return this.#applyForm(setLoopback(this.topology, id, n, ip, mask));
+  }
+
+  removeLoopback(id: string, n: number): TopologyError | null {
+    return this.#applyForm(removeLoopback(this.topology, id, n));
+  }
+
+  setPortChannel(id: string, index: number, channel: number | null, mode: ChannelMode = 'active'): TopologyError | null {
+    return this.#applyForm(setPortChannel(this.topology, id, index, channel, mode));
+  }
+
+  setVxlanSource(id: string, iface: number | null): TopologyError | null {
+    return this.#applyForm(setVxlanSource(this.topology, id, iface));
+  }
+
+  setVniVlan(id: string, vni: number, vlan: number | null): TopologyError | null {
+    return this.#applyForm(setVniVlan(this.topology, id, vni, vlan));
+  }
+
+  addVniPeer(id: string, vni: number, peer: string): TopologyError | null {
+    return this.#applyForm(addVniPeer(this.topology, id, vni, peer));
+  }
+
+  removeVniPeer(id: string, vni: number, peer?: string): TopologyError | null {
+    return this.#applyForm(removeVniPeer(this.topology, id, vni, peer));
+  }
+
+  addVrf(id: string, name: string): TopologyError | null {
+    return this.#applyForm(addVrf(this.topology, id, name));
+  }
+
+  removeVrf(id: string, name: string): TopologyError | null {
+    return this.#applyForm(removeVrf(this.topology, id, name));
+  }
+
+  setInterfaceVrf(id: string, index: number, name: string | null): TopologyError | null {
+    return this.#applyForm(setInterfaceVrf(this.topology, id, index, name));
+  }
+
+  addVrfRoute(id: string, name: string, route: StaticRoute): TopologyError | null {
+    return this.#applyForm(addVrfRoute(this.topology, id, name, route));
+  }
+
+  removeVrfRoute(id: string, name: string, index: number): TopologyError | null {
+    return this.#applyForm(removeVrfRoute(this.topology, id, name, index));
+  }
+
+  createVlan(id: string, vlan: number): TopologyError | null {
+    return this.#applyForm(createVlan(this.topology, id, vlan));
+  }
+
+  deleteVlan(id: string, vlan: number): TopologyError | null {
+    return this.#applyForm(deleteVlan(this.topology, id, vlan));
+  }
+
+  setTrunkAllowed(id: string, index: number, vlans: number[] | null): TopologyError | null {
+    return this.#applyForm(setTrunkAllowed(this.topology, id, index, vlans));
+  }
+
+  setTrunkNative(id: string, index: number, vlan: number): TopologyError | null {
+    return this.#applyForm(setTrunkNative(this.topology, id, index, vlan));
   }
 
   setVlanName(id: string, vlan: number, name: string): TopologyError | null {

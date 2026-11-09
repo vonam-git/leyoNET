@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEFAULT_LEASE_TIME, parseMask, type Device, type DhcpServerConfig } from '../../core';
+  import { DEFAULT_LEASE_TIME, networkOf, parseIp, parseMask, type Device, type DhcpServerConfig } from '../../core';
   import { t } from '../../i18n';
   import { autosave } from '../autosave';
   import { editor } from '../state/editor.svelte';
@@ -41,10 +41,39 @@
     const failure = editor.setDhcpServer(device.id, config);
     if (failure) {
       if (!quiet) error = { field: failure.field, text: t(`error.${failure.code}`, failure.params) };
+      // Ganzer Bereich in einem anderen Netz: fragen, ob er für ein entferntes Netz (über Relay) gedacht ist.
+      foreign = !quiet && failure.code === 'dhcpRangeOutsideSubnet' && sameNet(draft.start, draft.end) ? { start: draft.start.trim(), end: draft.end.trim() } : null;
       return false;
     }
     error = null;
+    foreign = null;
     return true;
+  }
+
+  // --- Bereich in einem anderen Netz -------------------------------------------
+
+  /** Eigenes Präfix des Servers als Vorschlag für die Maske des entfernten Netzes. */
+  const ownPrefix = $derived(parseMask(device.interfaces[device.type === 'cpe' ? 1 : 0]?.mask ?? '') ?? 24);
+  let foreign = $state<{ start: string; end: string } | null>(null);
+
+  function sameNet(a: string, b: string): boolean {
+    const x = parseIp(a.trim());
+    const y = parseIp(b.trim());
+    return x !== null && y !== null && networkOf(x, ownPrefix) === networkOf(y, ownPrefix);
+  }
+
+  /** Bestätigt: als zusätzlichen Bereich anlegen; der Hauptbereich bleibt wie gespeichert. */
+  function moveToScope() {
+    if (!foreign) return;
+    const failure = editor.addDhcpScope(device.id, { start: foreign.start, end: foreign.end, mask: `/${ownPrefix}`, gateway: draft.gateway, dns: draft.dns });
+    if (failure) {
+      error = { field: failure.field, text: t(`error.${failure.code}`, failure.params) };
+      return;
+    }
+    foreign = null;
+    error = null;
+    const s = device.dhcpServer;
+    draft = { ...draft, start: s?.start ?? '', end: s?.end ?? '' };
   }
 
   // --- Feste Zuweisungen (Reservierungen) --------------------------------------
@@ -102,6 +131,15 @@
   {/if}
   {#if error && !fields.includes(error.field as Field)}
     <p class="error" role="alert">{error.text}</p>
+  {/if}
+  {#if foreign}
+    <div class="foreign" role="alertdialog" aria-label={t('dhcpServer.foreign.title')}>
+      <p><strong>{t('dhcpServer.foreign.title')}</strong> {t(device.dhcpServer ? 'dhcpServer.foreign.text' : 'dhcpServer.foreign.first', { start: foreign.start, end: foreign.end })}</p>
+      <div class="row">
+        {#if device.dhcpServer}<button type="button" onclick={moveToScope}>{t('dhcpServer.foreign.confirm')}</button>{/if}
+        <button type="button" class="ghost" onclick={() => (foreign = null)}>{t('dhcpServer.foreign.cancel')}</button>
+      </div>
+    </div>
   {/if}
 </form>
 
@@ -232,5 +270,20 @@
     margin: 4px 0 8px;
     font-size: 0.75rem;
     color: var(--muted);
+  }
+  .foreign {
+    margin: 8px 0;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
+    background: var(--warning-soft);
+    border-radius: 6px;
+  }
+  .foreign p {
+    margin: 0 0 6px;
+  }
+  .foreign .row {
+    display: flex;
+    gap: 6px;
   }
 </style>

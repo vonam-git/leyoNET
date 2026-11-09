@@ -1,5 +1,5 @@
 import { formatIp, maskToText, networkOf, parseIp, parseMask } from '../net/ipv4';
-import { ADMIN_DISTANCE, type Route } from '../net/routing';
+import { ADMIN_DISTANCE, LOOPBACK_BASE, type Route } from '../net/routing';
 import { inNetworks } from '../net/dynamic';
 import { OSPF_ALL_ROUTERS, type OspfPacket } from './frames';
 import { OSPF_DEFAULT_COST, OSPF_DEAD, OSPF_HELLO, OspfEngine, type OspfFamily, type OspfLink } from './ospf-engine';
@@ -31,14 +31,16 @@ export class Ospf {
           const net = inNetworks(iface.ip, c.networks);
           if (!net) return [];
           const port = device.interfaces[iface.index];
+          // Loopback: sendet keine Hellos und wird wie bei Cisco als Host-Route (/32) mit Kosten 1 angekündigt.
+          const loopback = iface.index >= LOOPBACK_BASE;
           return [
             {
               index: iface.index,
               area: net.area,
-              passive: !!c.passive?.includes(iface.index),
-              cost: port?.ospfCost ?? OSPF_DEFAULT_COST,
+              passive: loopback || !!c.passive?.includes(iface.index),
+              cost: loopback ? 1 : (port?.ospfCost ?? OSPF_DEFAULT_COST),
               address: formatIp(iface.ip),
-              prefixes: [{ network: formatIp(networkOf(iface.ip, iface.prefix)), prefix: iface.prefix }],
+              prefixes: [loopback ? { network: formatIp(iface.ip), prefix: 32 } : { network: formatIp(networkOf(iface.ip, iface.prefix)), prefix: iface.prefix }],
             },
           ];
         });
@@ -46,6 +48,11 @@ export class Ospf {
       up: (index) => host.ifaceUp(index),
       ownPrefixes: () => new Set(host.interfaces().map((i) => `${formatIp(networkOf(i.ip, i.prefix))}/${i.prefix}`)),
       hello: (link, neighbors) => ({ mask: maskToText(link.prefixes[0]?.prefix ?? 0), helloInterval: OSPF_HELLO / 1000, deadInterval: OSPF_DEAD / 1000, neighbors }),
+      sameSubnet: (src, link) => {
+        const ip = parseIp(src);
+        const p = link.prefixes[0];
+        return ip !== null && !!p && formatIp(networkOf(ip, p.prefix)) === p.network;
+      },
       helloMatches: (hello, link) => parseMask(hello.mask) === link.prefixes[0]?.prefix && hello.helloInterval * 1000 === OSPF_HELLO,
       sendMulticast: (link, packet) => host.sendMulticast(link.index, OSPF_ALL_ROUTERS, packet),
       sendTo: (neighbor, link, packet) => host.sendIp(neighbor.ip, packet, { src: link.address, ttl: 1 }),

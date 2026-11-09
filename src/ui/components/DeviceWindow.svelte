@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_SPECS, canAutoRoute, canFirewall, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterType, isSwitchType } from '../../core';
+  import { DEVICE_SPECS, canAccessList, canAutoRoute, canFirewall, canVrf, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterLike, isRouterType, isSwitchType } from '../../core';
   import { t } from '../../i18n';
   import { typeLabel } from '../labels';
   import { dialogs, type DeviceWindowState } from '../state/dialogs.svelte';
@@ -8,7 +8,11 @@
   import CpeConfig from './CpeConfig.svelte';
   import DeviceBasics from './DeviceBasics.svelte';
   import DhcpServerForm from './DhcpServerForm.svelte';
+  import DhcpPoolConfig from './DhcpPoolConfig.svelte';
   import FirewallConfig from './FirewallConfig.svelte';
+  import AclConfig from './AclConfig.svelte';
+  import VrfConfig from './VrfConfig.svelte';
+  import VxlanConfig from './VxlanConfig.svelte';
   import DeviceIcon from './DeviceIcon.svelte';
   import GroupConfig from './GroupConfig.svelte';
   import HostConfigForm from './HostConfigForm.svelte';
@@ -58,7 +62,7 @@
   );
   const position = $derived(device ? order.findIndex((d) => d.id === device.id) : -1);
 
-  type TabId = 'general' | 'addresses' | 'ports' | 'routing' | 'nat' | 'relay' | 'dhcp' | 'switching' | 'wlan' | 'mail' | 'services' | 'modem' | 'group' | 'state' | 'firewall' | 'vpn';
+  type TabId = 'general' | 'addresses' | 'ports' | 'routing' | 'nat' | 'relay' | 'dhcp' | 'switching' | 'wlan' | 'mail' | 'services' | 'modem' | 'group' | 'state' | 'firewall' | 'acl' | 'vrf' | 'vpn';
 
   const tabs = $derived.by((): TabId[] => {
     if (!device) return [];
@@ -68,14 +72,16 @@
     if (editor.acting) list.push('state');
     if (role === 'endpoint' && d.type !== 'clientgroup') list.push('addresses');
     if (d.type === 'clientgroup') list.push('group');
-    if (isRouterType(d.type) || d.type === 'l3switch' || d.type === 'cpe') list.push('addresses');
+    if (isRouterType(d.type) || d.type === 'l3switch' || d.type === 'cpe' || (d.type === 'switch' && ui.has('net.vlan'))) list.push('addresses');
     list.push('ports');
     if (hasRoutingTable(d.type) && role !== 'endpoint') list.push('routing');
     if (d.type === 'cpe') list.push('dhcp');
-    if (((d.type === 'router' || d.type === 'cpe') && ui.has('net.nat')) || (d.type === 'internet' && ui.has('net.cgnat'))) list.push('nat');
-    if (d.type === 'router' && ui.has('net.dhcpRelay')) list.push('relay');
-    if (canFirewall(d.type) && ui.has('net.firewall')) list.push('firewall');
-    if (d.type === 'router' && ui.has('net.vpn')) list.push('vpn');
+    if (((isRouterLike(d.type) || d.type === 'cpe') && ui.has('net.nat')) || (d.type === 'internet' && ui.has('net.cgnat'))) list.push('nat');
+    if ((isRouterLike(d.type) || d.type === 'l3switch') && (ui.has('net.dhcpRelay') || ui.has('service.dhcp'))) list.push('relay');
+    if (canFirewall(d.type) && (ui.has('net.firewall') || d.type === 'firewall')) list.push('firewall');
+    if (canAccessList(d.type) && ui.has('net.acl')) list.push('acl');
+    if (canVrf(d.type) && ui.has('net.vrf')) list.push('vrf');
+    if (isRouterLike(d.type) && ui.has('net.vpn')) list.push('vpn');
     if (isSwitchType(d.type)) list.push('switching');
     if (d.type === 'accesspoint' || (role === 'endpoint' && canUseWifi(d) && ui.has('medium.wireless'))) list.push('wlan');
     if (role === 'endpoint' && ui.has('service.mail') && d.type !== 'clientgroup') list.push('mail');
@@ -89,7 +95,7 @@
     return wanted && tabs.includes(wanted) ? wanted : (tabs[0] ?? 'general');
   });
 
-  const HELP: Partial<Record<TabId, string>> = { routing: 'routing', nat: 'nat', relay: 'dhcp', dhcp: 'dhcp', wlan: 'wlan', mail: 'mail', switching: 'vlan', services: 'dhcp', firewall: 'firewall', vpn: 'vpn' };
+  const HELP: Partial<Record<TabId, string>> = { routing: 'routing', nat: 'nat', relay: 'dhcp', dhcp: 'dhcp', wlan: 'wlan', mail: 'mail', switching: 'vlan', services: 'dhcp', firewall: 'firewall', acl: 'acl', vrf: 'vrf', vpn: 'vpn' };
 
   // Gerät gelöscht oder Projekt gewechselt: schliessen.
   $effect(() => {
@@ -214,6 +220,12 @@
     </div>
 
     <div id="{uid}-panel" class="panel" role="tabpanel" aria-labelledby="{uid}-tab-{tab}">
+      {#if !editor.editable && tab !== 'state'}
+        <p class="locked" role="status">
+          <span>{t('deviceDialog.simLocked')}</span>
+          <button onclick={() => editor.setMode('design')}>{t('deviceDialog.toDesign')}</button>
+        </p>
+      {/if}
       {#key device.id + tab}
         {#if tab === 'general'}
           <div class="cols">
@@ -231,7 +243,7 @@
           {#if DEVICE_SPECS[device.type].role === 'endpoint'}
             {#if editor.ipMode !== 'ipv6'}<HostConfigForm {device} />{/if}
             {#if editor.ipMode !== 'ipv4'}<Host6Form {device} />{/if}
-          {:else if device.type === 'l3switch'}
+          {:else if device.type === 'l3switch' || device.type === 'switch'}
             <SviConfig {device} />
           {:else if device.type === 'cpe'}
             <CpeConfig {device} />
@@ -242,7 +254,7 @@
         {:else if tab === 'group'}
           <GroupConfig {device} />
         {:else if tab === 'ports'}
-          {#if isSwitchType(device.type) || device.type === 'router'}
+          {#if isSwitchType(device.type) || isRouterLike(device.type)}
             <h3>{t('panel.title')}</h3>
             <PortPanel {device} />
           {/if}
@@ -263,12 +275,17 @@
           <DhcpServerForm {device} />
         {:else if tab === 'firewall'}
           <FirewallConfig {device} />
+        {:else if tab === 'acl'}
+          <AclConfig {device} />
+        {:else if tab === 'vrf'}
+          <VrfConfig {device} />
         {:else if tab === 'vpn'}
           <VpnConfig {device} />
         {:else if tab === 'relay'}
-          <RouterConfig {device} part="relay" />
+          <DhcpPoolConfig {device} />
         {:else if tab === 'switching'}
           <SwitchConfig {device} />
+          {#if device.type === 'l3switch' && ui.has('net.vxlan')}<VxlanConfig {device} />{/if}
         {:else if tab === 'wlan'}
           {#if device.type === 'accesspoint'}<WlanConfig {device} />{:else}<h3>{t('wifi.title')}</h3><WifiClientForm {device} />{/if}
         {:else if tab === 'mail'}
@@ -422,5 +439,21 @@
     .cols {
       grid-template-columns: 1fr;
     }
+  }
+  .locked {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 0 0 10px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    color: var(--text);
+    background: var(--warning-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .locked span {
+    flex: 1;
   }
 </style>

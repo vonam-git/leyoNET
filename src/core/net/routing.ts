@@ -18,11 +18,22 @@ export interface IfaceAddress {
 //   0 … 9999          physischer Anschluss (Index)
 //   10000·(p+1) + v   Subinterface von Anschluss p für VLAN v (Router-on-a-Stick)
 //   100000 + v        VLAN-Interface (SVI) eines Layer-3-Switches
+//   200000 + n        Loopback n («interface loopback0»)
 
 export const SUBIF_BASE = 10_000;
 export const SVI_BASE = 100_000;
+export const LOOPBACK_BASE = 200_000;
+export const MAX_LOOPBACK = 99;
 
-export type IfaceRef = { kind: 'port'; port: number } | { kind: 'sub'; port: number; vlan: number } | { kind: 'svi'; vlan: number };
+export type IfaceRef =
+  | { kind: 'port'; port: number }
+  | { kind: 'sub'; port: number; vlan: number }
+  | { kind: 'svi'; vlan: number }
+  | { kind: 'loopback'; id: number };
+
+export function loopbackId(n: number): number {
+  return LOOPBACK_BASE + n;
+}
 
 export function subifId(port: number, vlan: number): number {
   return SUBIF_BASE * (port + 1) + vlan;
@@ -33,6 +44,7 @@ export function sviId(vlan: number): number {
 }
 
 export function decodeIface(id: number): IfaceRef {
+  if (id >= LOOPBACK_BASE) return { kind: 'loopback', id: id - LOOPBACK_BASE };
   if (id >= SVI_BASE) return { kind: 'svi', vlan: id - SVI_BASE };
   if (id >= SUBIF_BASE) return { kind: 'sub', port: Math.floor(id / SUBIF_BASE) - 1, vlan: id % SUBIF_BASE };
   return { kind: 'port', port: id };
@@ -48,13 +60,15 @@ export function sviMac(device: Device): string {
 export function macOfIface(device: Device, id: number): string | undefined {
   const ref = decodeIface(id);
   if (ref.kind === 'svi') return sviMac(device);
+  if (ref.kind === 'loopback') return undefined;
   return device.interfaces[ref.port]?.mac;
 }
 
 /** Alle logischen Interfaces eines Geräts, auch unkonfigurierte (für Auswahllisten). */
 export function logicalInterfaces(device: Device): number[] {
-  if (device.type === 'l3switch') return (device.svis ?? []).map((s) => sviId(s.vlan));
-  return [...device.interfaces.map((i) => i.index), ...(device.subinterfaces ?? []).map((s) => subifId(s.parent, s.vlan))];
+  const loopbacks = (device.loopbacks ?? []).map((l) => loopbackId(l.id));
+  if (device.type === 'l3switch' || device.type === 'switch') return [...(device.svis ?? []).map((s) => sviId(s.vlan)), ...(device.type === 'l3switch' ? loopbacks : [])];
+  return [...device.interfaces.map((i) => i.index), ...(device.subinterfaces ?? []).map((s) => subifId(s.parent, s.vlan)), ...loopbacks];
 }
 
 /** Ziel des DHCP-Relays auf einem logischen Interface. */
@@ -62,6 +76,7 @@ export function relayOf(device: Device, id: number): string | undefined {
   const ref = decodeIface(id);
   if (ref.kind === 'port') return device.interfaces[ref.port]?.dhcpRelay;
   if (ref.kind === 'sub') return device.subinterfaces?.find((s) => s.parent === ref.port && s.vlan === ref.vlan)?.dhcpRelay;
+  if (ref.kind === 'loopback') return undefined;
   return device.svis?.find((s) => s.vlan === ref.vlan)?.dhcpRelay;
 }
 
@@ -91,15 +106,31 @@ export function interfaceAddresses(device: Device): IfaceAddress[] {
     const prefix = maskText ? parseMask(maskText) : null;
     return mac && ip !== null && prefix !== null ? [{ index, mac, ip, prefix }] : [];
   };
-  if (device.type === 'l3switch') {
+  // Layer-3-Switch: VLAN-Interfaces; Layer-2-Switch: Verwaltungs-Interface («interface vlan 1»).
+  // Loopbacks haben keine MAC (sie senden nie einen Rahmen); «lo» als Platzhalter.
+  const loopbacks = (device.loopbacks ?? []).flatMap((l) => addr(loopbackId(l.id), 'lo', l.ip, l.mask));
+  if (device.type === 'l3switch' || device.type === 'switch') {
     const mac = sviMac(device);
-    return (device.svis ?? []).flatMap((s) => addr(sviId(s.vlan), mac, s.ip, s.mask));
+    return [...(device.svis ?? []).flatMap((s) => addr(sviId(s.vlan), mac, s.ip, s.mask)), ...(device.type === 'l3switch' ? loopbacks : [])];
   }
   return [
     ...device.interfaces.flatMap((i) => addr(i.index, i.mac, i.ip, i.mask)),
     ...(device.subinterfaces ?? []).flatMap((s) => addr(subifId(s.parent, s.vlan), device.interfaces[s.parent]?.mac, s.ip, s.mask)),
+    ...loopbacks,
   ];
 }
+
+/** VRF eines logischen Interfaces; undefined = globale Tabelle. */
+export function vrfOfIface(device: Device, id: number): string | undefined {
+  const ref = decodeIface(id);
+  if (ref.kind === 'port') return device.interfaces[ref.port]?.vrf;
+  if (ref.kind === 'sub') return device.subinterfaces?.find((s) => s.parent === ref.port && s.vlan === ref.vlan)?.vrf;
+  if (ref.kind === 'svi') return device.svis?.find((s) => s.vlan === ref.vlan)?.vrf;
+  return device.loopbacks?.find((l) => l.id === ref.id)?.vrf;
+}
+
+export const VRF_NAME = /^[A-Za-z0-9_-]{1,32}$/;
+export const MAX_VRFS = 16;
 
 /** Längster Präfix gewinnt; bei Gleichstand die kleinere administrative Distanz, dann die zuerst eingetragene. */
 export function lookupRoute(routes: readonly Route[], dst: number): Route | undefined {
@@ -116,8 +147,9 @@ export function lookupRoute(routes: readonly Route[], dst: number): Route | unde
  * das Standardgateway und bei Vermittlungsrechnern die statischen Routen.
  * `unusable` nennt statische Routen, deren Gateway in keinem angeschlossenen Netz liegt.
  */
-export function buildRoutes(device: Device): { routes: Route[]; unusable: number[] } {
-  const connected: Route[] = interfaceAddresses(device).map((i) => ({
+export function buildRoutes(device: Device, vrf?: string): { routes: Route[]; unusable: number[] } {
+  // Jede VRF hat ihre eigene Tabelle: nur ihre Anschlüsse und ihre statischen Routen.
+  const connected: Route[] = interfaceAddresses(device).filter((i) => vrfOfIface(device, i.index) === vrf).map((i) => ({
     network: networkOf(i.ip, i.prefix),
     prefix: i.prefix,
     iface: i.index,
@@ -127,8 +159,10 @@ export function buildRoutes(device: Device): { routes: Route[]; unusable: number
   const routes = [...connected];
   const unusable: number[] = [];
 
-  if (DEVICE_SPECS[device.type].role === 'endpoint') {
-    const gateway = device.gateway ? parseIp(device.gateway) : null;
+  if (DEVICE_SPECS[device.type].role === 'endpoint' || device.type === 'switch') {
+    // Layer-2-Switch: «ip default-gateway» steht als Route 0.0.0.0/0 in den Routen.
+    const configured = device.type === 'switch' ? device.routes?.find((r) => parseMask(r.mask) === 0)?.gateway : device.gateway;
+    const gateway = configured ? parseIp(configured) : null;
     const towards = gateway !== null ? lookupRoute(connected, gateway) : undefined;
     if (gateway !== null && towards) {
       routes.push({ network: 0, prefix: 0, iface: towards.iface, via: gateway, kind: 'default' });
@@ -138,10 +172,11 @@ export function buildRoutes(device: Device): { routes: Route[]; unusable: number
 
   // Layer-3-Switch mit «no ip routing»: nur die eigenen Netze, keine Routen.
   if (device.type === 'l3switch' && device.ipRouting === false) return { routes, unusable };
-  // Automatisches Routing: Die Simulation berechnet die Routen selbst, eigene statische ruhen.
-  if (routingModeOf(device) === 'auto') return { routes, unusable };
+  // Automatisches Routing: Die Simulation berechnet die Routen selbst, eigene statische ruhen (nur global).
+  if (!vrf && routingModeOf(device) === 'auto') return { routes, unusable };
 
-  (device.routes ?? []).forEach((r, n) => {
+  const statics = vrf ? (device.vrfs?.find((v) => v.name === vrf)?.routes ?? []) : (device.routes ?? []);
+  statics.forEach((r, n) => {
     const network = parseIp(r.network);
     const prefix = parseMask(r.mask);
     const gateway = r.gateway ? parseIp(r.gateway) : null;
@@ -162,7 +197,7 @@ export interface RouteIssue {
 }
 
 /** Prüft eine statische Route vor dem Eintragen. */
-export function checkStaticRoute(device: Device, route: StaticRoute): RouteIssue | null {
+export function checkStaticRoute(device: Device, route: StaticRoute, vrf?: string): RouteIssue | null {
   const network = parseIp(route.network);
   if (network === null) return { code: 'invalidIp', field: 'network', params: { value: route.network } };
   const prefix = parseMask(route.mask);
@@ -179,7 +214,8 @@ export function checkStaticRoute(device: Device, route: StaticRoute): RouteIssue
   }
   if (route.iface !== undefined && !logicalInterfaces(device).includes(route.iface)) return { code: 'unknownInterface', field: 'iface' };
   if (!route.gateway && route.iface === undefined) return { code: 'routeNeedsTarget', field: 'gateway' };
-  const duplicate = (device.routes ?? []).some((r) => r.network === route.network && parseMask(r.mask) === prefix);
+  const existing = vrf ? (device.vrfs?.find((v) => v.name === vrf)?.routes ?? []) : (device.routes ?? []);
+  const duplicate = existing.some((r) => r.network === route.network && parseMask(r.mask) === prefix);
   if (duplicate) return { code: 'duplicateRoute', field: 'network', params: { net: `${route.network}/${prefix}` } };
   return null;
 }

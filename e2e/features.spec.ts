@@ -62,6 +62,40 @@ test('Router über die Befehlszeile konfigurieren (OSPF)', async ({ page }) => {
   await expect(page.getByLabel('IP-Adresse von eth0')).toHaveValue('10.1.1.1');
 });
 
+test('Befehlszeile: Fokus, mehrzeilig einfügen, Verlauf über den Moduswechsel, verschiebbar', async ({ page }) => {
+  await page.getByRole('button', { name: 'P2' }).click();
+  await page.getByRole('dialog', { name: 'Funktionsumfang' }).getByRole('radio', { name: /Profi/ }).click();
+  await page.keyboard.press('Escape');
+  await shop(page, 'Router', /^Router 2 Port/);
+  await page.getByRole('complementary', { name: 'Eigenschaften' }).getByRole('button', { name: /Befehlszeile \(CLI\)/ }).first().click();
+  const cli = page.getByLabel('CLI-Befehl eingeben');
+  await expect(cli).toBeFocused();
+  // Ganze Konfiguration auf einmal einfügen: jede Zeile wird ausgeführt.
+  await cli.evaluate((el) => {
+    const data = new DataTransfer();
+    data.setData('text/plain', 'enable\nconf t\n! Kommentar\ninterface eth0\n ip address 10.9.9.1/24\nend\n');
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  });
+  await expect(page.getByLabel('IP-Adresse von eth0')).toHaveValue('10.9.9.1');
+  // Fenster am Kopf verschieben.
+  const win = page.getByRole('dialog', { name: /Befehlszeile/ });
+  const head = win.locator('header');
+  const before = (await win.boundingBox())!;
+  const h = (await head.boundingBox())!;
+  await page.mouse.move(h.x + 60, h.y + h.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(h.x + 260, h.y + h.height / 2 + 80, { steps: 4 });
+  await page.mouse.up();
+  const after = (await win.boundingBox())!;
+  expect(after.x - before.x).toBeGreaterThan(150);
+  // Verlauf bleibt nach Simulation und zurück in den Entwurf.
+  await page.getByRole('radio', { name: 'Simulation' }).click();
+  await page.getByRole('radio', { name: 'Entwurf' }).click();
+  await page.getByRole('complementary', { name: 'Eigenschaften' }).getByRole('button', { name: /Befehlszeile \(CLI\)/ }).first().click();
+  await cli.press('ArrowUp');
+  await expect(cli).toHaveValue('end');
+});
+
 test('SSH vom PC zum Router in der Simulation', async ({ page }) => {
   await openProject(page, example('router-on-a-stick'));
   await page.getByRole('radio', { name: 'Simulation' }).click();
@@ -346,6 +380,8 @@ test('IPv6: SLAAC, Ping über den Router, IP-Version umschalten', async ({ page 
   const ipMode = page.getByRole('radiogroup', { name: 'IP-Version' });
   await expect(ipMode.getByRole('radio', { name: 'IPv6' })).toBeChecked();
   await page.getByRole('radio', { name: 'Simulation' }).click();
+  // Erst das Router Advertisement abwarten (SLAAC), sonst hat der PC noch keine globale Adresse.
+  await page.waitForTimeout(2500);
   await page.getByRole('button', { name: 'PC 1, Rechner' }).click();
   await page.getByRole('button', { name: 'Desktop öffnen' }).click();
   const input = page.getByLabel('Befehl eingeben');
@@ -418,7 +454,7 @@ test('VPN: Tunnel steht, Ping durch den Tunnel, ESP in der Paketliste', async ({
 test('Modul 117: Übung aus der Reihe starten', async ({ page }) => {
   await page.getByRole('button', { name: /Aufgaben-Katalog/ }).click();
   const catalog = page.getByRole('dialog');
-  await catalog.getByRole('radio', { name: /Modul 117/ }).check();
+  await catalog.getByRole('tab', { name: /M117/ }).click();
   await expect(catalog.locator('li')).toHaveCount(10);
   await expect(catalog).toContainText('Arbeitsblatt: M06C_M117_UE03_Router01.pdf');
   await catalog.locator('li').filter({ hasText: 'Auftrag 1: Ein Netz mit zwei Switches' }).getByRole('button', { name: 'Starten' }).click();
@@ -539,4 +575,71 @@ test('OSPFv3: Anschlüsse statt Netze im Reiter Routing', async ({ page }) => {
   await expect(r1.getByLabel('Area von eth1')).toHaveValue('0');
   if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
   await tour.getByRole('button', { name: 'Führung beenden' }).click();
+});
+
+test('Modul 129: Reiter, Übung mit Frage starten', async ({ page }) => {
+  await page.getByRole('button', { name: /Aufgaben-Katalog/ }).click();
+  const catalog = page.getByRole('dialog');
+  await catalog.getByRole('tab', { name: /M129/ }).click();
+  await expect(catalog.getByRole('tab', { name: /M129/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(catalog.locator('li')).toHaveCount(9);
+  await expect(catalog).toContainText('Modul 129 (Subnetting, Routing, Protokollanalyse)');
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  await catalog.locator('li').filter({ hasText: 'Auftrag 1: ICMP und TTL' }).getByRole('button', { name: 'Starten' }).click();
+  await expect(page.locator('.tasks')).toContainText('Welche TTL hat der Echo Request');
+});
+
+test('Grosse Aufgabe: eigenes Fenster mit Gliederung', async ({ page }) => {
+  await page.getByRole('button', { name: /Aufgaben-Katalog/ }).click();
+  const catalog = page.getByRole('dialog');
+  await catalog.getByRole('tab', { name: /M129/ }).click();
+  await catalog.locator('li').filter({ hasText: 'Drei Router statisch' }).first().getByRole('button', { name: 'Starten' }).click();
+  const win = page.getByRole('dialog', { name: 'Aufgabe' });
+  await expect(win).toBeVisible();
+  await expect(win.locator('li').filter({ hasText: 'Router2: eth0' })).toBeVisible();
+  await expect(win.locator('strong').filter({ hasText: 'Router-Adressen' })).toBeVisible();
+  await expect(win.locator('code').filter({ hasText: 'ip route 0.0.0.0/0 192.168.2.2' })).toBeVisible();
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  await page.keyboard.press('Escape');
+  await expect(win).toBeHidden();
+  await page.locator('.tasks').getByRole('button', { name: /Gross anzeigen/ }).click();
+  await expect(win).toBeVisible();
+});
+
+test('Firewall als Gerät und ACL am Switch im Formular', async ({ page }) => {
+  await page.getByRole('button', { name: 'P2' }).click();
+  await page.getByRole('dialog', { name: 'Funktionsumfang' }).getByRole('radio', { name: /Profi/ }).click();
+  await page.keyboard.press('Escape');
+  await shop(page, 'Router', /^Firewall 4 Port/);
+  await page.keyboard.press('e');
+  const fw = page.getByRole('dialog', { name: 'Firewall' });
+  await fw.getByRole('tab', { name: 'Firewall' }).click();
+  await expect(fw.locator('tr.rule').filter({ hasText: 'eth1 (LAN)' })).toBeVisible();
+  await expect(fw.getByRole('radio', { name: 'Verbieten' })).toBeChecked();
+  await fw.getByRole('button', { name: /Schliessen/ }).first().click();
+
+  await shop(page, 'Switches', /^Switch 8/);
+  await page.keyboard.press('e');
+  const sw = page.getByRole('dialog', { name: 'Switch' });
+  await sw.getByRole('tab', { name: 'ACL' }).click();
+  await sw.getByLabel('Neue Zugriffsliste').fill('GAESTE');
+  await sw.getByRole('button', { name: 'Anlegen' }).click();
+  await sw.getByLabel('Ziel', { exact: true }).fill('192.168.10.80');
+  await sw.getByRole('button', { name: 'Regel zu GAESTE hinzufügen' }).click();
+  await expect(sw.locator('tr.rule').filter({ hasText: '192.168.10.80' })).toContainText('Erlauben (permit)');
+  await sw.getByRole('combobox', { name: 'Port 1' }).selectOption('GAESTE');
+  await expect(sw).toContainText('an Port 1');
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+});
+
+test('Textfeld (Bereich) mit gegliedertem Text', async ({ page }) => {
+  await shop(page, 'Bereiche', /^Textfeld/);
+  const canvas = page.getByRole('application');
+  await expect(canvas).toContainText('Notiz 1');
+  const text = page.locator('.inspector').getByLabel('Text', { exact: true });
+  await text.fill('Auftrag für die Klasse\n\n- Router konfigurieren\n- **Ping** an 192.168.1.1');
+  await text.press('Tab');
+  await expect(canvas.locator('foreignObject li').filter({ hasText: 'Router konfigurieren' })).toBeVisible();
+  await expect(canvas.locator('foreignObject strong')).toHaveText('Ping');
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
 });

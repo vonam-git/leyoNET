@@ -4,7 +4,7 @@
   import { editor } from '../state/editor.svelte';
   import { ui } from '../state/ui.svelte';
 
-  let { entry, onclose }: { entry: PacketLogEntry; onclose: () => void } = $props();
+  let { entry, onclose, onfollow }: { entry: PacketLogEntry; onclose: () => void; onfollow?: () => void } = $props();
 
   /**
    * Der Rahmen wird mit echten Bytes kodiert (wie auf der Leitung) und nach dem
@@ -47,6 +47,7 @@
   <header>
     <h3 id="details-title">{t('layer.title', { id: entry.id })}</h3>
     <span class="muted">{t('wire.size', { n: wire.bytes.length })}</span>
+    {#if onfollow}<button class="small" onclick={onfollow} title={t('packets.stream.followHint')}>{t('packets.stream.follow')}</button>{/if}
     <button class="small" onclick={onclose} aria-label={t('layer.close')}>✕</button>
   </header>
 

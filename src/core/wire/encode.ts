@@ -22,6 +22,8 @@ import {
   type PppControl,
   type RipMessage,
   type StpBpdu,
+  type LacpPdu,
+  type VxlanMessage,
   type TcpSegment,
   type UdpDatagram,
 } from '../sim/frames';
@@ -251,7 +253,7 @@ function pseudoHeader6(src: string, dst: string, nextHeader: number, length: num
 function udp(d: UdpDatagram, srcIp: string, dstIp: string, v6 = false): Part {
   const p = new Part();
   const m = d.payload;
-  const inner = m.kind === 'dhcp' ? dhcp(m) : m.kind === 'dns' ? dns(m) : m.kind === 'dhcpv6' ? dhcp6(m) : m.kind === 'ike' ? ike(m) : m.kind === 'ripng' ? ripng(m) : rip(m);
+  const inner = m.kind === 'dhcp' ? dhcp(m) : m.kind === 'dns' ? dns(m) : m.kind === 'dhcpv6' ? dhcp6(m) : m.kind === 'ike' ? ike(m) : m.kind === 'ripng' ? ripng(m) : m.kind === 'vxlan' ? vxlan(m) : rip(m);
   p.u16('udp.srcPort', d.srcPort, portName(d.srcPort));
   p.u16('udp.dstPort', d.dstPort, portName(d.dstPort));
   p.u16('udp.length', 8 + inner.length);
@@ -718,6 +720,50 @@ function stp(b: StpBpdu): Part {
   return p;
 }
 
+/** VXLAN-Kopf (RFC 7348): Flags (I = VNI gültig), VNI, danach der innere Ethernet-Rahmen. */
+function vxlan(m: VxlanMessage): Part {
+  const p = new Part();
+  p.u8('vxlan.flags', 0x08, '0x08 (I: VNI gültig)');
+  p.field('vxlan.reserved1', '0', [0, 0, 0]);
+  p.field('vxlan.vni', String(m.vni), [(m.vni >> 16) & 0xff, (m.vni >> 8) & 0xff, m.vni & 0xff]);
+  p.u8('vxlan.reserved2', 0);
+  p.close(4, 'VXLAN', 0, { note: 'note.vxlan' });
+  const { part, etherType } = payloadPart(m.frame);
+  p.append(ethernet(m.frame, part, etherType));
+  return p;
+}
+
+/** LACPDU nach IEEE 802.1AX (Slow Protocols, Subtyp 1), 110 Bytes. */
+function lacp(l: LacpPdu): Part {
+  const p = new Part();
+  const info = (prefix: string, system: string, key: number, port: number, state: number) => {
+    p.u8(`lacp.${prefix}Type`, prefix === 'actor' ? 1 : 2);
+    p.u8(`lacp.${prefix}Length`, 20);
+    p.u16(`lacp.${prefix}SystemPriority`, 32768);
+    p.mac(`lacp.${prefix}System`, system);
+    p.u16(`lacp.${prefix}Key`, key);
+    p.u16(`lacp.${prefix}PortPriority`, 32768);
+    p.u16(`lacp.${prefix}Port`, port);
+    p.u8(`lacp.${prefix}State`, state, `${hex(state, 2)} (${LACP_STATE.filter((_, i) => state & (1 << i)).join(', ') || '–'})`);
+    p.field(`lacp.${prefix}Reserved`, '0', [0, 0, 0]);
+  };
+  p.u8('lacp.subtype', 1, '1 (LACP)');
+  p.u8('lacp.version', 1);
+  info('actor', l.actorSystem, l.actorKey, l.actorPort, l.actorState);
+  info('partner', l.partnerSystem, l.partnerKey, l.partnerPort, l.partnerState);
+  p.u8('lacp.collectorType', 3);
+  p.u8('lacp.collectorLength', 16);
+  p.u16('lacp.collectorMaxDelay', 0);
+  p.field('lacp.collectorReserved', '0', Array(12).fill(0));
+  p.u8('lacp.terminatorType', 0);
+  p.u8('lacp.terminatorLength', 0);
+  p.field('lacp.reserved', '0', Array(50).fill(0));
+  p.close(2, 'LACP', 0, { note: 'note.lacp' });
+  return p;
+}
+
+const LACP_STATE = ['Activity', 'Timeout', 'Aggregation', 'Synchronization', 'Collecting', 'Distributing', 'Defaulted', 'Expired'];
+
 function macOrZero(mac: string): number[] {
   const parts = mac.split(':').map((h) => parseInt(h, 16));
   return parts.length === 6 && parts.every((n) => Number.isFinite(n)) ? parts : [0, 0, 0, 0, 0, 0];
@@ -745,6 +791,7 @@ function payloadPart(frame: EthernetFrame): { part: Part; etherType: number; ppp
   if (p.kind === 'ipv4') return { part: ipv4(p), etherType: 0x0800, pppProtocol: 0x0021 };
   if (p.kind === 'ipv6') return { part: ipv6(p), etherType: 0x86dd, pppProtocol: 0x0057 };
   if (p.kind === 'stp') return { part: stp(p), etherType: 0, pppProtocol: 0 };
+  if (p.kind === 'lacp') return { part: lacp(p), etherType: 0x8809, pppProtocol: 0 };
   if (p.kind === 'ppp') return { part: pppControl(p), etherType: 0, pppProtocol: p.protocol === 'lcp' ? 0xc021 : 0x8021 };
   return { part: new Part(), etherType: 0, pppProtocol: 0 };
 }
@@ -757,7 +804,7 @@ function ethernet(frame: EthernetFrame, inner: Part, etherType: number, header =
     p.u16('eth.tpid', 0x8100, '0x8100 (802.1Q)');
     p.u16('eth.tci', frame.vlan & 0xfff, `PCP 0, VLAN ${frame.vlan}`);
   }
-  if (etherType) p.u16('eth.type', etherType, `${hex(etherType, 4)} (${{ 0x0800: 'IPv4', 0x86dd: 'IPv6', 0x0806: 'ARP', 0x8863: 'PPPoE Discovery', 0x8864: 'PPPoE Session', 0x888e: '802.1X' }[etherType] ?? ''})`);
+  if (etherType) p.u16('eth.type', etherType, `${hex(etherType, 4)} (${{ 0x0800: 'IPv4', 0x86dd: 'IPv6', 0x0806: 'ARP', 0x8863: 'PPPoE Discovery', 0x8864: 'PPPoE Session', 0x888e: '802.1X', 0x8809: 'Slow Protocols' }[etherType] ?? ''})`);
   else p.u16('eth.length', inner.length, `${inner.length} (IEEE 802.3)`);
   p.append(inner);
   p.close(2, frame.vlan !== undefined ? `${header} + 802.1Q` : header, 0, { note: 'note.ethernet' });

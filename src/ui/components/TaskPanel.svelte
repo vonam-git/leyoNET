@@ -1,50 +1,31 @@
 <script lang="ts">
-  import { evaluateTasks, pointsOf, scoreOf, swissGrade, type GoalResult } from '../../core';
   import { t } from '../../i18n';
   import { editor } from '../state/editor.svelte';
-  import { simStore } from '../state/sim.svelte';
   import { dialogs } from '../state/dialogs.svelte';
   import { ui } from '../state/ui.svelte';
   import { examMode } from '../state/exam.svelte';
-  import { catalogIdOf, progress } from '../state/progress.svelte';
-  import Stars from './Stars.svelte';
+  import { isLargeTask, taskView } from '../state/taskView.svelte';
+  import TaskBody from './TaskBody.svelte';
 
-  /** Aufgabe mit Lernzielen; "Prüfen" wertet das aktuelle Netz automatisch aus. */
-  let results = $state<GoalResult[] | null>(null);
-  let checking = $state(false);
-
+  /** Aufgabe in der Seitenleiste; «Gross anzeigen» öffnet sie in einem eigenen Fenster. */
   const tasks = $derived(editor.tasks);
-  const passedCount = $derived(results?.filter((r) => r.passed).length ?? 0);
-  /** Punkte anzeigen, sobald ein Ziel eigene Punkte hat oder benotet wird. */
-  const withPoints = $derived(!!tasks && (tasks.grading || tasks.goals.some((g) => g.points !== undefined)));
-  const maxPoints = $derived(tasks ? tasks.goals.reduce((sum, g) => sum + pointsOf(g), 0) : 0);
-  const score = $derived(tasks && results ? scoreOf(tasks, results) : null);
+  const locked = $derived(!!examMode.active);
 
   // Neue Aufgabe oder anderes Netz: alte Ergebnisse gelten nicht mehr.
   $effect(() => {
     void editor.tasks;
     void editor.generation;
-    results = null;
+    taskView.reset();
   });
 
-  function check() {
-    if (!tasks) return;
-    checking = true;
-    // Kurz warten, damit die Oberfläche "prüft …" zeigen kann; die Prüf-Simulationen laufen synchron.
-    setTimeout(() => {
-      results = evaluateTasks(editor.topology, tasks, simStore.sim?.getPacketLog() ?? []);
-      checking = false;
-      // Übung aus dem Katalog vollständig gelöst: im Katalog als erledigt zeigen.
-      const id = catalogIdOf(tasks);
-      if (id && results.length > 0 && results.every((r) => r.passed || r.manual) && progress.mark(id)) editor.notify(t('catalog.doneNotice'));
-    }, 20);
-  }
-
-  const resultOf = (id: string) => results?.find((r) => r.id === id);
-  /** Prüfungsdatei: Punkte je Teil statt Prüfbausteinen. */
-  const raster = $derived(tasks?.exam?.raster ?? null);
-  const rasterTotal = $derived(raster?.reduce((s, r) => s + r.points, 0) ?? 0);
-  const locked = $derived(!!examMode.active);
+  // Neue grosse Aufgabe (z.B. aus dem Katalog): gleich im Fenster zeigen.
+  let shownFor: unknown = null;
+  $effect(() => {
+    const current = editor.tasks;
+    if (current && current !== shownFor && shownFor !== null && isLargeTask(current) && !locked) taskView.show();
+    if (!current) taskView.close();
+    shownFor = current ?? 0;
+  });
 </script>
 
 <section class="tasks" aria-labelledby="tasks-title">
@@ -62,66 +43,8 @@
   {#if !tasks}
     <p class="muted">{t('tasks.none')}</p>
   {:else}
-    {#if tasks.difficulty}<Stars n={tasks.difficulty} />{/if}
-    <h3>{tasks.title}</h3>
-    {#if raster}
-      <table class="raster">
-        <caption>{t('tasks.raster')}</caption>
-        <tbody>
-          {#each raster as row (row.label)}<tr><td>{row.label}</td><td class="num">{row.points}</td></tr>{/each}
-          <tr class="sum"><td>{t('exam.rasterTotal')}</td><td class="num">{rasterTotal}</td></tr>
-        </tbody>
-      </table>
-      {#if tasks.grading}<p class="muted">{t('tasks.gradeFormula')}</p>{/if}
-    {:else if withPoints}<p class="muted">{t('tasks.maxPoints', { max: maxPoints })}{tasks.grading ? ` · ${t('tasks.gradeFormula')}` : ''}</p>{/if}
-    {#if tasks.description}
-      <p class="description">{tasks.description}</p>
-    {/if}
-    <ol class="goals">
-      {#each tasks.goals as goal (goal.id)}
-        {@const result = resultOf(goal.id)}
-        <li class:passed={result?.passed} class:failed={result && !result.passed}>
-          <span class="mark" aria-hidden="true">{result ? (result.passed ? '✓' : '✗') : '○'}</span>
-          <span>
-            {goal.text}
-            {#if withPoints}<span class="pts">({t('tasks.points', { n: pointsOf(goal) })})</span>{/if}
-            {#if goal.check.type === 'answer'}
-              {#if goal.check.kind === 'choice' && goal.check.options}
-                <span class="answer" role="radiogroup" aria-label={goal.text}>
-                  {#each goal.check.options as option (option)}
-                    <label><input type="radio" name="answer-{goal.id}" checked={tasks.answers?.[goal.id] === option} onchange={() => editor.setAnswer(goal.id, option)} /> {option}</label>
-                  {/each}
-                </span>
-              {:else}
-                <input class="answer" value={tasks.answers?.[goal.id] ?? ''} onchange={(e) => editor.setAnswer(goal.id, e.currentTarget.value)} aria-label={goal.text} placeholder={t('tasks.answerPlaceholder')} />
-              {/if}
-            {/if}
-            {#if result}
-              <span class="visually-hidden">{t(result.passed ? 'tasks.passed' : 'tasks.failed')}</span>
-            {/if}
-            {#if result && !result.passed}
-              {#if result.reason}
-                <span class="reason">{t(`tasks.reason.${result.reason.code}`, result.reason.params)}</span>
-              {/if}
-              {#if goal.hint}
-                <span class="hint">💡 {goal.hint}</span>
-              {/if}
-            {/if}
-          </span>
-        </li>
-      {/each}
-    </ol>
-    {#if tasks.noSelfCheck}
-      <p class="muted">{t('tasks.noSelfCheck')}</p>
-    {:else}
-      <button class="check" onclick={check} disabled={checking}>{checking ? t('tasks.checking') : t('tasks.check')}</button>
-    {/if}
-    {#if results}
-      <p class="summary" role="status">
-        {t('tasks.summary', { passed: passedCount, total: tasks.goals.length })}
-        {#if withPoints && score}<br />{t('tasks.score', { points: score.points, max: score.max })}{#if tasks.grading} · {t('tasks.grade', { grade: swissGrade(score.points, score.max).toFixed(1) })}{/if}{/if}
-      </p>
-    {/if}
+    <button class="small enlarge" onclick={() => taskView.toggle()} aria-pressed={taskView.open} title={t('tasks.enlargeHint')}>⤢ {taskView.open ? t('tasks.shrink') : t('tasks.enlarge')}</button>
+    <TaskBody {tasks} />
   {/if}
   {#if ui.has('tool.taskEditor') && !locked}<button class="small review" onclick={() => dialogs.show('review')} title={t('review.openHint')}>{t('review.open')}</button>{/if}
 </section>
@@ -147,97 +70,16 @@
     margin: 0;
     font-size: 0.95rem;
   }
-  h3 {
-    margin: 8px 0 4px;
-    font-size: 0.85rem;
-  }
   .small {
     font-size: 0.7rem;
     padding: 2px 6px;
   }
-  .description {
-    margin: 0 0 8px;
-  }
-  .goals {
-    list-style: none;
-    margin: 0 0 8px;
-    padding: 0;
-    display: grid;
-    gap: 6px;
-  }
-  .goals li {
-    display: grid;
-    grid-template-columns: 1.2em 1fr;
-    gap: 4px;
-  }
-  .mark {
-    font-weight: 700;
-    color: var(--muted);
-  }
-  .passed .mark {
-    color: var(--distribution);
-  }
-  .failed .mark {
-    color: var(--danger);
-  }
-  .reason,
-  .hint {
-    display: block;
-    margin-top: 2px;
-    color: var(--muted);
-  }
-  .raster {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.8rem;
-    margin: 6px 0;
-  }
-  .raster caption {
-    text-align: left;
-    color: var(--muted);
-    font-size: 0.75rem;
-  }
-  .raster td {
-    padding: 2px 4px;
-    border-bottom: 1px solid var(--border);
-  }
-  .raster .num {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-  .raster .sum td {
-    font-weight: 600;
-  }
-  .answer {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    margin-top: 4px;
-    width: 100%;
-    font-size: 0.82rem;
-  }
-  .answer label {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
-  .answer input[type='radio'] {
-    width: auto;
-  }
-  .pts {
-    color: var(--muted);
-    white-space: nowrap;
-  }
-  .check {
-    width: 100%;
-    font-weight: 600;
+  .enlarge {
+    float: right;
+    margin-left: 6px;
   }
   .review {
     margin-top: 10px;
-  }
-  .summary {
-    margin: 6px 0 0;
-    font-weight: 600;
   }
   .muted {
     color: var(--muted);

@@ -115,16 +115,18 @@ export const SHOP: readonly ShopItem[] = [
   device('serverMail', 'servers', 'server', { prepare: serverPreset('192.168.1.25', ['mail']), features: ['service.mail'] }),
   device('serverAll', 'servers', 'server', { prepare: serverPreset('192.168.1.2', ['dhcp', 'dns', 'web']), features: ['service.dhcp', 'service.dns', 'service.web'] }),
 
-  device('switch8', 'switches', 'switch', { options: { ports: 8, sfpSlots: 2 } }),
-  device('switch16', 'switches', 'switch', { options: { ports: 16, sfpSlots: 2 } }),
-  device('switch24', 'switches', 'switch', { options: { ports: 24, sfpSlots: 4 } }),
-  device('l3switch24', 'switches', 'l3switch', { options: { ports: 24, sfpSlots: 4 } }),
-  device('l3switch48', 'switches', 'l3switch', { options: { ports: 48, sfpSlots: 4 } }),
+  device('switch8', 'switches', 'switch', { options: { ports: 8 } }),
+  device('switch16', 'switches', 'switch', { options: { ports: 16 } }),
+  device('switch24', 'switches', 'switch', { options: { ports: 24 } }),
+  device('l3switch24', 'switches', 'l3switch', { options: { ports: 24 } }),
+  device('l3switch48', 'switches', 'l3switch', { options: { ports: 48 } }),
 
-  device('router2', 'routers', 'router', { options: { ports: 2, sfpSlots: 1 } }),
-  device('router4', 'routers', 'router', { options: { ports: 4, sfpSlots: 1 } }),
-  device('routerSerial', 'routers', 'router', { options: { ports: 2, serialPorts: 2, sfpSlots: 0 }, features: ['medium.serial'] }),
-  device('routerWan', 'routers', 'router', { options: { ports: 4, serialPorts: 2, sfpSlots: 2 }, features: ['medium.serial'] }),
+  device('router2', 'routers', 'router', { options: { ports: 2 } }),
+  device('router4', 'routers', 'router', { options: { ports: 4 } }),
+  device('routerSerial', 'routers', 'router', { options: { ports: 2, serialPorts: 2 }, features: ['medium.serial'] }),
+  device('routerWan', 'routers', 'router', { options: { ports: 4, serialPorts: 2 }, features: ['medium.serial'] }),
+  device('firewall4', 'routers', 'firewall', { options: { ports: 4 } }),
+  device('firewall8', 'routers', 'firewall', { options: { ports: 8 } }),
 
   device('accesspoint', 'wireless', 'accesspoint'),
 
@@ -156,11 +158,11 @@ export function priceOf(item: ShopItem): number {
   if (item.kind === 'sfp') return PRICES.sfp[item.module];
   if (item.kind === 'area') return item.preset.key === 'rack' ? PRICES.rack : 0;
   const o = item.options ?? {};
-  const ports = o.ports ?? (item.type === 'switch' || item.type === 'l3switch' ? 8 : item.type === 'router' ? 2 : 1);
+  const ports = o.ports ?? (item.type === 'switch' || item.type === 'l3switch' ? 8 : item.type === 'router' ? 2 : item.type === 'firewall' ? 4 : 1);
   const interfaces: NetInterface[] = [
     ...Array.from({ length: ports }, (_, i) => ({ index: i, mac: '' })),
     ...Array.from({ length: o.serialPorts ?? 0 }, (_, i) => ({ index: ports + i, mac: '', serial: true })),
-    ...Array.from({ length: o.sfpSlots ?? (item.type === 'switch' ? 2 : item.type === 'l3switch' ? 4 : item.type === 'router' ? 1 : 0) }, (_, i) => ({ index: 100 + i, mac: '', sfpSlot: true })),
+    ...Array.from({ length: o.sfpSlots ?? 0 }, (_, i) => ({ index: 100 + i, mac: '', sfpSlot: true })),
   ];
   return devicePrice({
     type: item.type,

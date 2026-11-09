@@ -138,3 +138,75 @@ group('BGP', () => {
     expect(sim.getDeviceState(r2).console.some((l) => l.code === 'bgp.badPeerAs')).toBe(true);
   });
 });
+
+group('OSPF mit mehreren Wegen und Adressen', () => {
+  /** Drei Router an einem LAN-Switch, R1–R2 zusätzlich direkt verbunden, R3–R4 als Transfernetz. */
+  function mesh(r4Address = '10.0.34.6/30') {
+    const net = new NetBuilder();
+    const sw = net.add('switch', 'SW');
+    const r1 = net.router('R1', ['192.168.1.1/24', '10.0.0.1/24', '10.0.12.1/30', '172.16.1.1/24']);
+    const r2 = net.router('R2', ['192.168.2.1/24', '10.0.0.2/24', '10.0.12.2/30']);
+    const r3 = net.router('R3', ['192.168.3.1/24', '10.0.0.3/24', '10.0.34.5/30']);
+    const r4 = net.router('R4', ['192.168.4.1/24', r4Address]);
+    const pcs = [1, 2, 3, 4].map((n) => net.host(`PC${n}`, `192.168.${n}.10`, '24', `192.168.${n}.1`));
+    [r1, r2, r3, r4].forEach((r, i) => net.link(pcs[i]!, r));
+    net.link(r1, sw);
+    net.link(r2, sw);
+    net.link(r3, sw);
+    net.link(r1, r2);
+    net.link(r3, r4);
+    const networks = [
+      { network: '10.0.0.0', mask: '255.255.0.0', area: 0 },
+      { network: '192.168.0.0', mask: '255.255.0.0', area: 0 },
+    ];
+    for (const r of [r1, r2, r3, r4]) net.apply((t) => setOspf(t, r, { networks }));
+    return { net, routers: [r1, r2, r3, r4], pcs };
+  }
+
+  it('konvergiert ohne LSU-Sturm und bleibt stabil', () => {
+    const { net, routers, pcs } = mesh();
+    const sim = new Simulation(net.topology);
+    sim.runUntil(10_000);
+    const lsus = () => sim.getPacketLog().filter((e) => e.frame.payload.kind === 'ipv4' && e.frame.payload.payload.kind === 'ospf' && e.frame.payload.payload.type === 'lsu').length;
+    for (const r of routers) expect(sim.getDeviceState(r).ospf!.neighbors.every((n) => n.state === 'full')).toBe(true);
+    const before = lsus();
+    sim.runUntil(40_000);
+    // Im eingeschwungenen Zustand nur noch Hellos.
+    expect(lsus() - before).toBe(0);
+    expect(routeTo(sim, routers[0]!, '192.168.4.0')).toMatchObject({ kind: 'ospf', via: parseIp('10.0.0.3') });
+    sim.ping(pcs[0]!, '192.168.4.10');
+    sim.runUntil(46_000);
+    expect(replies(sim, pcs[0]!)).toHaveLength(4);
+  });
+
+  it('Nachbar aus einem anderen Netz: Meldung statt hängender Nachbarschaft', () => {
+    const { net, routers } = mesh('10.0.34.9/30');
+    const sim = new Simulation(net.topology);
+    sim.runUntil(10_000);
+    expect(sim.getDeviceState(routers[3]!).ospf!.neighbors).toHaveLength(0);
+    expect(sim.getDeviceState(routers[3]!).console.some((l) => l.code === 'ospf.subnetMismatch')).toBe(true);
+  });
+});
+
+group('Loopback-Interfaces', () => {
+  it('Router-ID aus dem Loopback, OSPF kündigt /32 an, Ping an den Loopback über zwei Router', async () => {
+    const { setLoopback } = await import('../model/topology');
+    const net = new NetBuilder();
+    const pc = net.host('PC', '192.168.1.10', '24', '192.168.1.1');
+    const r1 = net.router('R1', ['192.168.1.1/24', '10.0.12.1/30']);
+    const r2 = net.router('R2', ['10.0.12.2/30']);
+    net.link(pc, r1);
+    net.link(r1, r2);
+    net.apply((t) => setLoopback(t, r2, 0, '10.255.0.2', '255.255.255.0'));
+    const networks = [{ network: '0.0.0.0', mask: '0.0.0.0', area: 0 }];
+    net.apply((t) => setOspf(t, r1, { networks }));
+    net.apply((t) => setOspf(t, r2, { networks }));
+    const sim = new Simulation(net.topology);
+    sim.runUntil(8000);
+    expect(sim.getDeviceState(r2).ospf!.routerId).toBe('10.255.0.2');
+    expect(sim.getRoutes(r1).find((r) => r.kind === 'ospf' && r.network === parseIp('10.255.0.2'))).toMatchObject({ prefix: 32 });
+    sim.ping(pc, '10.255.0.2');
+    sim.runUntil(14_000);
+    expect(replies(sim, pc)).toHaveLength(4);
+  });
+});

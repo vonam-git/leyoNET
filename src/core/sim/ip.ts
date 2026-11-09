@@ -1,8 +1,10 @@
+import { DhcpServer, type DhcpHost } from './dhcp';
+import { poolScopeFor } from '../net/dhcp';
 import type { Device, StaticNat, Topology } from '../model/types';
 import { routingModeOf } from '../model/devices';
 import { autoRoutes } from '../net/autoroute';
 import { LIMITED_BROADCAST, broadcastOf, formatIp, isCgnatRange, isPrivate, parseIp } from '../net/ipv4';
-import { buildRoutes, decodeIface, interfaceAddresses, lookupRoute, macOfIface, relayOf, subifId, type IfaceAddress, type Route } from '../net/routing';
+import { buildRoutes, decodeIface, interfaceAddresses, lookupRoute, macOfIface, relayOf, subifId, vrfOfIface, type IfaceAddress, type Route } from '../net/routing';
 import {
   BROADCAST_MAC,
   DHCP_CLIENT_PORT,
@@ -72,6 +74,8 @@ export type SendError = 'noRoute' | 'hostUnreachable' | 'gatewayUnreachable';
 export interface SendOptions {
   src?: string;
   ttl?: number;
+  /** Routingtabelle einer VRF statt der globalen («ping vrf KUNDE-A …»). */
+  vrf?: string;
 }
 
 const isLoopback = (ip: number) => ip >>> 24 === 127;
@@ -90,6 +94,18 @@ export class IpNode implements SimNode {
   readonly v6: Ip6Stack;
   /** Paketfilter (nur aktiv, wenn das Gerät eine Firewall hat). */
   readonly firewall: Firewall;
+
+  /**
+   * Prüft die Firewall auch Pakete an das Gerät selbst? Endgeräte immer, die
+   * Firewall als Gerät ebenfalls (schützt ihre eigenen Adressen, z.B. SSH vom WAN);
+   * Router nur weitergeleitete Pakete. Ausnahme: Pakete der eigenen VPN-Gegenstellen (IKE, ESP).
+   */
+  protected guardsSelf(src?: string): boolean {
+    if (!this.forwarding) return true;
+    const device = this.ctx.device();
+    if (device?.type !== 'firewall') return false;
+    return !src || !device.vpn?.some((v) => v.peer === src);
+  }
 
   constructor(readonly ctx: NodeContext) {
     const self = this;
@@ -110,7 +126,7 @@ export class IpNode implements SimNode {
         dynamicRoutes6: () => this.dynamicRoutes6(),
         // Dieselbe Firewall wie für IPv4: Endgeräte prüfen eingehende, Router weitergeleitete Pakete.
         filter6: (packet, inIndex, forwarded) => {
-          if (forwarded !== this.forwarding || packet.payload.kind === 'icmpv6' || packet.payload.kind === 'ipv4') return true;
+          if ((forwarded ? !this.forwarding : !this.guardsSelf(packet.src)) || packet.payload.kind === 'icmpv6' || packet.payload.kind === 'ipv4') return true;
           return this.firewall.allows(asIpv4View(packet, packet.payload), inIndex);
         },
         onTunnel: (packet, inner, index) => this.onTunnel(packet, inner, index),
@@ -173,6 +189,22 @@ export class IpNode implements SimNode {
     const device = this.effectiveDevice();
     return device ? buildRoutes(device).routes : [];
   }
+
+  /** VRF eines logischen Interfaces (undefined = global). */
+  vrfOf(index: number): string | undefined {
+    const device = this.effectiveDevice();
+    return device && index >= 0 ? vrfOfIface(device, index) : undefined;
+  }
+
+  /** Routingtabelle einer VRF; ohne Namen die globale (mit dynamischen Routen). */
+  routesIn(vrf?: string): Route[] {
+    if (!vrf) return this.routes();
+    const device = this.effectiveDevice();
+    return device ? buildRoutes(device, vrf).routes : [];
+  }
+
+  /** VRF des Pakets, das gerade zugestellt wird: Antworten (Ping, ICMP) gehen in dieselbe VRF zurück. */
+  #replyVrf: string | undefined;
 
   arpEntries(): ArpEntry[] {
     const now = this.ctx.now;
@@ -307,7 +339,7 @@ export class IpNode implements SimNode {
     if (!iface) return;
     const forMe = parseIp(arp.targetIp) === iface.ip || this.answersArpFor(index, arp.targetIp);
     // Wie RFC 826: Absender lernen, wenn die Anfrage uns gilt oder er schon bekannt ist.
-    if (forMe || this.#arp.has(arp.senderIp)) this.#learn(arp.senderIp, arp.senderMac, index);
+    if (forMe || this.#arp.has(this.#arpKey(arp.senderIp, index))) this.#learn(arp.senderIp, arp.senderMac, index);
     if (arp.op === 'request' && forMe) {
       this.sendFrame(index, {
         src: iface.mac,
@@ -324,11 +356,18 @@ export class IpNode implements SimNode {
     }
   }
 
+  /** ARP-Cache je VRF: Dieselbe Adresse kann in zwei VRFs zu verschiedenen Geräten gehören. */
+  #arpKey(ip: string, index: number): string {
+    const vrf = this.vrfOf(index);
+    return vrf ? `${vrf}|${ip}` : ip;
+  }
+
   #learn(ip: string, mac: string, iface: number) {
-    this.#arp.set(ip, { ip, mac, iface, expires: this.ctx.now + ARP_TTL });
-    const pending = this.#pending.get(ip);
+    const key = this.#arpKey(ip, iface);
+    this.#arp.set(key, { ip, mac, iface, expires: this.ctx.now + ARP_TTL });
+    const pending = this.#pending.get(key);
     if (!pending) return;
-    this.#pending.delete(ip);
+    this.#pending.delete(key);
     for (const waiter of pending.waiters) waiter.onMac(mac);
   }
 
@@ -336,7 +375,7 @@ export class IpNode implements SimNode {
   #resolve(index: number, ip: number, waiter: Waiter) {
     // Punkt-zu-Punkt-Leitungen brauchen keine Adressauflösung.
     if (this.isSerial(index)) return waiter.onMac('');
-    const key = formatIp(ip);
+    const key = this.#arpKey(formatIp(ip), index);
     const cached = this.#arp.get(key);
     if (cached && cached.expires > this.ctx.now) {
       waiter.onMac(cached.mac);
@@ -404,7 +443,8 @@ export class IpNode implements SimNode {
     else if (this.isOwn(dst) || broadcast) {
       // Endgerät mit Firewall: eingehende Pakete prüfen (Broadcasts und DHCP-Antworten sind immer erlaubt).
       const dhcpReply = packet.payload.kind === 'udp' && packet.payload.dstPort === DHCP_CLIENT_PORT;
-      if (!this.forwarding && !broadcast && !dhcpReply && !this.firewall.allows(packet, index)) return;
+      if (this.guardsSelf(packet.src) && !broadcast && !dhcpReply && !this.firewall.allows(packet, index)) return;
+      if (!this.localAllowed(index, packet)) return;
       this.#deliver(packet, broadcast, index, srcMac);
     }
     else if (this.forwarding && iface) this.#forward(iface, packet);
@@ -445,6 +485,11 @@ export class IpNode implements SimNode {
     this.#forward({ index: -1, mac: '', ip: parseIp(via) ?? 0, prefix: 29 }, packet);
   }
 
+  /** Darf ein Paket an das Gerät selbst zugestellt werden (z.B. Zugriffsliste am VLAN-Interface)? */
+  protected localAllowed(_index: number, _packet: Ipv4Packet): boolean {
+    return true;
+  }
+
   /** Eingehende Übersetzung (NAT) vor der Zustellung; null = nichts zu übersetzen. */
   protected inbound(_iface: IfaceAddress, _packet: Ipv4Packet): Ipv4Packet | null {
     return null;
@@ -466,7 +511,8 @@ export class IpNode implements SimNode {
     if (this.tunnelOut(inIface, { ...packet, ttl: packet.ttl - 1 })) return;
     if (this.vpnRoute({ ...packet, ttl: packet.ttl - 1 })) return;
     const dst = parseIp(packet.dst)!;
-    const route = lookupRoute(this.routes(), dst);
+    // VRF: Das Paket bleibt in der Tabelle des Anschlusses, über den es kam.
+    const route = lookupRoute(this.routesIn(this.vrfOf(inIface.index)), dst);
     const out = route && this.interfaces().find((i) => i.index === route.iface);
     if (!route || !out) {
       this.#icmpError(inIface, packet, 'destUnreachable', 'net');
@@ -498,10 +544,20 @@ export class IpNode implements SimNode {
       },
       ...(code ? { code } : {}),
     };
-    this.sendIp(original.src, message, { src: formatIp(from.ip) });
+    this.sendIp(original.src, message, { src: formatIp(from.ip), ...(this.vrfOf(from.index) ? { vrf: this.vrfOf(from.index) } : {}) });
   }
 
   #deliver(packet: Ipv4Packet, broadcast: boolean, index: number, srcMac = '') {
+    const before = this.#replyVrf;
+    this.#replyVrf = this.vrfOf(index);
+    try {
+      this.#dispatch(packet, broadcast, index, srcMac);
+    } finally {
+      this.#replyVrf = before;
+    }
+  }
+
+  #dispatch(packet: Ipv4Packet, broadcast: boolean, index: number, srcMac: string) {
     const payload = packet.payload;
     if (payload.kind === 'ospf') {
       this.onOspf(packet, payload, index);
@@ -556,7 +612,7 @@ export class IpNode implements SimNode {
       if ((payload.kind === 'udp' || payload.kind === 'tcp') && parseIp6(dstText) !== null && this.v6.enabled()) {
         // Eigene Verbindung merken, damit die Antworten durch die Firewall dürfen.
         const local = options.src ?? this.localIpFor(dstText);
-        if (!this.forwarding && local) this.firewall.track({ kind: 'ipv4', src: local, dst: normalizeIp6(dstText) ?? dstText, ttl: 0, id: 0, payload });
+        if (this.guardsSelf() && local) this.firewall.track({ kind: 'ipv4', src: local, dst: normalizeIp6(dstText) ?? dstText, ttl: 0, id: 0, payload });
         this.v6.send(dstText, payload, { ...(options.src ? { src: options.src } : {}), ...(options.ttl !== undefined ? { hopLimit: options.ttl } : {}) }, onError);
       } else if (parseIp6(dstText) !== null) onError?.('noRoute');
       return;
@@ -564,7 +620,7 @@ export class IpNode implements SimNode {
     const build = (src: string): Ipv4Packet => {
       const packet: Ipv4Packet = { kind: 'ipv4', src: options.src ?? src, dst: dstText, ttl: options.ttl ?? DEFAULT_TTL, id: ++this.#ipId, payload };
       // Endgerät mit Firewall: eigene Verbindungen merken, damit die Antworten herein dürfen.
-      if (!this.forwarding) this.firewall.track(packet);
+      if (this.guardsSelf()) this.firewall.track(packet);
       return packet;
     };
 
@@ -585,7 +641,7 @@ export class IpNode implements SimNode {
       return;
     }
 
-    const route = lookupRoute(this.routes(), dst);
+    const route = lookupRoute(this.routesIn(options.vrf ?? this.#replyVrf), dst);
     const iface = route && this.interfaces().find((i) => i.index === route.iface);
     if (!route || !iface) {
       onError?.('noRoute');
@@ -767,7 +823,8 @@ export class ForwardingNode extends IpNode {
       ctx,
       tcp: this.tcp,
       device: () => this.routingDevice(),
-      interfaces: () => this.interfaces(),
+      // Routingprotokolle laufen nur in der globalen Tabelle; Anschlüsse in einer VRF nehmen nicht teil.
+      interfaces: () => this.interfaces().filter((i) => !this.vrfOf(i.index)),
       routesExcept: (kind) => this.#combine(kind),
       sendMulticast: (index, group, payload) => this.sendMulticast(index, group, payload),
       sendIp: (dst, payload, options, onError) => this.sendIp(dst, payload, options, onError),
@@ -797,7 +854,7 @@ export class ForwardingNode extends IpNode {
   /** Physische Verbindung eines logischen Interfaces; VLAN-Interfaces (SVI) gelten als verbunden. */
   ifaceUp(index: number): boolean {
     const ref = decodeIface(index);
-    return ref.kind === 'svi' ? true : this.ctx.isConnected(ref.port);
+    return ref.kind === 'svi' || ref.kind === 'loopback' ? true : this.ctx.isConnected(ref.port);
   }
 
   protected override linkUp6(index: number): boolean {
@@ -922,6 +979,43 @@ export class RouterNode extends ForwardingNode {
   /** Site-to-Site-VPN (IPsec). */
   readonly vpn: Vpn;
 
+  /** DHCP-Server aus den Pools («ip dhcp pool»). */
+  readonly pools: DhcpServer;
+
+  /**
+   * Pools: Anfragen direkt am Interface bedient der Pool im Netz dieses Interfaces,
+   * weitergeleitete (giaddr) der Pool im Netz des Relays. Absender ist die Interface-Adresse.
+   */
+  #poolServer(ctx: NodeContext): DhcpServer {
+    const self = this;
+    const host: DhcpHost = {
+      get ctx() {
+        return ctx;
+      },
+      interfaces: () => self.interfaces(),
+      sendIp: (dst, payload) => self.sendIp(dst, payload),
+      sendUnconfiguredBroadcast: (index, payload) => self.sendUnconfiguredBroadcast(index, payload),
+      broadcastOn: (index, payload, src) => self.sendUnconfiguredBroadcast(index, payload, src),
+    };
+    return new DhcpServer(host, {
+      resolve: (packet, msg, index) => {
+        const device = ctx.device();
+        if (!device?.dhcpPools?.length) return null;
+        const all = self.interfaces();
+        const own = msg.giaddr ? (all.find((i) => formatIp(i.ip) === packet.dst) ?? all.find((i) => i.index === index)) : all.find((i) => i.index === index);
+        if (!own) return null;
+        const client = msg.giaddr ? parseIp(msg.giaddr) : own.ip;
+        if (client === null) return null;
+        const found = poolScopeFor(device, client, all.map((i) => i.ip));
+        if (!found) {
+          if (msg.giaddr) ctx.print('dhcpServer.noScope', { relay: msg.giaddr });
+          return null;
+        }
+        return { scope: found.scope, own, leaseTime: found.leaseTime };
+      },
+    });
+  }
+
   constructor(ctx: NodeContext) {
     super(ctx);
     const seq = deviceSeq(ctx.device()?.id ?? 'd0');
@@ -937,6 +1031,7 @@ export class RouterNode extends ForwardingNode {
       seq,
     );
     startSshServer(this, ctx);
+    this.pools = this.#poolServer(ctx);
     this.ppp = new PppLinks(
       ctx,
       (port, control) => this.sendFrame(port, { src: '', dst: '', payload: control }),
@@ -989,8 +1084,8 @@ export class RouterNode extends ForwardingNode {
     return this.vpn.state();
   }
 
-  /** «ping» aus der Befehlszeile des Routers. */
-  ping(target: string) {
+  /** «ping» aus der Befehlszeile des Routers; mit VRF über deren Tabelle. */
+  ping(target: string, vrf?: string) {
     this.#ping?.cancel();
     // IPv6-Ziel: Echo als ICMPv6 über den IPv6-Stack.
     const v6 = parseIp(target) === null && parseIp6(target) !== null;
@@ -1001,7 +1096,9 @@ export class RouterNode extends ForwardingNode {
             if (payload.kind === 'icmp') this.v6.send(dst, { ...payload, kind: 'icmpv6' }, options?.ttl !== undefined ? { hopLimit: options.ttl } : {}, onError);
           },
         }
-      : this;
+      : vrf
+        ? { ctx: this.ctx, sendIp: (dst, payload, options, onError) => this.sendIp(dst, payload, { ...options, vrf }, onError) }
+        : this;
     const run = new PingRun(via, v6 ? (normalizeIp6(target) ?? target) : target, ++this.#pingId, '');
     this.#ping = run;
     run.start();
@@ -1103,7 +1200,8 @@ export class RouterNode extends ForwardingNode {
 
   override state(): object {
     const vpn = this.vpn.state();
-    return { ...super.state(), nat: this.natEntries(), ...(this.ppp.status().length ? { ppp: this.ppp.status() } : {}), ...(vpn.length ? { vpn } : {}) };
+    const leases = this.pools.leases();
+    return { ...super.state(), ...(leases.length ? { dhcpLeases: leases } : {}), nat: this.natEntries(), ...(this.ppp.status().length ? { ppp: this.ppp.status() } : {}), ...(vpn.length ? { vpn } : {}) };
   }
 
   /**
@@ -1120,6 +1218,8 @@ export class RouterNode extends ForwardingNode {
     if (fromClient) {
       const device = this.ctx.device();
       const server = device && relayOf(device, index);
+      // Eigene Pools, wenn am Interface kein Relay eingetragen ist (oder die Anfrage von einem Relay kommt).
+      if (device?.dhcpPools?.length && (!server || msg.giaddr)) return this.pools.onMessage(packet, msg, index);
       const own = this.interfaces().find((i) => i.index === index);
       if (!server || !own || msg.giaddr) return;
       this.ctx.print('relay.forward', { op: msg.op, server });

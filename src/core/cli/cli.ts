@@ -31,6 +31,27 @@ import {
   setSvi,
   removeSvi,
   setVlanName,
+  createVlan,
+  deleteVlan,
+  setTrunkAllowed,
+  setTrunkNative,
+  trunkAllows,
+  usedVlans,
+  vlanExists,
+  setDefaultGateway,
+  setVniVlan,
+  setVxlanSource,
+  addVniPeer,
+  removeVniPeer,
+  addVrf,
+  removeVrf,
+  setInterfaceVrf,
+  addVrfRoute,
+  removeVrfRoute,
+  setPortChannel,
+  channelMembers,
+  setLoopback,
+  removeLoopback,
   addStaticNat,
   removeStaticNat,
   setBgp,
@@ -47,16 +68,25 @@ import {
   setInterfaceIpv6,
   setOspf6,
   setRipng,
+  setAccessList,
+  setPortAccessList,
+  setSviAccessList,
+  setDhcpPool,
+  setDhcpExcluded,
+  setFirewall,
+  firewallZone,
 } from '../model/topology';
+import { formatAclRule, formatFirewallRule, parseRule } from './rules';
+import type { FirewallConfig } from '../model/security';
 import { ipv6Links } from '../sim/ip6';
-import type { BgpConfig, CliConfig, Device, DeviceType, Ospf6Config, RipngConfig, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, Topology } from '../model/types';
+import type { BgpConfig, CliConfig, Device, DhcpPool, DeviceType, Ospf6Config, RipngConfig, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, Topology } from '../model/types';
 import { formatIp, maskToText, networkOf, parseIp, parseMask } from '../net/ipv4';
 import { formatCidr6, formatIp6, parseCidr6, parseIp6 } from '../net/ipv6';
-import { buildRoutes, decodeIface, logicalInterfaces, type Route } from '../net/routing';
+import { buildRoutes, decodeIface, logicalInterfaces, vrfOfIface, type Route } from '../net/routing';
 import type { DeviceState } from '../sim/simulation';
 import { cliIfaceName, ifaceIdOf, parseIfaceName, usesPortNames } from './names';
 
-export type CliMode = 'user' | 'enable' | 'config' | 'if' | 'vlan' | 'line' | 'router-ospf' | 'router-rip' | 'router-bgp' | 'router-ospf6' | 'router-ripng';
+export type CliMode = 'user' | 'enable' | 'config' | 'if' | 'vlan' | 'line' | 'router-ospf' | 'router-rip' | 'router-bgp' | 'router-ospf6' | 'router-ripng' | 'acl' | 'nve' | 'dhcp';
 
 export interface CliSession {
   device: string;
@@ -65,6 +95,10 @@ export interface CliSession {
   targets?: number[];
   /** VLAN im VLAN-Modus. */
   vlan?: number;
+  /** Name der Zugriffsliste im ACL-Modus. */
+  acl?: string;
+  /** Name des DHCP-Pools im DHCP-Modus. */
+  pool?: string;
   /** Nächste Eingabe ist ein Passwort (verdeckt eingeben). */
   awaiting?: 'enable-password';
   /** Über SSH angemeldet (sonst Konsole). */
@@ -87,12 +121,12 @@ export interface CliOutput {
   /** Sitzung beendet («exit» im obersten Modus). */
   close?: boolean;
   /** Etwas, das die Simulation ausführen soll (z.B. ping). */
-  action?: { kind: 'ping'; target: string };
+  action?: { kind: 'ping'; target: string; vrf?: string };
 }
 
 /** Gerätetypen mit Befehlszeile. */
 export function hasCli(type: DeviceType): boolean {
-  return type === 'router' || type === 'switch' || type === 'l3switch';
+  return type === 'router' || type === 'firewall' || type === 'switch' || type === 'l3switch';
 }
 
 export function startSession(device: Device, remote = false): { session: CliSession; lines: string[] } {
@@ -130,6 +164,12 @@ export function prompt(topology: Topology, session: CliSession): string {
       return `${name}(config-ospf6)#`;
     case 'router-ripng':
       return `${name}(config-router)#`;
+    case 'acl':
+      return `${name}(config-ext-nacl)#`;
+    case 'nve':
+      return `${name}(config-if-nve)#`;
+    case 'dhcp':
+      return `${name}(dhcp-config)#`;
   }
 }
 
@@ -155,14 +195,15 @@ interface Command {
   run: Handler;
 }
 
-const ROUTERS: DeviceType[] = ['router'];
+const ROUTERS: DeviceType[] = ['router', 'firewall'];
 /** IPv6-Befehle: Router und Layer-3-Switch (dort auf den VLAN-Interfaces). */
-const ROUTERS6: DeviceType[] = ['router', 'l3switch'];
+const ROUTERS6: DeviceType[] = ['router', 'firewall', 'l3switch'];
 const SWITCHES: DeviceType[] = ['switch', 'l3switch'];
-const L3: DeviceType[] = ['router', 'l3switch'];
+const L3: DeviceType[] = ['router', 'firewall', 'l3switch'];
+const L3_AND_SWITCH: DeviceType[] = [...L3, 'switch'];
 const EXEC: CliMode[] = ['user', 'enable'];
 const ROUTER_MODES: CliMode[] = ['router-ospf', 'router-rip', 'router-bgp', 'router-ospf6', 'router-ripng'];
-const CONFIG_ALL: CliMode[] = ['config', 'if', 'vlan', 'line', ...ROUTER_MODES];
+const CONFIG_ALL: CliMode[] = ['config', 'if', 'vlan', 'line', 'acl', 'nve', 'dhcp', ...ROUTER_MODES];
 
 /** Kurze Erklärungen für Schlüsselwörter mitten in einem Befehl (für «?»). */
 const KEYWORD_HELP: Record<string, string> = {
@@ -238,6 +279,17 @@ const KEYWORD_HELP: Record<string, string> = {
   hdlc: 'Cisco HDLC',
   'address-family': 'Address family configuration',
   'exit-address-family': 'Leave the address family',
+  'access-list': 'Access list (ACL)',
+  'access-lists': 'Access lists (ACL) with hit counters',
+  'access-group': 'Apply an access list to this port',
+  extended: 'Extended access list (protocol, source, destination, port)',
+  permit: 'Let matching packets through',
+  deny: 'Drop matching packets',
+  remark: 'Comment',
+  firewall: 'Packet filter (firewall)',
+  rule: 'Firewall rule',
+  default: 'Action when no rule matches',
+  stateful: 'Let replies to allowed connections back in',
 };
 
 function ok(lines: string[] = []): Partial<CliOutput> {
@@ -276,6 +328,12 @@ function errorLine(error: TopologyError): string {
       return `% Invalid user name: ${p.name ?? ''}`;
     case 'passwordRequired':
       return '% Password required';
+    case 'invalidAclName':
+      return `% Invalid access list name: ${p.value ?? ''} (letters, digits, - and _)`;
+    case 'unknownAcl':
+      return `% Access list ${p.name ?? ''} not found`;
+    case 'tooMany':
+      return `% Too many entries (max. ${p.max ?? ''})`;
     default:
       return `% Error: ${error.code}`;
   }
@@ -317,10 +375,67 @@ function addressOn(call: Call, ip: string, mask: string): Partial<CliOutput> {
       const ref = decodeIface(id);
       if (ref.kind === 'sub') return setSubinterface(t, call.device.id, ref.port, ref.vlan, ip, mask);
       if (ref.kind === 'svi') return setSvi(t, call.device.id, ref.vlan, ip, mask);
+      if (ref.kind === 'loopback') return setLoopback(t, call.device.id, ref.id, ip, mask);
       if (usesPortNames(call.device)) return { ok: false, error: { code: 'unknownInterface' } };
       return setInterfaceAddress(t, call.device.id, ref.port, ip, mask);
     }),
   );
+}
+
+/** Alle gewählten logischen Interfaces (Ports, Subinterfaces, SVIs, Loopbacks). */
+function forLogical(call: Call, step: (t: Topology, id: number) => Result<Topology>): Partial<CliOutput> {
+  return applyAll(
+    call.env.topology,
+    (call.session.targets ?? []).map((id) => (t: Topology) => step(t, id)),
+  );
+}
+
+function addVrfRouteCli(call: Call, vrf: string, prefixText: string, via: string): Partial<CliOutput> {
+  const { device, env } = call;
+  const [network, prefix] = splitCidr(prefixText);
+  if (parseIp(via) !== null) return apply(addVrfRoute(env.topology, device.id, vrf, { network, mask: prefix, gateway: via }));
+  const ref = parseIfaceName(device, via);
+  if (!ref) return ok([`% Invalid next hop: ${via}`]);
+  return apply(addVrfRoute(env.topology, device.id, vrf, { network, mask: prefix, iface: ifaceIdOf(ref) }));
+}
+
+function removeVrfRouteCli(call: Call, vrf: string, prefixText: string): Partial<CliOutput> {
+  const { device, env } = call;
+  const [network, prefix] = splitCidr(prefixText);
+  const routes = device.vrfs?.find((v) => v.name === vrf)?.routes ?? [];
+  const index = routes.findIndex((r) => r.network === network && parseMask(r.mask) === parseMask(prefix));
+  if (index < 0) return ok(['% No such route']);
+  return apply(removeVrfRoute(env.topology, device.id, vrf, index));
+}
+
+function showVrf(device: Device): string[] {
+  const vrfs = device.vrfs ?? [];
+  if (!vrfs.length) return ['(no VRFs)'];
+  const rows = vrfs.map((v) => [v.name, logicalInterfaces(device).filter((id) => vrfOfIface(device, id) === v.name).map((id) => cliIfaceName(device, id)).join(', ') || '–']);
+  return table(['Name', 'Interfaces'], rows);
+}
+
+/** Nur VLAN-Interfaces gewählt? («no shutdown» auf «interface vlan 1» ist dann ohne Wirkung, aber kein Fehler.) */
+function onlySvis(call: Call): boolean {
+  const targets = call.session.targets ?? [];
+  return targets.length > 0 && targets.every((id) => decodeIface(id).kind === 'svi');
+}
+
+/** «ip access-group»: an Ports nur «in»; an VLAN-Interfaces «in» und «out». */
+function accessGroup(call: Call, direction: 'in' | 'out' | 'both', name: string | null): Partial<CliOutput> {
+  const targets = call.session.targets ?? [];
+  const steps = targets.map((id) => (t: Topology): Result<Topology> => {
+    const ref = decodeIface(id);
+    if (ref.kind === 'svi') {
+      if (direction !== 'both') return setSviAccessList(t, call.device.id, ref.vlan, direction, name);
+      const first = setSviAccessList(t, call.device.id, ref.vlan, 'in', null);
+      return first.ok ? setSviAccessList(first.value, call.device.id, ref.vlan, 'out', null) : first;
+    }
+    if (ref.kind !== 'port' || direction === 'out') return { ok: false, error: { code: 'notAclCapable' } };
+    return setPortAccessList(t, call.device.id, id, name);
+  });
+  if (direction === 'out' && targets.some((id) => decodeIface(id).kind !== 'svi')) return ok(['% Outgoing access lists only on VLAN interfaces (interface vlan N)']);
+  return applyAll(call.env.topology, steps);
 }
 
 function forPorts(call: Call, step: (t: Topology, port: number) => Result<Topology>): Partial<CliOutput> {
@@ -352,6 +467,9 @@ function exitMode(session: CliSession): Partial<CliOutput> {
     case 'router-bgp':
     case 'router-ospf6':
     case 'router-ripng':
+    case 'acl':
+    case 'nve':
+    case 'dhcp':
       return { session: { device: session.device, mode: 'config', ...(session.remote ? { remote: true } : {}) } };
     case 'config':
       return { session: { device: session.device, mode: 'enable', ...(session.remote ? { remote: true } : {}) } };
@@ -390,6 +508,35 @@ const COMMANDS: Command[] = [
   { modes: EXEC, syntax: 'show version', help: 'Software version', run: ({ device }) => ok(showVersion(device)) },
   { modes: ['enable'], syntax: 'show running-config', help: 'Current operating configuration', run: ({ device }) => ok(runningConfig(device)) },
   { modes: EXEC, types: L3, syntax: 'show ip route', help: 'IP routing table', run: ({ device, env }) => ok(showIpRoute(device, env)) },
+  { modes: EXEC, types: L3, syntax: 'show ip dhcp pool', help: 'DHCP pools of this device', run: ({ device }) => ok(showDhcpPools(device)) },
+  { modes: EXEC, types: L3, syntax: 'show ip dhcp binding', help: 'Addresses handed out by the DHCP pools', run: ({ env }) => ok(showDhcpBinding(env)) },
+  {
+    modes: EXEC,
+    types: L3,
+    syntax: 'show ip route vrf <word>',
+    help: 'Routing table of a VRF',
+    run: ({ device, env, args }) => (device.vrfs?.some((v) => v.name === args[0]) ? ok(showIpRoute(device, env, args[0])) : ok([`% VRF ${args[0]} does not exist`])),
+  },
+  { modes: EXEC, types: L3, syntax: 'show vrf', help: 'VRFs and their interfaces', run: ({ device }) => ok(showVrf(device)) },
+  {
+    modes: EXEC,
+    types: L3,
+    syntax: 'ping vrf <word> <ip>',
+    help: 'Ping using the routing table of a VRF',
+    run: ({ args, device }) =>
+      device.vrfs?.some((v) => v.name === args[0])
+        ? { lines: [`Sending 4 ICMP echos to ${args[1]} (VRF ${args[0]}):`], action: { kind: 'ping', target: args[1]!, vrf: args[0]! } }
+        : ok([`% VRF ${args[0]} does not exist`]),
+  },
+  { modes: ['config'], types: L3, syntax: 'vrf definition <word>', help: 'Create a VRF (own routing table)', run: ({ device, env, args }) => apply(addVrf(env.topology, device.id, args[0]!)) },
+  { modes: ['config'], types: L3, syntax: 'ip vrf <word>', help: 'Create a VRF (older syntax)', run: ({ device, env, args }) => apply(addVrf(env.topology, device.id, args[0]!)) },
+  { modes: ['config'], types: L3, syntax: 'no vrf definition <word>', help: 'Delete a VRF; its interfaces return to the global table', run: ({ device, env, args }) => apply(removeVrf(env.topology, device.id, args[0]!)) },
+  { modes: ['config'], types: L3, syntax: 'ip route vrf <word> <cidr> <word>', help: 'Static route in a VRF', run: (call) => addVrfRouteCli(call, call.args[0]!, call.args[1]!, call.args[2]!) },
+  { modes: ['config'], types: L3, syntax: 'ip route vrf <word> <ip> <mask> <word>', help: 'Static route in a VRF', run: (call) => addVrfRouteCli(call, call.args[0]!, `${call.args[1]}/${call.args[2]}`, call.args[3]!) },
+  { modes: ['config'], types: L3, syntax: 'no ip route vrf <word> <cidr>', help: 'Remove a static route of a VRF', run: (call) => removeVrfRouteCli(call, call.args[0]!, call.args[1]!) },
+  { modes: ['if'], types: L3, syntax: 'vrf forwarding <word>', help: 'Put this interface into a VRF', run: (call) => forLogical(call, (t, id) => setInterfaceVrf(t, call.device.id, id, call.args[0]!)) },
+  { modes: ['if'], types: L3, syntax: 'ip vrf forwarding <word>', help: 'Put this interface into a VRF (older syntax)', run: (call) => forLogical(call, (t, id) => setInterfaceVrf(t, call.device.id, id, call.args[0]!)) },
+  { modes: ['if'], types: L3, syntax: 'no vrf forwarding', help: 'Back to the global routing table', run: (call) => forLogical(call, (t, id) => setInterfaceVrf(t, call.device.id, id, null)) },
   { modes: EXEC, types: ROUTERS6, syntax: 'show ipv6 route', help: 'IPv6 routing table', run: ({ device, env }) => ok(showIpv6Route(device, env)) },
   { modes: EXEC, types: ROUTERS6, syntax: 'show ipv6 neighbors', help: 'IPv6 neighbour cache (Neighbor Discovery)', run: ({ device, env }) => ok(showIpv6Neighbors(device, env)) },
   { modes: EXEC, types: ROUTERS6, syntax: 'show ipv6 interface brief', help: 'IPv6 addresses per interface', run: ({ device, env }) => ok(showIpv6Brief(device, env)) },
@@ -410,6 +557,10 @@ const COMMANDS: Command[] = [
   { modes: EXEC, types: SWITCHES, syntax: 'show mac address-table', help: 'MAC forwarding table', run: ({ device, env }) => ok(showMacTable(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show vlan brief', help: 'VLAN summary', run: ({ device }) => ok(showVlanBrief(device)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show vlan', help: 'VLAN summary', run: ({ device }) => ok(showVlanBrief(device)) },
+  { modes: EXEC, types: ['switch', 'l3switch'], syntax: 'show etherchannel summary', help: 'Port-channels with the state of their ports', run: ({ device, env }) => ok(showEtherchannel(device, env)) },
+  { modes: EXEC, types: ['l3switch'], syntax: 'show nve vni', help: 'VXLAN segments (VNI, VLAN, VTEPs)', run: ({ device }) => ok(showNveVni(device)) },
+  { modes: EXEC, types: ['l3switch'], syntax: 'show nve peers', help: 'Other VTEPs and the MAC addresses learned behind them', run: ({ device, env }) => ok(showNvePeers(device, env)) },
+  { modes: EXEC, types: SWITCHES, syntax: 'show interfaces trunk', help: 'Trunk ports with allowed and native VLANs', run: ({ device, env }) => ok(showTrunks(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show interfaces status', help: 'Port status', run: ({ device, env }) => ok(showInterfacesStatus(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show spanning-tree', help: 'Spanning tree state', run: ({ device, env }) => ok(showSpanningTree(device, env)) },
 
@@ -428,11 +579,12 @@ const COMMANDS: Command[] = [
   },
   {
     modes: ['config'],
-    types: ['l3switch'],
+    types: SWITCHES,
     syntax: 'interface vlan <vlan>',
-    help: 'Select or create a VLAN interface (SVI)',
+    help: 'Select or create a VLAN interface (SVI; on a layer-2 switch the management address)',
     run: (call) => enterInterface(call, `vlan${call.args[0]}`),
   },
+  { modes: ['config'], types: ['switch', 'l3switch'], syntax: 'interface port-channel <num>', help: 'Configure all ports of a port-channel', run: (call) => enterChannel(call, Number(call.args[0])) },
   {
     modes: ['config'],
     types: SWITCHES,
@@ -442,18 +594,27 @@ const COMMANDS: Command[] = [
   },
   {
     modes: ['config'],
-    types: ['router'],
+    types: L3,
     syntax: 'no interface <iface>',
-    help: 'Delete a subinterface',
+    help: 'Delete a subinterface or loopback',
     run: ({ args, device, env }) => {
       const ref = parseIfaceName(device, args[0]!);
-      if (ref?.kind !== 'sub') return ok(['% Only subinterfaces (e.g. eth0.10) can be deleted']);
+      if (ref?.kind === 'loopback') return apply(removeLoopback(env.topology, device.id, ref.id));
+      if (ref?.kind !== 'sub') return ok(['% Only subinterfaces (e.g. eth0.10) and loopbacks can be deleted']);
       return apply(removeSubinterface(env.topology, device.id, ref.port, ref.vlan));
     },
   },
   {
     modes: ['config'],
-    types: ['l3switch'],
+    types: ['switch'],
+    syntax: 'ip default-gateway <ip>',
+    help: 'Gateway for the management address',
+    run: ({ args, device, env }) => apply(setDefaultGateway(env.topology, device.id, args[0]!)),
+  },
+  { modes: ['config'], types: ['switch'], syntax: 'no ip default-gateway', help: 'Remove the gateway', run: ({ device, env }) => apply(setDefaultGateway(env.topology, device.id, '')) },
+  {
+    modes: ['config'],
+    types: SWITCHES,
     syntax: 'no interface vlan <vlan>',
     help: 'Delete a VLAN interface',
     run: ({ args, device, env }) => apply(removeSvi(env.topology, device.id, Number(args[0]))),
@@ -480,16 +641,25 @@ const COMMANDS: Command[] = [
   {
     modes: ['config'],
     types: SWITCHES,
-    syntax: 'vlan <vlan>',
-    help: 'Create or select a VLAN',
-    run: ({ args, session }) => ({ session: { ...session, mode: 'vlan', vlan: Number(args[0]) } }),
+    syntax: 'vlan <word>',
+    help: 'Create or select a VLAN (several at once: 10,20,30-35)',
+    run: ({ args, device, env, session }) => {
+      const list = parseVlanList(args[0]!);
+      if (!list) return ok([`% Invalid VLAN list: ${args[0]}`]);
+      if (list.length > 1) return applyAll(env.topology, list.map((v) => (t: Topology) => createVlan(t, device.id, v)));
+      const vlan = list[0]!;
+      const next: CliSession = { device: session.device, mode: 'vlan', vlan, ...(session.remote ? { remote: true } : {}) };
+      if (vlanExists(device, vlan) && device.vlanDb) return { session: next };
+      const created = createVlan(env.topology, device.id, vlan);
+      return created.ok ? { topology: created.value, session: next } : { lines: [errorLine(created.error)] };
+    },
   },
   {
     modes: ['config'],
     types: SWITCHES,
     syntax: 'no vlan <vlan>',
-    help: 'Remove the VLAN name',
-    run: ({ args, device, env }) => apply(setVlanName(env.topology, device.id, Number(args[0]), '')),
+    help: 'Delete the VLAN (its ports become inactive)',
+    run: ({ args, device, env }) => apply(deleteVlan(env.topology, device.id, Number(args[0]))),
   },
   {
     modes: ['config'],
@@ -648,6 +818,38 @@ const COMMANDS: Command[] = [
   // --- vlan ------------------------------------------------------------------
   {
     modes: ['vlan'],
+    types: ['l3switch'],
+    syntax: 'vn-segment <num>',
+    help: 'Extend this VLAN over VXLAN with this VNI',
+    run: ({ args, device, env, session }) => apply(setVniVlan(env.topology, device.id, Number(args[0]), session.vlan ?? 1)),
+  },
+  {
+    modes: ['vlan'],
+    types: ['l3switch'],
+    syntax: 'no vn-segment',
+    help: 'Stop extending this VLAN over VXLAN',
+    run: ({ device, env, session }) => {
+      const vni = device.vxlan?.vnis.find((v) => v.vlan === (session.vlan ?? 1));
+      return vni ? apply(setVniVlan(env.topology, device.id, vni.vni, null)) : ok();
+    },
+  },
+  { modes: ['config'], types: ['l3switch'], syntax: 'interface nve1', help: 'VXLAN tunnel endpoint (VTEP)', run: ({ session }) => ({ session: { device: session.device, mode: 'nve', ...(session.remote ? { remote: true } : {}) } }) },
+  { modes: ['config'], types: ['l3switch'], syntax: 'no interface nve1', help: 'Remove the VXLAN configuration', run: ({ device, env }) => apply(clearVxlan(env.topology, device.id)) },
+  {
+    modes: ['nve'],
+    syntax: 'source-interface <iface>',
+    help: 'Source address of the tunnels, usually a loopback',
+    run: ({ args, device, env }) => {
+      const ref = parseIfaceName(device, args[0]!);
+      return ref ? apply(setVxlanSource(env.topology, device.id, ifaceIdOf(ref))) : ok([`% Unknown interface: ${args[0]}`]);
+    },
+  },
+  { modes: ['nve'], syntax: 'no source-interface', help: 'Remove the source interface', run: ({ device, env }) => apply(setVxlanSource(env.topology, device.id, null)) },
+  { modes: ['nve'], syntax: 'member vni <num> peer-ip <ip>', help: 'Another VTEP for this VNI (static ingress replication)', run: ({ args, device, env }) => apply(addVniPeer(env.topology, device.id, Number(args[0]), args[1]!)) },
+  { modes: ['nve'], syntax: 'no member vni <num> peer-ip <ip>', help: 'Remove a VTEP from this VNI', run: ({ args, device, env }) => apply(removeVniPeer(env.topology, device.id, Number(args[0]), args[1]!)) },
+  { modes: ['nve'], syntax: 'no member vni <num>', help: 'Remove all VTEPs of this VNI', run: ({ args, device, env }) => apply(removeVniPeer(env.topology, device.id, Number(args[0]))) },
+  {
+    modes: ['vlan'],
     syntax: 'name <word>',
     help: 'Name of the VLAN',
     run: ({ args, device, env, session }) => apply(setVlanName(env.topology, device.id, session.vlan ?? 1, args[0]!)),
@@ -660,9 +862,9 @@ const COMMANDS: Command[] = [
   { modes: ['if'], types: ROUTERS6, syntax: 'no ipv6 nd managed-config-flag', help: 'Addresses by SLAAC (no M flag)', run: (call) => forLinks6(call, (t, id) => setInterfaceDhcp6(t, call.device.id, id, false)) },
   { modes: ['if'], types: ROUTERS6, syntax: 'ipv6 nd ra dns server <ip6>', help: 'DNS server in router advertisements (RDNSS) and DHCPv6', run: (call) => forLinks6(call, (t, id) => setInterfaceDns6(t, call.device.id, id, call.args[0]!)) },
   { modes: ['if'], types: ROUTERS6, syntax: 'no ipv6 nd ra dns server', help: 'No DNS server in router advertisements', run: (call) => forLinks6(call, (t, id) => setInterfaceDns6(t, call.device.id, id, '')) },
-  { modes: ['if'], types: L3, syntax: 'ip address <cidr>', help: 'Address with prefix length, e.g. 192.168.1.1/24', run: (call) => addressOn(call, ...splitCidr(call.args[0]!)) },
-  { modes: ['if'], types: L3, syntax: 'ip address <ip> <mask>', help: 'Address and netmask', run: (call) => addressOn(call, call.args[0]!, call.args[1]!) },
-  { modes: ['if'], types: L3, syntax: 'no ip address', help: 'Remove the IP address', run: (call) => addressOn(call, '', '') },
+  { modes: ['if'], types: L3_AND_SWITCH, syntax: 'ip address <cidr>', help: 'Address with prefix length, e.g. 192.168.1.1/24', run: (call) => addressOn(call, ...splitCidr(call.args[0]!)) },
+  { modes: ['if'], types: L3_AND_SWITCH, syntax: 'ip address <ip> <mask>', help: 'Address and netmask', run: (call) => addressOn(call, call.args[0]!, call.args[1]!) },
+  { modes: ['if'], types: L3_AND_SWITCH, syntax: 'no ip address', help: 'Remove the IP address', run: (call) => addressOn(call, '', '') },
   {
     modes: ['if'],
     types: L3,
@@ -708,16 +910,248 @@ const COMMANDS: Command[] = [
   },
   { modes: ['if'], types: L3, syntax: 'ip ospf cost <num>', help: 'OSPF cost of this interface (1–65535)', run: (call) => forPorts(call, (t, p) => setOspfCost(t, call.device.id, p, Number(call.args[0]))) },
   { modes: ['if'], types: L3, syntax: 'no ip ospf cost', help: 'Default OSPF cost (10)', run: (call) => forPorts(call, (t, p) => setOspfCost(t, call.device.id, p, null)) },
-  { modes: ['if'], syntax: 'shutdown', help: 'Disable the interface', run: (call) => forPorts(call, (t, p) => setInterfaceShutdown(t, call.device.id, p, true)) },
-  { modes: ['if'], syntax: 'no shutdown', help: 'Enable the interface', run: (call) => forPorts(call, (t, p) => setInterfaceShutdown(t, call.device.id, p, false)) },
+  { modes: ['if'], syntax: 'shutdown', help: 'Disable the interface', run: (call) => (onlySvis(call) ? ok(['% VLAN interfaces stay up here']) : forPorts(call, (t, p) => setInterfaceShutdown(t, call.device.id, p, true))) },
+  { modes: ['if'], syntax: 'no shutdown', help: 'Enable the interface', run: (call) => (onlySvis(call) ? ok() : forPorts(call, (t, p) => setInterfaceShutdown(t, call.device.id, p, false))) },
   { modes: ['if'], syntax: 'description <text>', help: 'Interface description', run: (call) => forPorts(call, (t, p) => setInterfaceDescription(t, call.device.id, p, call.args[0]!)) },
   { modes: ['if'], syntax: 'no description', help: 'Remove the description', run: (call) => forPorts(call, (t, p) => setInterfaceDescription(t, call.device.id, p, '')) },
   { modes: ['if'], types: SWITCHES, syntax: 'switchport mode access', help: 'Access port (one VLAN, untagged)', run: (call) => forPorts(call, (t, p) => setPortTrunk(t, call.device.id, p, false)) },
   { modes: ['if'], types: SWITCHES, syntax: 'switchport mode trunk', help: 'Trunk port (all VLANs, 802.1Q)', run: (call) => forPorts(call, (t, p) => setPortTrunk(t, call.device.id, p, true)) },
-  { modes: ['if'], types: SWITCHES, syntax: 'switchport access vlan <vlan>', help: 'VLAN of this access port', run: (call) => forPorts(call, (t, p) => setPortVlan(t, call.device.id, p, Number(call.args[0]))) },
+  {
+    modes: ['if'],
+    types: SWITCHES,
+    syntax: 'switchport access vlan <vlan>',
+    help: 'VLAN of this access port',
+    run: (call) => {
+      const vlan = Number(call.args[0]);
+      const out = forPorts(call, (t, p) => setPortVlan(t, call.device.id, p, vlan));
+      // Wie Cisco: Ein unbekanntes VLAN wird beim Zuweisen angelegt.
+      return !vlanExists(call.device, vlan) && out.topology ? { ...out, lines: [`% Access VLAN does not exist. Creating vlan ${vlan}`, ...(out.lines ?? [])] } : out;
+    },
+  },
+  {
+    modes: ['if'],
+    types: SWITCHES,
+    syntax: 'switchport trunk allowed vlan <text>',
+    help: 'VLANs on this trunk: list (10,20,30-35), add …, remove …, except …, all, none',
+    run: (call) => forPorts(call, (t, p) => {
+      const current = getDevice(t, call.device.id)?.interfaces[p]?.allowedVlans ?? null;
+      const next = allowedVlans(call.args[0]!, current);
+      return next === undefined ? { ok: false, error: { code: 'invalidVlan' } } : setTrunkAllowed(t, call.device.id, p, next);
+    }),
+  },
+  {
+    modes: ['if'],
+    types: ['switch', 'l3switch'],
+    syntax: 'channel-group <num> mode <word>',
+    help: 'Bundle this port: mode active | passive (LACP) or on (without LACP)',
+    run: (call) => {
+      const mode = call.args[1]!.toLowerCase();
+      if (mode !== 'active' && mode !== 'passive' && mode !== 'on') return ok(['% Mode must be active, passive or on']);
+      return forPorts(call, (t, p) => setPortChannel(t, call.device.id, p, Number(call.args[0]), mode));
+    },
+  },
+  { modes: ['if'], types: ['switch', 'l3switch'], syntax: 'no channel-group', help: 'Remove the port from its port-channel', run: (call) => forPorts(call, (t, p) => setPortChannel(t, call.device.id, p, null)) },
+  { modes: ['if'], types: SWITCHES, syntax: 'no switchport trunk allowed vlan', help: 'All VLANs on this trunk', run: (call) => forPorts(call, (t, p) => setTrunkAllowed(t, call.device.id, p, null)) },
+  { modes: ['if'], types: SWITCHES, syntax: 'switchport trunk native vlan <vlan>', help: 'VLAN sent without a tag on this trunk', run: (call) => forPorts(call, (t, p) => setTrunkNative(t, call.device.id, p, Number(call.args[0]))) },
+  { modes: ['if'], types: SWITCHES, syntax: 'no switchport trunk native vlan', help: 'Native VLAN 1', run: (call) => forPorts(call, (t, p) => setTrunkNative(t, call.device.id, p, 1)) },
   { modes: ['if'], types: SWITCHES, syntax: 'no switchport access vlan', help: 'Back to VLAN 1', run: (call) => forPorts(call, (t, p) => setPortVlan(t, call.device.id, p, 1)) },
   { modes: ['if'], types: SWITCHES, syntax: 'spanning-tree portfast', help: 'Ports with end devices forward at once (always on here)', run: () => ok() },
+  // --- Zugriffslisten (Switches) ---------------------------------------------
+  { modes: EXEC, types: SWITCHES, syntax: 'show access-lists', help: 'Access lists with hit counters', run: ({ device, env }) => ok(showAccessLists(device, env)) },
+  { modes: EXEC, types: SWITCHES, syntax: 'show ip access-lists', help: 'Access lists with hit counters', run: ({ device, env }) => ok(showAccessLists(device, env)) },
+  // --- DHCP-Pools (Router, Layer-3-Switch) ----------------------------------
+  { modes: ['config', 'dhcp'], types: L3, syntax: 'ip dhcp pool <word>', help: 'Create or edit a DHCP pool', run: (call) => enterPool(call, call.args[0]!) },
+  { modes: ['config'], types: L3, syntax: 'no ip dhcp pool <word>', help: 'Delete a DHCP pool', run: ({ device, env, args }) => apply(setDhcpPool(env.topology, device.id, args[0]!, null)) },
+  { modes: ['config'], types: L3, syntax: 'ip dhcp excluded-address <ip> <ip>', help: 'Never hand out these addresses (from to)', run: ({ device, env, args }) => apply(setDhcpExcluded(env.topology, device.id, args[0]!, args[1]!)) },
+  { modes: ['config'], types: L3, syntax: 'ip dhcp excluded-address <ip>', help: 'Never hand out this address', run: ({ device, env, args }) => apply(setDhcpExcluded(env.topology, device.id, args[0]!, undefined)) },
+  { modes: ['config'], types: L3, syntax: 'no ip dhcp excluded-address <ip> <ip>', help: 'Remove an excluded range', run: ({ device, env, args }) => apply(setDhcpExcluded(env.topology, device.id, args[0]!, args[1]!, true)) },
+  { modes: ['config'], types: L3, syntax: 'no ip dhcp excluded-address <ip>', help: 'Remove an excluded address', run: ({ device, env, args }) => apply(setDhcpExcluded(env.topology, device.id, args[0]!, undefined, true)) },
+  { modes: ['dhcp'], types: L3, syntax: 'network <ip> <mask>', help: 'Network of this pool (e.g. network 192.168.10.0 255.255.255.0)', run: (call) => poolChange(call, { network: call.args[0]!, mask: call.args[1]! }) },
+  { modes: ['dhcp'], types: L3, syntax: 'network <cidr>', help: 'Network of this pool (e.g. network 192.168.10.0/24)', run: (call) => { const [n = '', m = ''] = call.args[0]!.split('/'); return poolChange(call, { network: n, mask: m }); } },
+  { modes: ['dhcp'], types: L3, syntax: 'default-router <ip>', help: 'Gateway handed out to clients', run: (call) => poolChange(call, { gateway: call.args[0]! }) },
+  { modes: ['dhcp'], types: L3, syntax: 'no default-router', help: 'Hand out no gateway', run: (call) => poolChange(call, { gateway: undefined }) },
+  { modes: ['dhcp'], types: L3, syntax: 'dns-server <ip>', help: 'DNS server handed out to clients', run: (call) => poolChange(call, { dns: call.args[0]! }) },
+  { modes: ['dhcp'], types: L3, syntax: 'no dns-server', help: 'Hand out no DNS server', run: (call) => poolChange(call, { dns: undefined }) },
+  { modes: ['dhcp'], types: L3, syntax: 'lease <num>', help: 'Lease time in days', run: (call) => poolChange(call, { leaseTime: Number(call.args[0]) * 24 * 3600 }) },
+  { modes: ['dhcp'], types: L3, syntax: 'lease <num> <num>', help: 'Lease time in days and hours', run: (call) => poolChange(call, { leaseTime: (Number(call.args[0]) * 24 + Number(call.args[1])) * 3600 }) },
+  { modes: ['config', 'acl'], types: SWITCHES, syntax: 'ip access-list extended <word>', help: 'Create or edit a named access list', run: (call) => enterAcl(call, call.args[0]!) },
+  {
+    modes: ['config'],
+    types: SWITCHES,
+    syntax: 'no ip access-list extended <word>',
+    help: 'Delete an access list',
+    run: ({ device, env, args }) => apply(setAccessList(env.topology, device.id, args[0]!, null)),
+  },
+  { modes: ['acl'], syntax: 'permit <text>', help: 'permit <ip|tcp|udp|icmp> <src> <dst> [eq <port>]', run: (call) => aclRule(call, `permit ${call.args[0]!}`) },
+  { modes: ['acl'], syntax: 'deny <text>', help: 'deny <ip|tcp|udp|icmp> <src> <dst> [eq <port>]', run: (call) => aclRule(call, `deny ${call.args[0]!}`) },
+  { modes: ['acl'], syntax: 'no <num>', help: 'Remove the entry with this sequence number', run: (call) => removeAclRule(call, Number(call.args[0])) },
+  { modes: ['acl'], syntax: 'remark <text>', help: 'Comment (not stored)', run: () => ok() },
+  { modes: ['if'], types: SWITCHES, syntax: 'ip access-group <word> in', help: 'Filter incoming packets (port, or traffic from the VLAN on an SVI)', run: (call) => accessGroup(call, 'in', call.args[0]!) },
+  { modes: ['if'], types: SWITCHES, syntax: 'ip access-group <word> out', help: 'Filter packets routed into the VLAN (SVI only)', run: (call) => accessGroup(call, 'out', call.args[0]!) },
+  { modes: ['if'], types: SWITCHES, syntax: 'no ip access-group <word> in', help: 'Remove the incoming access list', run: (call) => accessGroup(call, 'in', null) },
+  { modes: ['if'], types: SWITCHES, syntax: 'no ip access-group <word> out', help: 'Remove the outgoing access list', run: (call) => accessGroup(call, 'out', null) },
+  { modes: ['if'], types: SWITCHES, syntax: 'no ip access-group', help: 'Remove all access lists here', run: (call) => accessGroup(call, 'both', null) },
+  // --- Firewall (Router und Firewall) -----------------------------------------
+  { modes: EXEC, types: ROUTERS, syntax: 'show firewall', help: 'Firewall rules with hit counters', run: ({ device, env }) => ok(showFirewall(device, env)) },
+  { modes: ['config'], types: ROUTERS, syntax: 'firewall default <word>', help: 'allow | deny when no rule matches', run: (call) => firewallDefault(call, call.args[0]!) },
+  { modes: ['config'], types: ROUTERS, syntax: 'firewall stateful', help: 'Replies to allowed connections come back by themselves', run: (call) => editFirewall(call, ({ stateful: _s, ...c }) => c) },
+  { modes: ['config'], types: ROUTERS, syntax: 'no firewall stateful', help: 'Stateless: replies need their own rule', run: (call) => editFirewall(call, (c) => ({ ...c, stateful: false })) },
+  {
+    modes: ['config'],
+    types: ROUTERS,
+    syntax: 'firewall rule <text>',
+    help: 'firewall rule [<pos>] allow|deny <ip|tcp|udp|icmp> <src> <dst> [port <n>] [in <iface>]',
+    run: (call) => firewallRule(call, call.args[0]!),
+  },
+  { modes: ['config'], types: ROUTERS, syntax: 'no firewall rule <num>', help: 'Remove rule number …', run: (call) => removeFirewallRule(call, Number(call.args[0])) },
+  { modes: ['config'], types: ROUTERS, syntax: 'no firewall', help: 'Remove the firewall (let everything through)', run: ({ device, env }) => apply(setFirewall(env.topology, device.id, null)) },
 ];
+
+// --- Zugriffslisten und Firewall ---------------------------------------------------
+
+function enterPool(call: Call, name: string): Partial<CliOutput> {
+  const { device, env, session } = call;
+  const next: CliSession = { device: session.device, mode: 'dhcp', pool: name, ...(session.remote ? { remote: true } : {}) };
+  if (device.dhcpPools?.some((p) => p.name === name)) return { session: next };
+  const created = setDhcpPool(env.topology, device.id, name, { name });
+  return created.ok ? { topology: created.value, session: next } : { lines: [errorLine(created.error)] };
+}
+
+function poolChange(call: Call, change: Partial<DhcpPool>): Partial<CliOutput> {
+  const { device, env, session } = call;
+  const pool = device.dhcpPools?.find((p) => p.name === session.pool);
+  if (!pool) return ok(['% DHCP pool no longer exists']);
+  const next = { ...pool, ...change } as DhcpPool;
+  for (const key of Object.keys(change) as (keyof DhcpPool)[]) if (change[key] === undefined) delete next[key];
+  return apply(setDhcpPool(env.topology, device.id, pool.name, next));
+}
+
+function showDhcpPools(device: Device): string[] {
+  const pools = device.dhcpPools ?? [];
+  if (!pools.length) return ['(no DHCP pools)'];
+  const lines: string[] = [];
+  for (const p of pools) {
+    lines.push(`Pool ${p.name} :`, `  Network        : ${p.network ? `${p.network}/${parseMask(p.mask ?? '')}` : '(not set)'}`, `  Default router : ${p.gateway ?? '-'}`, `  DNS server     : ${p.dns ?? '-'}`, `  Lease          : ${Math.round((p.leaseTime ?? 86400) / 3600)} h`);
+  }
+  const excluded = device.dhcpExcluded ?? [];
+  if (excluded.length) lines.push('Excluded addresses:', ...excluded.map((e) => `  ${e.start}${e.end ? ` - ${e.end}` : ''}`));
+  return lines;
+}
+
+function showDhcpBinding(env: CliEnv): string[] {
+  const leases = (env.state as { dhcpLeases?: { ip: string; mac: string; expires: number }[] } | undefined)?.dhcpLeases;
+  if (!env.state) return ['% Bindings are only known while the simulation is running'];
+  if (!leases?.length) return ['(no bindings)'];
+  const now = env.now ?? 0;
+  return table(['IP address', 'Hardware address', 'Expires in'], leases.map((l) => [l.ip, l.mac, `${Math.max(0, Math.round((l.expires - now) / 1000))} s`]));
+}
+
+function enterAcl(call: Call, name: string): Partial<CliOutput> {
+  const { device, env, session } = call;
+  const next: CliSession = { device: session.device, mode: 'acl', acl: name, ...(session.remote ? { remote: true } : {}) };
+  if (device.acls?.some((a) => a.name === name)) return { session: next };
+  const created = setAccessList(env.topology, device.id, name, []);
+  return created.ok ? { topology: created.value, session: next } : { lines: [errorLine(created.error)] };
+}
+
+function aclRule(call: Call, text: string): Partial<CliOutput> {
+  const { device, env, session } = call;
+  const acl = device.acls?.find((a) => a.name === session.acl);
+  if (!acl) return ok(['% Access list no longer exists']);
+  const parsed = parseRule(tokenize(text));
+  if (!parsed.ok) return ok([parsed.error]);
+  return apply(setAccessList(env.topology, device.id, acl.name, [...acl.rules, parsed.rule]));
+}
+
+function removeAclRule(call: Call, sequence: number): Partial<CliOutput> {
+  const { device, env, session } = call;
+  const acl = device.acls?.find((a) => a.name === session.acl);
+  if (!acl) return ok(['% Access list no longer exists']);
+  const index = sequence / 10 - 1;
+  if (!Number.isInteger(index) || !acl.rules[index]) return ok([`% No entry with sequence number ${sequence}`]);
+  return apply(setAccessList(env.topology, device.id, acl.name, acl.rules.filter((_, i) => i !== index)));
+}
+
+function showAccessLists(device: Device, env: CliEnv): string[] {
+  const acls = device.acls ?? [];
+  if (acls.length === 0) return ['(no access lists)'];
+  const lines: string[] = [];
+  for (const acl of acls) {
+    const live = env.state?.acls?.find((a) => a.name === acl.name);
+    const ports = [
+      ...device.interfaces.filter((i) => i.aclIn === acl.name).map((i) => `${cliIfaceName(device, i.index)} in`),
+      ...(device.svis ?? []).flatMap((v) => [...(v.aclIn === acl.name ? [`vlan${v.vlan} in`] : []), ...(v.aclOut === acl.name ? [`vlan${v.vlan} out`] : [])]),
+    ];
+    lines.push(`Extended IP access list ${acl.name}${ports.length ? `  (${ports.join(', ')})` : ''}`);
+    acl.rules.forEach((rule, i) => lines.push(`    ${(i + 1) * 10} ${formatAclRule(rule)}${live ? ` (${live.hits[i] ?? 0} matches)` : ''}`));
+    lines.push(`    (implicit deny ip any any${live ? `, ${live.implicitDeny} matches` : ''})`);
+  }
+  const bound = [...device.interfaces.map((i) => i.aclIn), ...(device.svis ?? []).flatMap((v) => [v.aclIn, v.aclOut])];
+  const dangling = [...new Set(bound.filter((n): n is string => !!n && !acls.some((a) => a.name === n)))];
+  for (const name of dangling) lines.push(`% Access list ${name} is applied but does not exist (everything passes)`);
+  return lines;
+}
+
+/** Name nach «in»: Anschlussname (eth0, port1) oder bei der Firewall auch die Zone (wan, lan, dmz, opt1). */
+function ruleIface(device: Device) {
+  return (name: string): number | null => {
+    if (device.type === 'firewall') {
+      const zone = device.interfaces.find((i) => !i.sfpSlot && firewallZone(i.index).toLowerCase() === name.toLowerCase());
+      if (zone) return zone.index;
+    }
+    const ref = parseIfaceName(device, name);
+    return ref?.kind === 'port' ? ref.port : null;
+  };
+}
+
+function editFirewall(call: Call, change: (config: FirewallConfig) => FirewallConfig): Partial<CliOutput> {
+  const current = call.device.firewall ?? { rules: [], defaultAction: 'allow' as const };
+  return apply(setFirewall(call.env.topology, call.device.id, change(current)));
+}
+
+function firewallDefault(call: Call, word: string): Partial<CliOutput> {
+  const action = word.toLowerCase();
+  if (action !== 'allow' && action !== 'deny' && action !== 'permit') return ok(['% Expected allow or deny']);
+  return editFirewall(call, (c) => ({ ...c, defaultAction: action === 'deny' ? 'deny' : 'allow' }));
+}
+
+function firewallRule(call: Call, text: string): Partial<CliOutput> {
+  const tokens = tokenize(text);
+  // Optional zuerst die Position, an der die Regel eingefügt wird (1 = zuoberst).
+  const position = /^\d+$/.test(tokens[0] ?? '') ? Number(tokens.shift()) : null;
+  const parsed = parseRule(tokens, ruleIface(call.device));
+  if (!parsed.ok) return ok([parsed.error]);
+  return editFirewall(call, (c) => {
+    const at = position === null ? c.rules.length : Math.max(0, Math.min(c.rules.length, position - 1));
+    return { ...c, rules: [...c.rules.slice(0, at), parsed.rule, ...c.rules.slice(at)] };
+  });
+}
+
+function removeFirewallRule(call: Call, number: number): Partial<CliOutput> {
+  const rules = call.device.firewall?.rules ?? [];
+  if (!rules[number - 1]) return ok([`% No firewall rule ${number}`]);
+  return editFirewall(call, (c) => ({ ...c, rules: c.rules.filter((_, i) => i !== number - 1) }));
+}
+
+function firewallIfaceName(device: Device) {
+  return (index: number) => (device.type === 'firewall' ? `${cliIfaceName(device, index)} (${firewallZone(index)})` : cliIfaceName(device, index));
+}
+
+function showFirewall(device: Device, env: CliEnv): string[] {
+  const fw = device.firewall;
+  if (!fw) return ['Firewall: off (everything passes)'];
+  const live = env.state?.firewall;
+  const lines = [`Firewall: ${fw.stateful === false ? 'stateless' : 'stateful'}, default ${fw.defaultAction}`];
+  const name = firewallIfaceName(device);
+  lines.push(
+    ...table(
+      ['No', 'Action', 'Proto', 'Source', 'Destination', 'Port', 'In', ...(live ? ['Hits'] : [])],
+      fw.rules.map((r, i) => [String(i + 1), r.action, r.protocol, r.src, r.dst, r.port !== undefined ? String(r.port) : '-', r.iface !== undefined ? name(r.iface) : 'any', ...(live ? [String(live.hits[i] ?? 0)] : [])]),
+    ),
+  );
+  if (live) lines.push(`Default hits: ${live.defaultHits}  Blocked: ${live.blocked}  Connections: ${live.connections}`);
+  return lines;
+}
 
 // --- Hilfen für Routingprotokolle ------------------------------------------------
 
@@ -878,6 +1312,9 @@ function splitCidr(cidr: string): [string, string] {
 
 function enterInterface(call: Call, name: string): Partial<CliOutput> {
   const { device, env, session } = call;
+  // «interface port-channel1» (auch po1): alle Ports des Channels auf einmal.
+  const po = /^(?:port-channel|po)\s*(\d+)$/i.exec(name.trim());
+  if (po && (device.type === 'switch' || device.type === 'l3switch')) return enterChannel(call, Number(po[1]));
   const ref = parseIfaceName(device, name);
   if (!ref) return ok([`% Unknown interface: ${name}`]);
   let topology: Topology | undefined;
@@ -887,12 +1324,24 @@ function enterInterface(call: Call, name: string): Partial<CliOutput> {
     if (!created.ok) return ok([errorLine(created.error)]);
     topology = created.value;
   }
+  if (ref.kind === 'loopback' && !device.loopbacks?.some((l) => l.id === ref.id)) {
+    const created = setLoopback(env.topology, device.id, ref.id, '', '');
+    if (!created.ok) return ok([errorLine(created.error)]);
+    topology = created.value;
+  }
   if (ref.kind === 'svi' && !device.svis?.some((s) => s.vlan === ref.vlan)) {
     const created = setSvi(env.topology, device.id, ref.vlan, '', '');
     if (!created.ok) return ok([errorLine(created.error)]);
     topology = created.value;
   }
   return { session: { ...session, mode: 'if', targets: [ifaceIdOf(ref)] }, ...(topology ? { topology } : {}) };
+}
+
+/** Port-Channel: Befehle gelten für alle seine Ports (wie bei Cisco das logische Interface). */
+function enterChannel(call: Call, channel: number): Partial<CliOutput> {
+  const members = channelMembers(call.device, channel);
+  if (!members.length) return ok([`% Port-channel ${channel} has no ports. Use "channel-group ${channel} mode active" on the ports first.`]);
+  return { session: { ...call.session, mode: 'if', targets: members } };
 }
 
 /** «interface range port1-4» oder «port1-4,port7». */
@@ -1097,6 +1546,12 @@ export function execute(session: CliSession, line: string, env: CliEnv): CliOutp
   const candidates = available(device, session.mode);
   const results = candidates.map((c) => matchCommand(c, tokens, trimmed));
   const matches = results.flatMap((r) => (r.match ? [r.match] : []));
+  // Wie bei Cisco: Ein globaler Befehl in einem Untermodus (z.B. «vlan 20» im VLAN-Modus,
+  // «interface port2» im Interface-Modus) verlässt den Untermodus und wird global ausgeführt.
+  if (matches.length === 0 && CONFIG_ALL.includes(session.mode) && session.mode !== 'config') {
+    const global: CliSession = { device: session.device, mode: 'config', ...(session.remote ? { remote: true } : {}) };
+    if (available(device, 'config').some((c) => matchCommand(c, tokens, trimmed).match)) return execute(global, line, env);
+  }
   if (matches.length === 0) {
     const promptText = prompt(env.topology, session);
     if (results.some((r) => r.incomplete && r.failedAt === tokens.length)) return { session, lines: ['% Incomplete command.'] };
@@ -1184,9 +1639,10 @@ const prefixText = (ip: number, prefix: number) => `${formatIp(networkOf(ip, pre
 const ROUTE_CODES: Record<Route['kind'], string> = { connected: 'C', static: 'S', default: 'S', ospf: 'O', rip: 'R', bgp: 'B', auto: 'A' };
 
 /** Routingtabelle; in der Simulation inklusive dynamisch gelernter Routen. */
-export function showIpRoute(device: Device, env?: CliEnv): string[] {
-  const routes = env?.state?.routes ?? buildRoutes(device).routes;
-  const lines = ['Codes: C - connected, S - static, O - OSPF, R - RIP, B - BGP, A - automatic (leyoNET)', '       > - selected route, * - FIB route', ''];
+export function showIpRoute(device: Device, env?: CliEnv, vrf?: string): string[] {
+  // VRF-Tabellen haben nur direkte und statische Routen; sie lassen sich ohne Simulation berechnen.
+  const routes = vrf ? buildRoutes(device, vrf).routes : (env?.state?.routes ?? buildRoutes(device).routes);
+  const lines = [...(vrf ? [`Routing Table: VRF ${vrf}`] : []), 'Codes: C - connected, S - static, O - OSPF, R - RIP, B - BGP, A - automatic (leyoNET)', '       > - selected route, * - FIB route', ''];
   const sorted = [...routes].sort((a, b) => (a.network >>> 0) - (b.network >>> 0) || a.prefix - b.prefix || (a.distance ?? 0) - (b.distance ?? 0));
   const selected = new Set<string>();
   for (const r of sorted) {
@@ -1319,17 +1775,19 @@ interface IfaceRow {
 function ifaceRows(device: Device, env: CliEnv): IfaceRow[] {
   return logicalInterfaces(device).map((id) => {
     const ref = decodeIface(id);
-    const port = ref.kind === 'svi' ? undefined : device.interfaces[ref.port];
+    const port = ref.kind === 'svi' || ref.kind === 'loopback' ? undefined : device.interfaces[ref.port];
     const config =
       ref.kind === 'port'
         ? port
         : ref.kind === 'sub'
           ? device.subinterfaces?.find((s) => s.parent === ref.port && s.vlan === ref.vlan)
-          : device.svis?.find((s) => s.vlan === ref.vlan);
+          : ref.kind === 'loopback'
+            ? device.loopbacks?.find((l) => l.id === ref.id)
+            : device.svis?.find((s) => s.vlan === ref.vlan);
     const prefix = config?.mask ? parseMask(config.mask) : null;
     const address = config?.ip && prefix !== null ? `${config.ip}/${prefix}` : 'unassigned';
     const down = port?.shutdown;
-    const up = ref.kind === 'svi' ? true : linkUpAt(env.topology, { device: device.id, iface: ref.port });
+    const up = ref.kind === 'svi' || ref.kind === 'loopback' ? true : linkUpAt(env.topology, { device: device.id, iface: ref.port });
     return {
       id,
       name: cliIfaceName(device, id),
@@ -1376,16 +1834,113 @@ function showNat(env: CliEnv): string[] {
 function showMacTable(device: Device, env: CliEnv): string[] {
   const table_ = env.state?.macTable;
   if (!table_) return ['% MAC table is only available while the simulation runs (action mode)'];
-  const rows = table_.map((e) => [String(e.vlan), e.mac.toLowerCase(), 'DYNAMIC', cliIfaceName(device, e.port)]);
+  const rows = table_.map((e) => [String(e.vlan), e.mac.toLowerCase(), 'DYNAMIC', e.port === -1 ? `nve1 (${e.vtep ?? '?'})` : cliIfaceName(device, e.port)]);
   return [...table(['Vlan', 'Mac Address', 'Type', 'Ports'], rows), `Total Mac Addresses: ${rows.length}`];
 }
 
+/** Angelegte VLANs (Datenbank; bei älteren Dateien alle verwendeten). */
 export function vlansOf(device: Device): number[] {
-  const set = new Set<number>([1]);
-  for (const p of device.interfaces) if (!p.trunk) set.add(p.vlan ?? 1);
-  for (const v of device.vlanNames ?? []) set.add(v.vlan);
-  for (const s of device.svis ?? []) set.add(s.vlan);
-  return [...set].sort((a, b) => a - b);
+  return [1, ...(device.vlanDb ?? usedVlans(device))];
+}
+
+/** «10,20,30-35» → [10, 20, 30, …, 35]; null bei Fehlern. */
+export function parseVlanList(text: string): number[] | null {
+  const result: number[] = [];
+  for (const part of text.split(',')) {
+    const m = /^\s*(\d{1,4})(?:\s*-\s*(\d{1,4}))?\s*$/.exec(part);
+    if (!m) return null;
+    const from = Number(m[1]);
+    const to = m[2] === undefined ? from : Number(m[2]);
+    if (from < 1 || to > 4094 || to < from) return null;
+    for (let v = from; v <= to; v++) result.push(v);
+  }
+  return [...new Set(result)].sort((a, b) => a - b);
+}
+
+/** «switchport trunk allowed vlan …»: Liste, add, remove, except, all, none. undefined = ungültig, null = alle. */
+export function allowedVlans(spec: string, current: number[] | null): number[] | null | undefined {
+  const [word = '', ...rest] = spec.trim().toLowerCase().split(/\s+/);
+  const listText = rest.join('');
+  if (word === 'all') return null;
+  if (word === 'none') return [];
+  const all = () => Array.from({ length: 4094 }, (_, i) => i + 1);
+  if (word === 'add' || word === 'remove' || word === 'except') {
+    const list = parseVlanList(listText);
+    if (!list) return undefined;
+    if (word === 'except') return all().filter((v) => !list.includes(v));
+    const base = current ?? all();
+    const next = word === 'add' ? [...new Set([...base, ...list])] : base.filter((v) => !list.includes(v));
+    return next.length === 4094 ? null : next.sort((a, b) => a - b);
+  }
+  return parseVlanList([word, ...rest].join('')) ?? undefined;
+}
+
+/** Kurze Schreibweise einer VLAN-Liste: 10,20,30-35. */
+export function formatVlanList(list: number[]): string {
+  const parts: string[] = [];
+  for (let i = 0; i < list.length; ) {
+    let j = i;
+    while (j + 1 < list.length && list[j + 1] === list[j]! + 1) j++;
+    parts.push(j > i ? `${list[i]}-${list[j]}` : String(list[i]));
+    i = j + 1;
+  }
+  return parts.join(',') || 'none';
+}
+
+function showEtherchannel(device: Device, env: CliEnv): string[] {
+  const channels = [...new Set(device.interfaces.flatMap((i) => (i.channel ? [i.channel] : [])))].sort((a, b) => a - b);
+  if (!channels.length) return ['(no port-channels)'];
+  const live = env.state?.channels;
+  const flag = (port: number) => {
+    const s = live?.flatMap((c) => c.ports).find((p) => p.port === port);
+    if (!s) return 'D';
+    return s.status === 'bundled' ? 'P' : s.status === 'suspended' ? 's' : 'D';
+  };
+  const rows = channels.map((channel) => {
+    const members = channelMembers(device, channel);
+    const mode = device.interfaces[members[0]!]?.channelMode ?? 'active';
+    const up = members.some((m) => flag(m) === 'P');
+    return [String(channel), `Po${channel}(${live ? (up ? 'SU' : 'SD') : '-'})`, mode === 'on' ? '-' : 'LACP', members.map((m) => `${cliIfaceName(device, m)}(${live ? flag(m) : mode})`).join(' ')];
+  });
+  return [
+    'Flags:  D - down   P - bundled in port-channel   s - suspended',
+    '        S - layer 2   U - in use',
+    ...(live ? [] : ['(state only while the simulation runs; showing the configured mode)']),
+    '',
+    ...table(['Group', 'Port-channel', 'Protocol', 'Ports'], rows),
+  ];
+}
+
+function clearVxlan(t: Topology, id: string): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return { ok: false, error: { code: 'unknownDevice' } };
+  return { ok: true, value: { ...t, devices: t.devices.map((d) => (d.id === id ? (({ vxlan: _x, ...rest }) => rest)(d) : d)) } };
+}
+
+function showNveVni(device: Device): string[] {
+  const x = device.vxlan;
+  if (!x?.vnis.length) return ['(no VNIs; "vn-segment" in a VLAN and "member vni" under "interface nve1")'];
+  const source = x.source !== undefined ? cliIfaceName(device, x.source) : '(no source-interface)';
+  return [`Interface nve1, source ${source}`, '', ...table(['VNI', 'VLAN', 'Peers (ingress replication)'], x.vnis.map((v) => [String(v.vni), v.vlan !== undefined ? String(v.vlan) : '-', v.peers.join(', ') || '-']))];
+}
+
+function showNvePeers(device: Device, env: CliEnv): string[] {
+  const peers = [...new Set((device.vxlan?.vnis ?? []).flatMap((v) => v.peers))];
+  if (!peers.length) return ['(no VTEP peers)'];
+  const macs = env.state?.macTable?.filter((e) => e.port === -1) ?? [];
+  return table(['Peer', 'VNIs', 'Learned MACs'], peers.map((p) => [p, (device.vxlan?.vnis ?? []).filter((v) => v.peers.includes(p)).map((v) => v.vni).join(', '), env.state ? String(macs.filter((m) => m.vtep === p).length) : '-']));
+}
+
+function showTrunks(device: Device, env: CliEnv): string[] {
+  const trunks = device.interfaces.filter((p) => p.trunk);
+  if (!trunks.length) return ['(no trunk ports)'];
+  const rows = trunks.map((p) => {
+    const up = linkUpAt(env.topology, { device: device.id, iface: p.index });
+    const allowed = p.allowedVlans ? formatVlanList(p.allowedVlans) : '1-4094';
+    const active = vlansOf(device).filter((v) => trunkAllows(p, v));
+    return [cliIfaceName(device, p.index), up && !p.shutdown ? 'trunking' : 'not-connected', String(p.nativeVlan ?? 1), allowed, formatVlanList(active)];
+  });
+  return table(['Port', 'Status', 'Native', 'Allowed', 'Allowed and active'], rows);
 }
 
 function vlanName(device: Device, vlan: number): string {
@@ -1402,8 +1957,16 @@ function showVlanBrief(device: Device): string[] {
       .map((p) => cliIfaceName(device, p.index))
       .join(', '),
   ]);
+  // Ports in einem VLAN, das nicht angelegt ist, sind inaktiv.
+  const missing = [...new Set(device.interfaces.filter((p) => !p.trunk && !vlanExists(device, p.vlan ?? 1)).map((p) => p.vlan!))];
+  const lines = table(['VLAN', 'Name', 'Status', 'Ports'], rows);
+  for (const v of missing) {
+    const ports = device.interfaces.filter((p) => !p.trunk && p.vlan === v).map((p) => cliIfaceName(device, p.index));
+    lines.push(`% VLAN ${v} does not exist: ${ports.join(', ')} inactive`);
+  }
   const trunks = device.interfaces.filter((p) => p.trunk).map((p) => cliIfaceName(device, p.index));
-  return [...table(['VLAN', 'Name', 'Status', 'Ports'], rows), ...(trunks.length ? ['', `Trunk ports (all VLANs): ${trunks.join(', ')}`] : [])];
+  if (trunks.length) lines.push('', `Trunk ports: ${trunks.join(', ')} (show interfaces trunk)`);
+  return lines;
 }
 
 function showInterfacesStatus(device: Device, env: CliEnv): string[] {
@@ -1442,20 +2005,41 @@ export function runningConfig(device: Device): string[] {
   if (cli?.enableSecret) lines.push(`enable secret ${cli.enableSecret}`);
   if (cli?.banner) lines.push(`banner motd ${cli.banner}`);
   if (device.type === 'l3switch') lines.push(device.ipRouting === false ? 'no ip routing' : 'ip routing');
+  for (const v of device.vrfs ?? []) lines.push(`vrf definition ${v.name}`);
   if (device.type === 'switch' || device.type === 'l3switch') {
     if (device.stp) {
       lines.push('spanning-tree');
       if (device.stpPriority !== undefined) lines.push(`spanning-tree priority ${device.stpPriority}`);
     }
-    for (const v of device.vlanNames ?? []) lines.push('!', `vlan ${v.vlan}`, ` name ${v.name}`);
+    for (const v of vlansOf(device).slice(1)) {
+      const name = device.vlanNames?.find((n) => n.vlan === v)?.name;
+      const vni = device.vxlan?.vnis.find((x) => x.vlan === v)?.vni;
+      lines.push('!', `vlan ${v}`, ...(name ? [` name ${name}`] : []), ...(vni ? [` vn-segment ${vni}`] : []));
+    }
+    for (const acl of device.acls ?? []) lines.push('!', `ip access-list extended ${acl.name}`, ...acl.rules.map((r) => ` ${formatAclRule(r)}`));
+  }
+  for (const e of device.dhcpExcluded ?? []) lines.push(`ip dhcp excluded-address ${e.start}${e.end ? ` ${e.end}` : ''}`);
+  for (const p of device.dhcpPools ?? []) {
+    lines.push('!', `ip dhcp pool ${p.name}`);
+    if (p.network && p.mask) lines.push(` network ${p.network} ${p.mask}`);
+    if (p.gateway) lines.push(` default-router ${p.gateway}`);
+    if (p.dns) lines.push(` dns-server ${p.dns}`);
+    if (p.leaseTime !== undefined && p.leaseTime !== 86400) lines.push(` lease ${Math.floor(p.leaseTime / 86400)} ${Math.floor((p.leaseTime % 86400) / 3600)}`);
   }
   lines.push('!');
   for (const p of device.interfaces) {
     lines.push(`interface ${cliIfaceName(device, p.index)}`);
     if (p.description) lines.push(` description ${p.description}`);
+    if (p.vrf) lines.push(` vrf forwarding ${p.vrf}`);
     if (usesPortNames(device)) {
-      if (p.trunk) lines.push(' switchport mode trunk');
+      if (p.trunk) {
+        lines.push(' switchport mode trunk');
+        if (p.nativeVlan) lines.push(` switchport trunk native vlan ${p.nativeVlan}`);
+        if (p.allowedVlans) lines.push(` switchport trunk allowed vlan ${formatVlanList(p.allowedVlans)}`);
+      }
       else if (p.vlan && p.vlan !== 1) lines.push(' switchport mode access', ` switchport access vlan ${p.vlan}`);
+      if (p.channel) lines.push(` channel-group ${p.channel} mode ${p.channelMode ?? 'active'}`);
+      if (p.aclIn) lines.push(` ip access-group ${p.aclIn} in`);
     } else {
       if (p.ip && p.mask) lines.push(` ip address ${p.ip}/${parseMask(p.mask)}`);
       if (p.dhcpRelay) lines.push(` ip helper-address ${p.dhcpRelay}`);
@@ -1471,25 +2055,48 @@ export function runningConfig(device: Device): string[] {
   }
   for (const s of device.subinterfaces ?? []) {
     lines.push(`interface eth${s.parent}.${s.vlan}`, ` encapsulation dot1q ${s.vlan}`);
+    if (s.vrf) lines.push(` vrf forwarding ${s.vrf}`);
     if (s.ip && s.mask) lines.push(` ip address ${s.ip}/${parseMask(s.mask)}`);
     if (s.dhcpRelay) lines.push(` ip helper-address ${s.dhcpRelay}`);
     lines.push('!');
   }
+  for (const l of device.loopbacks ?? []) {
+    lines.push(`interface loopback${l.id}`);
+    if (l.vrf) lines.push(` vrf forwarding ${l.vrf}`);
+    if (l.ip && l.mask) lines.push(` ip address ${l.ip}/${parseMask(l.mask)}`);
+    lines.push('!');
+  }
+  if (device.vxlan) {
+    lines.push('interface nve1');
+    if (device.vxlan.source !== undefined) lines.push(` source-interface ${cliIfaceName(device, device.vxlan.source)}`);
+    for (const v of device.vxlan.vnis) for (const p of v.peers) lines.push(` member vni ${v.vni} peer-ip ${p}`);
+    lines.push('!');
+  }
   for (const s of device.svis ?? []) {
     lines.push(`interface vlan${s.vlan}`);
+    if (s.vrf) lines.push(` vrf forwarding ${s.vrf}`);
     if (s.ip && s.mask) lines.push(` ip address ${s.ip}/${parseMask(s.mask)}`);
     if (s.dhcpRelay) lines.push(` ip helper-address ${s.dhcpRelay}`);
+    if (s.aclIn) lines.push(` ip access-group ${s.aclIn} in`);
+    if (s.aclOut) lines.push(` ip access-group ${s.aclOut} out`);
     if (s.ipv6) lines.push(` ipv6 address ${s.ipv6}`);
     if (s.dhcp6) lines.push(' ipv6 nd managed-config-flag');
     if (s.dns6) lines.push(` ipv6 nd ra dns server ${s.dns6}`);
     lines.push('!');
   }
-  for (const r of device.routes ?? []) {
+  if (device.type === 'switch') {
+    const gw = device.routes?.find((r) => parseMask(r.mask) === 0)?.gateway;
+    if (gw) lines.push(`ip default-gateway ${gw}`, '!');
+  }
+  for (const r of device.type === 'switch' ? [] : (device.routes ?? [])) {
     const prefix = parseMask(r.mask);
     const via = r.gateway ?? (r.iface !== undefined ? cliIfaceName(device, r.iface) : '');
     lines.push(`ip route ${r.network}/${prefix} ${via}`);
   }
   if (device.routes?.length) lines.push('!');
+  for (const v of device.vrfs ?? []) {
+    for (const r of v.routes ?? []) lines.push(`ip route vrf ${v.name} ${r.network}/${parseMask(r.mask)} ${r.gateway ?? (r.iface !== undefined ? cliIfaceName(device, r.iface) : '')}`);
+  }
   for (const r of device.routes6 ?? []) {
     const via = [r.gateway, r.iface !== undefined ? cliIfaceName(device, r.iface) : undefined].filter(Boolean).join(' ');
     lines.push(`ipv6 route ${r.network} ${via}`);
@@ -1498,6 +2105,12 @@ export function runningConfig(device: Device): string[] {
   // Nur 1:1-NAT hat eine Entsprechung in der Befehlszeile; reines SNAT/DNAT wird im Formular eingestellt.
   for (const r of device.staticNat ?? []) lines.push(r.kind ? `! ${r.kind.toUpperCase()} ${r.inside} <-> ${r.outside} (Formular)` : `ip nat inside source static ${r.inside} ${r.outside}`);
   if (device.staticNat?.length) lines.push('!');
+  if (device.firewall && (device.type === 'router' || device.type === 'firewall')) {
+    lines.push(`firewall default ${device.firewall.defaultAction}`);
+    if (device.firewall.stateful === false) lines.push('no firewall stateful');
+    const name = (index: number) => cliIfaceName(device, index);
+    lines.push(...device.firewall.rules.map((r) => `firewall rule ${formatFirewallRule(r, name)}`), '!');
+  }
   const prefixOf = (n: RoutedNetwork) => `${n.network}/${parseMask(n.mask)}`;
   const common = (c: { passive?: number[]; defaultOriginate?: boolean; redistribute?: RedistributeSource[] }) => [
     ...(c.passive ?? []).map((i) => ` passive-interface ${cliIfaceName(device, i)}`),

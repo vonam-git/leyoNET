@@ -1,12 +1,24 @@
 <script lang="ts">
-  import { sviId, type Device } from '../../core';
+  import { parseMask, sviId, type Device } from '../../core';
   import { t } from '../../i18n';
   import { interfaceLabel } from '../labels';
   import { editor } from '../state/editor.svelte';
   import { subnetSummary } from '../subnet';
+  import { ui } from '../state/ui.svelte';
+  import LoopbackConfig from './LoopbackConfig.svelte';
 
-  /** Layer-3-Switch: VLAN-Interfaces (SVIs) als Gateways der VLANs und Routing ein/aus. */
+  /**
+   * Layer-3-Switch: VLAN-Interfaces (SVIs) als Gateways der VLANs und Routing ein/aus.
+   * Layer-2-Switch: Verwaltungsadresse («interface vlan 1») und Standardgateway, ohne Routing.
+   */
   let { device }: { device: Device } = $props();
+  const management = $derived(device.type === 'switch');
+  const gateway = $derived(device.routes?.find((r) => parseMask(r.mask) === 0)?.gateway ?? '');
+
+  function setGateway(value: string) {
+    const failure = editor.setDefaultGateway(device.id, value);
+    error = failure ? t(`error.${failure.code}`, failure.params) : null;
+  }
 
   let draft = $state({ vlan: '', ip: '', mask: '' });
   let error = $state<string | null>(null);
@@ -19,12 +31,17 @@
   }
 </script>
 
-<h3>{t('svi.title')}</h3>
-<label class="toggle">
-  <input type="checkbox" checked={device.ipRouting !== false} onchange={(e) => editor.setIpRouting(device.id, e.currentTarget.checked)} />
-  {t('svi.routing')}
-</label>
-<p class="muted">{t('svi.hint')}</p>
+{#if management}
+  <h3>{t('svi.managementTitle')}</h3>
+  <p class="muted">{t('svi.managementHint')}</p>
+{:else}
+  <h3>{t('svi.title')}</h3>
+  <label class="toggle">
+    <input type="checkbox" checked={device.ipRouting !== false} onchange={(e) => editor.setIpRouting(device.id, e.currentTarget.checked)} />
+    {t('svi.routing')}
+  </label>
+  <p class="muted">{t('svi.hint')}</p>
+{/if}
 {#if (device.svis ?? []).length > 0}
   <ul>
     {#each device.svis ?? [] as s (s.vlan)}
@@ -45,9 +62,35 @@
   {/if}
   <button type="submit" disabled={!draft.vlan.trim()} title={t('svi.add')} aria-label={t('svi.add')}>+</button>
 </form>
+{#if device.type === 'l3switch' && ui.has('net.loopback')}
+  <LoopbackConfig {device} />
+{/if}
+{#if management}
+  <label class="gw">
+    <span>{t('config.gateway')}</span>
+    <input value={gateway} placeholder="192.168.1.1" disabled={!editor.editable} onchange={(e) => setGateway(e.currentTarget.value)} autocomplete="off" spellcheck="false" />
+  </label>
+{/if}
 {#if error}<p class="error" role="alert">{error}</p>{/if}
 
 <style>
+  .gw {
+    display: grid;
+    grid-template-columns: 7rem minmax(0, 1fr);
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    margin-top: 8px;
+  }
+  .gw input {
+    font: inherit;
+    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    padding: 2px 4px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
   h3 {
     margin: 16px 0 6px;
     font-size: 0.85rem;

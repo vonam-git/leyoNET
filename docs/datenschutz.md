@@ -34,7 +34,9 @@ Es wird nichts übertragen. Die Admin-Konsole, Sessions und Rückmeldungen sind 
 - Inhalt: nur die **Projektdatei** (Geräte, Kabel, IP-Konfiguration, Dokumentationsbereiche, Snapshots, Inhalte simulierter Webserver) und technische Metadaten (Erstellungs- und Ablaufzeit, optional der Klassencode).
 - Schlüssel: ein **Zufallscode** (z.B. `DHGT-V8SS`, rund 40 Bit Zufall aus `crypto.randomInt`). Wer den Code kennt, kann die Session öffnen; der Code ist keiner Person zugeordnet.
 - Löschung: automatisch nach der eingestellten Zeit ohne Änderung (Standard **24 Stunden**, Admin wählbar 1 Stunde bis 30 Tage) oder sofort mit **Session löschen**.
-- Im Browser wird nur der Code in `localStorage` gemerkt, damit die Session nach einem Neuladen weiterläuft. Eine neue Session beginnt immer leer.
+- Im Browser werden nur der Code und ein zufälliges **Schreib-Token** in `localStorage` gemerkt, damit die Session nach einem Neuladen weiterläuft und nur dieses Gerät in ihr speichert. Auf dem Server liegt vom Token nur ein Hash. Eine neue Session beginnt immer leer.
+- Ob ein Gerät verbunden ist, weiss der Server nur aus dem Zeitpunkt der letzten Meldung (Speichern oder Lebenszeichen alle 20 Sekunden), im Arbeitsspeicher und ohne Adresse.
+- Wer eine Session mit einer **PIN** sperrt: Gespeichert wird nur ein Hash der PIN (scrypt mit Salz) in der Session, gelöscht mit ihr. Fehlversuche zählt der Server nur kurz im Arbeitsspeicher.
 
 ### Schutz vor Überlastung
 

@@ -1,0 +1,206 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "switch",
+        "name": "Switch Stock 1",
+        "position": {
+          "x": 380,
+          "y": 200
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:01:01",
+            "channel": 1
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:01:02",
+            "channel": 1
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:01:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:01:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:01:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:01:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:01:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:01:08",
+            "sfpSlot": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:01:09",
+            "sfpSlot": true
+          }
+        ],
+        "vlanDb": [],
+        "stp": true
+      },
+      {
+        "id": "d2",
+        "type": "switch",
+        "name": "Switch Stock 2",
+        "position": {
+          "x": 640,
+          "y": 200
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:02:01",
+            "channel": 1
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:02:02",
+            "channel": 1
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:02:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:02:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:02:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:02:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:02:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:02:08",
+            "sfpSlot": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:02:09",
+            "sfpSlot": true
+          }
+        ],
+        "vlanDb": [],
+        "stp": true
+      },
+      {
+        "id": "d3",
+        "type": "pc",
+        "name": "PC Büro",
+        "position": {
+          "x": 160,
+          "y": 200
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ip": "192.168.1.11",
+            "mask": "255.255.255.0"
+          }
+        ]
+      },
+      {
+        "id": "d4",
+        "type": "pc",
+        "name": "PC Labor",
+        "position": {
+          "x": 860,
+          "y": 200
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ip": "192.168.1.22",
+            "mask": "255.255.255.0"
+          }
+        ]
+      }
+    ],
+    "cables": [
+      {
+        "id": "c5",
+        "a": {
+          "device": "d3",
+          "iface": 0
+        },
+        "b": {
+          "device": "d1",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c6",
+        "a": {
+          "device": "d4",
+          "iface": 0
+        },
+        "b": {
+          "device": "d2",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c7",
+        "a": {
+          "device": "d1",
+          "iface": 1
+        },
+        "b": {
+          "device": "d2",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c8",
+        "a": {
+          "device": "d1",
+          "iface": 2
+        },
+        "b": {
+          "device": "d2",
+          "iface": 2
+        }
+      }
+    ],
+    "nextId": 9
+  },
+  "configuration": {}
+}

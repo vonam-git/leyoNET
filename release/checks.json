@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0",
-  "date": "2026-11-05T07:51:31.258Z",
+  "version": "1.2.0",
+  "date": "2026-11-09T14:08:51.556Z",
   "checks": [
     {
       "id": "privacy.noExternal",
@@ -30,7 +30,7 @@
       "id": "privacy.storage",
       "category": "privacy",
       "status": "pass",
-      "detail": "Browser-Speicher nur für Technik: netzwerk-simulator.addresses, netzwerk-simulator.avatar, netzwerk-simulator.catalogDone, netzwerk-simulator.class, netzwerk-simulator.currency, netzwerk-simulator.exam, netzwerk-simulator.features, netzwerk-simulator.level, netzwerk-simulator.locale, netzwerk-simulator.panels, netzwerk-simulator.portChoice, netzwerk-simulator.portLabels, netzwerk-simulator.profile, netzwerk-simulator.session, netzwerk-simulator.sizes, netzwerk-simulator.theme"
+      "detail": "Browser-Speicher nur für Technik: netzwerk-simulator.addresses, netzwerk-simulator.avatar, netzwerk-simulator.catalogDone, netzwerk-simulator.class, netzwerk-simulator.currency, netzwerk-simulator.exam, netzwerk-simulator.features, netzwerk-simulator.level, netzwerk-simulator.locale, netzwerk-simulator.panels, netzwerk-simulator.portChoice, netzwerk-simulator.portLabels, netzwerk-simulator.profile, netzwerk-simulator.session, netzwerk-simulator.sizes, netzwerk-simulator.theme, netzwerk-simulator.writer"
     },
     {
       "id": "privacy.noIpLog",
@@ -108,7 +108,7 @@
       "id": "standards.registered",
       "category": "standards",
       "status": "pass",
-      "detail": "66 zitierte Normen, alle im Verzeichnis (52 RFCs, 10 IEEE/ITU-T/CableLabs)."
+      "detail": "68 zitierte Normen, alle im Verzeichnis (53 RFCs, 11 IEEE/ITU-T/CableLabs)."
     },
     {
       "id": "standards.reviewed",
@@ -120,7 +120,7 @@
       "id": "standards.prices",
       "category": "standards",
       "status": "pass",
-      "detail": "35 Richtpreise im plausiblen Bereich, zuletzt am 2026-11-01 mit dem Markt verglichen."
+      "detail": "37 Richtpreise im plausiblen Bereich, zuletzt am 2026-11-01 mit dem Markt verglichen."
     }
   ]
 }

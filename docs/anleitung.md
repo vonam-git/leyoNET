@@ -78,6 +78,49 @@ Im Fenster **Erweitert … → Firewall** (Router, Internet-Box und Endgeräte, 
 
 **Zustandsbehaftet** (Standard): Antworten auf erlaubte Verbindungen kommen ohne eigene Regel zurück. Ein Router filtert, was er weiterleitet; ein Endgerät filtert, was bei ihm ankommt. In der Simulation zeigt der Reiter, wie oft jede Regel gegriffen hat, und die Konsole des Geräts meldet blockierte Pakete. Siehe Demo «Firewall mit DMZ».
 
+**Firewall als Gerät** (Shop → Router, ab Profil 3): Statt den Router filtern zu lassen, setzt du eine eigene Firewall zwischen Provider und Netz. Ihre Anschlüsse heissen nach Zonen: **eth0 (WAN)**, **eth1 (LAN)**, **eth2 (DMZ)**, ab eth3 **OPT**. Ab Werk ist sie zustandsbehaftet, lässt alles von innen nach aussen durch und sperrt neue Verbindungen vom WAN. Mit denselben Regeln schützt sie auch sich selbst: Vom WAN antwortet sie nicht auf Ping oder SSH. Für einen Webserver in der DMZ ergänzt du z.B. «Erlauben TCP 80 zum Webserver, Eingang WAN» zuoberst. Sonst kann sie alles, was ein Router kann (NAT, Portweiterleitung, VPN, Routing). Demo «Firewall-Gerät und ACL».
+
+Auf der **Befehlszeile** von Router und Firewall:
+
+```
+firewall default deny
+firewall rule 1 allow tcp any 192.168.2.80 port 80 in wan
+firewall rule deny icmp any any in dmz
+no firewall rule 3
+no firewall stateful        ! zustandslos
+show firewall               ! Regeln mit Trefferzählern
+```
+
+## VXLAN: VLAN über ein geroutetes Netz
+
+Ab Profil 4 (oder einzeln «VXLAN») kann ein Layer-3-Switch VTEP sein (Reiter **Switching**, Abschnitt VXLAN): Ein VLAN wird einer VNI zugeordnet, als Quelle dient meist ein Loopback, die anderen VTEPs stehen in einer festen Liste. Rahmen des VLANs reisen dann in UDP (Port 4789) per IP zu den anderen Switches; Geräte an verschiedenen Standorten liegen im selben Subnetz. Die Paketliste zeigt aussen IP von Loopback zu Loopback, innen den Ethernet-Rahmen. EVPN (BGP als Steuerung) ist nicht nachgebildet. Befehlszeile: `vn-segment`, `interface nve1`, `source-interface`, `member vni … peer-ip …`, `show nve peers`. Demo «VXLAN zwischen zwei Standorten».
+
+## VRF: mehrere Routingtabellen
+
+Ab Profil 4 (oder einzeln «VRF») haben Router, Firewall und Layer-3-Switch den Reiter **VRF**. Eine VRF ist eine eigene Routingtabelle: Anschlüsse darin sehen nur die Netze und statischen Routen dieser VRF. So laufen zwei Kunden mit denselben Adressen (z.B. beide 10.0.0.0/24) über denselben Router, ohne sich zu sehen. Pakete bleiben in der VRF des Anschlusses, über den sie hereinkommen. OSPF, RIP, BGP, NAT und das automatische Routing gelten nur für die globale Tabelle. Befehlszeile: `vrf definition KUNDE-A`, am Interface `vrf forwarding KUNDE-A`, `ip route vrf …`, `show ip route vrf KUNDE-A`, `ping vrf KUNDE-A …`.
+
+## Mehrere Kabel und Port-Channel
+
+Zwischen zwei Geräten dürfen mehrere Kabel liegen; die Fläche zeichnet sie nebeneinander. Zwischen Switches ist das ohne weitere Einstellung eine **Schleife**: Spanning Tree blockiert ein Kabel, ohne STP zeigt die Simulation den Broadcast-Sturm.
+
+Ab Profil 4 (oder einzeln «Port-Channel») bündelt man die Kabel zu einem **Port-Channel** (Link Aggregation): Im Reiter **Switching** auf beiden Switches dieselbe Channel-Nummer bei den Ports eintragen, Modus «LACP aktiv» (oder auf einer Seite passiv). Die Switches handeln das Bündel mit LACP aus, Spanning Tree sieht es als einen Port. Fällt ein Kabel aus, läuft alles über die übrigen. Ports mit abweichender VLAN-/Trunk-Einstellung, zu einem anderen Switch oder ohne Partner bleiben ausgestellt. Befehlszeile: `channel-group 1 mode active`, `interface port-channel 1`, `show etherchannel summary`. Demo «Port-Channel mit LACP».
+
+## Zugriffslisten (ACL) auf Switches
+
+Ab Profil 4 (oder einzeln «Zugriffslisten (ACL)») hat jeder Switch im Fenster **Erweitert … → ACL** benannte Zugriffslisten. Eine Liste wirkt erst, wenn sie einem Port zugewiesen ist; dann prüft der Switch jedes IP-Paket, das an diesem Port **hereinkommt**. Die erste passende Regel gilt, am Ende steht ein **implizites Verweigern**. Anders als die Firewall ist die ACL **zustandslos**: Antworten prüft der Switch am Port, über den sie hereinkommen. ARP, Spanning Tree und IPv6 Neighbor Discovery gehen immer durch. In der Simulation zählt der Reiter die Treffer, die Konsole des Switches meldet verworfene Pakete.
+
+```
+ip access-list extended GAESTE
+ permit udp any any eq 53
+ permit tcp 192.168.10.0 0.0.0.255 host 192.168.10.80 eq 80
+ deny ip any any
+!
+interface port1
+ ip access-group GAESTE in
+```
+
+Adressen: `any`, `host 192.168.10.80`, Netz mit Wildcard-Maske (`192.168.10.0 0.0.0.255`) oder Präfix (`192.168.10.0/24`). `no 20` löscht im ACL-Modus den Eintrag 20, `show access-lists` zeigt Listen, Ports und Treffer.
+
 ## VPN zwischen zwei Standorten
 
 Ein **Site-to-Site-VPN** (ab Profil 4) verbindet zwei private Netze über das Internet. Im Fenster **Erweitert … → VPN** beider Router trägst du je einen Tunnel ein:
@@ -111,6 +154,7 @@ Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routi
 | Server | DHCP, DNS, Web und Mail. Im Shop auch fertig eingerichtet erhältlich. |
 | Switch, L3-Switch | Verbinden Geräte im selben Netz; der L3-Switch routet zusätzlich zwischen VLANs. |
 | Router | Verbindet Netze. Ports wahlweise Ethernet oder seriell. NAT, OSPF, RIP, BGP; für IPv6 OSPFv3 und RIPng. |
+| Firewall | Routet wie ein Router, filtert ab Werk: Zonen WAN, LAN, DMZ, OPT; von innen nach aussen offen, vom WAN gesperrt. |
 | Access Point | WLAN-Funkzelle. |
 | Modem | Kabel, Glasfaser, Mobilfunk, ADSL oder VDSL zum Provider. |
 | Internet-Box (CPE) | Wie zu Hause: Modem, Router mit NAT, DHCP-Server und vier LAN-Buchsen in einem Gerät. Ab Werk LAN 192.168.1.1/24; einzutragen sind nur WAN-Adresse und Gateway des Providers. |
@@ -127,6 +171,8 @@ Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routi
 - **blau: privat** (10/8, 172.16/12, 192.168/16), nur im eigenen Netz
 - **orange: CGNAT** (100.64/10), vom Provider vergeben
 - **grün, fett: öffentlich**, im Internet erreichbar
+
+**Textfeld:** Shop → Bereiche → **Textfeld** setzt ein Feld mit Titel und freiem Text auf die Fläche, z.B. für Infos, einen Auftrag oder eine Legende. Leerzeile = neuer Absatz, «- » = Liste, «1. » = nummerierte Liste, `**fett**`, `` `Befehl` ``; IP-Adressen werden hervorgehoben. Die Ecke unten rechts zieht das Feld grösser.
 
 Ein Bereich «Öffentliches Netz» (mit Weltkugel) markiert ein ganzes Netz als öffentlich, z.B. eine DMZ. Bei Routern steht der Anschluss dezent davor, z.B. `eth0: 192.168.1.1/24`.
 
@@ -162,6 +208,8 @@ In der Simulation zeigt die Paketliste unten jeden Rahmen. Ein Klick öffnet die
 ## Aufgaben
 
 **Werkzeuge → Aufgaben-Katalog** enthält Übungen von ★ (Einstieg) bis ★★★★★ (Studium). Eine Aufgabe lädt ein Startnetz und zeigt unten ihre Lernziele. **Prüfen** sagt, was schon erfüllt ist und was fehlt. Viele Ziele haben einen Tipp. Sind alle Ziele erfüllt, steht die Übung im Katalog mit **✓ erledigt** (nur in diesem Browser; «Fortschritt zurücksetzen» löscht die Markierungen).
+
+Lange Aufträge öffnen sich zusätzlich in einem **grossen Fenster**: Absätze, Listen, Befehle und IP-Adressen sind dort hervorgehoben, die Ziele stehen als Karten darunter. Das Fenster ist nicht modal, du arbeitest daneben im Netz weiter; am Kopf verschieben, unten rechts vergrössern, Esc schliesst. **⤢ Gross anzeigen** im Aufgabenbereich öffnet es jederzeit.
 
 ## Demo-Netze
 

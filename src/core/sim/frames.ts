@@ -122,7 +122,19 @@ export interface IkeMessage {
   notify?: 'AUTHENTICATION_FAILED' | 'TS_UNACCEPTABLE';
 }
 
-export type AppMessage = DhcpMessage | DnsMessage | RipMessage | RipngMessage | Dhcpv6Message | IkeMessage;
+/**
+ * VXLAN (RFC 7348): ein ganzer Ethernet-Rahmen in UDP (Port 4789). Die VNI
+ * (24 Bit) kennzeichnet das Layer-2-Segment, wie eine VLAN-Nummer, über ein geroutetes Netz hinweg.
+ */
+export interface VxlanMessage {
+  kind: 'vxlan';
+  vni: number;
+  frame: EthernetFrame;
+}
+
+export const VXLAN_PORT = 4789;
+
+export type AppMessage = DhcpMessage | DnsMessage | RipMessage | RipngMessage | Dhcpv6Message | IkeMessage | VxlanMessage;
 
 export interface UdpDatagram {
   kind: 'udp';
@@ -267,6 +279,27 @@ export interface StpBpdu {
 }
 
 /**
+ * LACPDU (IEEE 802.1AX): Link Aggregation Control Protocol. Beide Enden eines
+ * Port-Channels tauschen ihre Kennung (System-MAC, Schlüssel = Channel-Nummer,
+ * Port) aus; nur Ports mit demselben Partner werden gebündelt.
+ */
+export interface LacpPdu {
+  kind: 'lacp';
+  actorSystem: string;
+  actorKey: number;
+  actorPort: number;
+  /** Zustandsbits: 0 Activity, 1 Timeout, 2 Aggregation, 3 Synchronization, 4 Collecting, 5 Distributing, 6 Defaulted, 7 Expired. */
+  actorState: number;
+  partnerSystem: string;
+  partnerKey: number;
+  partnerPort: number;
+  partnerState: number;
+}
+
+/** Ziel-MAC der Slow Protocols (LACP), wird von Switches nie weitergeleitet. */
+export const LACP_MAC = '01:80:C2:00:00:02';
+
+/**
  * PPP-Steuerpaket (RFC 1661/1332): LCP handelt die Verbindung aus, IPCP die
  * IP-Adressen. Erst danach fliessen IP-Pakete.
  */
@@ -306,7 +339,7 @@ export interface EthernetFrame {
   vlan?: number;
   l2?: 'hdlc' | 'ppp';
   access?: AccessTech;
-  payload: ArpPacket | Ipv4Packet | Ipv6Packet | StpBpdu | PppControl | LinkControl;
+  payload: ArpPacket | Ipv4Packet | Ipv6Packet | StpBpdu | LacpPdu | PppControl | LinkControl;
 }
 
 export type AccessTech = 'docsis' | 'gpon' | 'adsl' | 'vdsl' | 'lte';

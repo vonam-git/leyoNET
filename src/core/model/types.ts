@@ -6,6 +6,7 @@ export type DeviceType =
   | 'switch'
   | 'l3switch'
   | 'router'
+  | 'firewall'
   | 'accesspoint'
   | 'modem'
   | 'cpe'
@@ -32,7 +33,7 @@ export interface StaticRoute6 {
   iface?: number;
 }
 
-import type { FirewallConfig, VpnTunnel } from './security';
+import type { AccessList, FirewallConfig, VpnTunnel } from './security';
 export type { FirewallConfig, FirewallRule, FirewallAction, FirewallProtocol, VpnTunnel } from './security';
 
 export type RoutingMode = 'auto' | 'static' | 'dynamic';
@@ -49,6 +50,10 @@ export interface ModemConfig {
 export type SerialEncapsulation = 'hdlc' | 'ppp';
 
 /** Farbmarkierung für Anschlüsse und Bereiche (Dokumentationsmodus). */
+export type ChannelMode = 'active' | 'passive' | 'on';
+export const CHANNEL_MODES: readonly ChannelMode[] = ['active', 'passive', 'on'];
+export const MAX_CHANNEL = 64;
+
 export type TagColor = 'red' | 'orange' | 'yellow' | 'green' | 'teal' | 'blue' | 'purple' | 'pink' | 'gray';
 
 /** Rolle eines Geräts, bestimmt u.a. die Farbe in der Oberfläche. */
@@ -74,6 +79,18 @@ export interface NetInterface {
   vlan?: number;
   /** Nur Switch: Trunk-Port, überträgt alle VLANs mit 802.1Q-Tag (VLAN 1 ohne Tag). */
   trunk?: boolean;
+  /** Router, Firewall: VRF, zu dem der Anschluss gehört («vrf forwarding KUNDE-A»); fehlt = globale Tabelle. */
+  vrf?: string;
+  /** Nur Switch, Trunk: erlaubte VLANs («switchport trunk allowed vlan»); fehlt = alle. */
+  allowedVlans?: number[];
+  /** Nur Switch, Trunk: VLAN ohne Tag («switchport trunk native vlan»); fehlt = 1. */
+  nativeVlan?: number;
+  /** Nur Switch: Port-Channel (Link Aggregation), dem der Port angehört («channel-group 1»). */
+  channel?: number;
+  /** Nur Switch: Aushandlung im Port-Channel: LACP aktiv, passiv oder fest ohne LACP («on»). Fehlt = aktiv. */
+  channelMode?: ChannelMode;
+  /** Nur Switch: Name der Zugriffsliste für eingehende Pakete («ip access-group NAME in»). */
+  aclIn?: string;
   /** Administrativ abgeschaltet («shutdown»): Link ist aus, nichts wird gesendet oder empfangen. */
   shutdown?: boolean;
   /** Farbmarkierung des Anschlusses (z.B. für Patchfelder und Dokumentation). */
@@ -118,11 +135,56 @@ export interface SubInterface {
   ip?: string;
   mask?: string;
   dhcpRelay?: string;
+  vrf?: string;
+}
+
+/** Loopback-Interface eines Routers oder Layer-3-Switches («interface loopback0»): immer aktiv, z.B. für die Router-ID. */
+export interface Loopback {
+  /** Nummer 0–99. */
+  id: number;
+  ip?: string;
+  mask?: string;
+  vrf?: string;
+}
+
+/** VXLAN-Segment: VNI, zugeordnetes VLAN und die anderen VTEPs (statische Liste, Ingress Replication). */
+export interface VxlanVni {
+  vni: number;
+  /** VLAN dieses Switches, das über die VNI verlängert wird («vn-segment» im VLAN). */
+  vlan?: number;
+  /** Adressen der anderen VTEPs («peer-ip»). */
+  peers: string[];
+}
+
+/** Layer-3-Switch als VTEP («interface nve1»). */
+export interface VxlanConfig {
+  /** Logisches Interface mit der Absenderadresse, meist ein Loopback («source-interface loopback0»). */
+  source?: number;
+  vnis: VxlanVni[];
+}
+
+export const MAX_VNI = 16_777_215;
+
+/**
+ * VRF (Virtual Routing and Forwarding): eigene Routingtabelle auf demselben
+ * Gerät, z.B. für zwei Kunden mit überlappenden Adressen. Anschlüsse werden
+ * per `vrf` zugeordnet; Pakete bleiben in ihrer VRF.
+ */
+export interface Vrf {
+  /** Name, z.B. «KUNDE-A» (Buchstaben, Ziffern, «-», «_»). */
+  name: string;
+  /** Statische Routen dieser VRF. */
+  routes?: StaticRoute[];
 }
 
 /** Layer-3-Switch: virtuelles Interface eines VLANs (SVI, «interface vlan 10»). */
 export interface Svi {
   vlan: number;
+  vrf?: string;
+  /** Zugriffsliste für Pakete aus dem VLAN («ip access-group NAME in»), auch an den Switch selbst. */
+  aclIn?: string;
+  /** Zugriffsliste für Pakete, die ins VLAN geroutet werden («ip access-group NAME out»). */
+  aclOut?: string;
   ip?: string;
   mask?: string;
   dhcpRelay?: string;
@@ -157,6 +219,10 @@ export interface Device {
   dhcp?: boolean;
   /** Nur Rechner: DHCP-Server-Dienst. */
   dhcpServer?: DhcpServerConfig;
+  /** Router, Firewall, Layer-3-Switch: DHCP-Pools je Netz (Cisco-Stil). */
+  dhcpPools?: DhcpPool[];
+  /** Router, Firewall, Layer-3-Switch: von den Pools ausgeschlossene Adressen. */
+  dhcpExcluded?: DhcpExcluded[];
   /** Nur Rechner: DNS-Server-Dienst mit seiner Zone. */
   dnsServer?: DnsServerConfig;
   /** Nur Rechner: Webserver mit seinen Seiten. */
@@ -175,6 +241,12 @@ export interface Device {
   stpPriority?: number;
   /** Nur Router: 802.1Q-Subinterfaces (Router-on-a-Stick). */
   subinterfaces?: SubInterface[];
+  /** Router, Firewall, Layer-3-Switch: Loopback-Interfaces. */
+  loopbacks?: Loopback[];
+  /** Router, Firewall, Layer-3-Switch: VRFs (eigene Routingtabellen). */
+  vrfs?: Vrf[];
+  /** Layer-3-Switch: VXLAN-Tunnelendpunkt (VTEP). */
+  vxlan?: VxlanConfig;
   /** Nur Layer-3-Switch: VLAN-Interfaces mit Adresse. */
   svis?: Svi[];
   /** Nur Layer-3-Switch: false = Routing zwischen VLANs ausgeschaltet («no ip routing»). */
@@ -189,6 +261,12 @@ export interface Device {
   cli?: CliConfig;
   /** Nur Switches: Namen der VLANs («vlan 10» / «name Verwaltung»). */
   vlanNames?: VlanName[];
+  /**
+   * Nur Switches: angelegte VLANs ausser VLAN 1 («vlan 10»). Ein Switch leitet
+   * nur VLANs weiter, die er kennt. Fehlt das Feld (Dateien vor Version 1.2),
+   * gelten alle verwendeten VLANs als angelegt.
+   */
+  vlanDb?: number[];
   /** In diesem Rack (Bereich der Art «rack») eingebaut. */
   rack?: string;
   /** Nur Client-Gruppe: Anzahl Rechner, die sich den Anschluss teilen (alle per DHCP). */
@@ -199,6 +277,8 @@ export interface Device {
   staticNat?: StaticNat[];
   /** Router, Internet-Box, Endgeräte: Paketfilter (Router: weitergeleitete Pakete, Endgerät: eingehende). */
   firewall?: FirewallConfig;
+  /** Nur Switches: benannte Zugriffslisten (ACL), zugewiesen über `aclIn` am Port. */
+  acls?: AccessList[];
   /** Nur Router: IPsec-Tunnel zu anderen Standorten (Site-to-Site-VPN). */
   vpn?: VpnTunnel[];
   /** Nur Internet (Provider): öffentliche Adresse, hinter der CGNAT-Kunden erscheinen. */
@@ -440,6 +520,24 @@ export interface DhcpReservation {
   ip: string;
 }
 
+/** DHCP-Pool auf einem Router oder Layer-3-Switch («ip dhcp pool NAME»). Vergeben wird das ganze Netz ohne ausgeschlossene Adressen. */
+export interface DhcpPool {
+  name: string;
+  /** Netz, z.B. "192.168.10.0", und Maske in Punktschreibweise. Fehlt, solange «network» noch nicht gesetzt ist. */
+  network?: string;
+  mask?: string;
+  gateway?: string;
+  dns?: string;
+  /** Gültigkeit in Sekunden; fehlt = 1 Tag wie auf Cisco-Geräten. */
+  leaseTime?: number;
+}
+
+/** Ausgeschlossener Adressbereich («ip dhcp excluded-address A [B]»). */
+export interface DhcpExcluded {
+  start: string;
+  end?: string;
+}
+
 export interface DhcpScope {
   start: string;
   end: string;
@@ -479,8 +577,11 @@ export interface Cable {
 export interface DocArea {
   /** Form "a<n>". */
   id: string;
-  /** «rack»: 19-Zoll-Schrank, in den Netzwerkgeräte eingebaut werden; sonst ein farbiger Bereich. */
-  kind?: 'rack';
+  /**
+   * «rack»: 19-Zoll-Schrank, in den Netzwerkgeräte eingebaut werden; «note»: Textfeld
+   * mit Titel und frei formatiertem Text (Absätze, Listen, **fett**); sonst ein farbiger Bereich.
+   */
+  kind?: 'rack' | 'note';
   title: string;
   color: TagColor;
   x: number;

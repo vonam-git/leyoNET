@@ -25,13 +25,17 @@ Profile und Funktionsdateien: [funktionsprofile.md](funktionsprofile.md).
 | Dienste | E-Mail | SMTP, IMAP |
 | Switching | VLAN und Spanning Tree | blockierter Port, 802.1Q-Tag auf dem Trunk |
 | Switching | Broadcast-Sturm | Schleife ohne STP, Sturm-Warnung |
+| Switching | Port-Channel mit LACP | zwei Kabel gebündelt, LACPDUs, kein blockierter Port |
+| Switching | VXLAN zwischen zwei Standorten | ARP und Ping in UDP 4789, OSPF-Underlay mit Loopbacks |
+| Routing | Rechenzentrum Leaf-Spine mit BGP und VXLAN | eBGP-Underlay mit Loopbacks, zwei VNIs über drei Leafs, ARP und Ping in UDP 4789 |
+| Routing | VRF: zwei Kunden, gleiche Adressen | gleiche Adresse, verschiedene Server je nach VRF |
 | Switching | Router-on-a-Stick, Layer-3-Switch | Routing zwischen VLANs, DHCP-Relay |
 | Routing | Statische Routen, OSPF, RIP, BGP | `tracert` über die Router, Protokollmeldungen, gelernte Routen |
 | Zugang | NAT, Internet-Box (CPE), serielle Leitung mit PPP, WLAN-Mesh | NAT-Tabelle, DOCSIS-Aufbau, LCP/IPCP, Mesh |
-| Sicherheit | Firewall mit DMZ | Webseite erlaubt, Ping blockiert, Trefferzähler je Regel |
+| Sicherheit | Firewall mit DMZ; Firewall-Gerät und ACL | Webseite erlaubt, Ping blockiert, Trefferzähler je Regel; Zonen WAN/LAN/DMZ, ACL am Switch-Port verwirft Gast-Pings |
 | Sicherheit | VPN zwischen zwei Standorten | IKEv2-Aushandlung, ESP-Pakete im Internet, Tunnelstatus |
 
-**Schritt für Schritt** (bei ARP/Ping, Gateway, DHCP, DNS/HTTP, SNAT, DNAT, Internet-Box, DS-Lite, Firewall und VPN): Ein Avatar als Lehrperson erklärt den Testfall in kleinen Schritten. Er hebt Geräte hervor, öffnet die passenden Einstellungen, startet Aktionen und hält die Simulation an, damit die Klasse im Einzelschritt mitgeht. Jede Person kann den Avatar selbst einstellen (Frisur, Bart, Brille, Hautton, Shirt, Headset); gespeichert wird nur das Aussehen, im eigenen Browser.
+**Schritt für Schritt** (bei ARP/Ping, Gateway, DHCP, DNS/HTTP, SNAT, DNAT, Internet-Box, DS-Lite, Firewall, Firewall-Gerät mit ACL, VPN, VXLAN, Port-Channel und Rechenzentrum): Ein Avatar als Lehrperson erklärt den Testfall in kleinen Schritten. Er hebt Geräte hervor, öffnet die passenden Einstellungen, startet Aktionen und hält die Simulation an, damit die Klasse im Einzelschritt mitgeht. Jede Person kann den Avatar selbst einstellen (Frisur, Bart, Brille, Hautton, Shirt, Headset); gespeichert wird nur das Aussehen, im eigenen Browser.
 
 Tipp: Vorführen, dann mit **Leertaste** anhalten und mit **N** im Einzelschritt weitergehen. Jedes ankommende Paket wird dabei Schicht für Schicht ausgepackt (OSI-Farben unten eingeblendet), was die Kapselung gut sichtbar macht. Jede Demo wird bei jedem Release automatisch geprüft (`src/ui/demos.test.ts`); die Dateien liegen auch in [docs/beispiele](beispiele).
 
@@ -79,7 +83,7 @@ Tipp: Vorführen, dann mit **Leertaste** anhalten und mit **N** im Einzelschritt
 
 ## Modul 117: Übungen, Arbeitsblätter und Prüfung
 
-Im Aufgaben-Katalog gibt es die Reihe **«Modul 117»** (Filter oben im Katalog) mit den Übungen aus Block 6 «IP und Router» und Block 7 «Netzwerkdienste»:
+Im Aufgaben-Katalog gibt es den Reiter **«M117»** (Reiter oben im Katalog) mit den Übungen aus Block 6 «IP und Router» und Block 7 «Netzwerkdienste»:
 
 | Sterne | Übung | Arbeitsblatt |
 |---|---|---|
@@ -97,6 +101,51 @@ Im Aufgaben-Katalog gibt es die Reihe **«Modul 117»** (Filter oben im Katalog)
 Zu jeder Übung gibt es ein **ausfüllbares Arbeitsblatt** (PDF) mit den Fragen, die sich nicht automatisch prüfen lassen (Netz-ID, Beobachtungen, Begründungen), dazu eine Version mit Musterlösung: [docs/arbeitsblaetter](arbeitsblaetter/README.md). Die Lernenden geben das ausgefüllte PDF und ihre Projektdateien über die Plattform der Klasse ab (z.B. Teams oder Moodle); ausgewertet wird mit **«Abgaben auswerten …»**.
 
 Die praktische Prüfung (LB3) erstellt **Werkzeuge → Prüfung erstellen …**: eine gewürfelte Variante oder eine eigene je Platz, 75 Punkte, Note = 5 × Punkte / 75 + 1. Die Lernenden erhalten eine Prüfungsdatei ohne Prüfbausteine und Lösungen; du behältst den Schlüssel und wertest damit aus, mit Nachkorrektur und Berichten. Jede andere Aufgabe wird mit **Werkzeuge → Als Prüfung speichern …** zur Prüfung, auch als Fehlersuche mit zufälligen Fehlern je Platz. In der **Webversion** lädst du Prüfungsdatei und Schlüssel in der Admin-Konsole hoch, verteilst Platzkarten mit Platz-Codes, gibst je Platz Nachteilsausgleich und lässt am Ende automatisch auswerten; gespeichert wird alle 20 Sekunden, abgegeben automatisch. Ablauf, Prüfungsmodus, «wer ist wer» und Grenzen: [pruefungen.md](pruefungen.md).
+
+## Modul 129: Subnetting, Routing und Protokollanalyse
+
+Der Reiter **«M129»** im Aufgaben-Katalog enthält drei Gruppen mit je einem ausfüllbaren Arbeitsblatt. Alles läuft in leyoNET: Router, Firewall, Server und die Paketanalyse. Adressen im «Internet» stammen aus den Dokumentationsbereichen nach RFC 5737, Namen enden auf `.example`.
+
+| Sterne | Übung | Arbeitsblatt |
+|---|---|---|
+| ★★ | Subnetting – Auftrag 1: Vier gleich grosse Subnetze | M129_Subnetting |
+| ★★★★ | Subnetting – Auftrag 2: Subnetze nach Bedarf (VLSM) | M129_Subnetting |
+| ★★★ | Subnetting – Auftrag 3: Fehlersuche im Firmennetz | M129_Subnetting |
+| ★★★ | Routing – Auftrag 1: Drei Router statisch verbinden | M129_Routing |
+| ★★★★ | Routing – Auftrag 2: Ins Internet mit NAT | M129_Routing |
+| ★★★ | Routing – Auftrag 3: Verwaltungsnetz und SSH | M129_Routing |
+| ★★ | Protokollanalyse – Auftrag 1: ICMP und TTL | M129_Protokollanalyse |
+| ★★★ | Protokollanalyse – Auftrag 2: DHCP | M129_Protokollanalyse |
+| ★★★★ | Protokollanalyse – Auftrag 3: ARP, DNS und HTTP | M129_Protokollanalyse |
+
+Neu sind **Fragen direkt in leyoNET** (Baustein «Antwort»): z.B. der EtherType von ARP oder die TTL nach der Firewall. «Prüfen» bewertet sie zusammen mit den Netzzielen. Das Arbeitsblatt zum Routing zeigt die passenden Befehle für die Befehlszeile der Router. Nummern und Titel der Übungen lassen sich später an die Unterlagen der Schule anpassen (`src/ui/catalogM129.ts`, Texte in `src/i18n`, Arbeitsblätter in `scripts/arbeitsblaetter/inhaltM129.mjs`).
+
+### Modul 145: VLAN, Inter-VLAN-Routing, DHCP, Netzwerkdesign
+
+Der Reiter **«M145»** folgt den Unterrichtseinheiten UE02 bis UE09 und ergänzt sie um Netzwerkdesign (UE10 Three-Tier, UE11 Collapsed Core) und drei Zusatzübungen. Zu jeder UE gibt es ein Arbeitsblatt in [docs/arbeitsblaetter/](arbeitsblaetter/README.md). Die Übungen bauen auf einem gemeinsamen Firmennetz auf: ENTWICKLUNG VLAN 10, VERWALTUNG VLAN 20, SALES VLAN 30, ITMGMT VLAN 40, je 192.168.<VLAN>.0/24, Gateway .1.
+
+| Sterne | Übung | Arbeitsblatt |
+|---|---|---|
+| ★ | UE02 Netzwerk OldSchool: Zwei Netze mit einem Router | M145_UE02_Netzwerk_OldSchool |
+| ★★ | UE03 Portbasiertes VLAN | M145_UE03_Portbasiertes_VLAN |
+| ★★★ | UE04 Trunk VLAN über zwei Stockwerke | M145_UE04_Trunk_VLAN |
+| ★★★ | UE05 VLAN Theorie-Check (Broadcast mit Native-VLAN-Fehlern) | M145_UE05_VLAN_Theorie_Check |
+| ★★★ | UE06 Router-on-a-Stick | M145_UE06_Router_on_a_Stick |
+| ★★★ | UE07 Layer-3-Switch mit SVIs | M145_UE07_Layer_3_Switch |
+| ★★★★ | UE07b Layer-3-Switch mit ACL | M145_UE07b_Layer_3_Switch_mit_ACL |
+| ★★★ | UE08 DHCP-Pools auf dem Layer-3-Switch | M145_UE08_DHCP |
+| ★★★★ | UE09 DHCP extern mit Relay | M145_UE09_DHCP_extern |
+| ★★★★★ | UE10 Three-Tier (Core, Distribution, Access, OSPF) | M145_UE10_Three_Tier |
+| ★★★★ | UE11 Collapsed Core mit Spanning Tree | M145_UE11_Collapsed_Core |
+| ★★★★ / ★★★ / ★★★★ | Zusatz 1–3: Fehlersuche, Management-VLAN und natives VLAN, Port-Channel | M145_Zusatzuebungen |
+
+Neu dafür: DHCP-Pools auf Routern und Layer-3-Switches («ip dhcp pool»), Zugriffslisten an VLAN-Interfaces («ip access-group NAME in|out» auf «interface vlan N») und die Prüfbausteine `hostVlan` und `trunk`. Das Rätsel in UE05 ist eine eigene Aufgabe von leyoNET (nicht aus den Unterlagen kopiert).
+
+Weitere Module erhalten einen eigenen Reiter, sobald ihre Übungen eine Reihe (`series`) haben, z.B. `m123`.
+
+### Katalog durchsuchen
+
+Oben im Katalog sucht das Suchfeld in Titel, Beschreibung, Arbeitsblatt und Themen (mehrere Wörter: alle müssen vorkommen, «ue» findet auch «ü»). Die **Themen** (VLAN, DHCP, OSPF, ACL …) leitet leyoNET aus den Funktionen und Prüfbausteinen jeder Übung ab; ein Klick filtert, mehrere Themen zeigen Übungen mit mindestens einem davon. **«Nur passend zu meinem Profil»** blendet Übungen aus, die Funktionen ausserhalb des eingestellten Funktionsprofils brauchen.
 
 ## Eigene Aufgaben
 

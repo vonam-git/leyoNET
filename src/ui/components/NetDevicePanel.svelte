@@ -1,6 +1,6 @@
 <script lang="ts">
   import Ipv6StateView from './Ipv6StateView.svelte';
-  import { isRouterType, isSwitchType, type Device, type OspfState } from '../../core';
+  import { isRouterLike, isRouterType, isSwitchType, type Device, type OspfState } from '../../core';
   import { t } from '../../i18n';
   import { interfaceLabel } from '../labels';
   import { simStore } from '../state/sim.svelte';
@@ -122,7 +122,7 @@
       {/each}
     </ul>
   {/if}
-  {#if (device.type === 'router' || device.type === 'cpe') && device.interfaces.some((i) => i.nat)}
+  {#if (isRouterLike(device.type) || device.type === 'cpe') && device.interfaces.some((i) => i.nat)}
     <h3>{t('nat.table')}</h3>
     {#if (deviceState?.nat ?? []).length === 0}
       <p class="muted">{t('nat.empty')}</p>

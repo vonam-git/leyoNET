@@ -1,4 +1,4 @@
-import type { Device, DhcpReservation, DhcpScope, DhcpServerConfig } from '../model/types';
+import type { Device, DhcpPool, DhcpReservation, DhcpScope, DhcpServerConfig } from '../model/types';
 import { canHostServices } from '../model/devices';
 import { normalizeMac } from '../model/mac';
 import { broadcastOf, formatIp, maskToText, networkOf, parseIp, parseMask } from './ipv4';
@@ -121,6 +121,8 @@ export interface ResolvedScope {
   prefix: number;
   /** Feste Zuweisungen in diesem Netz: MAC → Adresse. */
   reserved: Map<string, number>;
+  /** Nicht zu vergebende Adressen (von–bis), z.B. «ip dhcp excluded-address». */
+  excluded?: [number, number][];
   gateway?: string;
   dns?: string;
 }
@@ -154,6 +156,77 @@ export function scopeFor(device: Device, giaddr?: string): ResolvedScope | null 
     if (start === null || end === null || prefix === null) continue;
     if (networkOf(relay, prefix) !== networkOf(start, prefix)) continue;
     return { start, end, prefix, reserved: new Map(), ...(scope.gateway ? { gateway: scope.gateway } : {}), ...(scope.dns ? { dns: scope.dns } : {}) };
+  }
+  return null;
+}
+
+// --- DHCP-Pools auf Routern und Layer-3-Switches («ip dhcp pool») -------------------------
+
+export const MAX_DHCP_POOLS = 16;
+export const MAX_DHCP_EXCLUDED = 32;
+/** Cisco-Standard: 1 Tag. */
+export const POOL_LEASE_TIME = 24 * 3600;
+export const DHCP_POOL_NAME = /^[A-Za-z0-9_.-]{1,32}$/;
+
+export function canDhcpPool(type: Device['type']): boolean {
+  return type === 'router' || type === 'firewall' || type === 'l3switch';
+}
+
+/** Pool prüfen: Name, Netz mit Maske, Gateway und DNS als Adressen, Gültigkeit im erlaubten Bereich. */
+export function checkDhcpPool(pool: DhcpPool): { code: string; field: string; params?: Record<string, string | number> } | null {
+  if (!DHCP_POOL_NAME.test(pool.name)) return { code: 'invalidPoolName', field: 'name', params: { value: pool.name.slice(0, 40) } };
+  if (pool.network !== undefined) {
+    const net = parseIp(pool.network);
+    if (net === null) return { code: 'invalidIp', field: 'network', params: { value: pool.network } };
+    const prefix = pool.mask !== undefined ? parseMask(pool.mask) : null;
+    if (prefix === null || prefix > 30 || prefix < 8) return { code: 'invalidMask', field: 'mask', params: { value: pool.mask ?? '' } };
+  }
+  for (const field of ['gateway', 'dns'] as const) {
+    const v = pool[field];
+    if (v !== undefined && parseIp(v) === null) return { code: 'invalidIp', field, params: { value: v } };
+  }
+  if (pool.leaseTime !== undefined && (!Number.isInteger(pool.leaseTime) || pool.leaseTime < MIN_LEASE_TIME || pool.leaseTime > MAX_LEASE_TIME * 52)) {
+    return { code: 'dhcpLeaseTime', field: 'leaseTime', params: { min: MIN_LEASE_TIME, max: MAX_LEASE_TIME * 52 } };
+  }
+  return null;
+}
+
+/** Normalform: Netzadresse statt Hostadresse, Maske in Punktschreibweise. */
+export function normalizePool(pool: DhcpPool): DhcpPool {
+  const result: DhcpPool = { name: pool.name };
+  if (pool.network !== undefined && pool.mask !== undefined) {
+    const prefix = parseMask(pool.mask)!;
+    result.network = formatIp(networkOf(parseIp(pool.network)!, prefix));
+    result.mask = maskToText(prefix);
+  }
+  if (pool.gateway) result.gateway = pool.gateway.trim();
+  if (pool.dns) result.dns = pool.dns.trim();
+  if (pool.leaseTime !== undefined) result.leaseTime = pool.leaseTime;
+  return result;
+}
+
+/** Bereich eines Pools für eine Adresse im Client-Netz (Interface-Adresse oder giaddr); null, wenn kein Pool passt. */
+export function poolScopeFor(device: Device, clientNet: number, ownIps: readonly number[]): { scope: ResolvedScope; leaseTime: number; pool: DhcpPool } | null {
+  for (const pool of device.dhcpPools ?? []) {
+    const net = pool.network !== undefined ? parseIp(pool.network) : null;
+    const prefix = pool.mask !== undefined ? parseMask(pool.mask) : null;
+    if (net === null || prefix === null || networkOf(clientNet, prefix) !== networkOf(net, prefix)) continue;
+    const excluded: [number, number][] = ownIps.map((ip) => [ip, ip]);
+    for (const e of device.dhcpExcluded ?? []) {
+      const a = parseIp(e.start);
+      const b = e.end !== undefined ? parseIp(e.end) : a;
+      if (a !== null && b !== null) excluded.push([Math.min(a, b), Math.max(a, b)]);
+    }
+    const scope: ResolvedScope = {
+      start: networkOf(net, prefix) + 1,
+      end: broadcastOf(net, prefix) - 1,
+      prefix,
+      reserved: new Map(),
+      excluded,
+      ...(pool.gateway ? { gateway: pool.gateway } : {}),
+      ...(pool.dns ? { dns: pool.dns } : {}),
+    };
+    return { scope, leaseTime: pool.leaseTime ?? POOL_LEASE_TIME, pool };
   }
   return null;
 }

@@ -24,11 +24,15 @@
   import ShortcutsDialog from './ShortcutsDialog.svelte';
   import SnapshotDialog from './SnapshotDialog.svelte';
   import TaskEditor from './TaskEditor.svelte';
+  import TaskWindow from './TaskWindow.svelte';
+  import { taskView } from '../state/taskView.svelte';
   import VlanDialog from './VlanDialog.svelte';
 
   /** Zeigt den gerade geöffneten Dialog (gesteuert über Menüs, Kürzel und Schaltflächen). */
   const close = () => dialogs.close();
 </script>
+
+{#if taskView.open}<TaskWindow />{/if}
 
 {#each dialogs.deviceWindows as win (win.key)}
   <DeviceWindow {win} />

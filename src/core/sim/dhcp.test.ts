@@ -158,7 +158,7 @@ group('DHCP-Relay', () => {
   it('erreicht ohne Relay keinen Server in einem anderen Netz', () => {
     const { net, nb } = relayed(false);
     const sim = new Simulation(net.topology);
-    sim.runUntil(10_000);
+    sim.runUntil(30_000);
     expect(codes(sim, nb)).toEqual(['dhcp.discover', 'dhcp.noServer']);
   });
 
@@ -169,7 +169,7 @@ group('DHCP-Relay', () => {
       devices: net.topology.devices.map((d) => (d.id === server ? { ...d, dhcpServer: { ...d.dhcpServer!, scopes: [] } } : d)),
     };
     const sim = new Simulation(net.topology);
-    sim.runUntil(10_000);
+    sim.runUntil(30_000);
     expect(codes(sim, server)).toContain('dhcpServer.noScope');
     expect(codes(sim, nb)).toEqual(['dhcp.discover', 'dhcp.noServer']);
   });
@@ -179,7 +179,7 @@ group('DHCP-Fehlerfälle', () => {
   it('meldet einen erschöpften Adressbereich', () => {
     const { net, server, clients } = network(2, { ...POOL, end: '192.168.0.100' });
     const sim = new Simulation(net.topology);
-    sim.runUntil(10_000);
+    sim.runUntil(30_000);
     expect(sim.getDeviceState(clients[0]!).address?.ip).toBe('192.168.0.100');
     expect(codes(sim, clients[1]!)).toEqual(['dhcp.discover', 'dhcp.noServer']);
     expect(codes(sim, server)).toContain('dhcpServer.exhausted');
@@ -191,8 +191,11 @@ group('DHCP-Fehlerfälle', () => {
     const b = net.host('PC1', '10.0.0.1');
     net.link(a, b);
     const sim = new Simulation(net.topology);
-    sim.runUntil(10_000);
+    sim.runUntil(30_000);
     expect(dhcpLog(net, sim)).toHaveLength(3);
+    // Wiederholung mit doppelter Wartezeit (RFC 2131, 4.1): 4 s, dann 8 s.
+    const sent = sim.getPacketLog().filter((e) => e.frame.payload.kind === 'ipv4' && e.frame.payload.payload.kind === 'udp').map((e) => e.sent);
+    expect([sent[1]! - sent[0]!, sent[2]! - sent[1]!]).toEqual([4000, 8000]);
     expect(codes(sim, a)).toEqual(['dhcp.discover', 'dhcp.noServer']);
     sim.ping(a, '10.0.0.1');
     expect(codes(sim, a).at(-1)).toBe('ping.noLease');

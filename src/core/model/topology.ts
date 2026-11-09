@@ -1,15 +1,17 @@
-import { checkDhcpScope, checkDhcpServer, normalizeDhcpServer, normalizeScope } from '../net/dhcp';
+import { MAX_DHCP_EXCLUDED, MAX_DHCP_POOLS, canDhcpPool, checkDhcpPool, checkDhcpScope, checkDhcpServer, normalizeDhcpServer, normalizePool, normalizeScope } from '../net/dhcp';
 import { checkDnsRecord, isValidName, normalizeName, normalizeRecord } from '../net/dns';
 import { isValidPath } from '../net/http';
 import { checkMailAccount, checkMailbox } from '../net/mail';
-import { checkHostConfig, maskToText, parseIp, parseMask, type HostConfigInput } from '../net/ipv4';
-import { checkStaticRoute, decodeIface, normalizeRoute } from '../net/routing';
-import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
+import { checkHostConfig, formatIp, maskToText, parseIp, parseMask, type HostConfigInput } from '../net/ipv4';
+import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME, checkStaticRoute, decodeIface, logicalInterfaces, normalizeRoute } from '../net/routing';
+import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, isRouterLike, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
 import { MIN_SIGNAL, portMedium, signalBetween } from './links';
 import { macFor, normalizeMac } from './mac';
-import { MAX_VPN_TUNNELS, checkFirewall, checkVpnTunnel, type FirewallConfig, type VpnTunnel } from './security';
+import { MAX_ACLS, MAX_VPN_TUNNELS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type VpnTunnel } from './security';
 import { formatCidr6, formatIp6, isLinkLocal6, isLoopback6, isMulticast6, isUnspecified6, networkOf6, parseCidr6, parseIp6 } from '../net/ipv6';
 import type {
+  DhcpExcluded,
+  DhcpPool,
   Cable,
   Device,
   DeviceType,
@@ -33,6 +35,9 @@ import type {
   PortForward,
   StaticRoute,
   SubInterface,
+  ChannelMode,
+  VxlanConfig,
+  Loopback,
   Svi,
   Topology,
   WebFile,
@@ -48,6 +53,7 @@ import type {
   StaticNat,
   VlanDef,
 } from './types';
+import { CHANNEL_MODES, MAX_CHANNEL, MAX_VNI } from './types';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
 
 export const MAX_NAME_LENGTH = 32;
@@ -56,6 +62,7 @@ export const MAX_WEB_FILE = 160_000;
 export const MAX_WEB_TOTAL = 300_000;
 
 export type ErrorCode =
+  | 'notEditable'
   | 'unknownDevice'
   | 'unknownCable'
   | 'sameDevice'
@@ -72,6 +79,14 @@ export type ErrorCode =
   | 'duplicateForward'
   | 'notASwitch'
   | 'invalidVlan'
+  | 'invalidChannel'
+  | 'invalidVrfName'
+  | 'notAVtep'
+  | 'invalidVni'
+  | 'unknownVni'
+  | 'vlanHasVni'
+  | 'unknownVrf'
+  | 'defaultVlan'
   | 'stpNeededForLoop'
   | 'invalidPriority'
   | 'notAnEndpoint'
@@ -87,8 +102,14 @@ export type ErrorCode =
   | 'firewallPortNeedsProtocol'
   | 'invalidNetwork'
   | 'tooMany'
+  | 'invalidPoolName'
+  | 'unknownPool'
+  | 'notDhcpPoolCapable'
   | 'vpnKeyLength'
   | 'notFirewallCapable'
+  | 'invalidAclName'
+  | 'notAclCapable'
+  | 'unknownAcl'
   | 'ipv6Link'
   | 'unknownRoute'
   | 'networkHasHostBits'
@@ -271,7 +292,7 @@ export interface DeviceOptions {
 
 /** Router und CPE können Adressen übersetzen (NAT, Portweiterleitung). */
 export function natCapable(device: Device): boolean {
-  return device.type === 'router' || device.type === 'cpe';
+  return isRouterLike(device.type) || device.type === 'cpe';
 }
 
 /**
@@ -287,12 +308,28 @@ function cpeDefaults(device: Device): Partial<Device> {
 }
 
 /**
+ * Firewall ab Werk: zustandsbehaftet, von innen (LAN, DMZ, OPT) nach aussen
+ * erlaubt, alles andere gesperrt. Antworten kommen dank Zustand zurück; neue
+ * Verbindungen vom WAN brauchen eine eigene Regel.
+ */
+export function firewallDefaults(device: Pick<Device, 'interfaces'>): FirewallConfig {
+  const inside = device.interfaces.filter((i) => i.index > 0 && !i.sfpSlot && !i.serial);
+  return { rules: inside.map((i) => ({ action: 'allow', protocol: 'any', src: 'any', dst: 'any', iface: i.index })), defaultAction: 'deny' };
+}
+
+/** Zone eines Firewall-Anschlusses: 0 WAN, 1 LAN, 2 DMZ, weitere OPT1, OPT2 … */
+export function firewallZone(index: number): string {
+  return index === 0 ? 'WAN' : index === 1 ? 'LAN' : index === 2 ? 'DMZ' : `OPT${index - 2}`;
+}
+
+/**
  * Standardgateway eines Vermittlungsgeräts (z.B. das Gateway des Providers an
  * der CPE): ersetzt die Route 0.0.0.0/0; leer entfernt sie.
  */
 export function setDefaultGateway(t: Topology, id: string, gateway: string): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
+  if (DEVICE_SPECS[device.type].role === 'endpoint' || device.type === 'accesspoint' || device.type === 'modem') return fail('notARouter');
   const value = gateway.trim();
   if (value && parseIp(value) === null) return { ok: false, error: { code: 'invalidIp', params: { value }, field: 'gateway' } };
   const others = (device.routes ?? []).filter((r) => parseMask(r.mask) !== 0);
@@ -332,6 +369,9 @@ export function addDevice(
   }
   if ((type === 'modem' || type === 'cpe') && options.modem) device.modem = { kind: options.modem };
   if (type === 'cpe') Object.assign(device, cpeDefaults(device));
+  if (type === 'firewall') device.firewall = firewallDefaults(device);
+  // Neue Switches führen eine VLAN-Datenbank: Weitergeleitet wird nur, was angelegt ist.
+  if (isSwitchType(type)) device.vlanDb = [];
   return ok({ topology: { ...t, devices: [...t.devices, device], nextId: seq + 1 }, id: device.id });
 }
 
@@ -381,7 +421,7 @@ export function freeInterfaceFor(t: Topology, device: Device, medium: Medium): N
 
 /** Warum kein Anschluss frei ist: Medium passt nirgends, SFP-Modul fehlt oder alles belegt. */
 export function noPortError(t: Topology, device: Device, medium: Medium): ErrorCode {
-  if (medium === 'fiber' && device.interfaces.some((i) => i.sfpSlot && !i.sfp)) return 'noSfpModule';
+  if (medium === 'fiber' && (device.interfaces.some((i) => i.sfpSlot && !i.sfp) || canHaveSfp(device.type))) return 'noSfpModule';
   const anyPort = device.interfaces.some((i) => {
     if (portAccepts(device, i.index, medium)) return true;
     return medium === 'fiber' && !!i.sfpSlot;
@@ -424,8 +464,7 @@ export function connect(t: Topology, aId: string, bId: string, medium: Medium = 
   const b = getDevice(t, bId);
   if (!a || !b) return fail('unknownDevice');
   if (a.id === b.id) return fail('sameDevice');
-  const direct = cablesOf(t, a.id).some((c) => otherEnd(c, a.id).device === b.id);
-  if (direct) return fail('alreadyConnected', { a: a.name, b: b.name });
+  // Mehrere Kabel zwischen denselben Geräten sind erlaubt: Port-Channel (Link Aggregation) oder Schleifen.
   const mediumIssue = checkMedium(a, b, medium);
   if (mediumIssue) return fail(mediumIssue);
   // Schleifen zwischen Switches sind erlaubt: Ohne Spanning Tree zeigt die Simulation den Broadcast-Sturm.
@@ -575,18 +614,122 @@ function updatePort(t: Topology, id: string, index: number, change: (i: NetInter
   return updateDevice(t, id, (d) => ({ ...d, interfaces: d.interfaces.map((i) => (i.index === index ? change(i) : i)) }));
 }
 
-/** VLAN eines Access-Ports (1–4094); VLAN 1 wird nicht gespeichert. */
+// --- VLAN-Datenbank ----------------------------------------------------------------
+
+/** Kennt der Switch das VLAN? VLAN 1 immer; ohne Datenbank (ältere Dateien) jedes. */
+export function vlanExists(device: Pick<Device, 'vlanDb'>, vlan: number): boolean {
+  return vlan === 1 || !device.vlanDb || device.vlanDb.includes(vlan);
+}
+
+/** VLANs, die ein Switch verwendet (Ports, Trunks, SVIs, Namen) – Grundlage für die Datenbank älterer Dateien. */
+export function usedVlans(device: Device): number[] {
+  const set = new Set<number>();
+  for (const p of device.interfaces) {
+    if (!p.trunk && p.vlan) set.add(p.vlan);
+    for (const v of p.allowedVlans ?? []) set.add(v);
+    if (p.nativeVlan) set.add(p.nativeVlan);
+  }
+  for (const s of device.svis ?? []) set.add(s.vlan);
+  for (const n of device.vlanNames ?? []) set.add(n.vlan);
+  set.delete(1);
+  return [...set].sort((a, b) => a - b);
+}
+
+const validVlanId = (vlan: number) => Number.isInteger(vlan) && vlan >= 1 && vlan <= 4094;
+
+/** Datenbank mit diesen VLANs ergänzen; eine ältere Datei ohne Datenbank bekommt dabei alle verwendeten. */
+function withVlans(device: Device, add: number[]): Device {
+  const base = device.vlanDb ?? usedVlans(device);
+  const next = [...new Set([...base, ...add.filter((v) => v !== 1)])].sort((a, b) => a - b);
+  return { ...device, vlanDb: next };
+}
+
+/** VLAN anlegen («vlan 20»). */
+export function createVlan(t: Topology, id: string, vlan: number): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  if (!validVlanId(vlan)) return fail('invalidVlan');
+  return ok(updateDevice(t, id, (d) => withVlans(d, [vlan])));
+}
+
+/**
+ * VLAN löschen («no vlan 20»): Name und Eintrag verschwinden. Ports bleiben im
+ * VLAN, sind aber inaktiv, bis es wieder angelegt wird (wie bei Cisco).
+ */
+export function deleteVlan(t: Topology, id: string, vlan: number): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  if (vlan === 1) return fail('defaultVlan');
+  if (!validVlanId(vlan)) return fail('invalidVlan');
+  return ok(
+    updateDevice(t, id, (d) => {
+      const names = (d.vlanNames ?? []).filter((n) => n.vlan !== vlan);
+      const { vlanNames: _n, ...rest } = withVlans(d, []);
+      return { ...rest, vlanDb: (rest.vlanDb ?? []).filter((v) => v !== vlan), ...(names.length ? { vlanNames: names } : {}) };
+    }),
+  );
+}
+
+/** VLAN eines Access-Ports (1–4094); VLAN 1 wird nicht gespeichert. Ein unbekanntes VLAN wird angelegt (wie Cisco). */
 export function setPortVlan(t: Topology, id: string, index: number, vlan: number): Result<Topology> {
   const device = switchDevice(t, id);
   if (!device.ok) return device;
   if (!device.value.interfaces[index]) return fail('unknownInterface');
-  if (!Number.isInteger(vlan) || vlan < 1 || vlan > 4094) return fail('invalidVlan');
+  if (!validVlanId(vlan)) return fail('invalidVlan');
+  const next = updatePort(t, id, index, (i) => {
+    const { vlan: _v, ...base } = i;
+    return vlan === 1 ? base : { ...base, vlan };
+  });
+  return ok(vlanExists(device.value, vlan) ? next : updateDevice(next, id, (d) => withVlans(d, [vlan])));
+}
+
+/** Erlaubte VLANs eines Trunks; null = alle. */
+export function setTrunkAllowed(t: Topology, id: string, index: number, vlans: number[] | null): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  if (!device.value.interfaces[index]) return fail('unknownInterface');
+  if (vlans && !vlans.every(validVlanId)) return fail('invalidVlan');
+  const list = vlans ? [...new Set(vlans)].sort((a, b) => a - b) : null;
+  return ok(updatePort(t, id, index, (i) => (list === null ? without(i, 'allowedVlans') : { ...i, allowedVlans: list })));
+}
+
+/** VLAN ohne Tag auf einem Trunk (Native VLAN); 1 = Standard. */
+export function setTrunkNative(t: Topology, id: string, index: number, vlan: number): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  if (!device.value.interfaces[index]) return fail('unknownInterface');
+  if (!validVlanId(vlan)) return fail('invalidVlan');
+  return ok(updatePort(t, id, index, (i) => (vlan === 1 ? without(i, 'nativeVlan') : { ...i, nativeVlan: vlan })));
+}
+
+/**
+ * Port einem Port-Channel zuweisen («channel-group 1 mode active») oder ihn
+ * herauslösen (null). Alle Ports eines Channels sollten gleich eingestellt sein
+ * (VLAN bzw. Trunk); sonst stellt die Simulation abweichende Ports aus.
+ */
+export function setPortChannel(t: Topology, id: string, index: number, channel: number | null, mode: ChannelMode = 'active'): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  if (device.value.type === 'accesspoint') return fail('notASwitch');
+  if (!device.value.interfaces[index]) return fail('unknownInterface');
+  if (channel !== null && (!Number.isInteger(channel) || channel < 1 || channel > MAX_CHANNEL)) return fail('invalidChannel', { max: MAX_CHANNEL });
+  if (!CHANNEL_MODES.includes(mode)) return fail('invalidChannel', { max: MAX_CHANNEL });
   return ok(
     updatePort(t, id, index, (i) => {
-      const { vlan: _v, ...base } = i;
-      return vlan === 1 ? base : { ...base, vlan };
+      const { channel: _c, channelMode: _m, ...base } = i;
+      return channel === null ? base : { ...base, channel, ...(mode !== 'active' ? { channelMode: mode } : {}) };
     }),
   );
+}
+
+/** Ports eines Port-Channels (Index aufsteigend). */
+export function channelMembers(device: Device, channel: number): number[] {
+  return device.interfaces.filter((i) => i.channel === channel).map((i) => i.index);
+}
+
+/** Darf ein Trunk dieses VLAN übertragen? */
+export function trunkAllows(iface: Pick<NetInterface, 'allowedVlans'>, vlan: number): boolean {
+  return !iface.allowedVlans || iface.allowedVlans.includes(vlan);
 }
 
 export function setPortTrunk(t: Topology, id: string, index: number, trunk: boolean): Result<Topology> {
@@ -717,6 +860,11 @@ function remapPorts(t: Topology, id: string, interfaces: NetInterface[], mapping
       const next: Device = { ...d, interfaces };
       if (d.subinterfaces) next.subinterfaces = d.subinterfaces.map((si) => ({ ...si, parent: map(si.parent) }));
       if (d.routes) next.routes = d.routes.map((r) => (r.iface !== undefined && decodeIface(r.iface).kind === 'port' ? { ...r, iface: map(r.iface) } : r));
+      // Firewall-Regeln für einen Anschluss folgen ihm; fällt er weg, fällt auch die Regel weg.
+      if (d.firewall) {
+        const rules = d.firewall.rules.filter((r) => r.iface === undefined || mapping.has(r.iface)).map((r) => (r.iface === undefined ? r : { ...r, iface: map(r.iface) }));
+        next.firewall = { ...d.firewall, rules };
+      }
       return next;
     }),
     cables: t.cables.map((c) => ({
@@ -769,6 +917,49 @@ export function configureHost(t: Topology, id: string, input: HostConfigInput): 
       };
     }),
   );
+}
+
+/** DHCP-Pool anlegen oder ändern (gleicher Name ersetzt); null als Pool entfernt den Pool mit diesem Namen. */
+export function setDhcpPool(t: Topology, id: string, name: string, pool: DhcpPool | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canDhcpPool(device.type)) return fail('notDhcpPoolCapable');
+  const list = device.dhcpPools ?? [];
+  const exists = list.some((p) => p.name === name);
+  if (pool === null) {
+    if (!exists) return fail('unknownPool', { name });
+    const rest = list.filter((p) => p.name !== name);
+    return ok(updateDevice(t, id, (d) => (rest.length ? { ...d, dhcpPools: rest } : without(d, 'dhcpPools'))));
+  }
+  const issue = checkDhcpPool(pool);
+  if (issue) return { ok: false, error: { code: issue.code as ErrorCode, params: issue.params, field: issue.field } };
+  if (!exists && list.length >= MAX_DHCP_POOLS) return fail('tooMany', { max: MAX_DHCP_POOLS });
+  const next = normalizePool(pool);
+  const pools = exists ? list.map((p) => (p.name === name ? next : p)) : [...list, next];
+  return ok(updateDevice(t, id, (d) => ({ ...d, dhcpPools: pools })));
+}
+
+/** Ausgeschlossene Adressen der DHCP-Pools ergänzen («ip dhcp excluded-address A [B]») oder entfernen (`remove`). */
+export function setDhcpExcluded(t: Topology, id: string, start: string, end: string | undefined, remove = false): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canDhcpPool(device.type)) return fail('notDhcpPoolCapable');
+  const a = parseIp(start.trim());
+  if (a === null) return { ok: false, error: { code: 'invalidIp', params: { value: start.trim() }, field: 'start' } };
+  const endText = end?.trim() || undefined;
+  const b = endText !== undefined ? parseIp(endText) : a;
+  if (b === null) return { ok: false, error: { code: 'invalidIp', params: { value: endText ?? '' }, field: 'end' } };
+  if (b < a) return { ok: false, error: { code: 'dhcpRangeOrder', field: 'end' } };
+  const entry: DhcpExcluded = { start: formatIp(a), ...(b !== a ? { end: formatIp(b) } : {}) };
+  const list = device.dhcpExcluded ?? [];
+  const same = (e: DhcpExcluded) => e.start === entry.start && (e.end ?? e.start) === (entry.end ?? entry.start);
+  if (remove) {
+    const rest = list.filter((e) => !same(e));
+    return ok(updateDevice(t, id, (d) => (rest.length ? { ...d, dhcpExcluded: rest } : without(d, 'dhcpExcluded'))));
+  }
+  if (list.some(same)) return ok(t);
+  if (list.length >= MAX_DHCP_EXCLUDED) return fail('tooMany', { max: MAX_DHCP_EXCLUDED });
+  return ok(updateDevice(t, id, (d) => ({ ...d, dhcpExcluded: [...list, entry] })));
 }
 
 /** Richtet den DHCP-Server-Dienst eines Rechners ein oder entfernt ihn (`null`). */
@@ -878,7 +1069,7 @@ const validVlan = (vlan: number) => Number.isInteger(vlan) && vlan >= 1 && vlan 
 export function setSubinterface(t: Topology, id: string, parent: number, vlan: number, ip: string, mask: string): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  if (device.type !== 'router') return fail('notARouter');
+  if (!isRouterLike(device.type)) return fail('notARouter');
   if (!device.interfaces[parent]) return fail('unknownInterface');
   if (!validVlan(vlan)) return { ok: false, error: { code: 'invalidVlan', field: 'vlan' } };
   const issue = checkAddress(ip, mask);
@@ -891,6 +1082,214 @@ export function setSubinterface(t: Topology, id: string, parent: number, vlan: n
     ? existing.map((s) => (s === old ? next : s))
     : [...existing, next].sort((a, b) => a.parent - b.parent || a.vlan - b.vlan);
   return ok(updateDevice(t, id, (d) => ({ ...d, subinterfaces: list })));
+}
+
+// --- VXLAN ------------------------------------------------------------------------
+
+export const MAX_VNIS = 32;
+export const MAX_VTEP_PEERS = 16;
+
+function vtepDevice(t: Topology, id: string): Result<Device> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (device.type !== 'l3switch') return fail('notAVtep');
+  return ok(device);
+}
+
+const validVni = (vni: number) => Number.isInteger(vni) && vni >= 1 && vni <= MAX_VNI;
+
+function withVxlan(d: Device, change: (c: VxlanConfig) => VxlanConfig): Device {
+  const next = change(d.vxlan ?? { vnis: [] });
+  const vnis = next.vnis.filter((v) => v.vlan !== undefined || v.peers.length).sort((a, b) => a.vni - b.vni);
+  return vnis.length || next.source !== undefined ? { ...d, vxlan: { ...next, vnis } } : without(d, 'vxlan');
+}
+
+/** Absender der Tunnel («source-interface loopback0»); null entfernt. */
+export function setVxlanSource(t: Topology, id: string, iface: number | null): Result<Topology> {
+  const device = vtepDevice(t, id);
+  if (!device.ok) return device;
+  if (iface !== null && !logicalInterfaces(device.value).includes(iface)) return fail('unknownInterface');
+  return ok(updateDevice(t, id, (d) => withVxlan(d, (c) => (iface === null ? without(c, 'source') : { ...c, source: iface }))));
+}
+
+/** VLAN einer VNI zuordnen («vn-segment 10010» im VLAN); null löst die Zuordnung. */
+export function setVniVlan(t: Topology, id: string, vni: number, vlan: number | null): Result<Topology> {
+  const device = vtepDevice(t, id);
+  if (!device.ok) return device;
+  if (!validVni(vni)) return fail('invalidVni', { max: MAX_VNI });
+  if (vlan !== null && !validVlanId(vlan)) return fail('invalidVlan');
+  const vnis = device.value.vxlan?.vnis ?? [];
+  if (vlan !== null && vnis.some((v) => v.vlan === vlan && v.vni !== vni)) return fail('vlanHasVni', { vlan });
+  if (!vnis.some((v) => v.vni === vni) && vnis.length >= MAX_VNIS) return fail('tooMany', { max: MAX_VNIS });
+  return ok(
+    updateDevice(t, id, (d) =>
+      withVxlan(d, (c) => {
+        const existing = c.vnis.find((v) => v.vni === vni) ?? { vni, peers: [] };
+        const next = vlan === null ? without(existing, 'vlan') : { ...existing, vlan };
+        return { ...c, vnis: [...c.vnis.filter((v) => v.vni !== vni), next] };
+      }),
+    ),
+  );
+}
+
+/** Anderen VTEP für eine VNI eintragen («member vni 10010» / «peer-ip 10.255.0.2»). */
+export function addVniPeer(t: Topology, id: string, vni: number, peer: string): Result<Topology> {
+  const device = vtepDevice(t, id);
+  if (!device.ok) return device;
+  if (!validVni(vni)) return fail('invalidVni', { max: MAX_VNI });
+  const ip = parseIp(peer.trim());
+  if (ip === null) return { ok: false, error: { code: 'invalidIp', params: { value: peer }, field: 'peer' } };
+  const vnis = device.value.vxlan?.vnis ?? [];
+  const existing = vnis.find((v) => v.vni === vni);
+  if (!existing && vnis.length >= MAX_VNIS) return fail('tooMany', { max: MAX_VNIS });
+  if (existing?.peers.includes(formatIp(ip))) return ok(t);
+  if ((existing?.peers.length ?? 0) >= MAX_VTEP_PEERS) return fail('tooMany', { max: MAX_VTEP_PEERS });
+  return ok(
+    updateDevice(t, id, (d) =>
+      withVxlan(d, (c) => {
+        const base = c.vnis.find((v) => v.vni === vni) ?? { vni, peers: [] };
+        return { ...c, vnis: [...c.vnis.filter((v) => v.vni !== vni), { ...base, peers: [...base.peers, formatIp(ip)] }] };
+      }),
+    ),
+  );
+}
+
+/** VTEP aus einer VNI entfernen; ohne Adresse alle («no member vni 10010»). */
+export function removeVniPeer(t: Topology, id: string, vni: number, peer?: string): Result<Topology> {
+  const device = vtepDevice(t, id);
+  if (!device.ok) return device;
+  const existing = device.value.vxlan?.vnis.find((v) => v.vni === vni);
+  if (!existing) return fail('unknownVni', { vni });
+  return ok(
+    updateDevice(t, id, (d) =>
+      withVxlan(d, (c) => ({ ...c, vnis: c.vnis.map((v) => (v.vni === vni ? { ...v, peers: peer === undefined ? [] : v.peers.filter((p) => p !== peer) } : v)) })),
+    ),
+  );
+}
+
+// --- VRF ----------------------------------------------------------------------------
+
+/** Geräte mit VRFs (eigenen Routingtabellen). */
+export function canVrf(type: DeviceType): boolean {
+  return isRouterLike(type) || type === 'l3switch';
+}
+
+function vrfDevice(t: Topology, id: string): Result<Device> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canVrf(device.type)) return fail('notARouter');
+  return ok(device);
+}
+
+/** VRF anlegen («vrf definition KUNDE-A»); vorhandene bleibt unverändert. */
+export function addVrf(t: Topology, id: string, name: string): Result<Topology> {
+  const device = vrfDevice(t, id);
+  if (!device.ok) return device;
+  if (!VRF_NAME.test(name)) return fail('invalidVrfName', { value: name.slice(0, 40) });
+  if (device.value.vrfs?.some((v) => v.name === name)) return ok(t);
+  if ((device.value.vrfs?.length ?? 0) >= MAX_VRFS) return fail('tooMany', { max: MAX_VRFS });
+  return ok(updateDevice(t, id, (d) => ({ ...d, vrfs: [...(d.vrfs ?? []), { name }] })));
+}
+
+/** VRF löschen: Ihre Anschlüsse fallen in die globale Tabelle zurück, ihre Routen verschwinden. */
+export function removeVrf(t: Topology, id: string, name: string): Result<Topology> {
+  const device = vrfDevice(t, id);
+  if (!device.ok) return device;
+  if (!device.value.vrfs?.some((v) => v.name === name)) return fail('unknownVrf', { name });
+  const strip = <T extends { vrf?: string }>(x: T): T => (x.vrf === name ? (without(x, 'vrf') as T) : x);
+  return ok(
+    updateDevice(t, id, (d) => {
+      const vrfs = (d.vrfs ?? []).filter((v) => v.name !== name);
+      const next: Device = {
+        ...d,
+        interfaces: d.interfaces.map(strip),
+        ...(d.subinterfaces ? { subinterfaces: d.subinterfaces.map(strip) } : {}),
+        ...(d.svis ? { svis: d.svis.map(strip) } : {}),
+        ...(d.loopbacks ? { loopbacks: d.loopbacks.map(strip) } : {}),
+      };
+      return vrfs.length ? { ...next, vrfs } : without(next, 'vrfs');
+    }),
+  );
+}
+
+/** Logisches Interface einer VRF zuordnen («vrf forwarding KUNDE-A»); null = globale Tabelle. */
+export function setInterfaceVrf(t: Topology, id: string, index: number, name: string | null): Result<Topology> {
+  const device = vrfDevice(t, id);
+  if (!device.ok) return device;
+  if (name !== null && !device.value.vrfs?.some((v) => v.name === name)) return fail('unknownVrf', { name });
+  const ref = decodeIface(index);
+  const apply = <T extends { vrf?: string }>(x: T): T => (name === null ? (without(x, 'vrf') as T) : { ...x, vrf: name });
+  if (ref.kind === 'port') {
+    if (!device.value.interfaces[ref.port]) return fail('unknownInterface');
+    return ok(updateDevice(t, id, (d) => ({ ...d, interfaces: d.interfaces.map((i) => (i.index === ref.port ? apply(i) : i)) })));
+  }
+  if (ref.kind === 'sub') {
+    if (!device.value.subinterfaces?.some((s) => s.parent === ref.port && s.vlan === ref.vlan)) return fail('unknownInterface');
+    return ok(updateDevice(t, id, (d) => ({ ...d, subinterfaces: d.subinterfaces!.map((s) => (s.parent === ref.port && s.vlan === ref.vlan ? apply(s) : s)) })));
+  }
+  if (ref.kind === 'svi') {
+    if (!device.value.svis?.some((s) => s.vlan === ref.vlan)) return fail('unknownInterface');
+    return ok(updateDevice(t, id, (d) => ({ ...d, svis: d.svis!.map((s) => (s.vlan === ref.vlan ? apply(s) : s)) })));
+  }
+  if (!device.value.loopbacks?.some((l) => l.id === ref.id)) return fail('unknownInterface');
+  return ok(updateDevice(t, id, (d) => ({ ...d, loopbacks: d.loopbacks!.map((l) => (l.id === ref.id ? apply(l) : l)) })));
+}
+
+/** Statische Route in einer VRF («ip route vrf KUNDE-A 0.0.0.0/0 10.1.1.2»). */
+export function addVrfRoute(t: Topology, id: string, name: string, route: StaticRoute): Result<Topology> {
+  const device = vrfDevice(t, id);
+  if (!device.ok) return device;
+  if (!device.value.vrfs?.some((v) => v.name === name)) return fail('unknownVrf', { name });
+  const issue = checkStaticRoute(device.value, route, name);
+  if (issue) return { ok: false, error: { code: issue.code as ErrorCode, params: issue.params, field: issue.field } };
+  return ok(updateDevice(t, id, (d) => ({ ...d, vrfs: d.vrfs!.map((v) => (v.name === name ? { ...v, routes: [...(v.routes ?? []), normalizeRoute(route)] } : v)) })));
+}
+
+export function removeVrfRoute(t: Topology, id: string, name: string, index: number): Result<Topology> {
+  const device = vrfDevice(t, id);
+  if (!device.ok) return device;
+  const vrf = device.value.vrfs?.find((v) => v.name === name);
+  if (!vrf) return fail('unknownVrf', { name });
+  if (!vrf.routes?.[index]) return fail('unknownRoute');
+  return ok(
+    updateDevice(t, id, (d) => ({
+      ...d,
+      vrfs: d.vrfs!.map((v) => {
+        if (v.name !== name) return v;
+        const routes = (v.routes ?? []).filter((_, i) => i !== index);
+        return routes.length ? { ...v, routes } : without(v, 'routes');
+      }),
+    })),
+  );
+}
+
+/** Geräte mit Loopback-Interfaces. */
+export function canLoopback(type: DeviceType): boolean {
+  return isRouterLike(type) || type === 'l3switch';
+}
+
+/** Loopback anlegen oder seine Adresse ändern («interface loopback0», «ip address 10.255.0.1/32»). */
+export function setLoopback(t: Topology, id: string, n: number, ip: string, mask: string): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canLoopback(device.type)) return fail('notARouter');
+  if (!Number.isInteger(n) || n < 0 || n > MAX_LOOPBACK) return fail('unknownInterface');
+  const issue = checkAddress(ip, mask);
+  if (issue) return { ok: false, error: issue };
+  const existing = device.loopbacks ?? [];
+  const old = existing.find((l) => l.id === n);
+  const { ip: _ip, mask: _mask, ...rest } = old ?? { id: n };
+  const next: Loopback = { ...rest, ...normalized(ip, mask) };
+  const list = old ? existing.map((l) => (l === old ? next : l)) : [...existing, next].sort((a, b) => a.id - b.id);
+  return ok(updateDevice(t, id, (d) => ({ ...d, loopbacks: list })));
+}
+
+export function removeLoopback(t: Topology, id: string, n: number): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!device.loopbacks?.some((l) => l.id === n)) return fail('unknownInterface');
+  const list = device.loopbacks.filter((l) => l.id !== n);
+  return ok(updateDevice(t, id, (d) => (list.length ? { ...d, loopbacks: list } : without(d, 'loopbacks'))));
 }
 
 export function removeSubinterface(t: Topology, id: string, parent: number, vlan: number): Result<Topology> {
@@ -906,11 +1305,14 @@ export function removeSubinterface(t: Topology, id: string, parent: number, vlan
   );
 }
 
-/** VLAN-Interface eines Layer-3-Switches anlegen oder seine Adresse ändern («interface vlan 10»). */
+/**
+ * VLAN-Interface anlegen oder seine Adresse ändern («interface vlan 10»): am
+ * Layer-3-Switch als Gateway der VLANs, am Layer-2-Switch als Verwaltungsadresse (ohne Routing).
+ */
 export function setSvi(t: Topology, id: string, vlan: number, ip: string, mask: string): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  if (device.type !== 'l3switch') return fail('notASwitch');
+  if (device.type !== 'l3switch' && device.type !== 'switch') return fail('notASwitch');
   if (!validVlan(vlan)) return { ok: false, error: { code: 'invalidVlan', field: 'vlan' } };
   const issue = checkAddress(ip, mask);
   if (issue) return { ok: false, error: issue };
@@ -919,7 +1321,8 @@ export function setSvi(t: Topology, id: string, vlan: number, ip: string, mask: 
   const { ip: _ip, mask: _mask, ...rest } = old ?? { vlan };
   const next: Svi = { ...rest, ...normalized(ip, mask) };
   const list = old ? existing.map((s) => (s === old ? next : s)) : [...existing, next].sort((a, b) => a.vlan - b.vlan);
-  return ok(updateDevice(t, id, (d) => ({ ...d, svis: list })));
+  // Eine SVI legt ihr VLAN mit an, sonst bliebe sie stumm.
+  return ok(updateDevice(t, id, (d) => ({ ...(vlanExists(d, vlan) ? d : withVlans(d, [vlan])), svis: list })));
 }
 
 export function removeSvi(t: Topology, id: string, vlan: number): Result<Topology> {
@@ -1385,6 +1788,9 @@ export function setDeviceFloor(t: Topology, id: string, floor: number): Result<T
 
 // --- Dokumentationsmodus: Bereiche ---------------------------------------------
 
+/** Höchstlänge des Texts eines Bereichs bzw. Textfelds. */
+export const MAX_NOTE = 4000;
+
 export function addArea(t: Topology, area: Omit<DocArea, 'id'>): Result<{ topology: Topology; id: string }> {
   const id = `a${t.nextId}`;
   const checked = checkArea({ ...area, id });
@@ -1394,11 +1800,11 @@ export function addArea(t: Topology, area: Omit<DocArea, 'id'>): Result<{ topolo
 
 function checkArea(area: DocArea): Result<DocArea> {
   if (area.title.length > 80) return fail('textTooLong', { max: 80 });
-  if ((area.note ?? '').length > 2000) return fail('textTooLong', { max: 2000 });
+  if ((area.note ?? '').length > MAX_NOTE) return fail('textTooLong', { max: MAX_NOTE });
   if (area.vlan !== undefined && (!Number.isInteger(area.vlan) || area.vlan < 1 || area.vlan > 4094)) return fail('invalidVlan');
   const clean: DocArea = {
     id: area.id,
-    ...(area.kind === 'rack' ? { kind: 'rack' as const } : {}),
+    ...(area.kind === 'rack' || area.kind === 'note' ? { kind: area.kind } : {}),
     title: area.title,
     color: area.color,
     x: Math.round(area.x),
@@ -1410,6 +1816,7 @@ function checkArea(area: DocArea): Result<DocArea> {
   if (area.vlan !== undefined) clean.vlan = area.vlan;
   if (area.note?.trim()) clean.note = area.note;
   if (area.floor !== undefined) clean.floor = area.floor;
+  if (area.public) clean.public = true;
   return ok(clean);
 }
 
@@ -1476,7 +1883,7 @@ export function setVlanName(t: Topology, id: string, vlan: number, name: string)
   list.sort((a, b) => a.vlan - b.vlan);
   return ok(
     updateDevice(t, id, (d) => {
-      const { vlanNames: _v, ...rest } = d;
+      const { vlanNames: _v, ...rest } = value && !vlanExists(d, vlan) ? withVlans(d, [vlan]) : d;
       return list.length ? { ...rest, vlanNames: list } : rest;
     }),
   );
@@ -1499,11 +1906,58 @@ export function setSfpModule(t: Topology, id: string, index: number, module: Sfp
   );
 }
 
-/** Modul in den ersten leeren SFP-Einschub stecken (aus der Palette). */
+export const MAX_SFP_SLOTS = 8;
+
+/** Geräte, die SFP-Einschübe haben können (Switches, Router, Firewall). */
+export function canHaveSfp(type: DeviceType): boolean {
+  return type === 'switch' || type === 'l3switch' || type === 'router' || type === 'firewall';
+}
+
+/**
+ * Anzahl SFP-Einschübe ändern (0 bis 8). Neue Einschübe kommen hinten dazu;
+ * entfernt werden nur leere, nicht verkabelte Einschübe von hinten.
+ */
+export function setSfpSlotCount(t: Topology, id: string, count: number): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canHaveSfp(device.type)) return fail('notAnSfpSlot');
+  if (!Number.isInteger(count) || count < 0 || count > MAX_SFP_SLOTS) return fail('interfaceCountOutOfRange', { min: 0, max: MAX_SFP_SLOTS });
+  const slots = device.interfaces.filter((i) => i.sfpSlot);
+  if (count === slots.length) return ok(t);
+  if (count > slots.length) {
+    const used = new Set(device.interfaces.map((i) => i.mac));
+    const seq = deviceSeq(id);
+    let n = 0;
+    const added: NetInterface[] = [];
+    for (let k = slots.length; k < count; k++) {
+      while (used.has(macFor(seq, n))) n++;
+      used.add(macFor(seq, n));
+      added.push({ index: device.interfaces.length + added.length, mac: macFor(seq, n), sfpSlot: true });
+    }
+    return ok(updateDevice(t, id, (d) => ({ ...d, interfaces: [...d.interfaces, ...added] })));
+  }
+  // Nur von hinten entfernen, damit die Nummern der anderen Anschlüsse bleiben.
+  const last = device.interfaces.length - 1;
+  const remove = slots.slice(count);
+  const trailing = remove.every((s, k) => s.index === last - (remove.length - 1 - k));
+  const busy = remove.find((s) => s.sfp || cableAt(t, { device: id, iface: s.index }));
+  if (busy || !trailing) return fail('interfaceConnected', { device: device.name, index: (busy ?? remove[0]!).index });
+  const gone = new Set(remove.map((s) => s.index));
+  return ok(updateDevice(t, id, (d) => ({ ...d, interfaces: d.interfaces.filter((i) => !gone.has(i.index)) })));
+}
+
+/** Modul in den ersten leeren SFP-Einschub stecken (aus der Palette); fehlt einer, wird ein Einschub ergänzt. */
 export function insertSfpModule(t: Topology, id: string, module: SfpModule): Result<{ topology: Topology; index: number }> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  const slot = device.interfaces.find((i) => i.sfpSlot && !i.sfp);
+  let slot = device.interfaces.find((i) => i.sfpSlot && !i.sfp);
+  if (!slot && canHaveSfp(device.type)) {
+    const grown = setSfpSlotCount(t, id, device.interfaces.filter((i) => i.sfpSlot).length + 1);
+    if (grown.ok) {
+      t = grown.value;
+      slot = getDevice(t, id)!.interfaces.find((i) => i.sfpSlot && !i.sfp);
+    }
+  }
   if (!slot) return fail('noFreeSfpSlot', { device: device.name });
   const next = setSfpModule(t, id, slot.index, module);
   return next.ok ? ok({ topology: next.value, index: slot.index }) : next;
@@ -1761,7 +2215,7 @@ export function setAftr(t: Topology, id: string, enabled: boolean): Result<Topol
 
 /** Geräte mit Firewall: Router, Internet-Box und Endgeräte (ausser Client-Gruppen). */
 export function canFirewall(type: DeviceType): boolean {
-  return type === 'router' || type === 'cpe' || (DEVICE_SPECS[type].role === 'endpoint' && type !== 'clientgroup');
+  return isRouterLike(type) || type === 'cpe' || (DEVICE_SPECS[type].role === 'endpoint' && type !== 'clientgroup');
 }
 
 /** Firewall eines Geräts setzen (ganze Konfiguration); null = keine Firewall. */
@@ -1775,10 +2229,64 @@ export function setFirewall(t: Topology, id: string, config: FirewallConfig | nu
   return ok(updateDevice(t, id, (d) => ({ ...d, firewall: checked.value })));
 }
 
+/** Geräte mit Zugriffslisten (ACL) an den Ports: Switches. */
+export function canAccessList(type: DeviceType): boolean {
+  return isSwitchType(type);
+}
+
+/** Zugriffsliste anlegen oder ersetzen (gleicher Name); `rules: null` löscht sie. Zuweisungen an Ports bleiben stehen. */
+export function setAccessList(t: Topology, id: string, name: string, rules: AccessList['rules'] | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canAccessList(device.type)) return fail('notAclCapable');
+  const others = (device.acls ?? []).filter((a) => a.name !== name);
+  if (rules === null) {
+    if (others.length === (device.acls ?? []).length) return fail('unknownAcl', { name });
+    return ok(updateDevice(t, id, (d) => (others.length ? { ...d, acls: others } : without(d, 'acls'))));
+  }
+  const checked = checkAccessList({ name, rules });
+  if (!checked.ok) return { ok: false, error: checked.error };
+  const exists = others.length !== (device.acls ?? []).length;
+  if (!exists && others.length >= MAX_ACLS) return fail('tooMany', { max: MAX_ACLS });
+  const acls = exists ? (device.acls ?? []).map((a) => (a.name === name ? checked.value : a)) : [...others, checked.value];
+  return ok(updateDevice(t, id, (d) => ({ ...d, acls })));
+}
+
+/** Zugriffsliste einem Port für eingehende Pakete zuweisen; null entfernt die Zuweisung. */
+export function setPortAccessList(t: Topology, id: string, iface: number, name: string | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canAccessList(device.type)) return fail('notAclCapable');
+  if (!device.interfaces[iface]) return fail('unknownInterface');
+  if (name !== null && !/^[A-Za-z0-9_-]{1,32}$/.test(name)) return { ok: false, error: { code: 'invalidAclName', field: 'name', params: { value: name.slice(0, 40) } } };
+  return ok(
+    updateDevice(t, id, (d) => ({
+      ...d,
+      interfaces: d.interfaces.map((i) => (i.index !== iface ? i : name === null ? without(i, 'aclIn') : { ...i, aclIn: name })),
+    })),
+  );
+}
+
+/** Zugriffsliste an ein VLAN-Interface (SVI) binden: «in» = aus dem VLAN, «out» = ins VLAN; null entfernt. */
+export function setSviAccessList(t: Topology, id: string, vlan: number, direction: 'in' | 'out', name: string | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canAccessList(device.type)) return fail('notAclCapable');
+  if (!device.svis?.some((s) => s.vlan === vlan)) return fail('unknownSubinterface');
+  if (name !== null && !/^[A-Za-z0-9_-]{1,32}$/.test(name)) return { ok: false, error: { code: 'invalidAclName', field: 'name', params: { value: name.slice(0, 40) } } };
+  const key = direction === 'in' ? 'aclIn' : 'aclOut';
+  return ok(
+    updateDevice(t, id, (d) => ({
+      ...d,
+      svis: (d.svis ?? []).map((s) => (s.vlan !== vlan ? s : name === null ? without(s, key) : { ...s, [key]: name })),
+    })),
+  );
+}
+
 export function addVpnTunnel(t: Topology, id: string, tunnel: VpnTunnel): Result<Topology> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  if (device.type !== 'router') return fail('notARouter');
+  if (!isRouterLike(device.type)) return fail('notARouter');
   if ((device.vpn?.length ?? 0) >= MAX_VPN_TUNNELS) return fail('tooMany', { max: MAX_VPN_TUNNELS });
   const checked = checkVpnTunnel(tunnel, device.vpn ?? []);
   if (!checked.ok) return { ok: false, error: checked.error };

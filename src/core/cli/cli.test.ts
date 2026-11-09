@@ -133,7 +133,7 @@ group('CLI Switch', () => {
     expect(device.interfaces[7]!.trunk).toBe(true);
     expect(device.vlanNames).toEqual([{ vlan: 10, name: 'Verwaltung' }]);
     expect(output.join('\n')).toMatch(/10\s+Verwaltung\s+active\s+port1, port2, port3/);
-    expect(output.join('\n')).toContain('Trunk ports (all VLANs): port8');
+    expect(output.join('\n')).toContain('Trunk ports: port8 (show interfaces trunk)');
   });
 
   it('zeigt die MAC-Tabelle aus der laufenden Simulation', () => {

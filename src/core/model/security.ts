@@ -47,7 +47,23 @@ export interface VpnTunnel {
   key: string;
 }
 
+/**
+ * Zugriffsliste (ACL) eines Switches: benannte Liste von Regeln wie bei der
+ * Firewall, aber zustandslos und mit implizitem «deny» am Ende. Sie wirkt auf
+ * IP-Pakete, die an einem Port hereinkommen, dem sie zugewiesen ist
+ * (`aclIn` am Anschluss). ARP, Spanning Tree und IPv6 Neighbor Discovery
+ * gehen immer durch, sonst fände niemand mehr seinen Nachbarn.
+ */
+export interface AccessList {
+  /** Name, z.B. «GAESTE» (Buchstaben, Ziffern, «-» und «_»). */
+  name: string;
+  /** Regeln von oben nach unten; `iface` wird nicht verwendet. */
+  rules: FirewallRule[];
+}
+
 export const MAX_FIREWALL_RULES = 50;
+export const MAX_ACLS = 16;
+export const ACL_NAME = /^[A-Za-z0-9_-]{1,32}$/;
 export const MAX_VPN_TUNNELS = 8;
 
 type Check<T> = { ok: true; value: T } | { ok: false; error: TopologyError };
@@ -117,6 +133,19 @@ export function checkFirewall(config: FirewallConfig, ports: number): Check<Fire
     rules.push(checked.value);
   }
   return { ok: true, value: { rules, defaultAction: config.defaultAction, ...(config.stateful === false ? { stateful: false } : {}) } };
+}
+
+export function checkAccessList(acl: AccessList): Check<AccessList> {
+  if (!ACL_NAME.test(acl.name)) return bad('invalidAclName', 'name', { value: acl.name.slice(0, 40) });
+  if (acl.rules.length > MAX_FIREWALL_RULES) return bad('tooMany', 'rules', { max: MAX_FIREWALL_RULES });
+  const rules: FirewallRule[] = [];
+  for (const rule of acl.rules) {
+    const { iface: _ignored, ...rest } = rule;
+    const checked = checkFirewallRule(rest, 0);
+    if (!checked.ok) return checked;
+    rules.push(checked.value);
+  }
+  return { ok: true, value: { name: acl.name, rules } };
 }
 
 /** Netz in CIDR mit Netzadresse, z.B. «192.168.1.0/24». */

@@ -1,12 +1,15 @@
-import { DEVICE_SPECS, canAutoRoute, isDeviceType } from '../model/devices';
+import { DEVICE_SPECS, canAutoRoute, isDeviceType, isRouterLike, isSwitchType } from '../model/devices';
+import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME } from '../net/routing';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
+import { MAX_DHCP_EXCLUDED, MAX_DHCP_POOLS, canDhcpPool, checkDhcpPool, normalizePool } from '../net/dhcp';
 import { MAC_PATTERN } from '../model/mac';
 import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
-import { checkFirewall, checkVpnTunnel, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
+import { ACL_NAME, MAX_ACLS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
 import { MAX_GROUP_SIZE } from '../model/devices';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
-import { logicalInterfaces, sviId } from '../net/routing';
+import { logicalInterfaces, sviId, vrfOfIface } from '../net/routing';
 import type {
+  DhcpPool,
   Cable,
   Device,
   DhcpServerConfig,
@@ -28,7 +31,7 @@ import type {
   RoutedNetwork,
   VlanDef,
 } from '../model/types';
-import { DNS_TYPES, IP_MODES, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type DnsType, type IpMode, type Svi, type RoutingMode } from '../model/types';
+import { CHANNEL_MODES, DNS_TYPES, IP_MODES, MAX_CHANNEL, MAX_VNI, MEDIA, MODEM_KINDS, ROUTING_MODES, SFP_MODULES, type ChannelMode, type DnsType, type IpMode, type Svi, type RoutingMode } from '../model/types';
 import { formatCidr6, formatIp6, isLinkLocal6, isMulticast6, parseCidr6, parseIp6 } from '../net/ipv6';
 import { checkDnsRecord, isValidName, normalizeName, normalizeRecord } from '../net/dns';
 import { normalizeMac } from '../model/mac';
@@ -147,6 +150,15 @@ function readSnapshots(v: unknown): Snapshot[] {
       }
       return { id, name: text(o.name, `${path}.name`, 80), created, ...(o.auto === true ? { auto: true } : {}), topology };
     });
+}
+
+/** Liste von VLAN-Nummern 1–4094, ohne Doppelte, sortiert. */
+function vlanList(v: unknown, path: string): number[] {
+  const list = arr(v, path);
+  if (list.length > 4094) throw new Invalid(path);
+  const set = new Set(list.map((x, i) => int(x, `${path}[${i}]`)));
+  for (const vlan of set) if (vlan < 1 || vlan > 4094) throw new Invalid(path);
+  return [...set].sort((a, b) => a - b);
 }
 
 /** Hebt ältere Formatversionen schrittweise auf die aktuelle an. */
@@ -270,10 +282,10 @@ function readTopology(v: unknown): Topology {
     const id = str(o.id, `${path}.id`);
     if (!/^a\d+$/.test(id) || areaIds.has(id)) throw new Invalid(`${path}.id`);
     areaIds.add(id);
-    if (o.kind !== undefined && o.kind !== 'rack') throw new Invalid(`${path}.kind`);
+    if (o.kind !== undefined && o.kind !== 'rack' && o.kind !== 'note') throw new Invalid(`${path}.kind`);
     const area: DocArea = {
       id,
-      ...(o.kind === 'rack' ? { kind: 'rack' as const } : {}),
+      ...(o.kind === 'rack' || o.kind === 'note' ? { kind: o.kind } : {}),
       title: text(o.title, `${path}.title`, 80),
       color: color(o.color, `${path}.color`),
       x: num(o.x, `${path}.x`),
@@ -284,7 +296,7 @@ function readTopology(v: unknown): Topology {
     if (area.width <= 0 || area.height <= 0) throw new Invalid(`${path}.width`);
     if (o.network !== undefined) area.network = text(o.network, `${path}.network`, 40).trim();
     if (o.vlan !== undefined) area.vlan = vlanNumber(o.vlan, `${path}.vlan`);
-    if (o.note !== undefined) area.note = text(o.note, `${path}.note`, 2000);
+    if (o.note !== undefined) area.note = text(o.note, `${path}.note`, 4000);
     if (o.floor !== undefined) area.floor = int(o.floor, `${path}.floor`);
     if (o.public !== undefined && bool(o.public, `${path}.public`)) area.public = true;
     return area;
@@ -352,6 +364,11 @@ function readDevice(v: unknown, path: string): Device {
     if (!MAC_PATTERN.test(mac)) throw new Invalid(`${p}.mac`);
     const iface: NetInterface = { index: i, mac };
     if (io.ip !== undefined) iface.ip = ip(io.ip, `${p}.ip`);
+    if (io.vrf !== undefined) {
+      const name = str(io.vrf, `${p}.vrf`);
+      if (!VRF_NAME.test(name)) throw new Invalid(`${p}.vrf`);
+      iface.vrf = name;
+    }
     if (io.mask !== undefined) {
       const prefix = parseMask(str(io.mask, `${p}.mask`));
       if (prefix === null) throw new Invalid(`${p}.mask`);
@@ -370,6 +387,27 @@ function readDevice(v: unknown, path: string): Device {
     if (io.trunk !== undefined) {
       if (typeof io.trunk !== 'boolean') throw new Invalid(`${p}.trunk`);
       if (io.trunk) iface.trunk = true;
+    }
+    if (io.channel !== undefined) {
+      const channel = int(io.channel, `${p}.channel`);
+      if (channel < 1 || channel > MAX_CHANNEL) throw new Invalid(`${p}.channel`);
+      iface.channel = channel;
+    }
+    if (io.channelMode !== undefined) {
+      const mode = str(io.channelMode, `${p}.channelMode`) as ChannelMode;
+      if (!CHANNEL_MODES.includes(mode) || iface.channel === undefined) throw new Invalid(`${p}.channelMode`);
+      if (mode !== 'active') iface.channelMode = mode;
+    }
+    if (io.allowedVlans !== undefined) iface.allowedVlans = vlanList(io.allowedVlans, `${p}.allowedVlans`);
+    if (io.nativeVlan !== undefined) {
+      const vlan = int(io.nativeVlan, `${p}.nativeVlan`);
+      if (vlan < 2 || vlan > 4094) throw new Invalid(`${p}.nativeVlan`);
+      iface.nativeVlan = vlan;
+    }
+    if (io.aclIn !== undefined) {
+      const name = str(io.aclIn, `${p}.aclIn`);
+      if (!ACL_NAME.test(name)) throw new Invalid(`${p}.aclIn`);
+      iface.aclIn = name;
     }
     if (io.shutdown !== undefined && bool(io.shutdown, `${p}.shutdown`)) iface.shutdown = true;
     if (io.color !== undefined) iface.color = color(io.color, `${p}.color`);
@@ -412,6 +450,36 @@ function readDevice(v: unknown, path: string): Device {
   if (o.dhcp !== undefined) {
     if (typeof o.dhcp !== 'boolean') throw new Invalid(`${path}.dhcp`);
     if (o.dhcp) device.dhcp = true;
+  }
+  if (o.dhcpPools !== undefined) {
+    if (!canDhcpPool(device.type)) throw new Invalid(`${path}.dhcpPools`);
+    const list = arr(o.dhcpPools, `${path}.dhcpPools`);
+    if (list.length > MAX_DHCP_POOLS) throw new Invalid(`${path}.dhcpPools`);
+    const names = new Set<string>();
+    device.dhcpPools = list.map((raw, i) => {
+      const p = `${path}.dhcpPools[${i}]`;
+      const po = obj(raw, p);
+      const pool: DhcpPool = { name: str(po.name, `${p}.name`) };
+      if (po.network !== undefined) pool.network = str(po.network, `${p}.network`);
+      if (po.mask !== undefined) pool.mask = str(po.mask, `${p}.mask`);
+      if (po.gateway !== undefined) pool.gateway = str(po.gateway, `${p}.gateway`);
+      if (po.dns !== undefined) pool.dns = str(po.dns, `${p}.dns`);
+      if (po.leaseTime !== undefined) pool.leaseTime = int(po.leaseTime, `${p}.leaseTime`);
+      if (checkDhcpPool(pool) || names.has(pool.name) || (pool.network === undefined) !== (pool.mask === undefined)) throw new Invalid(p);
+      names.add(pool.name);
+      return normalizePool(pool);
+    });
+  }
+  if (o.dhcpExcluded !== undefined) {
+    if (!canDhcpPool(device.type)) throw new Invalid(`${path}.dhcpExcluded`);
+    const list = arr(o.dhcpExcluded, `${path}.dhcpExcluded`);
+    if (list.length > MAX_DHCP_EXCLUDED) throw new Invalid(`${path}.dhcpExcluded`);
+    device.dhcpExcluded = list.map((raw, i) => {
+      const p = `${path}.dhcpExcluded[${i}]`;
+      const e = obj(raw, p);
+      const start = ip(e.start, `${p}.start`);
+      return { start, ...(e.end !== undefined ? { end: ip(e.end, `${p}.end`) } : {}) };
+    });
   }
   if (o.dhcpServer !== undefined) {
     const p = `${path}.dhcpServer`;
@@ -537,9 +605,9 @@ function readDevice(v: unknown, path: string): Device {
     if (issue) throw new Invalid(`${p}.${issue.field}`);
     device.mailAccount = account;
   }
-  if (o.routes !== undefined) {
-    device.routes = arr(o.routes, `${path}.routes`).map((raw, i): StaticRoute => {
-      const p = `${path}.routes[${i}]`;
+  const readRoutes = (v: unknown, base: string) =>
+    arr(v, base).map((raw, i): StaticRoute => {
+      const p = `${base}[${i}]`;
       const r = obj(raw, p);
       const prefix = parseMask(str(r.mask, `${p}.mask`));
       if (prefix === null) throw new Invalid(`${p}.mask`);
@@ -550,6 +618,47 @@ function readDevice(v: unknown, path: string): Device {
         route.iface = iface;
       }
       return route;
+    });
+  if (o.routes !== undefined) device.routes = readRoutes(o.routes, `${path}.routes`);
+  if (o.vxlan !== undefined) {
+    if (type !== 'l3switch') throw new Invalid(`${path}.vxlan`);
+    const p = `${path}.vxlan`;
+    const x = obj(o.vxlan, p);
+    const list = arr(x.vnis, `${p}.vnis`);
+    if (list.length > 32) throw new Invalid(`${p}.vnis`);
+    const seenVni = new Set<number>();
+    const seenVlan = new Set<number>();
+    const vnis = list.map((raw, i) => {
+      const vp = `${p}.vnis[${i}]`;
+      const v = obj(raw, vp);
+      const vni = int(v.vni, `${vp}.vni`);
+      if (vni < 1 || vni > MAX_VNI || seenVni.has(vni)) throw new Invalid(`${vp}.vni`);
+      seenVni.add(vni);
+      const peers = arr(v.peers, `${vp}.peers`).map((pr, j) => ip(pr, `${vp}.peers[${j}]`));
+      if (peers.length > 16) throw new Invalid(`${vp}.peers`);
+      const entry: { vni: number; vlan?: number; peers: string[] } = { vni, peers };
+      if (v.vlan !== undefined) {
+        const vlan = vlanNumber(v.vlan, `${vp}.vlan`);
+        if (seenVlan.has(vlan)) throw new Invalid(`${vp}.vlan`);
+        seenVlan.add(vlan);
+        entry.vlan = vlan;
+      }
+      return entry;
+    });
+    device.vxlan = { vnis, ...(x.source !== undefined ? { source: int(x.source, `${p}.source`) } : {}) };
+  }
+  if (o.vrfs !== undefined) {
+    if (!isRouterLike(type) && type !== 'l3switch') throw new Invalid(`${path}.vrfs`);
+    const list = arr(o.vrfs, `${path}.vrfs`);
+    if (list.length > MAX_VRFS) throw new Invalid(`${path}.vrfs`);
+    const names = new Set<string>();
+    device.vrfs = list.map((raw, i) => {
+      const p = `${path}.vrfs[${i}]`;
+      const v = obj(raw, p);
+      const name = str(v.name, `${p}.name`);
+      if (!VRF_NAME.test(name) || names.has(name)) throw new Invalid(`${p}.name`);
+      names.add(name);
+      return { name, ...(v.routes !== undefined ? { routes: readRoutes(v.routes, `${p}.routes`) } : {}) };
     });
   }
   if (o.subinterfaces !== undefined) {
@@ -563,6 +672,18 @@ function readDevice(v: unknown, path: string): Device {
       if (seen.has(`${parent}.${vlan}`)) throw new Invalid(`${p}.vlan`);
       seen.add(`${parent}.${vlan}`);
       return { parent, vlan, ...readAddress(si, p) };
+    });
+  }
+  if (o.loopbacks !== undefined) {
+    if (!isRouterLike(type) && type !== 'l3switch') throw new Invalid(`${path}.loopbacks`);
+    const seen = new Set<number>();
+    device.loopbacks = arr(o.loopbacks, `${path}.loopbacks`).map((raw, i) => {
+      const p = `${path}.loopbacks[${i}]`;
+      const lo = obj(raw, p);
+      const id = int(lo.id, `${p}.id`);
+      if (id < 0 || id > MAX_LOOPBACK || seen.has(id)) throw new Invalid(`${p}.id`);
+      seen.add(id);
+      return { id, ...readAddress(lo, p) };
     });
   }
   if (o.svis !== undefined) {
@@ -581,6 +702,12 @@ function readDevice(v: unknown, path: string): Device {
       }
       if (si.dhcp6 !== undefined && bool(si.dhcp6, `${p}.dhcp6`)) svi.dhcp6 = true;
       if (si.dns6 !== undefined) svi.dns6 = ip6(si.dns6, `${p}.dns6`);
+      for (const key of ['aclIn', 'aclOut'] as const) {
+        if (si[key] === undefined) continue;
+        const name = str(si[key], `${p}.${key}`);
+        if (!ACL_NAME.test(name)) throw new Invalid(`${p}.${key}`);
+        svi[key] = name;
+      }
       return svi;
     });
   }
@@ -625,6 +752,10 @@ function readDevice(v: unknown, path: string): Device {
       });
     }
   }
+  if (o.vlanDb !== undefined) {
+    if (!isSwitchType(type)) throw new Invalid(`${path}.vlanDb`);
+    device.vlanDb = vlanList(o.vlanDb, `${path}.vlanDb`).filter((v) => v !== 1);
+  }
   if (o.vlanNames !== undefined) {
     const seen = new Set<number>();
     device.vlanNames = arr(o.vlanNames, `${path}.vlanNames`).map((raw, i) => {
@@ -661,7 +792,7 @@ function readDevice(v: unknown, path: string): Device {
     device.variant = variant;
   }
   if (o.staticNat !== undefined) {
-    if (type !== 'router' && type !== 'cpe') throw new Invalid(`${path}.staticNat`);
+    if (type !== 'router' && type !== 'firewall' && type !== 'cpe') throw new Invalid(`${path}.staticNat`);
     device.staticNat = arr(o.staticNat, `${path}.staticNat`).map((raw, i) => {
       const r = obj(raw, `${path}.staticNat[${i}]`);
       if (r.kind !== undefined && r.kind !== 'snat' && r.kind !== 'dnat') throw new Invalid(`${path}.staticNat[${i}].kind`);
@@ -695,8 +826,35 @@ function readDevice(v: unknown, path: string): Device {
     if (!checked.ok) throw new Invalid(`${p}.${checked.error.field ?? 'rules'}`);
     device.firewall = checked.value;
   }
+  if (o.acls !== undefined) {
+    if (!isSwitchType(type)) throw new Invalid(`${path}.acls`);
+    const list = arr(o.acls, `${path}.acls`);
+    if (list.length > MAX_ACLS) throw new Invalid(`${path}.acls`);
+    const names = new Set<string>();
+    device.acls = list.map((raw, n) => {
+      const p = `${path}.acls[${n}]`;
+      const a = obj(raw, p);
+      const acl: AccessList = {
+        name: str(a.name, `${p}.name`),
+        rules: arr(a.rules, `${p}.rules`).map((rr, i) => {
+          const r = obj(rr, `${p}.rules[${i}]`);
+          return {
+            action: str(r.action, `${p}.rules[${i}].action`) as FirewallRule['action'],
+            protocol: str(r.protocol, `${p}.rules[${i}].protocol`) as FirewallRule['protocol'],
+            src: str(r.src, `${p}.rules[${i}].src`),
+            dst: str(r.dst, `${p}.rules[${i}].dst`),
+            ...(r.port !== undefined ? { port: int(r.port, `${p}.rules[${i}].port`) } : {}),
+          };
+        }),
+      };
+      const checked = checkAccessList(acl);
+      if (!checked.ok || names.has(acl.name)) throw new Invalid(`${p}.${checked.ok ? 'name' : (checked.error.field ?? 'rules')}`);
+      names.add(acl.name);
+      return checked.value;
+    });
+  }
   if (o.vpn !== undefined) {
-    if (type !== 'router') throw new Invalid(`${path}.vpn`);
+    if (type !== 'router' && type !== 'firewall') throw new Invalid(`${path}.vpn`);
     const tunnels: VpnTunnel[] = [];
     arr(o.vpn, `${path}.vpn`).forEach((raw, i) => {
       const p = `${path}.vpn[${i}]`;
@@ -810,6 +968,19 @@ function readDevice(v: unknown, path: string): Device {
       if (r.iface !== undefined && !valid.includes(r.iface)) throw new Invalid(`${path}.routes[${i}].iface`);
     });
   }
+  if (device.vxlan?.source !== undefined && !logicalInterfaces(device).includes(device.vxlan.source)) throw new Invalid(`${path}.vxlan.source`);
+  // VRF-Zuordnungen müssen auf vorhandene VRFs zeigen.
+  const vrfNames = new Set((device.vrfs ?? []).map((v) => v.name));
+  for (const id of logicalInterfaces(device)) {
+    const vrf = vrfOfIface(device, id);
+    if (vrf !== undefined && !vrfNames.has(vrf)) throw new Invalid(`${path}.vrf`);
+  }
+  for (const [n, v] of (device.vrfs ?? []).entries()) {
+    const valid = logicalInterfaces(device);
+    (v.routes ?? []).forEach((r, i) => {
+      if (r.iface !== undefined && !valid.includes(r.iface)) throw new Invalid(`${path}.vrfs[${n}].routes[${i}].iface`);
+    });
+  }
   return device;
 }
 
@@ -827,8 +998,13 @@ function readRedistribute(v: unknown, path: string): RedistributeSource[] {
   });
 }
 
-function readAddress(o: Record<string, unknown>, path: string): { ip?: string; mask?: string; dhcpRelay?: string } {
-  const result: { ip?: string; mask?: string; dhcpRelay?: string } = {};
+function readAddress(o: Record<string, unknown>, path: string): { ip?: string; mask?: string; dhcpRelay?: string; vrf?: string } {
+  const result: { ip?: string; mask?: string; dhcpRelay?: string; vrf?: string } = {};
+  if (o.vrf !== undefined) {
+    const name = str(o.vrf, `${path}.vrf`);
+    if (!VRF_NAME.test(name)) throw new Invalid(`${path}.vrf`);
+    result.vrf = name;
+  }
   if (o.ip !== undefined) result.ip = ip(o.ip, `${path}.ip`);
   if (o.mask !== undefined) {
     const prefix = parseMask(str(o.mask, `${path}.mask`));
