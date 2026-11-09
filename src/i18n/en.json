@@ -1776,7 +1776,7 @@
   "canvas.ipv6Auto": "IPv6 automatic",
   "ipv6.mode": "IPv6 address",
   "ipv6.mode.manual": "static",
-  "ipv6.mode.auto": "automatic",
+  "ipv6.mode.auto": "automatic (SLAAC/DHCPv6)",
   "ipv6.autoExplain": "The router announces its prefix (router advertisement). The device forms an address itself (SLAAC) or gets one by DHCPv6 if the router asks for that. The default gateway is the router.",
   "ipv6.address": "IPv6 address with prefix",
   "ipv6.gateway": "IPv6 default gateway",

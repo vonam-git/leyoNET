@@ -10,6 +10,7 @@ Diese Seite beschreibt, wie man leyoNET angreifen könnte, was dagegen getan ist
 | Webversion: Seite und `/assets/` | alle | nur Auslieferung der fertigen Datei |
 | Webversion: `/api/sessions`, `/api/exams/join`, `/api/classes/join`, `/api/feedback` | alle, **ohne Anmeldung** | Projekte speichern und laden, Prüfung beitreten, Rückmeldung senden |
 | Webversion: `/api/admin/…` | nur mit Admin-Passwort | Einstellungen, Klassen, Prüfungen, Rückmeldungen |
+| Website leyonet.ch (`website/`) | alle | eine statische Seite ohne Skripte, Downloads als Links auf GitHub-Releases |
 | Projektdateien, Prüfungsdateien, Abgaben | wer eine Datei weitergibt oder hochlädt | werden in der Oberfläche geöffnet und dargestellt |
 
 ## Angriffe und Gegenmassnahmen
@@ -64,6 +65,9 @@ Diese Seite beschreibt, wie man leyoNET angreifen könnte, was dagegen getan ist
 | Ungültige Eingaben in Formularen (z.B. MAC-Adressen, Grössen der Bereiche) | Eingaben werden geprüft und vereinheitlicht (MAC nur als 6 Bytes, keine Gruppenadressen); gespeicherte Grössen im Browser werden auf feste Grenzen beschränkt. |
 | Formeln in der CSV-Auswertung (Dateinamen, Bemerkungen wie `=HYPERLINK(…)`) | Zellen, die mit `= + - @` beginnen, erhalten ein `'` davor. |
 | Skripte in heruntergeladenen Berichten, Platzkarten, Aufgabenblättern | Alle Werte HTML-maskiert, zusätzlich eine CSP ohne Skripte im Dokument. |
+| Website: fremde Inhalte einschleusen, Besucher verfolgen, untergeschobene Downloads | Keine Skripte und keine Formulare, CSP `default-src 'none'` (im `<meta>` und als Header in `.htaccess`), `frame-ancestors 'none'`, kein Referrer; Dokumentstamm nur `website/`, nicht das ganze Repo. Downloads nur von den Releases des eigenen GitHub-Repos (HTTPS). Ein Test (`website.test.ts`) prüft, dass die Seite nichts Fremdes lädt, nur bekannte Ziele verlinkt und jede Download-Datei im Workflow entsteht. |
+| Release-Workflow: Tag-Namen als Befehl ausführen (Script Injection), fremde Dateien in den Release | Tag-Name nur über eine Umgebungsvariable, Release-Text nur aus `docs/releases/<Tag>.md` bei Tags der Form `vX.Y.Z`; die festen Namen entstehen nur aus den eigenen Build-Dateien des Releases; das ZIP enthält nur die Blätter für Lernende (Musterlösungen sind nicht im Repo). |
+| Musterlösungen in der App oder im öffentlichen Repo | `catalogSolutions.ts` und `catalogSheets.ts` sind nur im Test und im Erzeuger der Arbeitsblätter eingebunden, nicht in der App; die `_mL.pdf` bleiben ausserhalb von Git (`.gitignore`). |
 | Fremde Pakete mit Schadcode | Server ohne Abhängigkeiten; Oberfläche ohne Laufzeitabhängigkeiten; Lizenz- und `npm audit`-Prüfung bei jedem Release. |
 
 ## Was offen bleibt

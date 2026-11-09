@@ -108,11 +108,24 @@ Ist der Stand auf `develop` gut, wird er nach `main` übernommen (Pull Request a
 
 ## leyonet.ch: Auftritt und Programm
 
-- **leyonet.ch** (Hauptdomain): der Auftritt mit Übersicht und Downloads, reine statische Dateien (nicht in diesem Repo). Dokumentstamm `httpdocs`, kein Node.js.
+- **leyonet.ch** (Hauptdomain): der Auftritt mit Übersicht und Downloads, reine statische Dateien im Ordner [`website/`](../website/), kein Node.js. Siehe [unten](#website-leyonetch).
 - **app.leyonet.ch** (Subdomain): das Programm wie oben beschrieben, mit Branch **`main`** (stabile Version für Klassen und Prüfungen).
 - **beta.leyonet.ch** mit Branch `develop` als Testumgebung: Umgebungsvariable `LEYONET_CHANNEL=beta`, eigenes `ADMIN_PASSWORD` und eigenes `DATA_DIR`. Oben steht dann «Testversion», und Suchmaschinen nehmen die Seite nicht auf. Keine Prüfungen auf beta durchführen: Nach einem Push kann dort etwas vorübergehend nicht funktionieren.
 - Ablauf: auf beta testen; läuft es, Pull Request `develop` → `main`, dann bei app.leyonet.ch *Pull Updates*.
 - Für jede Subdomain SSL/TLS mit Let's Encrypt aktivieren (oder ein Wildcard-Zertifikat für `*.leyonet.ch`).
+
+## Website leyonet.ch
+
+Die Website liegt im Repo unter `website/` (eine Seite, Logo, `.htaccess` mit Sicherheits-Headern; keine Skripte, keine fremden Ressourcen). Die Downloads sind **Links auf GitHub-Releases** mit festen Dateinamen, z.B. `https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-windows-setup.exe`. Bei einer neuen Version muss darum nichts hochgeladen werden: Sobald der Release auf GitHub veröffentlicht ist, zeigen die Links auf die neuen Dateien. Die festen Namen legt der Workflow `desktop.yml` (Auftrag «dateinamen») an.
+
+Einrichten in Plesk (einmalig, bei der Domain leyonet.ch):
+
+1. **Git** → Repository hinzufügen: `https://github.com/vonam-git/leyoNET.git`, Branch **`main`**, Bereitstellung automatisch, Bereitstellungspfad `httpdocs`.
+2. **Hosting & DNS → Hosting** (bzw. *Hosting-Einstellungen*): Dokumentstamm auf **`httpdocs/website`** setzen. So ist nur der Ordner `website/` öffentlich.
+3. SSL/TLS mit Let's Encrypt aktivieren.
+4. Alte, von Hand hochgeladene Installer in `httpdocs` löschen.
+
+Änderungen an der Website: auf `develop` ändern, mit `main` zusammenführen, in Plesk *Git → Pull Updates* (bzw. *Jetzt bereitstellen*). Bei reinem Nginx die Header aus `website/.htaccess` unter *Zusätzliche nginx-Anweisungen* eintragen.
 
 ## Ohne Node.js (nur statisch)
 

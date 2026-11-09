@@ -1,6 +1,6 @@
-# Arbeitsblätter zu den Modulen 117 und 129
+# Arbeitsblätter zu allen Übungen
 
-Ausfüllbare PDFs zu den Übungen der Reiter **«M117»**, **«M129»** und **«M145»** im Aufgaben-Katalog (Werkzeuge » Aufgaben-Katalog). Die Lernenden füllen die Felder direkt im PDF aus (Browser, Adobe Acrobat Reader oder eine andere PDF-App) und geben das PDF zusammen mit ihren Projektdateien ab. Die Musterlösungen (`_mL.pdf`) stehen bewusst nicht im öffentlichen Repo; `npm run arbeitsblaetter` erzeugt sie lokal.
+Ausfüllbare PDFs zu **allen** Übungen im Aufgaben-Katalog (Werkzeuge » Aufgaben-Katalog): von Hand geschrieben zu den Reitern **«M117»**, **«M129»** und **«M145»**, automatisch aus dem Katalog erzeugt zu allen übrigen Übungen (Reiter «Alle»). Die Lernenden füllen die Felder direkt im PDF aus (Browser, Adobe Acrobat Reader oder eine andere PDF-App) und geben das PDF zusammen mit ihren Projektdateien ab. Die Musterlösungen (`_mL.pdf`) stehen bewusst nicht im öffentlichen Repo; `npm run arbeitsblaetter` erzeugt sie lokal.
 
 | Arbeitsblatt | Übungen im Katalog | Sterne |
 |---|---|---|
@@ -31,6 +31,52 @@ Ausfüllbare PDFs zu den Übungen der Reiter **«M117»**, **«M129»** und **«
 | [M145_UE11_Collapsed_Core](M145_UE11_Collapsed_Core.pdf) | KMU-Netz mit Spanning Tree | ★★★★ |
 | [M145_Zusatzuebungen](M145_Zusatzuebungen.pdf) | Fehlersuche, Management-VLAN, Port-Channel | ★★★★ ★★★ ★★★★ |
 
+**Übungen ohne Modulreihe** (automatisch erzeugt aus Auftrag, Lernzielen und Hinweisen im Katalog; die Musterlösung zeigt die Konfiguration, die die Musterlösung gegenüber dem Startnetz ändert, im Stil der Befehlszeile):
+
+| Arbeitsblatt | Übung im Katalog | Sterne |
+|---|---|---|
+| [Uebung_acl-guest](Uebung_acl-guest.pdf) | Gast-Port mit Zugriffsliste | ★★★ |
+| [Uebung_auto-routing](Uebung_auto-routing.pdf) | Drei Router, automatisch geroutet | ★ |
+| [Uebung_bgp-two-as](Uebung_bgp-two-as.pdf) | Zwei autonome Systeme mit BGP | ★★★★★ |
+| [Uebung_budget-office](Uebung_budget-office.pdf) | Büro mit Budget | ★ |
+| [Uebung_cpe-home](Uebung_cpe-home.pdf) | Internet-Box anschliessen | ★★ |
+| [Uebung_datacenter](Uebung_datacenter.pdf) | Rechenzentrum: Leaf-Spine mit BGP und VXLAN | ★★★★★ |
+| [Uebung_dhcp](Uebung_dhcp.pdf) | Adressen per DHCP verteilen | ★★★ |
+| [Uebung_dnat-web](Uebung_dnat-web.pdf) | DNAT: Webserver unter eigener Adresse | ★★★★ |
+| [Uebung_ds-lite](Uebung_ds-lite.pdf) | DS-Lite einrichten | ★★★★ |
+| [Uebung_duplicate-ip](Uebung_duplicate-ip.pdf) | Wer hat die Adresse doppelt? | ★ |
+| [Uebung_fiber-ont](Uebung_fiber-ont.pdf) | Glasfaseranschluss | ★★ |
+| [Uebung_firewall-dmz](Uebung_firewall-dmz.pdf) | Firewall: DMZ absichern | ★★★ |
+| [Uebung_internet-nat](Uebung_internet-nat.pdf) | Ins Internet mit NAT | ★★★ |
+| [Uebung_ipv6-router](Uebung_ipv6-router.pdf) | IPv6 einrichten | ★★★ |
+| [Uebung_l3-campus](Uebung_l3-campus.pdf) | Campus mit Layer-3-Switch und Glasfaser | ★★★★ |
+| [Uebung_loopback-ospf](Uebung_loopback-ospf.pdf) | Loopbacks und OSPF | ★★★ |
+| [Uebung_modem-vdsl](Uebung_modem-vdsl.pdf) | VDSL-Anschluss | ★★★ |
+| [Uebung_ospf-triangle](Uebung_ospf-triangle.pdf) | Routing mit OSPF | ★★★★ |
+| [Uebung_port-forward](Uebung_port-forward.pdf) | Das NAS von unterwegs erreichen | ★★★ |
+| [Uebung_port-shutdown](Uebung_port-shutdown.pdf) | Gast aussperren | ★ |
+| [Uebung_rip-chain](Uebung_rip-chain.pdf) | RIP in der Kette | ★★★ |
+| [Uebung_router-on-a-stick](Uebung_router-on-a-stick.pdf) | Router-on-a-Stick | ★★★ |
+| [Uebung_serial-wan](Uebung_serial-wan.pdf) | Standorte über eine serielle Leitung | ★★★★ |
+| [Uebung_server-group](Uebung_server-group.pdf) | Ein ganzes Schulzimmer | ★★ |
+| [Uebung_snat-mail](Uebung_snat-mail.pdf) | SNAT: feste Absenderadresse für den Mailserver | ★★★★ |
+| [Uebung_sniff-arp](Uebung_sniff-arp.pdf) | Pakete mitschneiden | ★ |
+| [Uebung_static-nat-dmz](Uebung_static-nat-dmz.pdf) | Webserver mit eigener öffentlicher Adresse | ★★★★ |
+| [Uebung_static-routes](Uebung_static-routes.pdf) | Zwei Router, zwei statische Routen | ★★ |
+| [Uebung_stp-loop](Uebung_stp-loop.pdf) | Schleife ohne Sturm | ★★★ |
+| [Uebung_subnetting-vlsm](Uebung_subnetting-vlsm.pdf) | Subnetze nach Bedarf (VLSM) | ★★★ |
+| [Uebung_switch-lan](Uebung_switch-lan.pdf) | Kleines LAN mit Switch | ★★ |
+| [Uebung_two-pcs](Uebung_two-pcs.pdf) | Zwei Rechner verbinden | ★ |
+| [Uebung_two-subnets](Uebung_two-subnets.pdf) | Zwei Netze mit einem Router | ★★ |
+| [Uebung_vlan-colors](Uebung_vlan-colors.pdf) | VLANs dokumentieren | ★★ |
+| [Uebung_vlans](Uebung_vlans.pdf) | Netze mit VLANs trennen | ★★★ |
+| [Uebung_vpn-sites](Uebung_vpn-sites.pdf) | VPN: Zürich und Bern verbinden | ★★★★ |
+| [Uebung_vrf-customers](Uebung_vrf-customers.pdf) | VRF: Zwei Kunden mit denselben Netzen | ★★★★ |
+| [Uebung_web-dns](Uebung_web-dns.pdf) | Webseite über DNS aufrufen | ★★★ |
+| [Uebung_wlan](Uebung_wlan.pdf) | WLAN im Klassenzimmer | ★★★ |
+
+Alle Blätter für Lernende gibt es auch gebündelt als `leyoNET-Arbeitsblaetter.zip` bei jedem [Release](https://github.com/vonam-git/leyoNET/releases/latest).
+
 Die praktische Prüfung (LB3) entsteht in leyoNET selbst: **Werkzeuge » Prüfung erstellen …**, siehe [pruefungen.md](../pruefungen.md).
 
 ## Abgabe an die Lehrperson
@@ -49,7 +95,7 @@ Wo die ursprünglichen Unterlagen Adressen aus dem öffentlichen Internet verwen
 
 ## Ändern und neu erzeugen
 
-Der Inhalt steht in [`scripts/arbeitsblaetter/inhalt.mjs`](../../scripts/arbeitsblaetter/inhalt.mjs) (Modul 129: [`inhaltM129.mjs`](../../scripts/arbeitsblaetter/inhaltM129.mjs), Modul 145: [`inhaltM145.mjs`](../../scripts/arbeitsblaetter/inhaltM145.mjs)), das Layout in [`erzeugen.mjs`](../../scripts/arbeitsblaetter/erzeugen.mjs). Nach einer Änderung:
+Der Inhalt steht in [`scripts/arbeitsblaetter/inhalt.mjs`](../../scripts/arbeitsblaetter/inhalt.mjs) (Modul 129: [`inhaltM129.mjs`](../../scripts/arbeitsblaetter/inhaltM129.mjs), Modul 145: [`inhaltM145.mjs`](../../scripts/arbeitsblaetter/inhaltM145.mjs)), die automatisch erzeugten Blätter entstehen in [`src/ui/catalogSheets.ts`](../../src/ui/catalogSheets.ts) aus dem Katalog und den Musterlösungen ([`catalogSolutions.ts`](../../src/ui/catalogSolutions.ts)), das Layout steht in [`erzeugen.mjs`](../../scripts/arbeitsblaetter/erzeugen.mjs). Nach einer Änderung:
 
 ```bash
 npm run arbeitsblaetter

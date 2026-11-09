@@ -48,6 +48,9 @@ export interface CatalogEntry {
   build(): { topology: Topology; tasks: TaskSet };
 }
 
+/** Name des automatisch erzeugten Arbeitsblatts einer Übung ohne Modulreihe. */
+export const generalSheet = (id: string) => `Uebung_${id}`;
+
 export function unwrap<T>(r: Result<T>): T {
   if (!r.ok) throw new Error(r.error.code);
   return r.value;

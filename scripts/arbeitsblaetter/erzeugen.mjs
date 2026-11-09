@@ -39,6 +39,7 @@ class Writer {
     this.font = fonts.regular;
     this.bold = fonts.bold;
     this.italic = fonts.italic;
+    this.mono = fonts.mono;
     this.form = doc.getForm();
     this.sheet = sheet;
     this.solution = solution;
@@ -251,7 +252,27 @@ class Writer {
     this.y -= 6;
   }
 
+  /** Konfiguration der Musterlösung in Festbreitenschrift; nur in der _mL-Fassung. */
+  solutionCode({ title, lines }) {
+    if (!this.solution) return;
+    this.heading(title, 11, BLUE, 4);
+    const size = 8.5;
+    const lead = size * 1.3;
+    for (const line of lines) {
+      this.need(lead);
+      // Lange Zeilen hart umbrechen (Festbreite: Zeichen zählen).
+      const max = Math.floor(WIDTH / this.mono.widthOfTextAtSize('M', size));
+      for (let i = 0; i === 0 || i < line.length; i += max) {
+        this.need(lead);
+        this.page.drawText(line.slice(i, i + max), { x: MARGIN.left, y: this.y - size, size, font: this.mono, color: TEXT });
+        this.y -= lead;
+      }
+    }
+    this.y -= 6;
+  }
+
   block(b, prefix) {
+    if (b.solutionCode) return this.solutionCode(b.solutionCode);
     if (b.p) return this.paragraph(b.p);
     if (b.tip) return this.paragraph(b.tip, { size: 9.5, color: MUTED, font: this.italic });
     if (b.h) return this.heading(b.h, 11, TEXT, 4);
@@ -305,6 +326,8 @@ export async function buildSheet(sheet, { solution = false } = {}) {
     regular: await doc.embedFont(StandardFonts.Helvetica),
     bold: await doc.embedFont(StandardFonts.HelveticaBold),
     italic: await doc.embedFont(StandardFonts.HelveticaOblique),
+    // Courier nur in der Musterlösung (Konfiguration), damit die Blätter der Lernenden gleich bleiben.
+    ...(solution ? { mono: await doc.embedFont(StandardFonts.Courier) } : {}),
   };
   const title = `${sheet.title}${solution ? ' – Musterlösung' : ''}`;
   doc.setTitle(title);
@@ -338,9 +361,27 @@ export async function buildSheet(sheet, { solution = false } = {}) {
 
 export const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'docs', 'arbeitsblaetter');
 
+/**
+ * Blätter zu den Übungen ohne Modulreihe entstehen aus dem Katalog (TypeScript,
+ * src/ui/catalogSheets.ts); geladen über Vite wie im Test.
+ */
+async function catalogSheets() {
+  const { createServer } = await import('vite');
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  const server = await createServer({ root, configFile: join(root, 'vite.config.ts'), logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, watch: null } });
+  try {
+    const i18n = await server.ssrLoadModule('/src/i18n/index.ts');
+    i18n.setLocale('de');
+    const mod = await server.ssrLoadModule('/src/ui/catalogSheets.ts');
+    return mod.catalogSheets();
+  } finally {
+    await server.close();
+  }
+}
+
 async function main() {
   mkdirSync(OUT_DIR, { recursive: true });
-  for (const sheet of SHEETS) {
+  for (const sheet of [...SHEETS, ...(await catalogSheets())]) {
     writeFileSync(join(OUT_DIR, `${sheet.file}.pdf`), await buildSheet(sheet));
     writeFileSync(join(OUT_DIR, `${sheet.file}_mL.pdf`), await buildSheet(sheet, { solution: true }));
     console.log(`${sheet.file}.pdf, ${sheet.file}_mL.pdf`);

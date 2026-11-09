@@ -82,6 +82,10 @@ Vor dem Node.js-Server steht bei Plesk ein Webserver (Apache/Nginx), der **eigen
 
 Auch ein vorgeschaltetes CDN oder ein Reverse-Proxy kann protokollieren.
 
+## Website leyonet.ch
+
+Die Website (`website/`) ist eine einzelne statische Seite: keine Cookies, keine Skripte, kein Tracking, keine Schriften oder Bilder von fremden Servern (CSP `default-src 'none'`). Die Downloads sind Links auf die Releases bei GitHub; erst wer darauf klickt, verbindet sich mit github.com, und dort gilt die Datenschutzerklärung von GitHub. Die Seite sagt das im Abschnitt «Datenschutz». Wie bei jedem Webserver kann das Hosting (Plesk) Zugriffe im Server-Log festhalten; diese Logs gehören zum Hosting, nicht zu leyoNET.
+
 ## Prüfung bei jedem Release
 
 `npm run release` führt `scripts/release-checks.mjs` aus und bricht bei einem Fehler ab. Das Ergebnis steht in `release/checks.json` und in der Webversion unter **Admin-Konsole → Systemprüfung**. Geprüft wird automatisch:
