@@ -43,6 +43,7 @@ import {
   setCableLoss,
   setDhcpServer,
   setInterfaceAddress,
+  setSfpSlotCount,
   setDefaultGateway,
   setInterfaceCount,
   suggestName,
@@ -490,7 +491,8 @@ class Editor {
 
   /** Für Formulare: Fehler zurückgeben statt melden, damit sie beim betroffenen Feld erscheinen. */
   #applyForm(result: Result<Topology>): TopologyError | null {
-    if (!this.editable) return null;
+    // In der Simulation nicht still verwerfen, sondern sagen, warum nichts gespeichert wird.
+    if (!this.editable) return { code: 'notEditable' };
     if (!result.ok) return result.error;
     this.#commit(result.value);
     return null;
@@ -661,6 +663,12 @@ class Editor {
   replugCable(id: string, end: 'a' | 'b', iface: number) {
     if (!this.editable) return;
     const next = this.#check(replugCable(this.topology, id, end, iface));
+    if (next) this.#commit(next);
+  }
+
+  setSfpSlotCount(id: string, count: number) {
+    if (!this.editable) return;
+    const next = this.#check(setSfpSlotCount(this.topology, id, count));
     if (next) this.#commit(next);
   }
 

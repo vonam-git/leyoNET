@@ -60,6 +60,7 @@ export const MAX_WEB_FILE = 160_000;
 export const MAX_WEB_TOTAL = 300_000;
 
 export type ErrorCode =
+  | 'notEditable'
   | 'unknownDevice'
   | 'unknownCable'
   | 'sameDevice'
@@ -415,7 +416,7 @@ export function freeInterfaceFor(t: Topology, device: Device, medium: Medium): N
 
 /** Warum kein Anschluss frei ist: Medium passt nirgends, SFP-Modul fehlt oder alles belegt. */
 export function noPortError(t: Topology, device: Device, medium: Medium): ErrorCode {
-  if (medium === 'fiber' && device.interfaces.some((i) => i.sfpSlot && !i.sfp)) return 'noSfpModule';
+  if (medium === 'fiber' && (device.interfaces.some((i) => i.sfpSlot && !i.sfp) || canHaveSfp(device.type))) return 'noSfpModule';
   const anyPort = device.interfaces.some((i) => {
     if (portAccepts(device, i.index, medium)) return true;
     return medium === 'fiber' && !!i.sfpSlot;
@@ -1857,11 +1858,58 @@ export function setSfpModule(t: Topology, id: string, index: number, module: Sfp
   );
 }
 
-/** Modul in den ersten leeren SFP-Einschub stecken (aus der Palette). */
+export const MAX_SFP_SLOTS = 8;
+
+/** Geräte, die SFP-Einschübe haben können (Switches, Router, Firewall). */
+export function canHaveSfp(type: DeviceType): boolean {
+  return type === 'switch' || type === 'l3switch' || type === 'router' || type === 'firewall';
+}
+
+/**
+ * Anzahl SFP-Einschübe ändern (0 bis 8). Neue Einschübe kommen hinten dazu;
+ * entfernt werden nur leere, nicht verkabelte Einschübe von hinten.
+ */
+export function setSfpSlotCount(t: Topology, id: string, count: number): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canHaveSfp(device.type)) return fail('notAnSfpSlot');
+  if (!Number.isInteger(count) || count < 0 || count > MAX_SFP_SLOTS) return fail('interfaceCountOutOfRange', { min: 0, max: MAX_SFP_SLOTS });
+  const slots = device.interfaces.filter((i) => i.sfpSlot);
+  if (count === slots.length) return ok(t);
+  if (count > slots.length) {
+    const used = new Set(device.interfaces.map((i) => i.mac));
+    const seq = deviceSeq(id);
+    let n = 0;
+    const added: NetInterface[] = [];
+    for (let k = slots.length; k < count; k++) {
+      while (used.has(macFor(seq, n))) n++;
+      used.add(macFor(seq, n));
+      added.push({ index: device.interfaces.length + added.length, mac: macFor(seq, n), sfpSlot: true });
+    }
+    return ok(updateDevice(t, id, (d) => ({ ...d, interfaces: [...d.interfaces, ...added] })));
+  }
+  // Nur von hinten entfernen, damit die Nummern der anderen Anschlüsse bleiben.
+  const last = device.interfaces.length - 1;
+  const remove = slots.slice(count);
+  const trailing = remove.every((s, k) => s.index === last - (remove.length - 1 - k));
+  const busy = remove.find((s) => s.sfp || cableAt(t, { device: id, iface: s.index }));
+  if (busy || !trailing) return fail('interfaceConnected', { device: device.name, index: (busy ?? remove[0]!).index });
+  const gone = new Set(remove.map((s) => s.index));
+  return ok(updateDevice(t, id, (d) => ({ ...d, interfaces: d.interfaces.filter((i) => !gone.has(i.index)) })));
+}
+
+/** Modul in den ersten leeren SFP-Einschub stecken (aus der Palette); fehlt einer, wird ein Einschub ergänzt. */
 export function insertSfpModule(t: Topology, id: string, module: SfpModule): Result<{ topology: Topology; index: number }> {
   const device = getDevice(t, id);
   if (!device) return fail('unknownDevice');
-  const slot = device.interfaces.find((i) => i.sfpSlot && !i.sfp);
+  let slot = device.interfaces.find((i) => i.sfpSlot && !i.sfp);
+  if (!slot && canHaveSfp(device.type)) {
+    const grown = setSfpSlotCount(t, id, device.interfaces.filter((i) => i.sfpSlot).length + 1);
+    if (grown.ok) {
+      t = grown.value;
+      slot = getDevice(t, id)!.interfaces.find((i) => i.sfpSlot && !i.sfp);
+    }
+  }
   if (!slot) return fail('noFreeSfpSlot', { device: device.name });
   const next = setSfpModule(t, id, slot.index, module);
   return next.ok ? ok({ topology: next.value, index: slot.index }) : next;

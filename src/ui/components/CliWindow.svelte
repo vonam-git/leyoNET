@@ -8,6 +8,27 @@
   /** Konsolenfenster eines Routers oder Switches (wie mit dem Konsolenkabel angeschlossen). */
   const device = $derived(cliWindow.deviceId ? getDevice(editor.topology, cliWindow.deviceId) : undefined);
 
+  // Am Kopf verschieben; die Position bleibt für die Sitzung erhalten.
+  let el = $state<HTMLElement>();
+  let drag: { dx: number; dy: number } | null = null;
+  function onHeadDown(event: PointerEvent) {
+    if (!el || event.button !== 0 || (event.target as Element).closest('button')) return;
+    const box = el.getBoundingClientRect();
+    const parent = el.offsetParent!.getBoundingClientRect();
+    drag = { dx: event.clientX - box.left + parent.left, dy: event.clientY - box.top + parent.top };
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+  function onHeadMove(event: PointerEvent) {
+    if (!drag || !el) return;
+    const parent = el.offsetParent as HTMLElement;
+    cliWindow.x = Math.min(parent.clientWidth - 120, Math.max(160 - el.offsetWidth, event.clientX - drag.dx));
+    cliWindow.y = Math.min(parent.clientHeight - 40, Math.max(0, event.clientY - drag.dy));
+  }
+  function onHeadUp() {
+    drag = null;
+  }
+
   function onkeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       event.stopPropagation();
@@ -17,8 +38,8 @@
 </script>
 
 {#if device}
-  <div class="window" role="dialog" aria-labelledby="cli-title" tabindex="-1" {onkeydown}>
-    <header>
+  <div class="window" bind:this={el} role="dialog" aria-labelledby="cli-title" tabindex="-1" {onkeydown} style:left={cliWindow.x !== undefined ? `${cliWindow.x}px` : undefined} style:top={cliWindow.y !== undefined ? `${cliWindow.y}px` : undefined}>
+    <header onpointerdown={onHeadDown} onpointermove={onHeadMove} onpointerup={onHeadUp} onpointercancel={onHeadUp} title={t('desktop.dragHint')}>
       <h2 id="cli-title">{t('cli.title', { name: device.name })}</h2>
       <span class="hint">{t('cli.hint')}</span>
       <button class="close" onclick={closeCli} aria-label={t('desktop.close')}>✕</button>
@@ -45,9 +66,15 @@
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
     overflow: hidden;
+    resize: both;
+    min-width: 320px;
+    min-height: 200px;
     z-index: 6;
   }
   header {
+    cursor: move;
+    touch-action: none;
+    user-select: none;
     display: flex;
     align-items: center;
     gap: 10px;

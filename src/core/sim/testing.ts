@@ -26,6 +26,7 @@ import {
 } from '../model/topology';
 import type { DeviceType, DhcpScope, DhcpServerConfig, DnsType, Medium, Topology } from '../model/types';
 import type { PacketLogEntry } from './simulation';
+import type { DeviceOptions } from '../model/topology';
 import { asIpv4View } from './frames';
 
 export function unwrap<T>(r: Result<T>): T {
@@ -36,8 +37,8 @@ export function unwrap<T>(r: Result<T>): T {
 export class NetBuilder {
   topology: Topology = emptyTopology();
 
-  add(type: DeviceType, name: string): string {
-    const { topology, id } = unwrap(addDevice(this.topology, type, name, { x: 0, y: 0 }));
+  add(type: DeviceType, name: string, options?: DeviceOptions): string {
+    const { topology, id } = unwrap(addDevice(this.topology, type, name, { x: 0, y: 0 }, options));
     this.topology = topology;
     return id;
   }

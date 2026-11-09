@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { codeInput } from '../codeInput';
   import { emptyTopology, serializeProject } from '../../core';
   import { locale, t } from '../../i18n';
   import { editor } from '../state/editor.svelte';
@@ -95,14 +96,14 @@
 
   <h3>{t('session.resumeTitle')}</h3>
   <form onsubmit={(e) => (e.preventDefault(), resume())}>
-    <input bind:value={resumeCode} placeholder="ABCD-2345" maxlength="12" aria-label={t('session.code')} class="code" autocomplete="off" />
+    <input bind:value={resumeCode} placeholder="ABCD-2345" maxlength="14" use:codeInput aria-label={t('session.code')} class="code" autocomplete="off" />
     <button type="submit" disabled={busy || !resumeCode.trim()}>{t('session.resume')}</button>
   </form>
 
   <h3>{t('session.classTitle')}</h3>
   <p class="muted">{t('session.classHint')}</p>
   <form onsubmit={(e) => (e.preventDefault(), join())}>
-    <input bind:value={classCode} placeholder="WXYZ-6789" maxlength="12" aria-label={t('session.classCode')} class="code" autocomplete="off" />
+    <input bind:value={classCode} placeholder="WXYZ-6789" maxlength="14" use:codeInput aria-label={t('session.classCode')} class="code" autocomplete="off" />
     <button type="submit" disabled={busy || !classCode.trim()}>{t('session.join')}</button>
   </form>
 

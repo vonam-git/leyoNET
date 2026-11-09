@@ -12,8 +12,8 @@ function campus() {
   const net = new NetBuilder();
   const a = net.host('PC A', '10.0.0.1');
   const b = net.host('PC B', '10.0.0.2');
-  const s1 = net.add('switch', 'S1');
-  const s2 = net.add('switch', 'S2');
+  const s1 = net.add('switch', 'S1', { sfpSlots: 2 });
+  const s2 = net.add('switch', 'S2', { sfpSlots: 2 });
   net.link(a, s1);
   net.link(b, s2);
   return { net, a, b, s1, s2 };

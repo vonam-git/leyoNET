@@ -33,9 +33,9 @@ export const DEVICE_SPECS: Record<DeviceType, DeviceSpec> = {
   pc: { role: 'endpoint', defaultInterfaces: 1, minInterfaces: 1, maxInterfaces: 1 },
   server: { role: 'endpoint', defaultInterfaces: 1, minInterfaces: 1, maxInterfaces: 1 },
   clientgroup: { role: 'endpoint', defaultInterfaces: 1, minInterfaces: 1, maxInterfaces: 1 },
-  switch: { role: 'distribution', sfpSlots: 2, defaultInterfaces: 8, minInterfaces: 2, maxInterfaces: 24 },
-  l3switch: { role: 'distribution', sfpSlots: 4, defaultInterfaces: 8, minInterfaces: 2, maxInterfaces: 48 },
-  router: { role: 'routing', sfpSlots: 1, defaultInterfaces: 2, minInterfaces: 2, maxInterfaces: 8 },
+  switch: { role: 'distribution', sfpSlots: 0, defaultInterfaces: 8, minInterfaces: 2, maxInterfaces: 24 },
+  l3switch: { role: 'distribution', sfpSlots: 0, defaultInterfaces: 8, minInterfaces: 2, maxInterfaces: 48 },
+  router: { role: 'routing', sfpSlots: 0, defaultInterfaces: 2, minInterfaces: 2, maxInterfaces: 8 },
   // Firewall: Anschluss 0 ist WAN, 1 LAN, 2 DMZ, weitere OPT. Routet wie ein Router, filtert standardmässig.
   firewall: { role: 'routing', defaultInterfaces: 4, minInterfaces: 2, maxInterfaces: 8 },
   // Anschluss 0 ist der LAN-Port (Kabel), alle weiteren sind Funkverbindungen.

@@ -219,6 +219,12 @@
     </div>
 
     <div id="{uid}-panel" class="panel" role="tabpanel" aria-labelledby="{uid}-tab-{tab}">
+      {#if !editor.editable && tab !== 'state'}
+        <p class="locked" role="status">
+          <span>{t('deviceDialog.simLocked')}</span>
+          <button onclick={() => editor.setMode('design')}>{t('deviceDialog.toDesign')}</button>
+        </p>
+      {/if}
       {#key device.id + tab}
         {#if tab === 'general'}
           <div class="cols">
@@ -432,5 +438,21 @@
     .cols {
       grid-template-columns: 1fr;
     }
+  }
+  .locked {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 0 0 10px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    color: var(--text);
+    background: var(--warning-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .locked span {
+    flex: 1;
   }
 </style>
