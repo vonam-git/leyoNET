@@ -36,6 +36,15 @@ describe('Projektdatei', () => {
     expect(parseProject(text)).toEqual({ ok: true, topology: t });
   });
 
+  it('repariert den fehlenden Standardnamen alter Dateien («defaultName.server 1» → «Server 1»)', () => {
+    let t = emptyTopology();
+    for (const name of ['defaultName.server 1', 'defaultName.cpe 2', 'Server 3', 'defaultName.server 3']) t = unwrap(addDevice(t, 'server', name, { x: 0, y: 0 })).topology;
+    const parsed = parseProject(serializeProject(t));
+    if (!parsed.ok) throw new Error('parse');
+    // «Server 3» gibt es schon: dieser Name bleibt, damit die Namen eindeutig bleiben.
+    expect(parsed.topology.devices.map((d) => d.name)).toEqual(['Server 1', 'Internet-Box 2', 'Server 3', 'defaultName.server 3']);
+  });
+
   it('erkennt kaputtes JSON und fremde Dateien', () => {
     expect(parseProject('{nicht json')).toMatchObject({ ok: false, error: { code: 'invalidJson' } });
     expect(parseProject('{"hello": 1}')).toMatchObject({ ok: false, error: { code: 'notAProject' } });

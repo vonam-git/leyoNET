@@ -240,7 +240,7 @@ function text(v: unknown, path: string, max: number): string {
 function readTopology(v: unknown): Topology {
   const t = obj(v, 'topology');
 
-  const devices = arr(t.devices, 'topology.devices').map((d, i) => readDevice(d, `topology.devices[${i}]`));
+  const devices = repairDefaultNames(arr(t.devices, 'topology.devices').map((d, i) => readDevice(d, `topology.devices[${i}]`)));
   const ids = new Set<string>();
   const names = new Set<string>();
   devices.forEach((d, i) => {
@@ -1020,6 +1020,24 @@ function ip(v: unknown, path: string): string {
   const text = str(v, path).trim();
   if (parseIp(text) === null) throw new Invalid(path);
   return text;
+}
+
+/**
+ * Bis 1.2.0 fehlte der Standardname für Server und Internet-Box: neue Geräte hiessen
+ * «defaultName.server 1». Beim Laden still in «Server 1» bzw. «Internet-Box 1» ändern,
+ * sofern der Name frei ist.
+ */
+const LOST_NAMES: Record<string, string> = { server: 'Server', cpe: 'Internet-Box' };
+function repairDefaultNames(devices: Device[]): Device[] {
+  const used = new Set(devices.map((d) => d.name.toLowerCase()));
+  return devices.map((d) => {
+    const m = /^defaultName\.(server|cpe)(\s.*)?$/.exec(d.name);
+    if (!m) return d;
+    const name = `${LOST_NAMES[m[1]!]}${m[2] ?? ''}`;
+    if (used.has(name.toLowerCase())) return d;
+    used.add(name.toLowerCase());
+    return { ...d, name };
+  });
 }
 
 function readEndpoint(v: unknown, path: string, devices: Map<string, Device>, used: Set<string>): Endpoint {

@@ -6,7 +6,7 @@
   import { editor } from '../state/editor.svelte';
   import { simStore } from '../state/sim.svelte';
   import { TAG_HEX } from '../tags';
-  import { parallelOffset } from '../cableGeometry';
+  import { parallelOffset, rackSlot } from '../cableGeometry';
 
   let { cable, a, b, faded = false }: { cable: Cable; a: Device; b: Device; faded?: boolean } = $props();
 
@@ -60,6 +60,35 @@
       const port = simStore.sim?.getDeviceState(device.id).stp?.ports.find((p) => p.port === cable[end].iface);
       return port?.state === 'blocking';
     });
+  });
+
+  /**
+   * Beide Geräte im selben Rack: als Patchkabel vom rechten Rand der Frontplatte durch den
+   * Kabelkanal neben dem Rack zum anderen Gerät, statt quer über Symbole und Namen.
+   */
+  const PLATE_EDGE = 86;
+  const PATCH_COLORS = ['#3b82f6', '#22c55e', '#ef4444', '#eab308', '#a855f7', '#f97316'];
+  const patch = $derived.by(() => {
+    if (!a.rack || a.rack !== b.rack) return null;
+    const lane = editor.topology.cables.filter((c) => {
+      const da = editor.topology.devices.find((d) => d.id === c.a.device);
+      const db = editor.topology.devices.find((d) => d.id === c.b.device);
+      return da?.rack === a.rack && db?.rack === a.rack;
+    }).findIndex((c) => c.id === cable.id);
+    const x1 = a.position.x + PLATE_EDGE;
+    const x2 = b.position.x + PLATE_EDGE;
+    // Ausgänge je Gerät nach Port übereinander (gleiche Rechnung wie die Beschriftung am Gerät).
+    const y1 = a.position.y + rackSlot(editor.topology, a.id, cable.id);
+    const y2 = b.position.y + rackSlot(editor.topology, b.id, cable.id);
+    const channel = Math.max(x1, x2) + 12 + (lane % 4) * 4;
+    return {
+      d: `M ${x1 - 8} ${y1} H ${x1} C ${channel} ${y1}, ${channel} ${y2}, ${x2} ${y2} H ${x2 - 8}`,
+      color: PATCH_COLORS[lane % PATCH_COLORS.length]!,
+      // LED gleich am Kabelausgang (die Frontplatte liegt über den Kabeln); den Port schreibt das Gerät.
+      a: { x: x1 + 4, y: y1 },
+      b: { x: x2 + 4, y: y2 },
+      mid: { x: channel - 2, y: (y1 + y2) / 2 },
+    };
   });
 
   const geometry = $derived.by(() => {
@@ -139,6 +168,15 @@
   onfocus={() => editor.tool === 'select' && editor.select({ kind: 'cable', id: cable.id })}
   {onkeydown}
 >
+  {#if patch}
+    <path class="hit" d={patch.d} />
+    <path class="wire patch" class:damaged={!!cable.loss} class:blocked d={patch.d} style:stroke={cable.loss || blocked ? undefined : (endColor(a, cable.a.iface) ?? endColor(b, cable.b.iface) ?? (medium === 'fiber' ? undefined : patch.color))} />
+    {#each [{ end: 'a' as const, device: a, p: patch.a }, { end: 'b' as const, device: b, p: patch.b }] as { end, device, p } (end)}
+      <circle class="led" class:up={status.up} class:traffic={status.up && traffic} class:off={device.interfaces[cable[end].iface]?.shutdown} cx={p.x} cy={p.y} r="3">
+        <title>{status.up ? (traffic ? t('link.traffic') : t('link.up')) : t(`link.down.${status.reason ?? 'unknown'}`)}</title>
+      </circle>
+    {/each}
+  {:else}
   <line class="hit" x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} />
   <line class="wire" class:damaged={!!cable.loss} class:blocked x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} />
   {#if medium === 'coax'}
@@ -188,9 +226,23 @@
   {#if cable.loss}
     <text class="loss" x={(pa.x + pb.x) / 2} y={(pa.y + pb.y) / 2 - 8}>⚡ {cable.loss} %</text>
   {/if}
+  {/if}
 </g>
 
 <style>
+  .patch {
+    fill: none;
+    stroke-linecap: round;
+    stroke-width: 3;
+  }
+  .patch.blocked,
+  .patch.damaged {
+    stroke-width: 3;
+  }
+  .hit:is(path) {
+    fill: none;
+  }
+
   .cable {
     cursor: pointer;
     outline: none;

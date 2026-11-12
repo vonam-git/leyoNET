@@ -40,6 +40,8 @@
   "defaultName.switch": "Switch",
   "defaultName.router": "Router",
   "defaultName.modem": "Modem",
+  "defaultName.server": "Server",
+  "defaultName.cpe": "Internet-Box",
 
   "role.endpoint": "Endgerät",
   "role.distribution": "Verteiler",
@@ -3351,7 +3353,7 @@
   "help.areas.title": "Bereiche",
   "help.areas.body": "Bereiche dokumentieren das Netz: Subnetze, VLANs, Räume, Zonen und öffentliche Netze. Mit **B** zeichnen oder aus dem Shop ziehen. Ein VLAN-Bereich übernimmt die Farbe des VLANs. Beim Ziehen bewegt sich nur der Bereich; Geräte darin kommen mit, wenn sie mitgewählt sind. Mehrere Bereiche und Geräte wählt man mit einem Rahmen ([[selection]]).\n\n**Textfeld:** Im Shop unter **Bereiche → Textfeld** gibt es ein Feld für freien Text: Infos, Auftrag, Legende. Leerzeile = neuer Absatz, «- » = Liste, **fett**, `Befehl`; IP-Adressen werden hervorgehoben. Der Text steht direkt auf der Fläche, die Ecke unten rechts zieht das Feld grösser.",
   "help.racks.title": "Racks",
-  "help.racks.body": "Switches, Router, Rack-Server und Modems lassen sich in ein Rack einbauen. **R** zeigt die Frontansicht mit allen Ports; im Entwurf steckst du dort direkt um. Patchkabel zwischen Geräten im selben Rack erscheinen als farbige Kabel über der Front; Kabel zu Geräten ausserhalb stehen unter den Ports. Überfahren eines Ports hebt sein Kabel hervor.",
+  "help.racks.body": "Switches, Router, Rack-Server und Modems lassen sich in ein Rack einbauen. **R** zeigt die Frontansicht mit allen Ports; im Entwurf steckst du dort direkt um. Patchkabel zwischen Geräten im selben Rack erscheinen als farbige Kabel über der Front; Kabel zu Geräten ausserhalb stehen unter den Ports. Überfahren eines Ports hebt sein Kabel hervor. Auf der Zeichenfläche tragen eingebaute Geräte ein Etikett mit dem Namen; Kabel zwischen ihnen laufen als Patchkabel rechts am Rack entlang, mit Port und LED am Ausgang.",
   "help.floors.title": "Stockwerke",
   "help.floors.body": "Grosse Netze lassen sich auf Stockwerke verteilen. Kabel zwischen Stockwerken erscheinen als Steigleitung.",
   "help.snapshots.title": "Snapshots",

@@ -2,6 +2,7 @@
   import { DEVICE_SPECS, addressScope, floorsOf, parseIp, parseMask, type AddressScope, type Device } from '../../core';
   import { t } from '../../i18n';
   import { interfaceLabel, typeLabel } from '../labels';
+  import { rackLabelsFit, rackSlots } from '../cableGeometry';
   import { duplicates } from '../state/duplicates.svelte';
     import { ui } from '../state/ui.svelte';
   import { editor } from '../state/editor.svelte';
@@ -26,6 +27,15 @@
     const floors = floorsOf(editor.topology);
     if (floors.length < 2 || ui.floor !== 'all') return '';
     return floors[device.floor ?? 0]?.name ?? '';
+  });
+
+  /** Name auf der Frontplatte: höchstens 15 Zeichen, sonst gekürzt (ganzer Name als Tooltip). */
+  const rackName = $derived(device.name.length > 15 ? `${device.name.slice(0, 14)}…` : device.name);
+  const slots = $derived(racked ? rackSlots(editor.topology, device.id) : []);
+  /** Typ unter dem Etikett, kurz gehalten (Platz für die Port-Beschriftung rechts). */
+  const rackType = $derived.by(() => {
+    const text = typeLabel(device.type);
+    return text.length > 16 ? `${text.slice(0, 15)}…` : text;
   });
 
   const selected = $derived(editor.isSelected('device', device.id));
@@ -124,11 +134,21 @@
     <circle class="screw" cx="80" cy="-21" r="2" />
     <circle class="screw" cx="80" cy="21" r="2" />
   {/if}
-  <rect class="hit" x="-36" y="-30" width="72" height="60" rx="10" />
-  <DeviceIcon type={device.type} />
   {#if racked}
-    <text class="rack-label" x="-74" y="4">{device.name}</text>
+    <!-- Im Rack: Symbol klein links, daneben Etikett mit dem Namen und darunter der Typ. -->
+    <rect class="hit" x="-86" y="-28" width="172" height="56" rx="3" />
+    <g transform="translate(-54 0) scale(0.62)"><DeviceIcon type={device.type} variant={device.variant} /></g>
+    <rect class="tape" x="-32" y="-15" width={Math.min(rackName.length * 6.6 + 10, 104)} height="16" rx="2" />
+    <text class="rack-label" x="-27" y="-3">{rackName}<title>{device.name}</title></text>
+    <text class="rack-type" x="-31" y="14">{rackType}</text>
+    {#if ui.showPortLabels && rackLabelsFit(slots.length)}
+      {#each slots as slot (slot.iface)}
+        <text class="rack-port" x="80" y={slot.y + 3}>{interfaceLabel(device, slot.iface, true)}</text>
+      {/each}
+    {/if}
   {:else}
+    <rect class="hit" x="-36" y="-30" width="72" height="60" rx="10" />
+    <DeviceIcon type={device.type} variant={device.variant} />
     <text class="label" y="44">{device.name}</text>
   {/if}
   {#each lines as line, i (i)}
@@ -168,10 +188,29 @@
   .screw {
     fill: #64748b;
   }
+  /* Etikett wie vom Beschriftungsgerät: helles Band, dunkle Festbreitenschrift */
+  .tape {
+    fill: #f8fafc;
+    pointer-events: none;
+  }
   .rack-label {
+    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
     font-size: 11px;
-    font-weight: 600;
-    fill: #e2e8f0;
+    font-weight: 700;
+    fill: #0f172a;
+    user-select: none;
+  }
+  .rack-port {
+    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    font-size: 8px;
+    text-anchor: end;
+    fill: #cbd5e1;
+    user-select: none;
+    pointer-events: none;
+  }
+  .rack-type {
+    font-size: 9px;
+    fill: #94a3b8;
     user-select: none;
     pointer-events: none;
   }
