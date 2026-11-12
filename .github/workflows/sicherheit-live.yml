@@ -1,0 +1,86 @@
+# Sicherheitsprüfung von aussen gegen die echten Seiten («White-Hat»), nur lesend:
+# app.leyonet.ch, beta.leyonet.ch (Webversion) und leyonet.ch (Website).
+# Prüft TLS, HTTPS-Umleitung, Sicherheitsköpfe, versteckte Dateien und Pfad-Tricks, CORS,
+# CSRF, Admin-Sperre, Eingaben (kaputtes JSON, Prototype Pollution, Grösse), keine Cookies,
+# keine fremden Ressourcen, Impressum/Datenschutz vorhanden. Legt keine Daten an.
+# Läuft wöchentlich, nach jedem Desktop-Release und von Hand (Actions → «Sicherheitsprüfung live»).
+# Bei einem Befund: Issue «Sicherheitsprüfung live: Befund» (eröffnet oder ergänzt).
+name: Sicherheitsprüfung live
+
+on:
+  schedule:
+    - cron: '41 5 * * 1' # Montag, 05:41 UTC
+  workflow_run:
+    workflows: [Desktop]
+    types: [completed]
+  workflow_dispatch:
+  # Wenn sich die Prüfung selbst ändert: gleich gegen die echten Seiten laufen lassen.
+  push:
+    branches: [develop]
+    paths: [scripts/sicherheit/**, .github/workflows/sicherheit-live.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      befund: ${{ steps.angriff.outputs.befund }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Angriffe (nur lesend)
+        id: angriff
+        run: |
+          set +e
+          node scripts/sicherheit/angriff.mjs --live \
+            --app https://app.leyonet.ch --app https://beta.leyonet.ch \
+            --site https://leyonet.ch
+          code=$?
+          if [ "$code" = "0" ]; then echo "befund=nein" >> "$GITHUB_OUTPUT"; else echo "befund=ja" >> "$GITHUB_OUTPUT"; fi
+          test -f sicherheit-bericht.md && cat sicherheit-bericht.md >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: sicherheit-bericht
+          path: sicherheit-bericht.md
+          retention-days: 30
+          if-no-files-found: ignore
+
+  meldung:
+    needs: pruefen
+    if: always() && (needs.pruefen.result != 'success' || needs.pruefen.outputs.befund == 'ja')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: sicherheit-bericht
+        continue-on-error: true
+
+      - name: Issue eröffnen oder ergänzen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          LAUF: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            echo "Die Sicherheitsprüfung von aussen hat Befunde ([Lauf]($LAUF)). Nur die Zeilen mit ❌ sind zu beheben; Massnahmen in docs/sicherheit.md."
+            echo
+            if [ -f sicherheit-bericht.md ]; then grep -E '^(#|\| ❌|\| ℹ️|\|---|\| \| Stufe)' sicherheit-bericht.md; else echo "Prüfung konnte nicht laufen."; fi
+          } > meldung.md
+          titel="Sicherheitsprüfung live: Befund"
+          nummer=$(gh issue list --state open --search "in:title \"$titel\"" --json number --jq '.[0].number')
+          if [ -n "$nummer" ]; then
+            gh issue comment "$nummer" --body-file meldung.md
+          else
+            gh issue create --title "$titel" --body-file meldung.md
+          fi

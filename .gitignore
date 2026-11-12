@@ -14,3 +14,4 @@ docs/arbeitsblaetter/*_mL.pdf
 # Website: Impressum und Datenschutz mit Kontaktdaten nur auf dem Server (Vorlagen: *.vorlage.html)
 website/httpdocs/impressum.html
 website/httpdocs/datenschutz.html
+sicherheit-bericht.md

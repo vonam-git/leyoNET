@@ -343,3 +343,14 @@ test('Prüfung nur im Safe Exam Browser: Schlüssel, Kennung, gilt bis zum Ende'
   // Ohne Admin-Anmeldung kein Zugriff auf den Schlüssel.
   assert.equal((await foreign('POST', `/api/admin/exams/${exam.id}/seb`, { on: true })).status, 401);
 });
+
+test('Codes raten: nach 30 Fehlversuchen pro Minute gebremst (je Adresse, nicht für andere)', async () => {
+  const angreifer = { 'X-Forwarded-For': '198.51.100.7' };
+  for (let i = 0; i < 30; i++) assert.equal((await foreign('GET', `/api/sessions/ZZZZ-ZZ${String(i).padStart(2, '0')}`, null, angreifer)).status, 404);
+  assert.equal((await foreign('GET', '/api/sessions/ZZZZ-ZZZZ', null, angreifer)).status, 429);
+  // Platz-Codes zählen getrennt; andere Adressen bleiben unberührt.
+  assert.equal((await foreign('POST', '/api/exams/join', { seatCode: 'ZZZZ-ZZZZ' }, angreifer)).status, 404);
+  assert.equal((await foreign('GET', '/api/sessions/ZZZZ-ZZZZ', null, { 'X-Forwarded-For': '198.51.100.8' })).status, 404);
+  for (let i = 0; i < 30; i++) await foreign('POST', '/api/exams/join', { seatCode: `ZZZZ-ZY${String(i).padStart(2, '0')}` }, angreifer);
+  assert.equal((await foreign('POST', '/api/exams/join', { seatCode: 'ZZZZ-ZZZZ' }, angreifer)).data.error, 'rateLimited');
+});

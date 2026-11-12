@@ -118,7 +118,7 @@ Ist der Stand auf `develop` gut, wird er nach `main` übernommen (Pull Request a
 
 Die Website liegt im Repo unter [`website/httpdocs/`](../website/httpdocs/) (Startseite, Impressum, Datenschutz, Bilder, `.htaccess` mit Sicherheits-Köpfen; nur eigene Dateien, keine fremden Dienste). Die Downloads sind **Links auf GitHub-Releases** mit festen Dateinamen, z.B. `https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Windows-Setup.exe`. Bei einer neuen Version wird nichts hochgeladen: Sobald der Release veröffentlicht ist, zeigen die Links auf die neuen Dateien. Die festen Namen legt der Workflow `desktop.yml` (Auftrag «dateinamen») an.
 
-Einrichten in Plesk und Ablauf bei neuen Versionen: [`website/ANLEITUNG.md`](../website/ANLEITUNG.md). Kurz: bei leyonet.ch *Git* mit Branch `main` und Bereitstellungspfad `leyonet-repo`, Dokumentstamm `leyonet-repo/website/httpdocs`.
+Einrichten in Plesk und Ablauf bei neuen Versionen: [`website/ANLEITUNG.md`](../website/ANLEITUNG.md). Kurz: bei leyonet.ch *Git* mit Branch `main` und Bereitstellungspfad `leyonet-repo`, Dokumentstamm `leyonet-repo/website/httpdocs`. **Wichtig:** Weil nginx die statischen Dateien direkt ausliefert, gelten die Sicherheits-Köpfe der `.htaccess` nicht; sie gehören unter *Apache & nginx → Zusätzliche nginx-Anweisungen* (Abschnitt «Sicherheits-Köpfe für nginx» in der Anleitung). Für app. und beta. dort `server_tokens off;` und `passenger_show_version_in_header off;`.
 
 ## Ohne Node.js (nur statisch)
 

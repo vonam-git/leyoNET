@@ -289,9 +289,27 @@ function clientIp(req) {
 }
 
 function limited(req, kind, perMinute) {
-  const ip = clientIp(req);
-  const key = crypto.createHash('sha256').update(SALT).update(ip).update(kind).digest('base64url').slice(0, 16);
-  return count(key, perMinute);
+  return count(bucketKey(req, kind), perMinute);
+}
+
+/**
+ * Codes raten (Session- und Platz-Codes): Treffer sind normal, Fehlversuche selten. Wer viele
+ * unbekannte Codes probiert, wird für den Rest der Minute gebremst. Gezählt werden nur
+ * Fehlversuche, je Adresse (eine Schulklasse hinter einer Adresse vertippt sich kaum 30-mal
+ * pro Minute). Bewusst ohne gesamte Grenze: sonst könnte jemand mit Fehlversuchen allen
+ * anderen das Beitreten sperren.
+ */
+const MISSES_PER_MINUTE = 30;
+function tooManyMisses(req, kind) {
+  return peek(`miss:${kind}`, req, MISSES_PER_MINUTE);
+}
+function countMiss(req, kind) {
+  limited(req, `miss:${kind}`, Infinity);
+}
+const bucketKey = (req, kind) => crypto.createHash('sha256').update(SALT).update(clientIp(req)).update(kind).digest('base64url').slice(0, 16);
+function peek(kind, req, perMinute) {
+  const b = buckets.get(bucketKey(req, kind));
+  return !!b && Date.now() - b.start <= 60_000 && b.count >= perMinute;
 }
 
 /** Höchstens so viele Anfragen dieser Art pro Minute insgesamt (falls Adressen gefälscht werden können). */
@@ -738,10 +756,13 @@ async function api(req, res, url) {
       return json(res, 201, { code, expires: item.expires, classCode, writer });
     }
 
+    if (tooManyMisses(req, 'session')) return fail(res, 429, 'rateLimited');
     const code = normalizeCode(parts[1]);
-    if (!code || parts.length > 3) return fail(res, 404, 'unknownSession');
-    const item = loadSession(code);
-    if (!item) return fail(res, 404, 'unknownSession');
+    const item = code && parts.length <= 3 ? loadSession(code) : null;
+    if (!item) {
+      countMiss(req, 'session');
+      return fail(res, 404, 'unknownSession');
+    }
     const token = writerOf(req);
     const about = (it) => ({ locked: !!it.lock, connected: connected(code) });
 
@@ -823,11 +844,14 @@ async function api(req, res, url) {
 
   // --- Prüfung beitreten (mit Platz-Code) ---
   if (parts[0] === 'exams' && parts[1] === 'join' && method === 'POST') {
-    if (limited(req, 'examJoin', 600)) return fail(res, 429, 'rateLimited');
+    if (limited(req, 'examJoin', 600) || tooManyMisses(req, 'seat')) return fail(res, 429, 'rateLimited');
     const body = await readBody(req);
     const seatCode = normalizeCode(body.seatCode);
     const found = seatCode && findSeat(seatCode);
-    if (!found) return fail(res, 404, 'unknownSeat');
+    if (!found) {
+      countMiss(req, 'seat');
+      return fail(res, 404, 'unknownSeat');
+    }
     const { exam, seat } = found;
     if (!sebAllowed(req, exam, body.sebKey)) return fail(res, 403, 'sebRequired');
     const status = seatStatus(exam, seat);
@@ -1204,6 +1228,12 @@ function createServer() {
         return send(res, 200, CHANNEL === 'beta' ? 'User-agent: *\nDisallow: /\n' : 'User-agent: *\nAllow: /\n', { 'Content-Type': 'text/plain; charset=utf-8' });
       }
       if (url.pathname === '/healthz') return send(res, 200, 'ok', { 'Content-Type': 'text/plain' });
+      // Meldestelle für Sicherheitslücken (RFC 9116); läuft immer ein Jahr ab heute.
+      if (url.pathname === '/.well-known/security.txt') {
+        const expires = new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10);
+        const host = /^[a-z0-9.-]+(:\d+)?$/i.test(String(req.headers.host || '')) ? req.headers.host : 'app.leyonet.ch';
+        return send(res, 200, `Contact: https://github.com/vonam-git/leyoNET/security/advisories/new\nExpires: ${expires}T00:00:00.000Z\nPreferred-Languages: de, en\nCanonical: https://${host}/.well-known/security.txt\nPolicy: https://github.com/vonam-git/leyoNET/blob/main/SECURITY.md\n`, { 'Content-Type': 'text/plain; charset=utf-8' });
+      }
       return fail(res, 404, 'notFound');
     } catch (error) {
       const status = error && error.status ? error.status : 500;

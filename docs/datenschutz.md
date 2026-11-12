@@ -106,6 +106,10 @@ Alle Daten liegen als JSON-Dateien im Ordner `DATA_DIR` auf dem Server der Schul
 
 Da keine Daten einer bestimmten Person zugeordnet werden, gibt es in der Regel nichts herauszugeben. Sessions kann jede Person selbst sofort löschen. Für Rückmeldungen und Klassen wendet man sich an den Betreiber, der sie in der Admin-Konsole löscht; ansonsten verschwinden sie automatisch nach Ablauf der Frist.
 
+## Für den Einsatz an Schulen
+
+Informationssicherheits- und Datenschutzkonzept mit Schutzbedarf, Risiken, Restrisiken und Einsatzentscheid: [isds-konzept.md](isds-konzept.md). Schwellwertanalyse zur Datenschutz-Folgenabschätzung (Ergebnis: kein hohes Risiko unter klaren Bedingungen): [dsfa-abklaerung.md](dsfa-abklaerung.md).
+
 ## Vorlage für die Datenschutzerklärung der Schule
 
 > **leyoNET.** Die Webversion von leyoNET unter *‹Adresse›* wird von *‹Schule›* betrieben. Sie speichert nur technische Netzwerk-Konfigurationen unter einem Zufallscode, ohne Namen, Konten oder E-Mail-Adressen. Arbeitsstände werden nach *‹24 Stunden›* ohne Änderung automatisch gelöscht, Klassen nach *‹14 Tagen›*, Rückmeldungen nach *‹30 Tagen›*. Der Simulator setzt keine Cookies, nutzt keine Analyse- oder Werbedienste und speichert keine IP-Adressen. Der Webserver führt Zugriffsprotokolle, die nach *‹7 Tagen›* gelöscht werden. Kontakt: *‹Adresse der Datenschutzverantwortlichen›*.

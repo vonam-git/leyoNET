@@ -65,17 +65,32 @@ Die Download-Knöpfe zeigen auf `https://github.com/vonam-git/leyoNET/releases/l
 4. Den Entwurf unter *Releases* prüfen und **veröffentlichen**. Ab dann laden alle Knöpfe der Website die neue Version.
 5. In `index.html` die Versionsnummer (`data-version`) und allenfalls die Zahlen (Übungen, Demos …) nachführen; ein Test prüft, dass jeder Download-Name im Workflow entsteht.
 
-## Sicherheits-Köpfe für nginx (nur falls ohne Apache)
+## Sicherheits-Köpfe für nginx (nötig!)
+
+Plesk lässt statische Dateien direkt von **nginx** ausliefern («Statische Dateien direkt über nginx bereitstellen»). Dann greifen die `Header`-Zeilen der `.htaccess` **nicht**, die Seite hätte keine CSP, kein HSTS und keinen Schutz vor Einbetten. Die wöchentliche Prüfung «Sicherheitsprüfung live» meldet das. Darum bei **leyonet.ch → Apache & nginx → Zusätzliche nginx-Anweisungen** eintragen:
 
 ```nginx
-add_header Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
+server_tokens off;
+add_header Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
 add_header Strict-Transport-Security "max-age=31536000" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header X-Frame-Options "DENY" always;
 add_header Referrer-Policy "no-referrer" always;
-add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
-location = /download/leyonet.html { add_header Content-Disposition "attachment; filename=leyonet.html"; }
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()" always;
+add_header Cross-Origin-Opener-Policy "same-origin" always;
+add_header Cross-Origin-Resource-Policy "same-origin" always;
 ```
+
+Danach *OK*; Plesk prüft die Syntax. Kontrolle: Actions → «Sicherheitsprüfung live» → *Run workflow*.
+
+Für **app.leyonet.ch** und **beta.leyonet.ch** setzt der Node-Server die Köpfe selbst. Dort nur die Versionsangaben ausblenden (*Zusätzliche nginx-Anweisungen*):
+
+```nginx
+server_tokens off;
+passenger_show_version_in_header off;
+```
+
+Den Kopf `X-Powered-By: PleskLin` blendet die Plesk-Einstellung `xPoweredByHeader = off` im Abschnitt `[webserver]` der Datei `panel.ini` aus (Plesk-Administration, optional).
 
 ## Was die Seite tut und nicht tut
 
