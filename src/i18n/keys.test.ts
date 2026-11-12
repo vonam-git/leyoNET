@@ -66,7 +66,8 @@ describe('Sprachdatei', () => {
   });
 
   it('hat Namen für jeden Gerätetyp und Texte für jeden Prüfbaustein', () => {
-    const keys = [...DEVICE_TYPES.map((t) => `device.${t}`), ...CHECK_TYPES.map((t) => `taskForm.type.${t}`)];
+    // defaultName.<Typ>: Name neuer Geräte (fehlte er, hiess ein Server «defaultName.server 1»).
+    const keys = [...DEVICE_TYPES.flatMap((t) => [`device.${t}`, `defaultName.${t}`]), ...CHECK_TYPES.map((t) => `taskForm.type.${t}`)];
     expect(keys.filter((k) => !(k in de))).toEqual([]);
   });
 });

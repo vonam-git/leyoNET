@@ -76,6 +76,7 @@ export class NetBuilder {
     const id = this.add(type, name);
     if (addresses.length > 2) this.topology = unwrap(setInterfaceCount(this.topology, id, addresses.length));
     addresses.forEach((cidr, index) => {
+      if (!cidr) return; // leer: Anschluss ohne Adresse
       const [ip, prefix] = cidr.split('/');
       this.topology = unwrap(setInterfaceAddress(this.topology, id, index, ip!, prefix!));
     });

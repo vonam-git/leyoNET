@@ -2,8 +2,9 @@ import { MAX_DHCP_EXCLUDED, MAX_DHCP_POOLS, canDhcpPool, checkDhcpPool, checkDhc
 import { checkDnsRecord, isValidName, normalizeName, normalizeRecord } from '../net/dns';
 import { isValidPath } from '../net/http';
 import { checkMailAccount, checkMailbox } from '../net/mail';
-import { checkHostConfig, formatIp, maskToText, parseIp, parseMask, type HostConfigInput } from '../net/ipv4';
-import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME, checkStaticRoute, decodeIface, logicalInterfaces, normalizeRoute } from '../net/routing';
+import { checkHostConfig, formatIp, maskToText, networkOf, parseIp, parseMask, sameSubnet, type HostConfigInput } from '../net/ipv4';
+import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME, checkStaticRoute, decodeIface, interfaceAddresses, logicalInterfaces, loopbackId, normalizeRoute, subifId, sviId, vrfOfIface } from '../net/routing';
+import { cliIfaceName } from '../cli/names';
 import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, isRouterLike, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
 import { MIN_SIGNAL, portMedium, signalBetween } from './links';
 import { macFor, normalizeMac } from './mac';
@@ -93,6 +94,7 @@ export type ErrorCode =
   | 'unknownInterface'
   | 'invalidIp'
   | 'invalidMask'
+  | 'overlapsInterface'
   | 'maskRequired'
   | 'gatewayWithoutAddress'
   | 'switchLoop'
@@ -1065,6 +1067,25 @@ function checkAddress(ip: string, mask: string): TopologyError | null {
 
 const validVlan = (vlan: number) => Number.isInteger(vlan) && vlan >= 1 && vlan <= 4094;
 
+/**
+ * Wie auf echten Routern («% 192.168.1.0 overlaps with GigabitEthernet0/0»): Zwei Interfaces
+ * desselben Geräts dürfen in derselben Routingtabelle (VRF) nicht im selben Netz liegen, sonst
+ * wüsste der Router nicht, über welches er das Netz erreicht. In verschiedenen VRFs ist es erlaubt.
+ */
+function overlapIssue(device: Device, self: number, ip: string, mask: string, vrf: string | undefined): TopologyError | null {
+  if (!isRouterLike(device.type) && device.type !== 'l3switch') return null;
+  const a = ip.trim() ? parseIp(ip) : null;
+  const prefix = mask.trim() ? parseMask(mask) : null;
+  if (a === null || prefix === null) return null;
+  for (const other of interfaceAddresses(device)) {
+    if (other.index === self || vrfOfIface(device, other.index) !== vrf) continue;
+    const common = Math.min(prefix, other.prefix);
+    if (!sameSubnet(a, other.ip, common)) continue;
+    return { code: 'overlapsInterface', params: { net: `${formatIp(networkOf(a, prefix))}/${prefix}`, iface: cliIfaceName(device, other.index), other: `${formatIp(other.ip)}/${other.prefix}` }, field: 'ip' };
+  }
+  return null;
+}
+
 /** Subinterface eines Router-Anschlusses anlegen oder seine Adresse ändern (z.B. eth0.10). */
 export function setSubinterface(t: Topology, id: string, parent: number, vlan: number, ip: string, mask: string): Result<Topology> {
   const device = getDevice(t, id);
@@ -1076,6 +1097,8 @@ export function setSubinterface(t: Topology, id: string, parent: number, vlan: n
   if (issue) return { ok: false, error: issue };
   const existing = device.subinterfaces ?? [];
   const old = existing.find((s) => s.parent === parent && s.vlan === vlan);
+  const overlap = overlapIssue(device, subifId(parent, vlan), ip, mask, old?.vrf);
+  if (overlap) return { ok: false, error: overlap };
   const { ip: _ip, mask: _mask, ...rest } = old ?? { parent, vlan };
   const next: SubInterface = { ...rest, ...normalized(ip, mask) };
   const list = old
@@ -1278,6 +1301,8 @@ export function setLoopback(t: Topology, id: string, n: number, ip: string, mask
   if (issue) return { ok: false, error: issue };
   const existing = device.loopbacks ?? [];
   const old = existing.find((l) => l.id === n);
+  const overlap = overlapIssue(device, loopbackId(n), ip, mask, old?.vrf);
+  if (overlap) return { ok: false, error: overlap };
   const { ip: _ip, mask: _mask, ...rest } = old ?? { id: n };
   const next: Loopback = { ...rest, ...normalized(ip, mask) };
   const list = old ? existing.map((l) => (l === old ? next : l)) : [...existing, next].sort((a, b) => a.id - b.id);
@@ -1318,6 +1343,8 @@ export function setSvi(t: Topology, id: string, vlan: number, ip: string, mask: 
   if (issue) return { ok: false, error: issue };
   const existing = device.svis ?? [];
   const old = existing.find((s) => s.vlan === vlan);
+  const overlap = overlapIssue(device, sviId(vlan), ip, mask, old?.vrf);
+  if (overlap) return { ok: false, error: overlap };
   const { ip: _ip, mask: _mask, ...rest } = old ?? { vlan };
   const next: Svi = { ...rest, ...normalized(ip, mask) };
   const list = old ? existing.map((s) => (s === old ? next : s)) : [...existing, next].sort((a, b) => a.vlan - b.vlan);
@@ -1601,6 +1628,8 @@ export function setInterfaceAddress(t: Topology, id: string, index: number, ip: 
     return { ok: false, error: { code: 'invalidMask', params: { value: mask.trim() }, field: 'mask' } };
   }
   if (ip.trim() && !mask.trim()) return { ok: false, error: { code: 'maskRequired', field: 'mask' } };
+  const overlap = overlapIssue(device, index, ip, mask, device.interfaces[index].vrf);
+  if (overlap) return { ok: false, error: overlap };
   return ok(
     updateDevice(t, id, (d) => ({
       ...d,

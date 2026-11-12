@@ -4,6 +4,7 @@
   import { dialogs } from '../state/dialogs.svelte';
   import { ui } from '../state/ui.svelte';
   import { examMode } from '../state/exam.svelte';
+  import { session } from '../state/session.svelte';
   import { isLargeTask, taskView } from '../state/taskView.svelte';
   import TaskBody from './TaskBody.svelte';
 
@@ -18,11 +19,12 @@
     taskView.reset();
   });
 
-  // Neue grosse Aufgabe (z.B. aus dem Katalog): gleich im Fenster zeigen.
+  // Neue grosse Aufgabe (z.B. aus dem Katalog): gleich im Fenster zeigen. Nicht beim Ansehen
+  // einer Session: dort kommt bei jedem neuen Stand dieselbe Aufgabe neu an.
   let shownFor: unknown = null;
   $effect(() => {
     const current = editor.tasks;
-    if (current && current !== shownFor && shownFor !== null && isLargeTask(current) && !locked) taskView.show();
+    if (current && current !== shownFor && shownFor !== null && isLargeTask(current) && !locked && !session.watching) taskView.show();
     if (!current) taskView.close();
     shownFor = current ?? 0;
   });

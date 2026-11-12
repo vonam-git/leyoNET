@@ -21,3 +21,39 @@ export function parallelOffset(t: Topology, cable: Pick<Cable, 'id' | 'a' | 'b'>
   const length = Math.hypot(dx, dy) || 1;
   return { x: (-dy / length) * shift, y: (dx / length) * shift };
 }
+
+/** Abstand der Kabelausgänge an einer Frontplatte im Rack. */
+export const RACK_SLOT_GAP = 11;
+
+/** Kabel zwischen zwei Geräten im selben Rack (Patchkabel). */
+export function isRackPatch(t: Topology, cable: Pick<Cable, 'a' | 'b'>): boolean {
+  const a = t.devices.find((d) => d.id === cable.a.device);
+  const b = t.devices.find((d) => d.id === cable.b.device);
+  return !!a?.rack && a.rack === b?.rack;
+}
+
+/**
+ * Höhe des Kabelausgangs an der Frontplatte (relativ zur Gerätemitte): die Patchkabel eines
+ * Geräts nach Portnummer übereinander, damit Kabel und Beschriftungen sich nicht überdecken.
+ */
+export function rackSlot(t: Topology, device: string, cableId: string): number {
+  const mine = t.cables
+    .filter((c) => (c.a.device === device || c.b.device === device) && isRackPatch(t, c))
+    .map((c) => ({ id: c.id, port: c.a.device === device ? c.a.iface : c.b.iface }))
+    .sort((x, y) => x.port - y.port);
+  const k = mine.findIndex((c) => c.id === cableId);
+  return k < 0 ? 0 : (k - (mine.length - 1) / 2) * slotGap(mine.length);
+}
+
+/** Viele Kabel an einem Gerät: enger zusammen, damit alle auf der Frontplatte (±22) bleiben. */
+const slotGap = (n: number) => (n < 2 ? 0 : Math.min(RACK_SLOT_GAP, 44 / (n - 1)));
+
+/** Reicht der Platz für eine Beschriftung je Kabelausgang? */
+export const rackLabelsFit = (n: number) => n < 2 || slotGap(n) >= 9;
+
+/** Ports eines Geräts mit Patchkabel im Rack und Höhe ihres Ausgangs (für die Beschriftung). */
+export function rackSlots(t: Topology, device: string): { iface: number; y: number }[] {
+  return t.cables
+    .filter((c) => (c.a.device === device || c.b.device === device) && isRackPatch(t, c))
+    .map((c) => ({ iface: c.a.device === device ? c.a.iface : c.b.iface, y: rackSlot(t, device, c.id) }));
+}

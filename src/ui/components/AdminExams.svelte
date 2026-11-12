@@ -6,6 +6,7 @@
   import { dialogs } from '../state/dialogs.svelte';
   import { reviewInbox } from '../state/reviewInbox';
   import { seatCardsHtml } from '../seatCards';
+  import SebPanel from './SebPanel.svelte';
 
   /**
    * Admin-Konsole, Reiter «Prüfungen»: Prüfung auf den Server laden, Platz-Codes
@@ -47,6 +48,8 @@
     created: number;
     expires: number;
     hasKey: boolean;
+    /** Nur im Safe Exam Browser; key fehlt, sobald die Prüfung beendet ist. */
+    seb: { key: string | null } | null;
     seats: Seat[] | number;
     joined?: number;
   }
@@ -64,6 +67,7 @@
   let learner = $state<{ name: string; data: Record<string, unknown>; variants: number; minutes: number | null; title: string } | null>(null);
   let key = $state<{ name: string; data: unknown } | null>(null);
   let seats = $state(20);
+  let seb = $state(false);
   let minutes = $state(60);
   let busy = $state(false);
   let now = $state(Date.now());
@@ -117,7 +121,7 @@
 
   function errorText(error: unknown): string {
     const code = (error as { code?: string }).code ?? 'other';
-    return t(`admin.exams.error.${['notAnExam', 'labelRequired', 'badSeats', 'keyMismatch', 'alreadyStarted', 'notStarted', 'unknownExam', 'tooLarge'].includes(code) ? code : 'other'}`);
+    return t(`admin.exams.error.${['notAnExam', 'labelRequired', 'badSeats', 'keyMismatch', 'alreadyStarted', 'notStarted', 'unknownExam', 'tooLarge', 'examEnded'].includes(code) ? code : 'other'}`);
   }
 
   async function create(event: SubmitEvent) {
@@ -125,8 +129,9 @@
     if (!learner) return;
     busy = true;
     try {
-      const exam = await call<Exam>('POST', 'exams', { label, learner: learner.data, key: key?.data ?? null, seats, minutes });
+      const exam = await call<Exam>('POST', 'exams', { label, learner: learner.data, key: key?.data ?? null, seats, minutes, seb });
       learner = null;
+      seb = false;
       key = null;
       label = '';
       open = exam;
@@ -223,6 +228,7 @@
       <label class="short">{t('admin.exams.minutes')}<input type="number" min="1" max="600" bind:value={minutes} /></label>
       <button type="submit" class="primary" disabled={busy || !label.trim()}>{t('admin.exams.create')}</button>
     </div>
+    <label class="check"><input type="checkbox" bind:checked={seb} /> 🔒 {t('seb.create')}</label>
     {#if !key}<p class="warn">{t('admin.exams.withoutKey')}</p>{/if}
   {/if}
   <p class="muted">{t('admin.exams.hint')}</p>
@@ -238,7 +244,7 @@
     <tbody>
       {#each exams as e (e.id)}
         <tr class:active={open?.id === e.id}>
-          <td>{e.label}{#if !e.hasKey} <span class="warn" title={t('admin.exams.withoutKey')}>⚠</span>{/if}</td>
+          <td>{e.label}{#if e.seb} <span title={t('seb.title')}>🔒</span>{/if}{#if !e.hasKey} <span class="warn" title={t('admin.exams.withoutKey')}>⚠</span>{/if}</td>
           <td>{t(`admin.exams.state.${e.state}`)}</td>
           <td>{Array.isArray(e.seats) ? e.seats.length : `${e.joined ?? 0}/${e.seats}`}</td>
           <td>{when(e.expires)}</td>
@@ -269,6 +275,7 @@
     <button onclick={download} disabled={open.state === 'ready'}>⬇ {t('admin.exams.download')}</button>
   </div>
   <p class="muted">{t(`admin.exams.help.${open.state}`)}</p>
+  <SebPanel exam={open} onchange={(on, text) => act('seb', { on }, text)} />
   <table>
     <thead>
       <tr><th>{t('exam.seatWord')}</th><th>{t('admin.exams.code')}</th><th>{t('admin.exams.state')}</th><th>{t('admin.exams.saved')}</th><th>{t('admin.exams.until')}</th><th>{t('admin.exams.extra')}</th><th>{t('admin.exams.live')}</th></tr>
@@ -299,6 +306,12 @@
 {/if}
 
 <style>
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+  }
   .create {
     display: grid;
     gap: 6px;

@@ -26,7 +26,9 @@ const replies = (sim: Simulation, id: string) => sim.getDeviceState(id).console.
  */
 function provider() {
   const net = new NetBuilder();
-  const pe = net.router('PE', ['10.0.0.1/24', '10.9.0.1/24', '10.0.0.1/24', '10.9.0.1/24']);
+  // Kunde B bekommt seine (gleichen) Adressen erst nach «vrf forwarding»: in derselben
+  // Tabelle lehnt der Router ein zweites Interface im selben Netz ab.
+  const pe = net.router('PE', ['10.0.0.1/24', '10.9.0.1/24', '', '']);
   const a1 = net.host('PC A1', '10.0.0.10', '24', '10.0.0.1');
   const sa = net.host('Server A', '10.9.0.10', '24', '10.9.0.1');
   const b1 = net.host('PC B1', '10.0.0.10', '24', '10.0.0.1');
@@ -47,8 +49,10 @@ function provider() {
     'interface range eth2-3',
     'interface eth2',
     'vrf forwarding KUNDE-B',
+    'ip address 10.0.0.1 255.255.255.0',
     'interface eth3',
     'vrf forwarding KUNDE-B',
+    'ip address 10.9.0.1 255.255.255.0',
     'end',
   ]);
   return { topology, output, pe, a1, b1, sa, sb };
@@ -113,6 +117,22 @@ describe('VRF', () => {
     const pe = data.topology.devices.find((d: { name: string }) => d.name === 'PE');
     pe.vrfs = [{ name: 'KUNDE-A' }];
     expect(parseProject(JSON.stringify(data)).ok).toBe(false);
+  });
+});
+
+describe('VRF: Interfaces im selben Netz', () => {
+  it('lehnt ein zweites Interface im selben Netz derselben Tabelle ab, in einer anderen VRF nicht', () => {
+    const net = new NetBuilder();
+    const r = net.router('R1', ['192.168.1.1/24', '', '']);
+    const { output, topology } = cli(net.topology, r, ['en', 'conf t', 'interface eth1', 'ip address 192.168.1.2 255.255.255.0', 'interface eth2', 'ip address 192.168.1.130 255.255.255.128', 'interface loopback0', 'ip address 192.168.1.200 255.255.255.255', 'end']);
+    expect(output.filter((l) => l.includes('overlaps with eth0'))).toHaveLength(3);
+    expect(getDevice(topology, r)!.interfaces[1]!.ip).toBeUndefined();
+    // Anderes Netz geht, VRF erlaubt dasselbe Netz.
+    const ok = cli(topology, r, ['en', 'conf t', 'interface eth1', 'ip address 192.168.2.1 255.255.255.0', 'vrf definition X', 'interface eth2', 'vrf forwarding X', 'ip address 192.168.1.1 255.255.255.0', 'end']);
+    expect(ok.output.join('\n')).not.toContain('overlaps');
+    expect(getDevice(ok.topology, r)!.interfaces[2]!.ip).toBe('192.168.1.1');
+    // Gleiche Adresse am selben Interface neu setzen ist kein Konflikt.
+    expect(cli(ok.topology, r, ['en', 'conf t', 'interface eth0', 'ip address 192.168.1.1 255.255.255.0', 'end']).output.join('\n')).not.toContain('overlaps');
   });
 });
 

@@ -137,8 +137,14 @@ class SessionStore {
   }
 
   #headers(): Record<string, string> {
-    return this.#writer ? { 'X-Leyonet-Writer': this.#writer } : {};
+    return { ...(this.#writer ? { 'X-Leyonet-Writer': this.#writer } : {}), ...(this.sebKey ? { 'X-Leyonet-Seb': this.sebKey } : {}) };
   }
+
+  /**
+   * Schlüssel einer Prüfung im Safe Exam Browser (aus der Start-Adresse «?seb=…»); nur im
+   * Speicher, nie im Browser abgelegt. Der Server lässt Prüfungen mit SEB-Pflicht nur damit zu.
+   */
+  sebKey: string | null = null;
 
   #setWriter(token: string | null | undefined) {
     if (token === undefined) return;
@@ -159,7 +165,7 @@ class SessionStore {
 
   /** Prüfung mit Platz-Code beitreten; bei laufender Prüfung wird die Session des Platzes übernommen. */
   async joinExam(seatCode: string): Promise<ExamJoin> {
-    const data = await api<ExamJoin & { writer?: string }>('POST', 'exams/join', { seatCode, ...(this.#writer ? { writer: this.#writer } : {}) });
+    const data = await api<ExamJoin & { writer?: string }>('POST', 'exams/join', { seatCode, ...(this.#writer ? { writer: this.#writer } : {}), ...(this.sebKey ? { sebKey: this.sebKey } : {}) });
     if (data.session) {
       this.#setWriter(data.writer);
       this.takenOver = false;

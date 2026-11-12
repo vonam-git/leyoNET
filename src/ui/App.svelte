@@ -1,6 +1,7 @@
 <script lang="ts">
   import Splitter from './components/Splitter.svelte';
   import { onMount, untrack } from 'svelte';
+  import { takeSebKey } from './seb';
   import { parseProject, serializeProject } from '../core';
   import { locale, t } from '../i18n';
   import { ensureProjectFeatures } from './actions';
@@ -90,6 +91,10 @@
     // Webversion: Regeln des Admins laden und eine laufende Session fortsetzen.
     // Ohne Session beginnt die Webversion leer (keine Reste aus dem Browser).
     if (ui.online) {
+      // Aus dem Safe Exam Browser gestartet («?seb=<Schlüssel>»): Schlüssel nur im Speicher
+      // halten, aus der Adresszeile entfernen und gleich «Prüfung beitreten» öffnen.
+      const seb = takeSebKey();
+      if (seb) session.sebKey = seb;
       const config = await session.loadConfig();
       if (config) ui.setPolicy(normalizePolicy(config.policy));
       const remote = await session.restore();
@@ -99,6 +104,7 @@
         ensureProjectFeatures();
       }
       restored = true;
+      if (seb && !examMode.active) dialogs.show('examJoin');
       return;
     }
     const text = await loadAutosave();
@@ -235,6 +241,8 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh;
+    overflow: clip;
   }
   .beta {
     padding: 3px 12px;

@@ -75,10 +75,11 @@
   }
 </script>
 
-<div class="panel" style:--cols={columns} role="group" aria-label={t('panel.label', { name: device.name })}>
+<div class="panel" data-device={device.id} style:--cols={columns} role="group" aria-label={t('panel.label', { name: device.name })}>
   {#each ports as p, i (p.iface.index)}
     <button
       class="port"
+      data-port={p.iface.index}
       class:used={!!p.cable}
       class:moving={moving === i}
       class:target={moving !== null && !p.cable && !!ports[moving]?.iface.sfpSlot === !!p.iface.sfpSlot}

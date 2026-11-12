@@ -310,3 +310,36 @@ test('Prüfung: Speichern nach Ablauf der Zeit wird abgewiesen', async () => {
   assert.equal(put.data.exam.state, 'closed');
   assert.equal((await call('GET', `/api/admin/exams/${exam.id}`, null, token)).data.state, 'ended');
 });
+
+test('Prüfung nur im Safe Exam Browser: Schlüssel, Kennung, gilt bis zum Ende', async () => {
+  const { token } = (await call('POST', '/api/admin/login', { password: 'test-admin-passwort' })).data;
+  const learner = { ...project(0), tasks: { title: 'SEB', goals: [], noSelfCheck: true, exam: { id: 'P-SEB', unlock: 'b'.repeat(64), minutes: 30 } } };
+  const exam = (await call('POST', '/api/admin/exams', { label: 'SEB-Test', learner, seats: 1, seb: true }, token)).data;
+  assert.match(exam.seb.key, /^[0-9a-f]{64}$/);
+  const seatCode = exam.seats[0].code;
+  await call('POST', `/api/admin/exams/${exam.id}/start`, {}, token);
+  const seb = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 SEB/3.8' };
+  // Normaler Browser, falscher Schlüssel oder ohne SEB-Kennung: abgewiesen.
+  assert.equal((await foreign('POST', '/api/exams/join', { seatCode })).data.error, 'sebRequired');
+  assert.equal((await foreign('POST', '/api/exams/join', { seatCode, sebKey: 'c'.repeat(64) }, seb)).data.error, 'sebRequired');
+  assert.equal((await foreign('POST', '/api/exams/join', { seatCode, sebKey: exam.seb.key })).data.error, 'sebRequired');
+  assert.equal((await foreign('POST', '/api/exams/join', { seatCode, sebKey: { x: 1 } }, seb)).data.error, 'sebRequired');
+  // Im SEB mit dem Schlüssel der Prüfung: beitreten und speichern.
+  const join = await foreign('POST', '/api/exams/join', { seatCode, sebKey: exam.seb.key }, seb);
+  assert.equal(join.status, 200);
+  const headers = { ...seb, 'X-Leyonet-Writer': join.data.writer };
+  assert.equal((await foreign('PUT', `/api/sessions/${join.data.session}`, { project: learner }, headers)).data.error, 'sebRequired');
+  assert.equal((await foreign('PUT', `/api/sessions/${join.data.session}`, { project: learner }, { ...headers, 'X-Leyonet-Seb': exam.seb.key })).status, 200);
+  // Neuer Schlüssel: der alte gilt nicht mehr.
+  const renewed = (await call('POST', `/api/admin/exams/${exam.id}/seb`, { on: true }, token)).data;
+  assert.notEqual(renewed.seb.key, exam.seb.key);
+  assert.equal((await foreign('PUT', `/api/sessions/${join.data.session}`, { project: learner }, { ...headers, 'X-Leyonet-Seb': exam.seb.key })).data.error, 'sebRequired');
+  // Prüfung beendet: Schlüssel gelöscht, SEB lässt sich nicht wieder abschalten.
+  const ended = (await call('POST', `/api/admin/exams/${exam.id}/end`, {}, token)).data;
+  assert.equal(ended.seb.key, null);
+  assert.doesNotMatch(fs.readFileSync(path.join(dataDir, 'exams', `${exam.id}.json`), 'utf8'), new RegExp(renewed.seb.key));
+  assert.equal((await call('POST', `/api/admin/exams/${exam.id}/seb`, { on: false }, token)).data.error, 'examEnded');
+  assert.equal((await foreign('POST', '/api/exams/join', { seatCode, sebKey: renewed.seb.key }, seb)).data.error, 'sebRequired');
+  // Ohne Admin-Anmeldung kein Zugriff auf den Schlüssel.
+  assert.equal((await foreign('POST', `/api/admin/exams/${exam.id}/seb`, { on: true })).status, 401);
+});

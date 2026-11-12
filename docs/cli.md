@@ -120,6 +120,8 @@ ip route 172.16.0.0 255.255.0.0 eth1
 no ip route 172.16.0.0/16
 ```
 
+Zwei Interfaces desselben Routers (oder Layer-3-Switches) dürfen in derselben Routingtabelle nicht im selben Netz liegen. Wie auf echten Geräten lehnt leyoNET das ab: `% 192.168.1.0/24 overlaps with eth0 (192.168.1.1/24)`; im Formular erscheint eine Erklärung. Das gilt für Anschlüsse, Subinterfaces, SVIs und Loopbacks. In verschiedenen VRFs ist dasselbe Netz erlaubt; darum zuerst `vrf forwarding`, dann `ip address`.
+
 ### Serielle Leitungen (Router)
 
 ```
