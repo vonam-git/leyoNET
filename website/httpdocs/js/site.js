@@ -3,6 +3,34 @@
   'use strict';
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /* --- Hell/Dunkel: folgt dem System, der Schalter wechselt für diese Seite ------------
+     Ohne Speicherung (keine Cookies, nichts im Browser abgelegt): beim nächsten Besuch gilt wieder
+     die Einstellung des Systems. */
+  const root = document.documentElement;
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+  const isDark = () => (root.dataset.theme ? root.dataset.theme === 'dark' : systemDark.matches);
+  const themeListeners = [];
+  const applyTheme = () => {
+    const dark = isDark();
+    root.classList.toggle('theme-dark', dark);
+    for (const b of document.querySelectorAll('.theme-toggle')) {
+      b.setAttribute('aria-pressed', String(dark));
+      b.setAttribute('aria-label', dark ? 'Helles Design' : 'Dunkles Design');
+      b.title = dark ? 'Helles Design' : 'Dunkles Design';
+    }
+    themeListeners.forEach((f) => f());
+  };
+  for (const b of document.querySelectorAll('.theme-toggle')) {
+    b.hidden = false;
+    b.addEventListener('click', () => {
+      root.dataset.theme = isDark() ? 'light' : 'dark';
+      applyTheme();
+    });
+  }
+  systemDark.addEventListener('change', () => {
+    if (!root.dataset.theme) applyTheme();
+  });
+
   /* --- Hero: Ping über einen Router, wie in der Simulation ------------------------- */
   const X = { pc: 66, sw: 240, r: 410, srv: 551 };
   const FRAMES = [
@@ -116,13 +144,16 @@
   if (tabs.length && panel) {
     const img = panel.querySelector('img');
     const caption = panel.querySelector('figcaption');
+    let current = tabs[0];
     const select = (tab, focus) => {
+      current = tab;
       for (const t of tabs) {
         const on = t === tab;
         t.setAttribute('aria-selected', String(on));
         t.tabIndex = on ? 0 : -1;
       }
-      const name = tab.dataset.img;
+      // Bildschirmfotos gibt es hell und dunkel (das Dashboard ist immer dunkel).
+      const name = tab.dataset.img + (isDark() && tab.dataset.dark !== 'same' ? '-dark' : '');
       img.src = `img/${name}-1x.webp`;
       img.srcset = `img/${name}-1x.webp 1440w, img/${name}.webp 2880w`;
       img.alt = tab.dataset.caption;
@@ -130,6 +161,7 @@
       panel.setAttribute('aria-labelledby', tab.id);
       if (focus) tab.focus();
     };
+    themeListeners.push(() => select(current, false));
     tabs.forEach((tab, i) => {
       tab.tabIndex = i === 0 ? 0 : -1;
       tab.addEventListener('click', () => select(tab, false));
@@ -234,6 +266,8 @@
       io.observe(show);
     }
   }
+
+  applyTheme();
 
   /* --- Zähler: einmal hochzählen, wenn sie ins Bild kommen -------------------------- */
   const counters = [...document.querySelectorAll('[data-count]')];

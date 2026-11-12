@@ -15,8 +15,8 @@
   <meta property="og:image" content="https://leyonet.ch/img/og.png">
   <meta property="og:locale" content="de_CH">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="css/site.css">
-  <script src="js/site.js" defer></script>
+  <link rel="stylesheet" href="css/site.css?v=1.4.0">
+  <script src="js/site.js?v=1.4.0" defer></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -59,6 +59,10 @@
           <li><a href="#download">Download</a></li>
         </ul>
       </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
       <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
     </div>
   </header>
@@ -150,7 +154,8 @@
           <button role="tab" id="tab-entwurf" aria-controls="panel-views" aria-selected="true" data-img="entwurf" data-caption="Entwurf: Geräte aus dem Shop ziehen, verkabeln, Netze als farbige Bereiche dokumentieren. Hier ein Layer-3-Switch mit drei VLANs.">Entwurf</button>
           <button role="tab" id="tab-simulation" aria-controls="panel-views" aria-selected="false" data-img="simulation" data-caption="Simulation: Ping über einen Router. Die Paketliste zeigt jeden Rahmen, die Detailansicht seine Schichten aus echten Bytes.">Simulation</button>
           <button role="tab" id="tab-geraet" aria-controls="panel-views" aria-selected="false" data-img="geraetefenster" data-caption="Gerätefenster: Routingtabelle, OSPF-Nachbarn und ARP-Tabelle eines Routers, während OSPF-Hellos durchs Netz laufen.">Gerätefenster</button>
-          <button role="tab" id="tab-katalog" aria-controls="panel-views" aria-selected="false" data-img="katalog" data-caption="Aufgaben-Katalog: Übungen von einem bis fünf Sternen. Was gelöst ist, bleibt markiert.">Katalog</button>
+          <button role="tab" id="tab-katalog" aria-controls="panel-views" aria-selected="false" data-img="katalog" data-caption="Aufgaben-Katalog: über 70 Übungen von einem bis fünf Sternen, mit Themen und Suche. Was gelöst ist, bleibt markiert.">Katalog</button>
+          <button role="tab" id="tab-dashboard" aria-controls="panel-views" aria-selected="false" data-img="dashboard" data-dark="same" data-caption="Klassen-Verbund: Das Dashboard für den Beamer zeigt, welche Standorte der Klasse angeschlossen, online oder fertig sind – berechnet in der Simulation.">Dashboard</button>
         </div>
         <figure class="shot" id="panel-views" role="tabpanel" aria-labelledby="tab-entwurf">
           <div class="window">
@@ -214,7 +219,6 @@
     <section id="verbund" class="verbund" aria-labelledby="verbund-title">
       <div class="wrap verbund-grid">
         <div class="verbund-text">
-          <p class="kicker">Neu in 1.4</p>
           <h2 id="verbund-title">Die ganze Klasse in einem Netz</h2>
           <p>Jede Gruppe baut ihren eigenen Standort und schliesst ihn an die Klassen-Infrastruktur der Lehrperson an. leyoNET simuliert den ganzen Verbund: Wer richtig adressiert, routet und NAT einrichtet, ist online – und die Zentrale ruft die Webseite des Standorts ab.</p>
           <ul class="verbund-points">
