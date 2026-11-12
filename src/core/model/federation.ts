@@ -198,3 +198,57 @@ export function federate(infra: Topology, sites: readonly VerbundSite[]): Federa
 
 /** Geräte des eigenen Standorts aus einer zusammengesetzten Topologie (zum Speichern). */
 export const isForeignId = (id: string) => num(id) >= 100_000;
+
+// --- Zustand der Standorte (Dashboard) ----------------------------------------------------
+
+export type SiteLevel = 'offline' | 'connected' | 'online' | 'services' | 'done';
+
+export interface SiteProbe {
+  seat: number;
+  level: SiteLevel;
+  /** Ping von der Zentrale zur öffentlichen Adresse beantwortet. */
+  ping: boolean;
+  /** Webseite über die öffentliche Adresse erreichbar (Portweiterleitung). */
+  web: boolean;
+}
+
+/** Zentrale der Infrastruktur: erster Server, sonst erstes Endgerät (für Pings und Abrufe). */
+export function verbundHub(f: Federation): Device | null {
+  const infra = f.topology.devices.filter((d) => f.infra.includes(d.id));
+  return infra.find((d) => d.type === 'server') ?? infra.find((d) => ['pc', 'notebook'].includes(d.type)) ?? null;
+}
+
+type ProbeSim = {
+  now: number;
+  runUntil(t: number): void;
+  ping(device: string, target: string): void;
+  browse(device: string, url: string): void;
+  getDeviceState(id: string): { console: { code: string }[]; browser?: { status?: string; response?: { status?: number } } };
+};
+
+/**
+ * Alle Standorte nacheinander von der Zentrale aus prüfen, in EINER Simulation:
+ * Ping auf die öffentliche Adresse, dann Abruf von http://<Adresse>/ (Webserver hinter NAT).
+ * Die Simulation wird übergeben (Kern ohne Abhängigkeit zur Simulation hier).
+ */
+export function probeSites(f: Federation, sim: ProbeSim, bootMs = 8000, stepMs = 3000, only?: number): SiteProbe[] {
+  const hub = verbundHub(f);
+  sim.runUntil(bootMs);
+  return f.sites.filter((s) => only === undefined || s.seat === only).map((site) => {
+    if (!site.uplink || site.problem) return { seat: site.seat, level: 'offline' as const, ping: false, web: false };
+    if (!hub) return { seat: site.seat, level: 'connected' as const, ping: false, web: false };
+    const address = verbundAddresses(site.seat).site;
+    const before = sim.getDeviceState(hub.id).console.length;
+    sim.ping(hub.id, address);
+    sim.runUntil(sim.now + stepMs);
+    const ping = sim.getDeviceState(hub.id).console.slice(before).some((l) => l.code === 'ping.reply');
+    let web = false;
+    if (ping) {
+      sim.browse(hub.id, `http://${address}/`);
+      sim.runUntil(sim.now + stepMs);
+      const b = sim.getDeviceState(hub.id).browser;
+      web = b?.status === 'done' && b.response?.status === 200;
+    }
+    return { seat: site.seat, level: web ? ('services' as const) : ping ? ('online' as const) : ('connected' as const), ping, web };
+  });
+}

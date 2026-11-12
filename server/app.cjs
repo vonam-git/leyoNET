@@ -988,7 +988,10 @@ async function api(req, res, url) {
       // Die Frist läuft ab der letzten Änderung (Arbeit geht nicht mitten in der Lektion verloren).
       const before = indexes.sessions.get(code);
       if (!fits(projectSize(body.project) - (before ? before.size : 0))) return fail(res, 507, 'storageFull');
-      const next = { ...item, project: body.project, updated: now, expires: now + ttl };
+      // Fortschritt der Lernziele (für das Dashboard), nur zwei kleine Zahlen.
+      const p = body.progress;
+      const progress = p && Number.isInteger(p.goals) && Number.isInteger(p.total) && p.goals >= 0 && p.total >= 0 && p.goals <= p.total && p.total <= 99 ? { goals: p.goals, total: p.total } : item.progress;
+      const next = { ...item, project: body.project, updated: now, expires: now + ttl, ...(progress ? { progress } : {}) };
       store('sessions', code, next);
       return json(res, 200, { code, expires: next.expires, ...(writer ? { writer } : {}), ...about(next) });
     }
@@ -1099,7 +1102,8 @@ async function api(req, res, url) {
       if (limited(req, `msg:${own}`, 6)) return fail(res, 429, 'rateLimited');
       const text = typeof body.text === 'string' ? body.text.replace(/\u0000/g, '').trim().slice(0, MAX_MESSAGE_TEXT) : '';
       const subject = cleanLabel(body.subject) || 'Nachricht';
-      const to = body.to === 0 || validSeat(body.to) ? body.to : null;
+      // 0 = Zentrale, -1 = alle Standorte
+      const to = body.to === 0 || body.to === -1 || validSeat(body.to) ? body.to : null;
       if (!text || to === null) return fail(res, 400, 'emptyText');
       const list = classMessages(code);
       const id = (list.at(-1)?.id || 0) + 1;
@@ -1333,7 +1337,7 @@ async function admin(req, res, parts, method) {
         .sort((a, b) => a.created - b.created)
         .map((m) => loadSession(m.code))
         .filter(Boolean)
-        .map((s) => ({ code: s.code, created: s.created, updated: s.updated, expires: s.expires, site: s.site || null, connected: connected(s.code), ...summary(s.project), ...(withProjects ? { project: s.project } : {}) }));
+        .map((s) => ({ code: s.code, created: s.created, updated: s.updated, expires: s.expires, site: s.site || null, progress: s.progress || null, connected: connected(s.code), ...summary(s.project), ...(withProjects ? { project: s.project } : {}) }));
       return json(res, 200, sessions);
     }
     if (parts.length === 2 && method === 'PATCH') {

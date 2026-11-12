@@ -175,6 +175,9 @@ import {
   type SerialEncapsulation,
   type StaticNat,
   type VlanDef,
+  setVerbund,
+  setVerbundProvider,
+  verbundAddresses,
 } from '../../core';
 import { simStore } from './sim.svelte';
 import { ui } from './ui.svelte';
@@ -503,6 +506,34 @@ class Editor {
     if (!result.ok) return result.error;
     this.#commit(result.value);
     return null;
+  }
+
+  /** Klassen-Verbund: Anschluss des Standorts (null = nicht verbunden). */
+  setVerbund(id: string, iface: number | null): TopologyError | null {
+    return this.#applyForm(setVerbund(this.topology, id, iface));
+  }
+
+  setVerbundProvider(id: string, on: boolean): TopologyError | null {
+    return this.#applyForm(setVerbundProvider(this.topology, id, on));
+  }
+
+  /**
+   * Adressen des Platzes am Anschluss eintragen: WAN-Adresse im Transfernetz, Standardroute zum
+   * Provider und (Router/Firewall) NAT am WAN, in einem Schritt (ein Rückgängig).
+   */
+  applyVerbundAddresses(id: string, seat: number): TopologyError | null {
+    const device = this.topology.devices.find((d) => d.id === id);
+    if (!device?.verbund) return { code: 'unknownDevice' };
+    const a = verbundAddresses(seat);
+    const wan = device.verbund.iface;
+    let r = setInterfaceAddress(this.topology, id, wan, a.site, '30');
+    if (r.ok) {
+      const others = (getDevice(r.value, id)?.routes ?? []).filter((x) => !(x.network === '0.0.0.0' && x.mask === '0.0.0.0'));
+      r = { ok: true, value: { ...r.value, devices: r.value.devices.map((d) => (d.id === id ? { ...d, routes: others } : d)) } };
+    }
+    if (r.ok) r = addStaticRoute(r.value, id, { network: '0.0.0.0', mask: '0.0.0.0', gateway: a.provider });
+    if (r.ok && (device.type === 'router' || device.type === 'firewall')) r = setInterfaceNat(r.value, id, wan, true);
+    return this.#applyForm(r);
   }
 
   configureHost(id: string, input: HostConfigInput): TopologyError | null {

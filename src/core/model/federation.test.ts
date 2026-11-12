@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../sim/simulation';
 import { addDevice, addPortForward, addStaticRoute, configureHost, connect, emptyTopology, setInterfaceAddress, setInterfaceNat, setVerbund, setVerbundProvider } from './topology';
-import type { Result, Topology } from './types';
-import { federate, verbundAddresses } from './federation';
+import type { Topology } from './types';
+import type { Result } from './topology';
+import { federate, probeSites, verbundAddresses } from './federation';
 
 const u = <T>(r: Result<T>): T => {
   if (!r.ok) throw new Error(r.error.code);
@@ -104,5 +105,23 @@ describe('Klassen-Verbund: Standorte zusammensetzen', () => {
     const f = federate(infra(), [{ seat: 4, topology: s }]);
     expect(f.sites[0]!.problem).toBeUndefined();
     expect(f.topology.devices.find((d) => d.name === 'Platz 4: Router')!.portForwards).toHaveLength(1);
+  });
+});
+
+describe('Klassen-Verbund: Zustand der Standorte prüfen', () => {
+  it('offline ohne Anschluss, verbunden ohne Adresse, online mit Adresse', () => {
+    const noUplink = site(1, '192.168.1');
+    const t0 = { ...noUplink, devices: noUplink.devices.map(({ verbund: _v, ...d }) => d) };
+    const f = federate(infra(), [
+      { seat: 1, topology: t0 },
+      { seat: 2, topology: site(2, '192.168.2', false) },
+      { seat: 3, topology: site(3, '192.168.3') },
+    ]);
+    const probes = probeSites(f, new Simulation(f.topology));
+    expect(probes.map((p) => [p.seat, p.level])).toEqual([
+      [1, 'offline'],
+      [2, 'connected'],
+      [3, 'online'],
+    ]);
   });
 });

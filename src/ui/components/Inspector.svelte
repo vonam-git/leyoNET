@@ -3,6 +3,7 @@
   import { t } from '../../i18n';
   import { dialogs } from '../state/dialogs.svelte';
   import { editor } from '../state/editor.svelte';
+  import { ui } from '../state/ui.svelte';
   import AreaForm from './AreaForm.svelte';
   import CpeConfig from './CpeConfig.svelte';
   import CableInspector from './CableInspector.svelte';
@@ -14,6 +15,7 @@
   import HostPanel from './HostPanel.svelte';
   import Icon from './Icon.svelte';
   import ModemConfig from './ModemConfig.svelte';
+  import VerbundUplink from './VerbundUplink.svelte';
   import NetDevicePanel from './NetDevicePanel.svelte';
   import PortPanel from './PortPanel.svelte';
   import RouterConfig from './RouterConfig.svelte';
@@ -41,6 +43,7 @@
 
   {#if device && spec}
     <DeviceBasics {device} />
+    {#if ui.has('net.verbund')}<VerbundUplink {device} />{/if}
 
     {#if spec.role === 'endpoint'}
       {#if editor.acting}
