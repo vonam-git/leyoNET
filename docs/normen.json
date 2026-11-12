@@ -206,6 +206,10 @@
       "titel": "HTTP/1.1",
       "verwendung": "Webserver und Browser"
     },
+    "9116": {
+      "titel": "A File Format to Aid in Security Vulnerability Disclosure (security.txt)",
+      "verwendung": "Meldestelle für Sicherheitslücken auf leyonet.ch und app.leyonet.ch"
+    },
     "9293": {
       "titel": "Transmission Control Protocol (TCP)",
       "verwendung": "TCP"

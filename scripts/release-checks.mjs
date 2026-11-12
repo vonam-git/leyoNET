@@ -54,12 +54,12 @@ export function runChecks({ html, packages }) {
   add('privacy', 'privacy.storage', personal.length ? 'fail' : 'pass', personal.length ? `Verdächtige Schlüssel: ${personal.join(', ')}` : `Browser-Speicher nur für Technik: ${keys.join(', ') || '–'}`);
 
   // IP-Adressen nur gesalzen gehasht im Arbeitsspeicher (Ratenbegrenzung), nie in Dateien oder Logs.
-  // Die Adresse ermittelt nur clientIp() (auch hinter dem Proxy), und nur limited() verwendet sie, gehasht.
+  // Die Adresse ermittelt nur clientIp() (auch hinter dem Proxy), und nur bucketKey() verwendet sie, gehasht.
   const clientIp = /function clientIp\(req\) \{[\s\S]*?\n\}/.exec(server)?.[0] ?? '';
   const outside = server.replace(clientIp, '');
   const ipLines = outside.split('\n').filter((l) => /remoteAddress|x-forwarded-for|x-real-ip/i.test(l));
   const uses = [...outside.matchAll(/clientIp\(/g)].length;
-  const hashed = /const ip = clientIp\(req\);\s*const key = crypto\.createHash\('sha256'\)\.update\(SALT\)\.update\(ip\)/.test(server);
+  const hashed = /const bucketKey = \(req, kind\) => crypto\.createHash\('sha256'\)\.update\(SALT\)\.update\(clientIp\(req\)\)/.test(server);
   const logged = /console\.\w+\([^)]*(req\b|remoteAddress|headers|clientIp)/.test(server);
   const ok = ipLines.length === 0 && uses === 1 && hashed && !logged;
   add('privacy', 'privacy.noIpLog', ok ? 'pass' : 'fail', ok ? 'IP-Adressen nur als gesalzener Hash im Arbeitsspeicher, kein Zugriffsprotokoll.' : 'IP-Adressen werden möglicherweise gespeichert oder protokolliert.');
