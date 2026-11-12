@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| Stand | November 2026, leyoNET 1.3 |
+| Stand | November 2026, leyoNET 1.4 |
 | Verantwortlich (Betrieb leyonet.ch, app.leyonet.ch) | Mark und Mika (Betreiber), siehe Impressum auf leyonet.ch |
 | Verantwortlich (Einsatz an der Schule) | die Schule bzw. ihre Trägerschaft; dieses Dokument ist die Vorlage, Abschnitt 10 ist von der Schule auszufüllen |
 | Ergänzende Dokumente | [datenschutz.md](datenschutz.md) (Daten im Detail), [sicherheit.md](sicherheit.md) (Bedrohungen und Massnahmen), [dsfa-abklaerung.md](dsfa-abklaerung.md) (Schwellwertanalyse), [pruefungen.md](pruefungen.md), [plesk.md](plesk.md) (Betrieb) |
@@ -48,7 +48,9 @@ Lernende/r (Browser) ──HTTPS──► app.leyonet.ch (Plesk: nginx → Node-
 |---|---|---|
 | Betreiber | Mark und Mika | Betrieb, Updates, Admin-Konsole der eigenen Instanz |
 | Hosting | Privatperson als Server-Betreiber, Rechenzentrum Hetzner Online GmbH (DE) | technischer Betrieb, Zugriff auf Server und Protokolle (Auftragsbearbeitung) |
-| Lehrperson | mit Admin-Passwort der Instanz | Klassen, Prüfungen, Abgaben, Rückmeldungen ansehen |
+| Hauptadmin | mit Admin-Passwort der Instanz | alles: Klassen, Prüfungen, Abgaben, Rückmeldungen, Einstellungen, Zugänge |
+| Schule | mit Zugangsschlüssel der Schule | eigene Klassen und Prüfungen und die ihrer Lehrpersonen, Zugänge der eigenen Lehrpersonen |
+| Lehrperson | mit Zugangsschlüssel (oder Admin-Passwort der eigenen Instanz) | eigene Klassen, Prüfungen und Abgaben |
 | Lernende | mit Session-, Klassen- oder Platz-Code | nur die eigene Session |
 | Öffentlichkeit | ohne Code | Startseite, Einzeldatei, Downloads |
 
@@ -57,7 +59,9 @@ Lernende/r (Browser) ──HTTPS──► app.leyonet.ch (Plesk: nginx → Node-
 | Information | Personenbezug | Aufbewahrung | Ort |
 |---|---|---|---|
 | Netzwerk-Konfiguration (Session) | keiner (nur Technik); Code ist zufällig | Frist der Instanz (Standard 24 h nach letzter Änderung), jederzeit löschbar | Server |
-| Klassen | Bezeichnung (z.B. «INF22a»), keine Namen | Frist der Instanz | Server |
+| Klassen | Bezeichnung (z.B. «INF22a»), keine Namen; im Verbund Platz und Gruppe je Session, Infrastruktur-Netz | Frist der Instanz | Server |
+| Zugänge (Schule, Lehrperson) | Bezeichnung ohne Personenbezug, Prüfsumme des Schlüssels | bis zum Löschen in der Admin-Konsole | Server |
+| Verbund-Nachrichten und -Status | Freitext der Lernenden (Hinweis «keine persönlichen Angaben»), Stufen | 30 Minuten, nur Arbeitsspeicher | Server-RAM |
 | Prüfungsabgaben | **pseudonym**: Platznummer und Arbeit; die Zuordnung Platz ↔ Person hat nur die Lehrperson | 60 Tage | Server |
 | Punkte, Note, Bericht | wie Abgaben; die Auswertung läuft im Browser der Lehrperson, Namen werden nie übertragen | bei der Lehrperson | Gerät der Lehrperson |
 | Prüfungsschlüssel (Lösungen) | keiner, aber vertraulich | 60 Tage, verschlüsselt | Server |
@@ -133,7 +137,7 @@ Bedrohungen und Gegenmassnahmen sind in [sicherheit.md](sicherheit.md) vollstän
 
 ## 9. Restrisiken und Empfehlungen
 
-1. **Gemeinsame Instanz für mehrere Schulen**: Ein Admin-Passwort öffnet alle Prüfungen der Instanz. Für institutionellen Einsatz empfohlen: **eine Instanz je Schule** (eigene Subdomain bzw. eigener Server, eigenes Admin-Passwort) oder später getrennte Zugänge je Lehrperson.
+1. **Gemeinsame Instanz für mehrere Schulen** (umgesetzt ab v1.4): Der Hauptadmin legt **eigene Zugänge je Schule oder Lehrperson** an (Bezeichnung ohne Personenbezug, nur die Prüfsumme des Schlüssels gespeichert). Jeder Zugang sieht nur seine Klassen und Prüfungen, eine Schule auch die ihrer Lehrpersonen; Einstellungen, Rückmeldungen und Systemprüfung bleiben beim Hauptadmin. Restrisiko: Der Hauptadmin (Betreiber) sieht weiterhin alles, und der Prüfungsschlüssel ist mit dem Admin-Passwort verschlüsselt. Wer das ausschliessen will, betreibt **eine Instanz je Schule** (eigene Subdomain bzw. eigener Server, eigenes Admin-Passwort).
 2. **Auftragsbearbeitung**: Mit dem Hosting (Privatperson, Hetzner) und mit jeder Schule, die app.leyonet.ch für Klassen oder Prüfungen nutzt, eine schriftliche Vereinbarung abschliessen. Eine Vorlage lässt sich aus diesem Konzept ableiten.
 3. **Installer nicht signiert**: Schul-IT blockiert sie unter Umständen. Signieren (Windows) und Notarisieren (macOS) prüfen; bis dahin Prüfsummen vergleichen oder die Einzeldatei bzw. Webversion verwenden.
 4. **Verfügbarkeit**: kein zugesicherter Betrieb. Wichtige Prüfungen mit Rückfallebene planen oder auf eigenem Server durchführen.

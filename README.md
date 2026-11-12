@@ -18,7 +18,7 @@ Die ursprüngliche Anforderungsbeschreibung steht in [docs/konzept.md](docs/konz
 git clone https://github.com/vonam-git/leyoNET.git
 ```
 
-Dann **`release/leyonet.html`** doppelklicken – fertig, ohne Installation und ohne Internet. Alle Wege (Datei verteilen, Schulserver mit Docker, selbst bauen) beschreibt [docs/installation.md](docs/installation.md), dazu die [Webversion mit Node.js auf Plesk](docs/plesk.md) (Sessions mit Code, Klassen, Prüfungen, Rückmeldungen, Admin-Konsole) und die [Desktop-Version für Windows, macOS und Linux](docs/desktop.md).
+Dann **`release/leyonet.html`** doppelklicken – fertig, ohne Installation und ohne Internet. Alle Wege (Datei verteilen, Schulserver mit Docker, selbst bauen) beschreibt [docs/installation.md](docs/installation.md), dazu die [Webversion mit Node.js auf Plesk](docs/plesk.md) (Sessions mit Code, Klassen, [Klassen-Verbund](docs/verbund.md), Prüfungen, Rückmeldungen, Admin-Konsole mit Zugängen) und die [Desktop-Version für Windows, macOS und Linux](docs/desktop.md).
 
 ## Stand
 
@@ -55,7 +55,8 @@ Dann **`release/leyonet.html`** doppelklicken – fertig, ohne Installation und 
 | v1.0 | **Erste öffentliche Version** mit Website [leyonet.ch](https://leyonet.ch), Webversion [app.leyonet.ch](https://app.leyonet.ch), Installern für Windows, macOS und Linux; Testumgebung mit `LEYONET_CHANNEL=beta`, Schutz der Webversion vor Überlastung | ✅ |
 | v1.1 | **IPv6 vollständig**: DNS vollwertig (A, AAAA, CNAME, MX, TXT, NS, PTR, Weiterleitung, `nslookup -type`), DNS-Server per RDNSS/DHCPv6, Web, Mail und SSH über IPv6, Firewall für IPv6, IPv6 auf Layer-3-Switches (SVIs), **OSPFv3** und **RIPng**; macOS-Installer ad hoc signiert | ✅ |
 | v1.2 | **Rechenzentrum und Campus**: VLAN-Datenbank, Trunk mit erlaubten und nativem VLAN, Port-Channel (LACP), Loopbacks, VRF, VXLAN, Firewall als Gerät, ACLs an Ports und VLAN-Interfaces, DHCP-Pools auf Router und L3-Switch; Demo Leaf-Spine mit BGP und VXLAN; Reihe **M145** mit Arbeitsblättern, Katalogsuche mit Themen; Befehlszeile verschiebbar mit Einfügen ganzer Konfigurationen und Verlauf; Paketfilter «TCP-Verbindung folgen»; Prüfungscockpit live (Platz nur einmal offen, ansehen, freigeben), Session-Sperre mit PIN | ✅ |
-| **v1.3** | **Prüfung im Safe Exam Browser** (SEB-Datei mit Start-, Admin- und Beenden-Passwort, Prüfungsschlüssel bis Prüfungsende); Rack mit Etikett und Patchkabeln (Ansicht und Zeichenfläche); Router lehnt zwei Interfaces im selben Netz ab; Session ansehen ohne Aufgabenfenster, mit Hinweis auf neuen Stand; Musterlösungen der Arbeitsblätter für Lehrpersonen auf Anfrage | ✅ |
+| v1.3 | **Prüfung im Safe Exam Browser** (SEB-Datei mit Start-, Admin- und Beenden-Passwort, Prüfungsschlüssel bis Prüfungsende); Rack mit Etikett und Patchkabeln (Ansicht und Zeichenfläche); Router lehnt zwei Interfaces im selben Netz ab; Session ansehen ohne Aufgabenfenster, mit Hinweis auf neuen Stand; Musterlösungen der Arbeitsblätter für Lehrpersonen auf Anfrage | ✅ |
+| **v1.4** | **Klassen-Verbund**: Standorte der Lernenden (Platz und Gruppe) an einer Klassen-Infrastruktur mit Provider und Zentrale, Simulation des ganzen Verbunds, **Dashboard für den Beamer** mit Karte, Kacheln und ehrlichen Stufen, Nachrichten zwischen Standorten, Verbund-Übungen und Demo; **eigene Zugänge für Schulen und Lehrpersonen** (ohne Personendaten); Aufgaben und ganze Module je Instanz und Klasse ein- und ausblenden; Sicherheit und Datenschutz für Schulen (Codes raten gebremst, automatische Angriffe bei jedem Release, Live-Prüfung, security.txt, ISDS-Konzept, DSFA-Abklärung) | ✅ |
 
 ## Entwicklung
 

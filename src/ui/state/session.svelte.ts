@@ -24,6 +24,8 @@ export interface ServerConfig {
   admin: boolean;
   /** «beta»: Testumgebung (Server mit LEYONET_CHANNEL=beta). */
   channel?: 'beta' | 'stable';
+  /** Aufgaben-Katalog: vom Hauptadmin ausgeblendete Übungen und Reihen. */
+  catalog?: CatalogVisibility;
 }
 
 export class ApiError extends Error {
@@ -100,6 +102,17 @@ export interface Watching {
   error?: string;
 }
 
+/** Vom Server: Sichtbarkeit der Aufgaben (global oder je Klasse). */
+export interface CatalogVisibility {
+  hidden: string[];
+  hiddenSeries: string[];
+  verbund: boolean;
+}
+export interface ClassSettings {
+  catalog: CatalogVisibility;
+  verbund: { enabled: boolean; shareSites: boolean; showMap: boolean };
+}
+
 class SessionStore {
   code = $state<string | null>(read(CODE_KEY));
   #writer: string | null = read(WRITER_KEY);
@@ -111,6 +124,12 @@ class SessionStore {
   #onWatch: ((p: LoadedProject) => void) | null = null;
   classCode = $state<string | null>(read(CLASS_KEY));
   classLabel = $state<string | null>(null);
+  /** Platz und Gruppe im Klassen-Verbund (vom Server vergeben). */
+  site = $state<{ seat: number; label: string } | null>(null);
+  /** Erreichte Lernziele (nach «Prüfen»), wird mit dem Projekt gespeichert. */
+  progress: { goals: number; total: number } | null = null;
+  /** Einstellungen der Klasse: ausgeblendete Aufgaben, Verbund freigegeben. */
+  classSettings = $state.raw<ClassSettings | null>(null);
   expires = $state<number | null>(null);
   status = $state<'idle' | 'saving' | 'saved' | 'error'>('idle');
   config = $state.raw<ServerConfig | null>(null);
@@ -210,7 +229,7 @@ class SessionStore {
   async open(code: string, pin?: string): Promise<LoadedProject> {
     const own = code.toUpperCase().replace(/[^A-Z0-9]/g, '') === (this.code ?? '').replace('-', '');
     const headers = { ...(own ? this.#headers() : {}), ...(pin ? { 'X-Leyonet-Pin': pin } : {}) };
-    const data = await api<{ code: string; expires: number; classCode: string | null; project: unknown; writer?: string; locked?: boolean }>('GET', `sessions/${encodeURIComponent(code)}`, undefined, undefined, headers);
+    const data = await api<{ code: string; expires: number; classCode: string | null; site?: { seat: number; label: string } | null; project: unknown; writer?: string; locked?: boolean }>('GET', `sessions/${encodeURIComponent(code)}`, undefined, undefined, headers);
     const parsed = parseProject(JSON.stringify(data.project));
     if (!parsed.ok) throw new ApiError(400, 'invalidProject');
     this.#setWriter(data.writer);
@@ -219,17 +238,21 @@ class SessionStore {
     this.code = data.code;
     this.expires = data.expires;
     this.classCode = data.classCode;
+    this.site = data.site ?? null;
     write(CODE_KEY, data.code);
     write(CLASS_KEY, data.classCode);
+    if (data.classCode) void this.loadClassSettings(data.classCode);
     return parsed;
   }
 
   /** Neuer Code für den aktuellen Stand, optional einer Klasse zugeordnet. */
-  async create(projectJson: string, classCode: string | null = this.classCode): Promise<string> {
-    const data = await api<{ code: string; expires: number; classCode: string | null; writer?: string }>('POST', 'sessions', {
+  async create(projectJson: string, classCode: string | null = this.classCode, site?: { seat?: number; label?: string }): Promise<string> {
+    const data = await api<{ code: string; expires: number; classCode: string | null; site?: { seat: number; label: string } | null; writer?: string }>('POST', 'sessions', {
       project: JSON.parse(projectJson),
       ...(classCode ? { classCode } : {}),
+      ...(classCode && site ? { site } : {}),
     });
+    this.site = data.site ?? null;
     this.#setWriter(data.writer);
     this.takenOver = false;
     this.locked = false;
@@ -242,10 +265,34 @@ class SessionStore {
     return data.code;
   }
 
-  async joinClass(classCode: string, projectJson: string): Promise<void> {
-    const data = await api<{ classCode: string; label: string }>('POST', 'classes/join', { classCode });
+  async joinClass(classCode: string, projectJson: string, site?: { seat?: number; label?: string }): Promise<void> {
+    const data = await api<{ classCode: string; label: string } & ClassSettings>('POST', 'classes/join', { classCode });
     this.classLabel = data.label;
-    await this.create(projectJson, data.classCode);
+    this.classSettings = { catalog: data.catalog, verbund: data.verbund };
+    await this.create(projectJson, data.classCode, site);
+  }
+
+  /** Einstellungen der Klasse neu holen (nach dem Öffnen einer Session). */
+  async loadClassSettings(classCode: string) {
+    try {
+      const data = await api<{ classCode: string; label: string } & ClassSettings>('POST', 'classes/join', { classCode });
+      this.classLabel = data.label;
+      this.classSettings = { catalog: data.catalog, verbund: data.verbund };
+    } catch {
+      /* Klasse abgelaufen: ohne Einstellungen weiter */
+    }
+  }
+
+  /** Platz oder Gruppe im Verbund ändern. */
+  async setSite(change: { seat?: number; label?: string }): Promise<void> {
+    if (!this.code) return;
+    const data = await api<{ site: { seat: number; label: string } }>('PUT', `sessions/${encodeURIComponent(this.code)}/site`, change, undefined, this.#headers());
+    this.site = data.site;
+  }
+
+  /** Schreibkennung für Anfragen im Namen dieser Session (z.B. Nachrichten). */
+  writerHeaders(): Record<string, string> {
+    return this.#headers();
   }
 
   /** Änderungen gesammelt nach kurzer Pause hochladen; leere Projekte legen keine Session an. */
@@ -277,7 +324,7 @@ class SessionStore {
     this.status = 'saving';
     try {
       if (this.code) {
-        const data = await api<{ expires: number; exam?: SeatStatus; writer?: string; locked?: boolean }>('PUT', `sessions/${this.code}`, { project: JSON.parse(json) }, undefined, this.#headers());
+        const data = await api<{ expires: number; exam?: SeatStatus; writer?: string; locked?: boolean }>('PUT', `sessions/${this.code}`, { project: JSON.parse(json), ...(this.classCode && this.progress ? { progress: this.progress } : {}) }, undefined, this.#headers());
         this.#setWriter(data.writer);
         if (data.locked !== undefined) this.locked = data.locked;
         this.expires = data.expires;
@@ -396,6 +443,8 @@ class SessionStore {
     this.expires = null;
     this.classCode = null;
     this.classLabel = null;
+    this.site = null;
+    this.classSettings = null;
     this.status = 'idle';
     write(CODE_KEY, null);
     write(CLASS_KEY, null);

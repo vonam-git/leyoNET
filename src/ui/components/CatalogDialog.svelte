@@ -3,6 +3,7 @@
   import { t } from '../../i18n';
   import { CATALOG, type CatalogEntry } from '../catalog';
   import { matchesSearch, tagsOf } from '../catalogTags';
+  import { catalogVisible } from '../catalogVisibility';
   import { editor } from '../state/editor.svelte';
   import { progress } from '../state/progress.svelte';
   import { ui } from '../state/ui.svelte';
@@ -14,7 +15,7 @@
 
   // Texte erst beim Öffnen erzeugen (aktuelle Sprache).
   const entries = $derived(
-    CATALOG.map((entry) => {
+    CATALOG.filter(catalogVisible).map((entry) => {
       const preview = entry.build();
       const tags = tagsOf(entry, preview.topology, preview.tasks.goals.map((g) => g.check.type));
       return { entry, preview, tags, text: [preview.tasks.title, preview.tasks.description, entry.sheet ?? '', ...tags.map((x) => t(`catalog.tag.${x}`))].join(' ') };
@@ -30,7 +31,7 @@
   const toggleTag = (tag: string) => (picked = picked.includes(tag) ? picked.filter((x) => x !== tag) : [...picked, tag]);
   const filtered = (list: typeof entries) => list.filter((e) => matchesSearch(e.text, query) && (!picked.length || picked.some((x) => e.tags.includes(x))) && (!profileOnly || fitsProfile(e.entry)));
   /** Reihen (Module wie M117, M129) als Reiter; leer = alle Übungen. Neue Module erscheinen von selbst. */
-  const SERIES = [...new Set(CATALOG.flatMap((e) => (e.series ? [e.series] : [])))].sort();
+  const SERIES = $derived([...new Set(entries.flatMap((e) => (e.entry.series ? [e.entry.series] : [])))].sort());
   let series = $state('');
   const inSeries = (id: string) => filtered(id ? entries.filter((e) => e.entry.series === id) : entries);
   const doneIn = (id: string) => inSeries(id).filter((e) => progress.done[e.entry.id]).length;

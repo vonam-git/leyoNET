@@ -12,6 +12,7 @@ import { simStore, type Speed } from './state/sim.svelte';
 import { tour } from './state/tour.svelte';
 import { ui, type Theme } from './state/ui.svelte';
 import { EXAM_BLOCKED_COMMANDS, examMode } from './state/exam.svelte';
+import { verbund } from './state/verbund.svelte';
 
 /**
  * Alle Befehle an einer Stelle: Menüleiste, Befehlssuche (Strg+K) und
@@ -135,6 +136,7 @@ const COMMANDS: Command[] = [
   { id: 'tool.ipcalc', label: () => t('menu.tool.ipcalc'), keys: ['I'], run: () => dialogs.ipCalculator(), visible: () => ui.has('tool.ipCalculator'), icon: 'calc' },
   { id: 'tool.vlans', label: () => t('menu.tool.vlans'), run: () => dialogs.show('vlans'), visible: () => ui.has('net.vlan'), icon: 'tag' },
   { id: 'tool.catalog', label: () => t('catalog.open'), run: () => dialogs.show('catalog'), icon: 'star' },
+  { id: 'tool.verbund', label: () => t('verbund.openMap'), run: () => dialogs.show('verbundMap'), visible: () => verbund.active, icon: 'globe' },
   { id: 'tool.taskEditor', label: () => t('menu.tool.taskEditor'), run: () => dialogs.show('taskEditor'), visible: () => ui.has('tool.taskEditor'), enabled: design },
   { id: 'tool.exam', label: () => t('menu.tool.exam'), run: () => dialogs.show('exam'), visible: () => ui.has('tool.taskEditor'), enabled: design },
   { id: 'tool.examExport', label: () => t('menu.tool.examExport'), run: () => dialogs.show('examExport'), visible: () => ui.has('tool.taskEditor'), enabled: () => design() && !!editor.tasks?.goals.length },
@@ -314,6 +316,7 @@ export const MENUS: Menu[] = [
       { command: 'tool.vlans' },
       { separator: true },
       { command: 'tool.catalog' },
+      { command: 'tool.verbund' },
       { command: 'tool.taskEditor' },
       { command: 'tool.exam' },
       { command: 'tool.examExport' },

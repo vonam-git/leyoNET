@@ -66,6 +66,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('net.vrf', 'network', 5),
   f('net.vxlan', 'network', 5),
   f('net.vpn', 'network', 4),
+  f('net.verbund', 'network', 2),
   f('net.ipv6', 'network', 4),
   f('net.dsLite', 'network', 4),
   f('net.cli', 'network', 3),
@@ -131,6 +132,7 @@ export function usedFeatures(t: Topology): string[] {
     if (d.webServer) used.add('service.web');
     if (d.mailServer || d.mailAccount) used.add('service.mail');
     if (d.stp) used.add('net.stp');
+    if (d.verbund || d.verbundProvider) used.add('net.verbund');
     if (d.subinterfaces?.length) used.add('net.subinterfaces');
     if (d.portForwards?.length) used.add('net.nat');
     if (d.staticNat?.length) used.add('net.staticNat');

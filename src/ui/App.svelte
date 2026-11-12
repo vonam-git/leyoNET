@@ -2,6 +2,7 @@
   import Splitter from './components/Splitter.svelte';
   import { onMount, untrack } from 'svelte';
   import { takeSebKey } from './seb';
+  import { verbund } from './state/verbund.svelte';
   import { parseProject, serializeProject } from '../core';
   import { locale, t } from '../i18n';
   import { ensureProjectFeatures } from './actions';
@@ -62,10 +63,19 @@
   });
 
   // In der Simulation läuft die Zeit, im Entwurf pausiert sie (Zustände bleiben).
+  // Klassen-Verbund: Infrastruktur und andere Standorte regelmässig holen.
+  $effect(() => {
+    const code = session.classCode;
+    const enabled = !!session.classSettings?.verbund.enabled;
+    untrack(() => verbund.follow(code, enabled));
+  });
+
   $effect(() => {
     const { mode, topology, generation } = editor;
+    // Im Verbund simuliert die Simulation das ganze Netz (eigener Standort bleibt unverändert).
+    const simTopology = (verbund.version, verbund.simTopology(topology));
     untrack(() => {
-      if (mode === 'simulation') return simStore.activate(topology, generation);
+      if (mode === 'simulation') return simStore.activate(simTopology, generation);
       simStore.deactivate();
       closeDesktop();
     });

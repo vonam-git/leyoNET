@@ -4,7 +4,7 @@
  * Leerzeile = neuer Absatz, «- » = Aufzählung, **fett**, [[thema]] = Verweis.
  */
 export const HELP_GROUPS: { id: string; topics: string[] }[] = [
-  { id: 'start', topics: ['overview', 'modes', 'shop', 'selection', 'simulation', 'advanced', 'demos', 'shortcuts', 'features', 'tasks', 'webExam', 'costs'] },
+  { id: 'start', topics: ['overview', 'modes', 'shop', 'selection', 'simulation', 'advanced', 'demos', 'shortcuts', 'features', 'tasks', 'webExam', 'verbund', 'costs'] },
   {
     id: 'devices',
     topics: [

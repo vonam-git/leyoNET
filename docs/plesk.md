@@ -44,9 +44,12 @@ Danach unter der Adresse der Subdomain den Simulator öffnen. Oben rechts ersche
 
 ## Admin-Konsole
 
-- **Klassen**: Klassen-Sessions eröffnen (nur eine Bezeichnung wie «INF22a», keine Namen), den Klassencode verteilen, die Arbeiten der Klasse öffnen und die Klasse schliessen.
+- **Anmeldung**: mit dem Admin-Passwort (Hauptadmin) oder mit einem **Zugangsschlüssel** `LN-…` (Schule oder Lehrperson) im selben Feld.
+- **Klassen**: Klassen-Sessions eröffnen (nur eine Bezeichnung wie «INF22a», keine Namen), den Klassencode verteilen, die Arbeiten der Klasse öffnen und die Klasse schliessen. Bei jeder Klasse: **Klassen-Verbund** freigeben, Infrastruktur setzen, **Dashboard** für den Beamer öffnen und Aufgaben für die Klasse ein- und ausblenden (siehe [verbund.md](verbund.md)).
+- **Zugänge** (Hauptadmin und Schulen): eigene Zugänge für Schulen und Lehrpersonen mit einer Bezeichnung ohne Personenbezug. Der Schlüssel erscheint nur einmal; gespeichert ist nur eine Prüfsumme. Jeder Zugang sieht nur seine Klassen und Prüfungen, eine Schule auch die ihrer Lehrpersonen. Einstellungen, Aufgaben (global), Rückmeldungen und Systemprüfung bleiben beim Hauptadmin. Gespeichert unter `DATA_DIR/tenants`.
+- **Aufgaben** (Hauptadmin): Übungen, ganze Reihen (Module) und die Verbund-Aufgaben für die ganze Instanz ein- und ausblenden.
 - **Prüfungen**: Prüfungsdatei und Schlüssel hochladen, Platzkarten mit Platz-Codes drucken, starten, Nachteilsausgleich je Platz, beenden, automatisch auswerten, Abgaben herunterladen (siehe [pruefungen.md](pruefungen.md#prüfung-in-der-webversion-server)). Gespeichert wird unter `DATA_DIR/exams`, gelöscht nach 60 Tagen. Der Schlüssel ist mit dem Admin-Passwort verschlüsselt: **Admin-Passwort nicht während laufender Prüfungen ändern.**
-- **Rückmeldungen**: Probleme und Ideen der Lernenden, mit Status *neu / in Arbeit / erledigt*.
+- **Rückmeldungen** (Hauptadmin): Probleme und Ideen der Lernenden, mit Status *neu / in Arbeit / erledigt*.
 - **Einstellungen**:
   - erlaubte Modi (Entwurf, Simulation)
   - **Standardprofil** und **höchstes Profil** (1 = 1. Lehrjahr … 5 = Studium) sowie einzelne **gesperrte Funktionen** (siehe [funktionsprofile.md](funktionsprofile.md))

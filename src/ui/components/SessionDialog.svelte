@@ -16,6 +16,9 @@
 
   let resumeCode = $state('');
   let classCode = $state('');
+  /** Platz (leer = nächster freier) und Gruppe für den Klassen-Verbund. */
+  let seat = $state('');
+  let group = $state('');
   let message = $state<{ kind: 'ok' | 'error'; text: string } | null>(null);
   let busy = $state(false);
   /** Gesperrte Session: PIN abfragen; offen an anderem Gerät: Ansehen anbieten. */
@@ -84,7 +87,8 @@
 
   const join = () =>
     run(async () => {
-      await session.joinClass(classCode, project());
+      const n = Number(seat);
+      await session.joinClass(classCode, project(), { ...(seat.trim() && Number.isInteger(n) ? { seat: n } : {}), ...(group.trim() ? { label: group.trim() } : {}) });
       classCode = '';
       return t('session.joined', { label: session.classLabel ?? '', code: session.code ?? '' });
     });
@@ -122,6 +126,7 @@
     <p class="muted">
       {t('session.expires', { time: until })}
       {#if session.classCode}· {t('session.inClass')}{/if}
+      {#if session.site}· {t('verbund.siteOf', { seat: session.site.seat, label: session.site.label || '–' })}{/if}
     </p>
   {:else}
     <p class="muted">{t('session.none')}</p>
@@ -168,6 +173,8 @@
   <p class="muted">{t('session.classHint')}</p>
   <form onsubmit={(e) => (e.preventDefault(), join())}>
     <input bind:value={classCode} placeholder="WXYZ-6789" maxlength="14" use:codeInput aria-label={t('session.classCode')} class="code" autocomplete="off" />
+    <input bind:value={seat} inputmode="numeric" pattern={"[0-9]{1,2}"} placeholder={t('verbund.seat')} aria-label={t('verbund.seatHint')} title={t('verbund.seatHint')} class="seat" autocomplete="off" />
+    <input bind:value={group} maxlength="30" placeholder={t('verbund.group')} aria-label={t('verbund.groupHint')} title={t('verbund.groupHint')} class="group" autocomplete="off" />
     <button type="submit" disabled={busy || !classCode.trim()}>{t('session.join')}</button>
   </form>
 
@@ -182,6 +189,12 @@
 </Modal>
 
 <style>
+  .seat {
+    width: 4.5rem;
+  }
+  .group {
+    width: 9rem;
+  }
   .big {
     font-size: 1.6rem;
     font-weight: 700;

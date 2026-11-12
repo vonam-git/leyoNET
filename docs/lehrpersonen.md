@@ -168,6 +168,10 @@ Ideen für die neuen Funktionen:
 
 In der Webversion eröffnet die Lehrperson in der Admin-Konsole eine Klasse mit einer Bezeichnung ohne Personenbezug (z.B. «INF22a»). Lernende treten mit dem Klassencode bei. Die Lehrperson sieht Session-Codes, aber keine Namen. Wer welchen Code hat, klärt die Klasse selbst. Einrichtung: [plesk.md](plesk.md).
 
+Mit dem **Klassen-Verbund** baut jede Gruppe einen eigenen Standort und schliesst ihn an Ihre Klassen-Infrastruktur an; das **Dashboard** auf dem Beamer zeigt live, wer wirklich online ist, und Nachrichten fliegen zwischen den Standorten. Bei der Klasse blenden Sie ausserdem Übungen und ganze Module für die Klasse ein oder aus. Ablauf, Adressplan und Verbund-Übungen: [verbund.md](verbund.md).
+
+Arbeiten mehrere Lehrpersonen auf derselben Instanz, legt der Hauptadmin **eigene Zugänge** an (Admin-Konsole → Zugänge): Jede Lehrperson sieht dann nur ihre Klassen und Prüfungen.
+
 ## Datenschutz im Unterricht
 
 Lernende brauchen kein Konto und geben keine Namen ein. Projektdateien enthalten nur Technik (Geräte, Adressen, Konfiguration). Gerätenamen wie «PC Anna» sind möglich, aber nicht nötig. Am besten bittet man die Klasse, Geräte neutral zu benennen. Details und Vorlage für die Datenschutzerklärung: [datenschutz.md](datenschutz.md).

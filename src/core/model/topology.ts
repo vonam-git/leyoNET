@@ -95,6 +95,7 @@ export type ErrorCode =
   | 'invalidIp'
   | 'invalidMask'
   | 'overlapsInterface'
+  | 'verbundNotSupported'
   | 'maskRequired'
   | 'gatewayWithoutAddress'
   | 'switchLoop'
@@ -2594,4 +2595,27 @@ export function duplicateDevice(t: Topology, id: string, name: string, offset = 
 
 function structuredCloneSafe<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+// --- Klassen-Verbund ------------------------------------------------------------------------
+
+/** Anschluss des Standorts an die Klassen-Infrastruktur setzen (null = nicht verbunden). */
+export function setVerbund(t: Topology, id: string, iface: number | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return { ok: false, error: { code: 'unknownDevice' } };
+  if (iface === null) return ok(updateDevice(t, id, (d) => without(d, 'verbund')));
+  if (!['modem', 'cpe', 'router', 'firewall'].includes(device.type)) return { ok: false, error: { code: 'verbundNotSupported' } };
+  if (!Number.isInteger(iface) || iface < 0 || iface >= device.interfaces.length) return { ok: false, error: { code: 'unknownInterface' } };
+  // Nur ein Anschluss je Standort.
+  const cleared = { ...t, devices: t.devices.map((d) => (d.id !== id && d.verbund ? without(d, 'verbund') : d)) };
+  return ok(updateDevice(cleared, id, (d) => ({ ...d, verbund: { iface } })));
+}
+
+/** Internet-Gerät als Provider der Klassen-Infrastruktur markieren. */
+export function setVerbundProvider(t: Topology, id: string, on: boolean): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return { ok: false, error: { code: 'unknownDevice' } };
+  if (device.type !== 'internet') return { ok: false, error: { code: 'verbundNotSupported' } };
+  const cleared = { ...t, devices: t.devices.map((d) => (d.verbundProvider ? without(d, 'verbundProvider') : d)) };
+  return ok(on ? updateDevice(cleared, id, (d) => ({ ...d, verbundProvider: true })) : cleared);
 }

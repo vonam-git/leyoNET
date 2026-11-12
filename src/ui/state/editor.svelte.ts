@@ -175,6 +175,9 @@ import {
   type SerialEncapsulation,
   type StaticNat,
   type VlanDef,
+  setVerbund,
+  setVerbundProvider,
+  applyVerbundAddresses,
 } from '../../core';
 import { simStore } from './sim.svelte';
 import { ui } from './ui.svelte';
@@ -503,6 +506,23 @@ class Editor {
     if (!result.ok) return result.error;
     this.#commit(result.value);
     return null;
+  }
+
+  /** Klassen-Verbund: Anschluss des Standorts (null = nicht verbunden). */
+  setVerbund(id: string, iface: number | null): TopologyError | null {
+    return this.#applyForm(setVerbund(this.topology, id, iface));
+  }
+
+  setVerbundProvider(id: string, on: boolean): TopologyError | null {
+    return this.#applyForm(setVerbundProvider(this.topology, id, on));
+  }
+
+  /**
+   * Adressen des Platzes am Anschluss eintragen: WAN-Adresse im Transfernetz, Standardroute zum
+   * Provider und (Router/Firewall) NAT am WAN, in einem Schritt (ein Rückgängig).
+   */
+  applyVerbundAddresses(id: string, seat: number): TopologyError | null {
+    return this.#applyForm(applyVerbundAddresses(this.topology, id, seat));
   }
 
   configureHost(id: string, input: HostConfigInput): TopologyError | null {
