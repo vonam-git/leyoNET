@@ -885,6 +885,16 @@ function readDevice(v: unknown, path: string): Device {
     if (type !== 'cpe') throw new Invalid(`${path}.dsLite`);
     device.dsLite = { aftr: ip6(obj(o.dsLite, `${path}.dsLite`).aftr, `${path}.dsLite.aftr`) };
   }
+  if (o.verbund !== undefined) {
+    if (!['modem', 'cpe', 'router', 'firewall'].includes(type)) throw new Invalid(`${path}.verbund`);
+    const iface = int(obj(o.verbund, `${path}.verbund`).iface, `${path}.verbund.iface`);
+    if (iface < 0 || iface >= device.interfaces.length) throw new Invalid(`${path}.verbund.iface`);
+    device.verbund = { iface };
+  }
+  if (o.verbundProvider !== undefined && bool(o.verbundProvider, `${path}.verbundProvider`)) {
+    if (type !== 'internet') throw new Invalid(`${path}.verbundProvider`);
+    device.verbundProvider = true;
+  }
   if (o.aftr !== undefined && bool(o.aftr, `${path}.aftr`)) {
     if (type !== 'internet') throw new Invalid(`${path}.aftr`);
     device.aftr = true;
