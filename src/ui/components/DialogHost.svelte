@@ -27,6 +27,7 @@
   import TaskWindow from './TaskWindow.svelte';
   import { taskView } from '../state/taskView.svelte';
   import VlanDialog from './VlanDialog.svelte';
+  import VerbundMapDialog from './VerbundMapDialog.svelte';
 
   /** Zeigt den gerade geöffneten Dialog (gesteuert über Menüs, Kürzel und Schaltflächen). */
   const close = () => dialogs.close();
@@ -42,6 +43,8 @@
   <AboutDialog onclose={close} />
 {:else if dialogs.open === 'snapshots'}
   <SnapshotDialog onclose={close} />
+{:else if dialogs.open === 'verbundMap'}
+  <VerbundMapDialog onclose={close} />
 {:else if dialogs.open === 'rack'}
   <RackDialog onclose={close} />
 {:else if dialogs.open === 'privacy'}

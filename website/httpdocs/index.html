@@ -54,6 +54,7 @@
         <ul>
           <li><a href="#ansicht">Ansicht</a></li>
           <li><a href="#unterricht">Unterricht</a></li>
+          <li><a href="#verbund">Verbund</a></li>
           <li><a href="#technik">Technik</a></li>
           <li><a href="#download">Download</a></li>
         </ul>
@@ -167,10 +168,10 @@
         <h2 id="numbers-title" class="visually-hidden">leyoNET in Zahlen</h2>
         <dl class="counters">
           <div><dt>Übungen mit automatischer Prüfung</dt><dd data-count="70" data-suffix="+">70+</dd></div>
-          <div><dt>fertige Demo-Netze, viele Schritt für Schritt</dt><dd data-count="35">35</dd></div>
+          <div><dt>fertige Demo-Netze, viele Schritt für Schritt</dt><dd data-count="36">36</dd></div>
           <div><dt>Gerätetypen vom Notebook bis zum Provider</dt><dd data-count="12">12</dd></div>
           <div><dt>zitierte Normen: RFC, IEEE 802, ITU-T</dt><dd data-count="64">64</dd></div>
-          <div><dt>automatische Tests vor jeder Version</dt><dd data-count="640" data-suffix="+">640+</dd></div>
+          <div><dt>automatische Tests vor jeder Version</dt><dd data-count="680" data-suffix="+">680+</dd></div>
         </dl>
       </div>
     </section>
@@ -206,6 +207,89 @@
             <p>Nachteilsausgleich gibt es je Platz mit einem Klick. Die Auswertung rechnet Punkte und Note nach Schweizer Skala, mit Teilpunkten, Folgefehlern und Platz für die Nachkorrektur.</p>
           </article>
         </div>
+      </div>
+    </section>
+
+    <!-- Klassen-Verbund: Standorte der Lernenden an der Zentrale, wie auf dem Dashboard -->
+    <section id="verbund" class="verbund" aria-labelledby="verbund-title">
+      <div class="wrap verbund-grid">
+        <div class="verbund-text">
+          <p class="kicker">Neu in 1.4</p>
+          <h2 id="verbund-title">Die ganze Klasse in einem Netz</h2>
+          <p>Jede Gruppe baut ihren eigenen Standort und schliesst ihn an die Klassen-Infrastruktur der Lehrperson an. leyoNET simuliert den ganzen Verbund: Wer richtig adressiert, routet und NAT einrichtet, ist online – und die Zentrale ruft die Webseite des Standorts ab.</p>
+          <ul class="verbund-points">
+            <li><b>Dashboard für den Beamer:</b> Karte und Kacheln zeigen live, wer angeschlossen, online oder fertig ist. Grün wird nur, was in der Simulation wirklich funktioniert.</li>
+            <li><b>Nachrichten zwischen Standorten:</b> Sie gehen nur weg, wenn der eigene Standort die Zentrale erreicht.</li>
+            <li><b>Platz und Gruppe statt Namen:</b> «Team Rot» auf Platz 1 genügt.</li>
+            <li><b>Eigene Zugänge</b> für Schulen und Lehrpersonen, ohne Konten und ohne Personendaten. Übungen und ganze Module lassen sich je Klasse ein- und ausblenden.</li>
+          </ul>
+        </div>
+        <figure class="verbund-show" aria-label="Animation: Standorte einer Klasse verbinden sich nacheinander mit der Zentrale">
+          <svg viewBox="0 0 800 500" class="vb-map" role="img" aria-labelledby="vb-title">
+            <title id="vb-title">Karte des Klassen-Verbunds: acht Standorte um die Zentrale, die Verbindungen leuchten auf, sobald ein Standort online ist</title>
+            <g class="vb-links">
+              <line class="vb-link" data-seat="1" x1="400" y1="250" x2="400" y2="65"/>
+              <line class="vb-link" data-seat="2" x1="400" y1="250" x2="619" y2="119"/>
+              <line class="vb-link" data-seat="3" x1="400" y1="250" x2="710" y2="250"/>
+              <line class="vb-link" data-seat="4" x1="400" y1="250" x2="619" y2="381"/>
+              <line class="vb-link" data-seat="5" x1="400" y1="250" x2="400" y2="435"/>
+              <line class="vb-link" data-seat="6" x1="400" y1="250" x2="181" y2="381"/>
+              <line class="vb-link" data-seat="7" x1="400" y1="250" x2="90" y2="250"/>
+              <line class="vb-link" data-seat="8" x1="400" y1="250" x2="181" y2="119"/>
+            </g>
+            <g class="vb-hub" transform="translate(400 250)">
+              <circle class="vb-ring" r="44"/><circle class="vb-ring vb-ring-2" r="44"/>
+              <circle class="vb-core" r="40"/>
+              <text class="vb-hub-name" y="5">Zentrale</text>
+              <text class="vb-hub-count" y="-56"><tspan class="vb-online">0</tspan> / 8 online</text>
+            </g>
+            <circle class="vb-msg" r="6" cx="400" cy="250" opacity="0"/>
+            <g class="vb-sites">
+              <g class="vb-site" data-seat="1" transform="translate(330 39)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Team Rot</text><text class="vb-seat" x="131" y="19">1</text>
+                <text class="vb-state" x="13" y="42">nicht verbunden</text>
+              </g>
+              <g class="vb-site" data-seat="2" transform="translate(549 93)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Team Blau</text><text class="vb-seat" x="131" y="19">2</text>
+                <text class="vb-state" x="13" y="42">nicht verbunden</text>
+              </g>
+              <g class="vb-site" data-seat="3" transform="translate(640 224)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Platz 3</text><text class="vb-seat" x="131" y="19">3</text>
+                <text class="vb-state" x="13" y="42">nicht verbunden</text>
+              </g>
+              <g class="vb-site" data-seat="4" transform="translate(549 355)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Bern</text><text class="vb-seat" x="131" y="19">4</text>
+                <text class="vb-state" x="13" y="42">nicht verbunden</text>
+              </g>
+              <g class="vb-site" data-seat="5" transform="translate(330 409)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Team Gelb</text><text class="vb-seat" x="131" y="19">5</text>
+                <text class="vb-state" x="13" y="42">nicht verbunden</text>
+              </g>
+              <g class="vb-site" data-seat="6" transform="translate(111 355)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Basel</text><text class="vb-seat" x="131" y="19">6</text>
+                <text class="vb-state" x="13" y="42">nicht verbunden</text>
+              </g>
+              <g class="vb-site" data-seat="7" transform="translate(20 224)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Platz 7</text><text class="vb-seat" x="131" y="19">7</text>
+                <text class="vb-state" x="13" y="42">nicht verbunden</text>
+              </g>
+              <g class="vb-site" data-seat="8" transform="translate(111 93)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Team Grün</text><text class="vb-seat" x="131" y="19">8</text>
+                <text class="vb-state" x="13" y="42">nicht verbunden</text>
+              </g>
+            </g>
+          </svg>
+          <ol class="vb-ticker" aria-live="off"></ol>
+          <figcaption class="visually-hidden">Ein Standort nach dem anderen wird angeschlossen, geht online und stellt seine Webseite bereit; Nachrichten fliegen über die Zentrale zu anderen Standorten.</figcaption>
+        </figure>
       </div>
     </section>
 
@@ -274,7 +358,7 @@ Content-Security-Policy:
     <section id="download" class="download">
       <div class="wrap">
         <h2>Loslegen</h2>
-        <p class="section-lead">Überall dasselbe Programm. Version <span data-version>1.3.1</span>.</p>
+        <p class="section-lead">Überall dasselbe Programm. Version <span data-version>1.4.0</span>.</p>
         <ul class="dl-list">
           <li class="dl-main">
             <div><h3>Im Browser</h3><p>Sofort starten, Arbeitsstand unter einem Code speichern, Klassen und Prüfungen über den Server.</p></div>

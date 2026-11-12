@@ -45,6 +45,8 @@ export interface CatalogEntry {
   series?: string;
   /** Name des Arbeitsblatts (PDF) zur Übung, z.B. «M06C_M117_UE03_Router01». */
   sheet?: string;
+  /** Verbund-Aufgabe: nur in einer Klasse mit freigegebenem Klassen-Verbund sinnvoll. */
+  verbund?: boolean;
   build(): { topology: Topology; tasks: TaskSet };
 }
 

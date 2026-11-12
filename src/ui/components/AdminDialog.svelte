@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { parseProject, reviewSubmission, type SubmissionReview } from '../../core';
+  import { parseProject, reviewSubmission, serializeProject, siteName, type SubmissionReview } from '../../core';
   import { locale, t } from '../../i18n';
   import { editor } from '../state/editor.svelte';
   import { api, ApiError, session } from '../state/session.svelte';
@@ -7,6 +7,11 @@
   import { featureName } from '../labels';
   import { normalizePolicy, ui } from '../state/ui.svelte';
   import AdminExams from './AdminExams.svelte';
+  import AdminCatalog from './AdminCatalog.svelte';
+  import AdminTenants from './AdminTenants.svelte';
+  import VerbundDashboard from './VerbundDashboard.svelte';
+  import type { CatalogVisibility } from '../state/session.svelte';
+  import { verbundInfra } from '../verbundTemplate';
   import { startWatch } from '../watch';
   import Modal from './Modal.svelte';
 
@@ -26,6 +31,14 @@
     feedbackEnabled: boolean;
     feedbackDays: number;
     classHours: number;
+    catalog: CatalogVisibility;
+  }
+  interface ClassVerbund {
+    enabled: boolean;
+    shareSites: boolean;
+    showMap: boolean;
+    hasInfra: boolean;
+    infraUpdated?: number;
   }
   interface ClassInfo {
     code: string;
@@ -33,14 +46,19 @@
     created: number;
     expires: number;
     sessions: number;
+    owner: string | null;
+    catalog: CatalogVisibility;
+    verbund: ClassVerbund;
   }
+  type Role = 'super' | 'school' | 'teacher';
   interface Overview {
+    me: { role: Role; label: string };
     settings: Settings;
-    sessions: number;
+    sessions: number | null;
     classes: ClassInfo[];
     feedbackOpen: number;
     feedbackTotal: number;
-    storage?: { bytes: number; maxBytes: number; sessions: number; maxSessions: number };
+    storage?: { bytes: number; maxBytes: number; sessions: number; maxSessions: number } | null;
   }
   interface Feedback {
     id: string;
@@ -60,6 +78,9 @@
     devices: number;
     cables: number;
     task: string | null;
+    site?: { seat: number; label: string } | null;
+    progress?: { goals: number; total: number } | null;
+    connected?: boolean;
   }
 
   let token = $state<string | null>(adminToken.value);
@@ -76,10 +97,12 @@
     checks: CheckResult[];
   }
 
-  let tab = $state<'settings' | 'classes' | 'exams' | 'feedback' | 'checks'>('classes');
+  let tab = $state<'settings' | 'classes' | 'exams' | 'feedback' | 'checks' | 'tenants' | 'catalog'>('classes');
+  let dashboard = $state<ClassInfo | null>(null);
   let checks = $state<ChecksReport | null>(null);
   let checksMissing = $state(false);
   let overview = $state<Overview | null>(null);
+  const role = $derived<Role>(overview?.me?.role ?? 'super');
   let feedback = $state<Feedback[]>([]);
   let draft = $state<Settings | null>(null);
   let label = $state('');
@@ -107,7 +130,7 @@
     event.preventDefault();
     message = null;
     try {
-      const data = await api<{ token: string }>('POST', 'admin/login', { password });
+      const data = await api<{ token: string; role: Role }>('POST', 'admin/login', { password });
       token = data.token;
       adminToken.value = data.token;
       password = '';
@@ -122,15 +145,25 @@
   async function refresh() {
     overview = await call<Overview>('GET', 'overview');
     draft = $state.snapshot(overview.settings);
-    feedback = await call<Feedback[]>('GET', 'feedback');
-    try {
-      checks = await call<ChecksReport>('GET', 'checks');
-      checksMissing = false;
-    } catch {
+    if (overview.me.role === 'super') {
+      feedback = await call<Feedback[]>('GET', 'feedback');
+      try {
+        checks = await call<ChecksReport>('GET', 'checks');
+        checksMissing = false;
+      } catch {
+        checks = null;
+        checksMissing = true;
+      }
+    } else {
+      feedback = [];
       checks = null;
-      checksMissing = true;
+      if (['settings', 'feedback', 'checks', 'catalog'].includes(tab) || (tab === 'tenants' && overview.me.role !== 'school')) tab = 'classes';
     }
-    if (openClass) await showClass(openClass);
+    if (openClass) {
+      const fresh = overview.classes.find((c) => c.code === openClass!.code);
+      if (fresh) await showClass(fresh);
+      else openClass = null;
+    }
   }
 
   $effect(() => {
@@ -165,6 +198,41 @@
     openClass = c;
     reviews = {};
     classSessions = await call<ClassSession[]>('GET', `classes/${c.code}/sessions`);
+  }
+
+  /** Klasse ändern (Verbund, Aufgaben) und die Ansicht nachführen. */
+  async function patchClass(c: ClassInfo, change: { catalog?: CatalogVisibility; verbund?: Partial<ClassVerbund> }) {
+    try {
+      const next = await call<ClassInfo>('PATCH', `classes/${c.code}`, change);
+      if (overview) overview.classes = overview.classes.map((x) => (x.code === c.code ? next : x));
+      if (openClass?.code === c.code) openClass = next;
+      message = { kind: 'ok', text: t('admin.saved') };
+    } catch {
+      message = { kind: 'error', text: t('admin.loadFailed') };
+    }
+  }
+
+  /** Infrastruktur des Verbunds setzen: aktuelles Netz, Vorlage oder entfernen. */
+  async function setInfra(c: ClassInfo, source: 'current' | 'template' | 'none') {
+    if (source === 'none' && !confirm(t('admin.verbund.removeInfraConfirm'))) return;
+    const json = source === 'current' ? serializeProject(editor.topology) : source === 'template' ? serializeProject(verbundInfra()) : null;
+    try {
+      const next = await call<ClassInfo>('PUT', `classes/${c.code}/infra`, { project: json ? JSON.parse(json) : null });
+      if (overview) overview.classes = overview.classes.map((x) => (x.code === c.code ? next : x));
+      if (openClass?.code === c.code) openClass = next;
+      message = { kind: 'ok', text: t(source === 'none' ? 'admin.verbund.infraRemoved' : 'admin.verbund.infraSaved') };
+    } catch {
+      message = { kind: 'error', text: t('admin.verbund.infraFailed') };
+    }
+  }
+
+  /** Infrastruktur zum Bearbeiten in den Editor laden. */
+  async function editInfra(c: ClassInfo) {
+    const data = await api<{ infra?: unknown }>('GET', `classes/${encodeURIComponent(c.code)}/verbund`);
+    const parsed = data.infra ? parseProject(JSON.stringify(data.infra)) : null;
+    if (!parsed?.ok) return;
+    editor.replace(parsed.topology, { undoable: true, tasks: null, snapshots: [] });
+    message = { kind: 'ok', text: t('admin.verbund.infraLoaded') };
   }
 
   async function closeClass(c: ClassInfo) {
@@ -229,6 +297,7 @@
   export const adminToken: { value: string | null } = { value: null };
 </script>
 
+{#if !dashboard}
 <Modal title={t('admin.title')} {onclose} width={860}>
   {#if !ui.online}
     <p class="muted">{t('settings.onlineOnly')}</p>
@@ -241,23 +310,31 @@
       <button type="submit">{t('admin.login')}</button>
     </form>
     <p class="muted">{t('admin.loginHint')}</p>
+    <p class="muted">{t('admin.loginKeyHint')}</p>
   {:else if overview && draft}
     <div class="head">
       <div class="tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'classes'} onclick={() => (tab = 'classes')}>{t('admin.tab.classes')} ({overview.classes.length})</button>
         <button role="tab" aria-selected={tab === 'exams'} onclick={() => (tab = 'exams')}>{t('admin.tab.exams')}</button>
-        <button role="tab" aria-selected={tab === 'feedback'} onclick={() => (tab = 'feedback')}>
-          {t('admin.tab.feedback')} ({overview.feedbackOpen}/{overview.feedbackTotal})
-        </button>
-        <button role="tab" aria-selected={tab === 'settings'} onclick={() => (tab = 'settings')}>{t('admin.tab.settings')}</button>
-        <button role="tab" aria-selected={tab === 'checks'} onclick={() => (tab = 'checks')}>
-          {t('admin.tab.checks')}
-          {#if checks}
-            {@const bad = checks.checks.filter((c) => c.status === 'fail').length}
-            <span class="pill" class:bad={bad > 0}>{bad > 0 ? bad : '✓'}</span>
-          {/if}
-        </button>
+        {#if role !== 'teacher'}
+          <button role="tab" aria-selected={tab === 'tenants'} onclick={() => (tab = 'tenants')}>{t('admin.tab.tenants')}</button>
+        {/if}
+        {#if role === 'super'}
+          <button role="tab" aria-selected={tab === 'catalog'} onclick={() => (tab = 'catalog')}>{t('admin.tab.catalog')}</button>
+          <button role="tab" aria-selected={tab === 'feedback'} onclick={() => (tab = 'feedback')}>
+            {t('admin.tab.feedback')} ({overview.feedbackOpen}/{overview.feedbackTotal})
+          </button>
+          <button role="tab" aria-selected={tab === 'settings'} onclick={() => (tab = 'settings')}>{t('admin.tab.settings')}</button>
+          <button role="tab" aria-selected={tab === 'checks'} onclick={() => (tab = 'checks')}>
+            {t('admin.tab.checks')}
+            {#if checks}
+              {@const bad = checks.checks.filter((c) => c.status === 'fail').length}
+              <span class="pill" class:bad={bad > 0}>{bad > 0 ? bad : '✓'}</span>
+            {/if}
+          </button>
+        {/if}
       </div>
+      {#if role !== 'super'}<span class="me">{t(`admin.role.${role}`)}: {overview.me.label}</span>{/if}
       <button class="ghost" onclick={() => (examsVersion++, refresh())}>{t('admin.refresh')}</button>
       <button class="ghost" onclick={logout}>{t('admin.logout')}</button>
     </div>
@@ -311,8 +388,8 @@
       <p class="muted">{t('admin.retentionHint')}</p>
       <div class="row">
         <button onclick={saveSettings}>{t('admin.save')}</button>
-        <span class="muted">{t('admin.sessionCount', { n: overview.sessions })}</span>
-        <button class="danger" onclick={purgeSessions} disabled={overview.sessions === 0}>{t('admin.purge')}</button>
+        <span class="muted">{t('admin.sessionCount', { n: overview.sessions ?? 0 })}</span>
+        <button class="danger" onclick={purgeSessions} disabled={!overview.sessions}>{t('admin.purge')}</button>
       </div>
       {#if overview.storage}
         {@const st = overview.storage}
@@ -322,6 +399,11 @@
           {#if full}{t('admin.storageFull')}{/if}
         </p>
       {/if}
+    {:else if tab === 'tenants' && role !== 'teacher'}
+      <AdminTenants {call} role={role === 'school' ? 'school' : 'super'} notify={(kind, text) => (message = { kind, text })} />
+    {:else if tab === 'catalog'}
+      <AdminCatalog value={draft.catalog} scope="global" onchange={(v) => (draft!.catalog = v)} />
+      <div class="row"><button onclick={saveSettings}>{t('admin.save')}</button></div>
     {:else if tab === 'checks'}
       <p class="muted">{t('admin.checksHint')}</p>
       {#if checksMissing || !checks}
@@ -358,12 +440,13 @@
           <tbody>
             {#each overview.classes as c (c.code)}
               <tr class:active={openClass?.code === c.code}>
-                <td>{c.label}</td>
+                <td>{c.label}{#if c.verbund.enabled} <span class="badge-verbund" title={t('admin.verbund.enabled')}>🌐</span>{/if}</td>
                 <td class="code">{c.code}</td>
                 <td>{c.sessions}</td>
                 <td>{when(c.expires)}</td>
                 <td class="actions">
                   <button onclick={() => showClass(c)}>{t('admin.show')}</button>
+                  {#if c.verbund.enabled}<button onclick={() => (dashboard = c)}>📺 {t('admin.verbund.dashboard')}</button>{/if}
                   <button class="danger" onclick={() => closeClass(c)}>{t('admin.closeClass')}</button>
                 </td>
               </tr>
@@ -372,6 +455,34 @@
         </table>
       {/if}
       {#if openClass}
+        {@const oc = openClass}
+        <section class="class-panel">
+          <h3>🌐 {t('admin.verbund.title')}</h3>
+          <p class="muted">{t('admin.verbund.hint')}</p>
+          <div class="checks">
+            <label><input type="checkbox" checked={oc.verbund.enabled} onchange={(e) => patchClass(oc, { verbund: { enabled: e.currentTarget.checked } })} /> {t('admin.verbund.enabled')}</label>
+            <label title={t('admin.verbund.shareSitesHint')}><input type="checkbox" checked={oc.verbund.shareSites} disabled={!oc.verbund.enabled} onchange={(e) => patchClass(oc, { verbund: { shareSites: e.currentTarget.checked } })} /> {t('admin.verbund.shareSites')}</label>
+            <label><input type="checkbox" checked={oc.verbund.showMap} disabled={!oc.verbund.enabled} onchange={(e) => patchClass(oc, { verbund: { showMap: e.currentTarget.checked } })} /> {t('admin.verbund.showMap')}</label>
+          </div>
+          {#if oc.verbund.enabled}
+            <p class="muted">
+              {oc.verbund.hasInfra ? t('admin.verbund.infraSet', { time: when(oc.verbund.infraUpdated ?? oc.created) }) : t('admin.verbund.noInfra')}
+            </p>
+            <div class="row">
+              <button onclick={() => setInfra(oc, 'template')}>{t('admin.verbund.useTemplate')}</button>
+              <button onclick={() => setInfra(oc, 'current')} title={t('admin.verbund.useCurrentHint')}>{t('admin.verbund.useCurrent')}</button>
+              {#if oc.verbund.hasInfra}
+                <button onclick={() => editInfra(oc)}>{t('admin.verbund.editInfra')}</button>
+                <button class="danger" onclick={() => setInfra(oc, 'none')}>{t('admin.verbund.removeInfra')}</button>
+              {/if}
+              <button class="primary" onclick={() => (dashboard = oc)}>📺 {t('admin.verbund.dashboard')}</button>
+            </div>
+          {/if}
+          <details>
+            <summary>{t('admin.catalog.classTitle')}</summary>
+            <AdminCatalog value={oc.catalog} scope="class" onchange={(v) => patchClass(oc, { catalog: v })} />
+          </details>
+        </section>
         <h3>{t('admin.classSessions', { label: openClass.label })}</h3>
         {#if classSessions.length === 0}
           <p class="muted">{t('admin.noSessions', { code: openClass.code })}</p>
@@ -382,18 +493,20 @@
           </div>
           <table>
             <thead>
-              <tr><th>{t('admin.sessionCode')}</th><th>{t('admin.changed')}</th><th>{t('admin.devices')}</th><th>{t('review.score')}</th><th></th></tr>
+              <tr><th>{t('admin.sessionCode')}</th><th>{t('verbund.site')}</th><th>{t('admin.changed')}</th><th>{t('admin.devices')}</th><th>{t('admin.progress')}</th><th>{t('review.score')}</th><th></th></tr>
             </thead>
             <tbody>
               {#each classSessions as s (s.code)}
                 <tr>
-                  <td class="code">{s.code}</td>
+                  <td class="code">{#if s.connected}<span class="live" title={t('verbund.dash.present')}>●</span> {/if}{s.code}</td>
+                  <td>{s.site ? siteName(s.site.seat, s.site.label) : ''}</td>
                   <td>{when(s.updated)}</td>
                   <td>{s.devices} / {s.cables}</td>
+                  <td>{s.progress?.total ? `${s.progress.goals}/${s.progress.total}` : ''}</td>
                   <td>{score(reviews[s.code])}</td>
                   <td class="actions">
                     <button onclick={() => loadSession(s.code)}>{t('admin.open')}</button>
-                    <button title={t('admin.exams.watchHint')} onclick={async () => { if (token && (await startWatch(s.code, token, s.code))) onclose(); }}>👁 {t('admin.exams.watch')}</button>
+                    <button title={t('admin.exams.watchHint')} onclick={async () => { if (token && (await startWatch(s.code, token, s.site ? siteName(s.site.seat, s.site.label) : s.code))) onclose(); }}>👁 {t('admin.exams.watch')}</button>
                   </td>
                 </tr>
               {/each}
@@ -432,8 +545,40 @@
   {/if}
   {#if message}<p class={message.kind} role="status">{message.text}</p>{/if}
 </Modal>
+{:else}
+  {@const d = dashboard}
+  <VerbundDashboard
+    classCode={d.code}
+    label={d.label}
+    {call}
+    onclose={() => (dashboard = null)}
+    onwatch={async (code, name) => {
+      if (token && (await startWatch(code, token, name))) {
+        dashboard = null;
+        onclose();
+      }
+    }}
+  />
+{/if}
 
 <style>
+  .me {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .class-panel {
+    margin: 12px 0;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+  }
+  .class-panel h3 {
+    margin-top: 4px;
+  }
+  .live {
+    color: #16a34a;
+  }
   p.muted.error {
     color: var(--danger);
   }

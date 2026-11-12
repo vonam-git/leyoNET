@@ -68,6 +68,8 @@ const DEFAULT_SETTINGS = {
   feedbackEnabled: true,
   feedbackDays: 30,
   classHours: 24 * 14,
+  /** Aufgaben-Katalog in der Webversion: ausgeblendete Übungen und Reihen, Verbund-Aufgaben erlaubt. */
+  catalog: { hidden: [], hiddenSeries: [], verbund: true },
 };
 
 // --- Speicher ------------------------------------------------------------------
@@ -76,6 +78,7 @@ const dirs = {
   sessions: path.join(DATA_DIR, 'sessions'),
   feedback: path.join(DATA_DIR, 'feedback'),
   classes: path.join(DATA_DIR, 'classes'),
+  tenants: path.join(DATA_DIR, 'tenants'),
   exams: path.join(DATA_DIR, 'exams'),
 };
 
@@ -220,6 +223,22 @@ function settings() {
     maxLevel,
     defaultLevel: Math.min(Number.isInteger(stored.defaultLevel) ? stored.defaultLevel : DEFAULT_SETTINGS.defaultLevel, maxLevel),
     disabled: Array.isArray(stored.disabled) ? stored.disabled.filter((f) => typeof f === 'string' && FEATURE_ID.test(f)) : [],
+    catalog: readCatalog(stored.catalog, DEFAULT_SETTINGS.catalog),
+  };
+}
+
+// --- Sichtbarkeit von Aufgaben ------------------------------------------------------
+
+const CATALOG_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const SERIES_ID = /^[A-Za-z0-9][A-Za-z0-9 _-]{0,31}$/;
+/** Ausgeblendete Übungen und Reihen bereinigen (nur Kennungen, höchstens 500). */
+function readCatalog(v, fallback) {
+  const o = v && typeof v === 'object' ? v : {};
+  const ids = (a, re) => (Array.isArray(a) ? [...new Set(a.filter((x) => typeof x === 'string' && re.test(x)))].slice(0, 500) : []);
+  return {
+    hidden: o.hidden !== undefined ? ids(o.hidden, CATALOG_ID) : fallback.hidden,
+    hiddenSeries: o.hiddenSeries !== undefined ? ids(o.hiddenSeries, SERIES_ID) : fallback.hiddenSeries,
+    verbund: typeof o.verbund === 'boolean' ? o.verbund : fallback.verbund,
   };
 }
 
@@ -434,16 +453,76 @@ function claimWriter(code, item, token, pin) {
   return { token: fresh, item: next };
 }
 
-function isAdmin(req) {
+/** Angemeldete Person: { role: 'super' | 'school' | 'teacher', tenant, school } oder null. */
+function principal(req) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-  const expires = tokens.get(token);
-  if (!expires || expires < Date.now()) {
+  const entry = tokens.get(token);
+  if (!entry || entry.expires < Date.now()) {
     tokens.delete(token);
-    return false;
+    return null;
   }
-  return true;
+  // Gelöschter Zugang: sofort abgemeldet.
+  if (entry.tenant && !loadTenant(entry.tenant)) {
+    tokens.delete(token);
+    return null;
+  }
+  return entry;
 }
+const isAdmin = (req) => !!principal(req);
+
+// --- Zugänge (Schulen und Lehrpersonen) ----------------------------------------------
+//
+// Ohne Personendaten: ein Zugang hat nur eine Bezeichnung (z.B. «Schule Sursee», «LP 3»),
+// eine Rolle und einen Zugangsschlüssel «LN-<id>-<geheim>». Gespeichert wird nur der Hash des
+// geheimen Teils. Der Hauptadmin (ADMIN_PASSWORD) legt Schulen an, eine Schule ihre
+// Lehrpersonen. Klassen und Prüfungen gehören dem Zugang, der sie angelegt hat; die Schule
+// sieht die ihrer Lehrpersonen, der Hauptadmin alles.
+
+const TENANT_ID = /^[0-9a-f]{8}$/;
+const TENANT_KEY = /^LN-([0-9a-f]{8})-([A-Za-z0-9_-]{24,64})$/;
+const MAX_TENANTS = 500;
+const secretHash = (secret) => crypto.createHash('sha256').update(secret).digest('hex');
+
+function loadTenant(id) {
+  return TENANT_ID.test(String(id || '')) ? readJson(path.join(dirs.tenants, `${id}.json`)) : null;
+}
+function saveTenant(t) {
+  writeJson(path.join(dirs.tenants, `${t.id}.json`), t);
+}
+function tenants() {
+  try {
+    return fs
+      .readdirSync(dirs.tenants)
+      .filter((n) => n.endsWith('.json'))
+      .map((n) => readJson(path.join(dirs.tenants, n)))
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+const newTenantSecret = () => crypto.randomBytes(24).toString('base64url');
+const tenantKey = (t, secret) => `LN-${t.id}-${secret}`;
+
+/** Zugangsschlüssel prüfen; liefert den Zugang oder null. */
+function tenantByKey(key) {
+  const m = TENANT_KEY.exec(String(key || '').trim());
+  if (!m) return null;
+  const t = loadTenant(m[1]);
+  return t && sameHash(secretHash(m[2]), t.secret) ? t : null;
+}
+
+/** Darf diese Person ein Element (Klasse, Prüfung) mit Besitzer `owner` sehen? */
+function canSee(who, owner) {
+  if (!who) return false;
+  if (who.role === 'super') return true;
+  if (!owner) return false;
+  if (owner === who.tenant) return true;
+  if (who.role === 'school') return loadTenant(owner)?.school === who.tenant;
+  return false;
+}
+const ownerOf = (who) => (who.role === 'super' ? null : who.tenant);
+const tenantView = (t) => ({ id: t.id, label: t.label, role: t.role, school: t.school || null, created: t.created });
 
 // --- Aufräumen ---------------------------------------------------------------------
 
@@ -709,6 +788,7 @@ function publicConfig() {
     feedbackDays: s.feedbackDays,
     admin: !!ADMIN_PASSWORD,
     channel: CHANNEL,
+    catalog: s.catalog,
   };
 }
 
@@ -720,6 +800,65 @@ function loadSession(code) {
 function loadClass(code) {
   const item = readJson(fileFor(dirs.classes, code));
   return item && item.expires > Date.now() ? item : null;
+}
+
+const EMPTY_CATALOG = { hidden: [], hiddenSeries: [], verbund: true };
+const verbundOf = (c) => ({ enabled: false, shareSites: false, showMap: false, infra: null, infraUpdated: 0, ...(c.verbund || {}) });
+function classView(c, sessions) {
+  const v = verbundOf(c);
+  return {
+    code: c.code,
+    label: c.label,
+    created: c.created,
+    expires: c.expires,
+    owner: c.owner || null,
+    sessions: sessions.filter((s) => s.classCode === c.code).length,
+    catalog: c.catalog || EMPTY_CATALOG,
+    verbund: { enabled: v.enabled, shareSites: v.shareSites, showMap: v.showMap, hasInfra: !!v.infra, infraUpdated: v.infraUpdated },
+  };
+}
+
+// --- Klassen-Verbund ---------------------------------------------------------------
+//
+// Status je Standort (vom Dashboard der Lehrperson) und Nachrichten nur im Arbeitsspeicher:
+// kurzlebig, nach einem Neustart weg. Nachrichten sind Text von Lernenden: begrenzt, ohne Protokoll.
+const verbundStatus = new Map();
+const messages = new Map();
+const STATUS_LEVELS = ['offline', 'connected', 'online', 'services', 'done'];
+const MESSAGE_TTL_MS = 30 * 60_000;
+const MAX_MESSAGES = 200;
+const MAX_MESSAGE_TEXT = 500;
+const MAX_SEAT = 62;
+const validSeat = (n) => Number.isInteger(n) && n >= 1 && n <= MAX_SEAT;
+const cleanLabel = (v) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 30) : '');
+
+function cleanStatus(sites) {
+  const out = {};
+  if (!sites || typeof sites !== 'object') return out;
+  for (const [seat, v] of Object.entries(sites).slice(0, MAX_SEAT)) {
+    const n = Number(seat);
+    if (!validSeat(n) || !v || typeof v !== 'object') continue;
+    out[n] = {
+      level: STATUS_LEVELS.includes(v.level) ? v.level : 'offline',
+      goals: Number.isInteger(v.goals) && v.goals >= 0 && v.goals <= 99 ? v.goals : 0,
+      total: Number.isInteger(v.total) && v.total >= 0 && v.total <= 99 ? v.total : 0,
+    };
+  }
+  return out;
+}
+
+/** Platz für eine neue Session in der Klasse: gewünschter, sonst der nächste freie. */
+function seatFor(classCode, wanted) {
+  const taken = new Set(entries('sessions').filter((s) => s.classCode === classCode).map((s) => loadSession(s.code)?.site?.seat).filter(Boolean));
+  if (validSeat(wanted) && !taken.has(wanted)) return wanted;
+  for (let n = 1; n <= MAX_SEAT; n++) if (!taken.has(n)) return n;
+  return null;
+}
+
+function classMessages(code, now = Date.now()) {
+  const list = (messages.get(code) || []).filter((m) => now - m.time < MESSAGE_TTL_MS);
+  messages.set(code, list);
+  return list;
 }
 
 async function api(req, res, url) {
@@ -750,10 +889,16 @@ async function api(req, res, url) {
       while (indexes.sessions.has(code) || fs.existsSync(fileFor(dirs.sessions, code))) code = newCode();
       const now = Date.now();
       const writer = crypto.randomBytes(24).toString('base64url');
-      const item = { code, created: now, updated: now, expires: now + ttl, classCode, project: body.project, writer: writerHash(writer) };
+      // In einer Klasse: Platz (gewünscht oder nächster freier) und Gruppenbezeichnung für den Verbund.
+      let site = null;
+      if (classCode) {
+        const seat = seatFor(classCode, body.site && body.site.seat);
+        if (seat) site = { seat, label: cleanLabel(body.site && body.site.label) };
+      }
+      const item = { code, created: now, updated: now, expires: now + ttl, classCode, ...(site ? { site } : {}), project: body.project, writer: writerHash(writer) };
       store('sessions', code, item);
       leases.set(code, now);
-      return json(res, 201, { code, expires: item.expires, classCode, writer });
+      return json(res, 201, { code, expires: item.expires, classCode, site, writer });
     }
 
     if (tooManyMisses(req, 'session')) return fail(res, 429, 'rateLimited');
@@ -771,6 +916,23 @@ async function api(req, res, url) {
       if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
       leases.set(code, Date.now());
       return json(res, 200, { ok: true, ...about(item) });
+    }
+    // Platz und Gruppe im Klassen-Verbund ändern (nur das schreibende Gerät).
+    if (parts[2] === 'site' && method === 'PUT') {
+      if (!item.classCode) return fail(res, 400, 'notInClass');
+      if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
+      const body = await readBody(req);
+      const current = item.site || {};
+      let seat = current.seat;
+      if (body.seat !== undefined && body.seat !== current.seat) {
+        if (!validSeat(body.seat)) return fail(res, 400, 'badSeat');
+        if (seatFor(item.classCode, body.seat) !== body.seat) return fail(res, 409, 'seatTaken');
+        seat = body.seat;
+      }
+      const site = { seat: seat || seatFor(item.classCode), label: body.label !== undefined ? cleanLabel(body.label) : current.label || '' };
+      if (!site.seat) return fail(res, 409, 'seatTaken');
+      store('sessions', code, { ...item, site });
+      return json(res, 200, { site });
     }
     // Sperren mit PIN (nur das schreibende Gerät); Prüfungsplätze lassen sich nicht sperren.
     if (parts[2] === 'lock') {
@@ -793,7 +955,7 @@ async function api(req, res, url) {
     if (parts.length !== 2) return fail(res, 404, 'unknownSession');
 
     if (method === 'GET') {
-      const base = { code, expires: item.expires, classCode: item.classCode, project: item.project };
+      const base = { code, expires: item.expires, classCode: item.classCode, site: item.site || null, project: item.project };
       // Nur ansehen (z.B. Lehrperson): kein Schreibrecht, verdrängt niemanden.
       if (url.searchParams.get('watch') === '1') return json(res, 200, { ...base, updated: item.updated, watch: true, ...about(item) });
       const pin = req.headers['x-leyonet-pin'];
@@ -826,7 +988,10 @@ async function api(req, res, url) {
       // Die Frist läuft ab der letzten Änderung (Arbeit geht nicht mitten in der Lektion verloren).
       const before = indexes.sessions.get(code);
       if (!fits(projectSize(body.project) - (before ? before.size : 0))) return fail(res, 507, 'storageFull');
-      const next = { ...item, project: body.project, updated: now, expires: now + ttl };
+      // Fortschritt der Lernziele (für das Dashboard), nur zwei kleine Zahlen.
+      const p = body.progress;
+      const progress = p && Number.isInteger(p.goals) && Number.isInteger(p.total) && p.goals >= 0 && p.total >= 0 && p.goals <= p.total && p.total <= 99 ? { goals: p.goals, total: p.total } : item.progress;
+      const next = { ...item, project: body.project, updated: now, expires: now + ttl, ...(progress ? { progress } : {}) };
       store('sessions', code, next);
       return json(res, 200, { code, expires: next.expires, ...(writer ? { writer } : {}), ...about(next) });
     }
@@ -883,7 +1048,70 @@ async function api(req, res, url) {
     const code = normalizeCode(body.classCode);
     const item = code && loadClass(code);
     if (!item) return fail(res, 404, 'unknownClass');
-    return json(res, 200, { classCode: code, label: item.label });
+    const v = verbundOf(item);
+    return json(res, 200, { classCode: code, label: item.label, catalog: item.catalog || EMPTY_CATALOG, verbund: { enabled: v.enabled, shareSites: v.shareSites, showMap: v.showMap } });
+  }
+
+  // --- Klassen-Verbund (öffentlich mit Klassen-Code) ---
+  if (parts[0] === 'classes' && parts[2] === 'verbund' && method === 'GET') {
+    if (limited(req, 'verbund', 600) || tooManyMisses(req, 'class')) return fail(res, 429, 'rateLimited');
+    const code = normalizeCode(parts[1]);
+    const item = code && loadClass(code);
+    if (!item) {
+      countMiss(req, 'class');
+      return fail(res, 404, 'unknownClass');
+    }
+    const v = verbundOf(item);
+    if (!v.enabled) return json(res, 200, { enabled: false });
+    // Nur Geändertes seit `since` mitschicken: Die ganze Klasse fragt alle paar Sekunden.
+    const since = Number(new URL(req.url, 'http://x').searchParams.get('since')) || 0;
+    const members = entries('sessions')
+      .filter((m) => m.classCode === code)
+      .map((m) => loadSession(m.code))
+      .filter((x) => x && x.site);
+    const status = verbundStatus.get(code);
+    return json(res, 200, {
+      enabled: true,
+      label: item.label,
+      shareSites: v.shareSites,
+      showMap: v.showMap,
+      infraUpdated: v.infraUpdated,
+      ...(v.infra && v.infraUpdated > since ? { infra: v.infra } : {}),
+      // Andere Standorte (Netzwerk-Konfiguration) nur, wenn die Lehrperson das freigibt; nie Session-Codes.
+      sites: members.map((x) => ({ seat: x.site.seat, label: x.site.label || '', updated: x.updated, ...(v.shareSites && x.updated > since ? { project: x.project } : {}) })),
+      ...(v.showMap && status ? { status: status.sites, statusTime: status.time } : {}),
+      now: Date.now(),
+    });
+  }
+
+  // Nachrichten im Verbund: nur Mitglieder der Klasse (Session mit Schreibrecht) senden.
+  if (parts[0] === 'classes' && parts[2] === 'messages') {
+    if (limited(req, 'messages', 600)) return fail(res, 429, 'rateLimited');
+    const code = normalizeCode(parts[1]);
+    const item = code && loadClass(code);
+    if (!item || !verbundOf(item).enabled) return fail(res, 404, 'unknownClass');
+    if (method === 'GET') {
+      const after = Number(new URL(req.url, 'http://x').searchParams.get('after')) || 0;
+      return json(res, 200, classMessages(code).filter((m) => m.id > after));
+    }
+    if (method === 'POST') {
+      const body = await readBody(req);
+      const own = normalizeCode(body.session);
+      const sender = own && loadSession(own);
+      if (!sender || sender.classCode !== code || !sender.site || !isWriter(sender, writerOf(req))) return fail(res, 403, 'notInClass');
+      if (limited(req, `msg:${own}`, 6)) return fail(res, 429, 'rateLimited');
+      const text = typeof body.text === 'string' ? body.text.replace(/\u0000/g, '').trim().slice(0, MAX_MESSAGE_TEXT) : '';
+      const subject = cleanLabel(body.subject) || 'Nachricht';
+      // 0 = Zentrale, -1 = alle Standorte
+      const to = body.to === 0 || body.to === -1 || validSeat(body.to) ? body.to : null;
+      if (!text || to === null) return fail(res, 400, 'emptyText');
+      const list = classMessages(code);
+      const id = (list.at(-1)?.id || 0) + 1;
+      list.push({ id, time: Date.now(), from: sender.site.seat, fromLabel: sender.site.label || '', to, subject, text });
+      while (list.length > MAX_MESSAGES) list.shift();
+      return json(res, 201, { id });
+    }
+    return fail(res, 405, 'methodNotAllowed');
   }
 
   // --- Rückmeldungen ---
@@ -938,13 +1166,27 @@ async function admin(req, res, parts, method) {
     if (limited(req, 'login', 10) || limitedGlobal('login', 30)) return fail(res, 429, 'rateLimited');
     if (!ADMIN_PASSWORD) return fail(res, 403, 'adminDisabled');
     const body = await readBody(req);
-    if (!checkPassword(body.password || '')) return fail(res, 401, 'wrongPassword');
+    const given = typeof body.password === 'string' ? body.password : '';
+    let who = null;
+    if (checkPassword(given)) who = { role: 'super', tenant: null, label: null };
+    else {
+      const t = tenantByKey(given);
+      if (t) who = { role: t.role, tenant: t.id, label: t.label };
+    }
+    if (!who) return fail(res, 401, 'wrongPassword');
     const token = crypto.randomBytes(32).toString('base64url');
-    for (const [t, expires] of tokens) if (expires < Date.now()) tokens.delete(t);
-    tokens.set(token, Date.now() + ADMIN_TOKEN_HOURS * 3_600_000);
-    return json(res, 200, { token });
+    for (const [k, e] of tokens) if (e.expires < Date.now()) tokens.delete(k);
+    tokens.set(token, { ...who, expires: Date.now() + ADMIN_TOKEN_HOURS * 3_600_000 });
+    return json(res, 200, { token, role: who.role, label: who.label });
   }
-  if (!isAdmin(req)) return fail(res, 401, 'notLoggedIn');
+  const who = principal(req);
+  if (!who) return fail(res, 401, 'notLoggedIn');
+  /** Nur der Hauptadmin: sonst 403 senden und true liefern (Aufrufer bricht ab). */
+  const superOnly = () => {
+    if (who.role === 'super') return false;
+    fail(res, 403, 'notAllowed');
+    return true;
+  };
 
   if (parts[0] === 'logout' && method === 'POST') {
     tokens.delete((req.headers.authorization || '').slice(7));
@@ -953,27 +1195,81 @@ async function admin(req, res, parts, method) {
 
   if (parts[0] === 'overview' && method === 'GET') {
     const sessions = entries('sessions');
-    const feedback = entries('feedback');
+    const feedback = who.role === 'super' ? entries('feedback') : [];
     const u = usage();
     return json(res, 200, {
+      me: { role: who.role, label: who.label },
       settings: settings(),
-      sessions: sessions.length,
-      storage: { bytes: u.bytes, maxBytes: MAX_STORAGE_BYTES, sessions: u.sessions, maxSessions: MAX_SESSIONS },
+      sessions: who.role === 'super' ? sessions.length : null,
+      storage: who.role === 'super' ? { bytes: u.bytes, maxBytes: MAX_STORAGE_BYTES, sessions: u.sessions, maxSessions: MAX_SESSIONS } : null,
       classes: list(dirs.classes)
-        .map((c) => ({ code: c.code, label: c.label, created: c.created, expires: c.expires, sessions: sessions.filter((s) => s.classCode === c.code).length }))
+        .filter((c) => canSee(who, c.owner))
+        .map((c) => classView(c, sessions))
         .sort((a, b) => b.created - a.created),
       feedbackOpen: feedback.filter((f) => f.status === 'open').length,
       feedbackTotal: feedback.length,
     });
   }
 
+  // --- Zugänge ---
+  if (parts[0] === 'tenants') {
+    if (who.role === 'teacher') return fail(res, 403, 'notAllowed');
+    const mine = (t) => who.role === 'super' || t.school === who.tenant;
+    if (parts.length === 1 && method === 'GET') return json(res, 200, tenants().filter(mine).map(tenantView).sort((a, b) => a.label.localeCompare(b.label)));
+    if (parts.length === 1 && method === 'POST') {
+      const body = await readBody(req);
+      const label = typeof body.label === 'string' ? body.label.trim().slice(0, 40) : '';
+      if (!label) return fail(res, 400, 'labelRequired');
+      const role = who.role === 'school' ? 'teacher' : body.role === 'teacher' ? 'teacher' : 'school';
+      let school = null;
+      if (role === 'teacher') {
+        school = who.role === 'school' ? who.tenant : body.school ? String(body.school) : null;
+        if (school && loadTenant(school)?.role !== 'school') return fail(res, 400, 'unknownSchool');
+      }
+      if (tenants().length >= MAX_TENANTS) return fail(res, 507, 'storageFull');
+      let id = crypto.randomBytes(4).toString('hex');
+      while (loadTenant(id)) id = crypto.randomBytes(4).toString('hex');
+      const secret = newTenantSecret();
+      const t = { id, label, role, school, secret: secretHash(secret), created: Date.now() };
+      saveTenant(t);
+      return json(res, 201, { ...tenantView(t), key: tenantKey(t, secret) });
+    }
+    const t = loadTenant(parts[1]);
+    if (!t || !mine(t)) return fail(res, 404, 'unknownTenant');
+    if (parts[2] === 'key' && method === 'POST') {
+      // Neuer Schlüssel: der alte gilt sofort nicht mehr, Anmeldungen damit enden.
+      const secret = newTenantSecret();
+      saveTenant({ ...t, secret: secretHash(secret) });
+      for (const [k, e] of tokens) if (e.tenant === t.id) tokens.delete(k);
+      return json(res, 200, { ...tenantView(t), key: tenantKey(t, secret) });
+    }
+    if (parts.length === 2 && method === 'PATCH') {
+      const body = await readBody(req);
+      const label = typeof body.label === 'string' ? body.label.trim().slice(0, 40) : '';
+      if (!label) return fail(res, 400, 'labelRequired');
+      saveTenant({ ...t, label });
+      return json(res, 200, tenantView({ ...t, label }));
+    }
+    if (parts.length === 2 && method === 'DELETE') {
+      // Lehrpersonen einer gelöschten Schule gleich mit; ihre Klassen und Prüfungen sieht danach nur der Hauptadmin.
+      for (const x of tenants()) if (x.id === t.id || x.school === t.id) {
+        remove(path.join(dirs.tenants, `${x.id}.json`));
+        for (const [k, e] of tokens) if (e.tenant === x.id) tokens.delete(k);
+      }
+      return json(res, 200, { ok: true });
+    }
+    return fail(res, 405, 'methodNotAllowed');
+  }
+
   // Ergebnis der Release-Prüfungen (Datenschutz, Sicherheit, Lizenzen), erzeugt von scripts/release-checks.mjs.
   if (parts[0] === 'checks' && method === 'GET') {
+    if (superOnly()) return;
     const report = readJson(CHECKS_FILE);
     return report ? json(res, 200, report) : fail(res, 404, 'noChecks');
   }
 
   if (parts[0] === 'settings' && method === 'PUT') {
+    if (superOnly()) return;
     const body = await readBody(req);
     const current = settings();
     const int = (v, min, max, fallback) => (Number.isInteger(v) && v >= min && v <= max ? v : fallback);
@@ -990,12 +1286,14 @@ async function admin(req, res, parts, method) {
       feedbackEnabled: typeof body.feedbackEnabled === 'boolean' ? body.feedbackEnabled : current.feedbackEnabled,
       feedbackDays: int(body.feedbackDays, 1, 365, current.feedbackDays),
       classHours: int(body.classHours, 1, 24 * 180, current.classHours),
+      catalog: readCatalog(body.catalog, current.catalog),
     };
     writeJson(path.join(DATA_DIR, 'settings.json'), next);
     return json(res, 200, next);
   }
 
   if (parts[0] === 'feedback') {
+    if (superOnly()) return;
     if (parts.length === 1 && method === 'GET') {
       return json(res, 200, entries('feedback').sort((a, b) => b.created - a.created).map(({ size, ...f }) => f));
     }
@@ -1014,7 +1312,7 @@ async function admin(req, res, parts, method) {
     }
   }
 
-  if (parts[0] === 'exams') return adminExams(req, res, parts.slice(1), method);
+  if (parts[0] === 'exams') return adminExams(req, res, parts.slice(1), method, who);
 
   if (parts[0] === 'classes') {
     if (parts.length === 1 && method === 'POST') {
@@ -1025,21 +1323,54 @@ async function admin(req, res, parts, method) {
       let code = newCode();
       while (fs.existsSync(fileFor(dirs.classes, code))) code = newCode();
       const now = Date.now();
-      const item = { code, label, created: now, expires: now + s.classHours * 3_600_000 };
+      const item = { code, label, created: now, expires: now + s.classHours * 3_600_000, owner: ownerOf(who), catalog: readCatalog(body.catalog, EMPTY_CATALOG), verbund: { enabled: false, shareSites: false, infra: null, infraUpdated: 0 } };
       writeJson(fileFor(dirs.classes, code), item);
-      return json(res, 201, item);
+      return json(res, 201, classView(item, []));
     }
     const code = normalizeCode(parts[1]);
     const item = code && loadClass(code);
-    if (!item) return fail(res, 404, 'unknownClass');
+    if (!item || !canSee(who, item.owner)) return fail(res, 404, 'unknownClass');
     if (parts[2] === 'sessions' && method === 'GET') {
+      const withProjects = new URL(req.url, 'http://x').searchParams.get('projects') === '1';
       const sessions = entries('sessions')
         .filter((s) => s.classCode === code)
         .sort((a, b) => a.created - b.created)
         .map((m) => loadSession(m.code))
         .filter(Boolean)
-        .map((s) => ({ code: s.code, created: s.created, updated: s.updated, expires: s.expires, ...summary(s.project) }));
+        .map((s) => ({ code: s.code, created: s.created, updated: s.updated, expires: s.expires, site: s.site || null, progress: s.progress || null, connected: connected(s.code), ...summary(s.project), ...(withProjects ? { project: s.project } : {}) }));
       return json(res, 200, sessions);
+    }
+    if (parts.length === 2 && method === 'PATCH') {
+      const body = await readBody(req);
+      const next = { ...item };
+      if (typeof body.label === 'string' && body.label.trim()) next.label = body.label.trim().slice(0, 40);
+      if (body.catalog !== undefined) next.catalog = readCatalog(body.catalog, item.catalog || EMPTY_CATALOG);
+      if (body.verbund && typeof body.verbund === 'object') {
+        const v = verbundOf(item);
+        next.verbund = {
+          ...v,
+          enabled: typeof body.verbund.enabled === 'boolean' ? body.verbund.enabled : v.enabled,
+          shareSites: typeof body.verbund.shareSites === 'boolean' ? body.verbund.shareSites : v.shareSites,
+          showMap: typeof body.verbund.showMap === 'boolean' ? body.verbund.showMap : v.showMap,
+        };
+      }
+      writeJson(fileFor(dirs.classes, code), next);
+      return json(res, 200, classView(next, entries('sessions')));
+    }
+    // Infrastruktur des Verbunds (Projekt der Lehrperson).
+    if (parts[2] === 'infra' && method === 'PUT') {
+      const body = await readBody(req);
+      if (body.project !== null && !validProject(body.project)) return fail(res, 400, 'invalidProject');
+      if (body.project && !fits(projectSize(body.project))) return fail(res, 507, 'storageFull');
+      const next = { ...item, verbund: { ...verbundOf(item), infra: body.project || null, infraUpdated: Date.now() } };
+      writeJson(fileFor(dirs.classes, code), next);
+      return json(res, 200, classView(next, entries('sessions')));
+    }
+    // Status vom Dashboard der Lehrperson (berechnet in ihrem Browser), für die Karte der Lernenden.
+    if (parts[2] === 'status' && method === 'POST') {
+      const body = await readBody(req);
+      verbundStatus.set(code, { time: Date.now(), sites: cleanStatus(body.sites) });
+      return json(res, 200, { ok: true });
     }
     if (parts.length === 2 && method === 'DELETE') {
       // Klasse schliessen: auch alle ihre Sessions löschen.
@@ -1051,13 +1382,16 @@ async function admin(req, res, parts, method) {
 
   if (parts[0] === 'sessions') {
     if (parts.length === 1 && method === 'DELETE') {
+      if (superOnly()) return;
       // Abgaben von Prüfungen bleiben (sie werden mit der Prüfung gelöscht).
       for (const s of entries('sessions')) if (!s.exam) drop('sessions', s.code);
       return json(res, 200, { ok: true });
     }
     const code = normalizeCode(parts[1]);
     const item = code && loadSession(code);
-    if (!item) return fail(res, 404, 'unknownSession');
+    // Zugänge sehen nur Sessions ihrer Klassen und Prüfungen, der Hauptadmin alle.
+    const visible = item && (who.role === 'super' || (item.classCode && canSee(who, loadClass(item.classCode)?.owner)) || (item.exam && canSee(who, loadExam(item.exam.id)?.owner)));
+    if (!visible) return fail(res, 404, 'unknownSession');
     if (method === 'GET') return json(res, 200, { code, project: item.project, classCode: item.classCode, updated: item.updated, connected: connected(code), locked: !!item.lock });
     if (method === 'DELETE') {
       leases.delete(code);
@@ -1069,9 +1403,9 @@ async function admin(req, res, parts, method) {
   return fail(res, 404, 'notFound');
 }
 
-async function adminExams(req, res, parts, method) {
+async function adminExams(req, res, parts, method, who) {
   if (parts.length === 0 && method === 'GET') {
-    return json(res, 200, list(dirs.exams).sort((a, b) => b.created - a.created).map((e) => examSummary(e)));
+    return json(res, 200, list(dirs.exams).filter((e) => canSee(who, e.owner)).sort((a, b) => b.created - a.created).map((e) => examSummary(e)));
   }
   if (parts.length === 0 && method === 'POST') {
     const body = await readBody(req, MAX_EXAM_BODY);
@@ -1110,13 +1444,14 @@ async function adminExams(req, res, parts, method) {
       learner,
       key,
       seats,
+      owner: ownerOf(who),
       ...(body.seb === true ? { seb: { key: newSebKey() } } : {}),
     };
     saveExam(exam);
     return json(res, 201, examSummary(exam, true));
   }
   const exam = loadExam(parts[0]);
-  if (!exam) return fail(res, 404, 'unknownExam');
+  if (!exam || !canSee(who, exam.owner)) return fail(res, 404, 'unknownExam');
   const now = Date.now();
   if (parts.length === 1 && method === 'GET') return json(res, 200, examSummary(exam, true));
   if (parts.length === 1 && method === 'DELETE') {

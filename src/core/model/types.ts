@@ -273,6 +273,13 @@ export interface Device {
   groupSize?: number;
   /** Nur Modem: Zugangstechnik. */
   modem?: ModemConfig;
+  /**
+   * Klassen-Verbund: Dieses Gerät (Modem, Internet-Box oder Router) ist der Anschluss des
+   * Standorts an die Klassen-Infrastruktur; `iface` ist der Anschluss zum Provider.
+   */
+  verbund?: { iface: number };
+  /** Nur Internet: Provider der Klassen-Infrastruktur, hier hängen die Standorte an. */
+  verbundProvider?: boolean;
   /** Nur Router: statisches NAT 1:1 (Source-NAT mit Rückweg). */
   staticNat?: StaticNat[];
   /** Router, Internet-Box, Endgeräte: Paketfilter (Router: weitergeleitete Pakete, Endgerät: eingehende). */

@@ -354,3 +354,90 @@ test('Codes raten: nach 30 Fehlversuchen pro Minute gebremst (je Adresse, nicht 
   for (let i = 0; i < 30; i++) await foreign('POST', '/api/exams/join', { seatCode: `ZZZZ-ZY${String(i).padStart(2, '0')}` }, angreifer);
   assert.equal((await foreign('POST', '/api/exams/join', { seatCode: 'ZZZZ-ZZZZ' }, angreifer)).data.error, 'rateLimited');
 });
+
+/** Anmelden von eigener Adresse aus (die Anmeldung ist pro Adresse begrenzt). */
+let anmeldeNr = 0;
+async function anmelden(password) {
+  return (await foreign('POST', '/api/admin/login', { password }, { 'X-Forwarded-For': `198.51.100.${50 + (anmeldeNr++ % 100)}` })).data;
+}
+
+test('Zugänge: Schule und Lehrpersonen sehen nur ihre Klassen und Prüfungen, ohne Personendaten', async () => {
+  const { token: root } = (await anmelden('test-admin-passwort'));
+  const school = (await call('POST', '/api/admin/tenants', { label: 'Schule A', role: 'school' }, root)).data;
+  assert.match(school.key, /^LN-[0-9a-f]{8}-[A-Za-z0-9_-]{24,}$/);
+  const other = (await call('POST', '/api/admin/tenants', { label: 'Schule B', role: 'school' }, root)).data;
+  // Gespeichert wird nur der Hash des Schlüssels.
+  const stored = fs.readFileSync(path.join(dataDir, 'tenants', `${school.id}.json`), 'utf8');
+  assert.ok(!stored.includes(school.key.split('-').slice(2).join('-')));
+  const loginA = (await anmelden(school.key));
+  assert.equal(loginA.role, 'school');
+  const teacher = (await call('POST', '/api/admin/tenants', { label: 'LP 1', role: 'school' }, loginA.token)).data;
+  assert.equal(teacher.role, 'teacher');
+  const lp = (await anmelden(teacher.key)).token;
+  const b = (await anmelden(other.key)).token;
+  const classLp = (await call('POST', '/api/admin/classes', { label: 'INF22a' }, lp)).data;
+  const classB = (await call('POST', '/api/admin/classes', { label: 'INF22b' }, b)).data;
+  const ov = async (t) => (await call('GET', '/api/admin/overview', null, t)).data;
+  assert.deepEqual((await ov(lp)).classes.map((c) => c.label), ['INF22a']);
+  assert.deepEqual((await ov(loginA.token)).classes.map((c) => c.label), ['INF22a']);
+  assert.deepEqual((await ov(b)).classes.map((c) => c.label), ['INF22b']);
+  assert.ok((await ov(root)).classes.length >= 2);
+  // Fremde Klasse: wie nicht vorhanden.
+  assert.equal((await call('GET', `/api/admin/classes/${classB.code}/sessions`, null, lp)).status, 404);
+  assert.equal((await call('PATCH', `/api/admin/classes/${classB.code}`, { label: 'x' }, lp)).status, 404);
+  // Nur der Hauptadmin: Einstellungen, Rückmeldungen, alle Sessions löschen, Prüfberichte.
+  assert.equal((await call('PUT', '/api/admin/settings', { sessionHours: 2 }, lp)).status, 403);
+  assert.equal((await call('GET', '/api/admin/feedback', null, loginA.token)).status, 403);
+  assert.equal((await call('DELETE', '/api/admin/sessions', null, lp)).status, 403);
+  assert.equal((await call('GET', '/api/admin/tenants', null, lp)).status, 403);
+  // Schule sieht nur eigene Lehrpersonen; neuer Schlüssel meldet ab.
+  assert.deepEqual((await call('GET', '/api/admin/tenants', null, loginA.token)).data.map((t) => t.label), ['LP 1']);
+  await call('POST', `/api/admin/tenants/${teacher.id}/key`, {}, loginA.token);
+  assert.equal((await call('GET', '/api/admin/overview', null, lp)).status, 401);
+  assert.equal((await foreign('POST', '/api/admin/login', { password: teacher.key }, { 'X-Forwarded-For': '198.51.100.40' })).status, 401);
+  // Gelöschte Schule: Anmeldung endet sofort.
+  await call('DELETE', `/api/admin/tenants/${other.id}`, null, root);
+  assert.equal((await call('GET', '/api/admin/overview', null, b)).status, 401);
+  void classLp;
+});
+
+test('Klassen-Verbund: Plätze, Infrastruktur, Standorte nur bei Freigabe, Nachrichten nur von Mitgliedern', async () => {
+  const { token } = (await anmelden('test-admin-passwort'));
+  const klasse = (await call('POST', '/api/admin/classes', { label: 'Verbund' }, token)).data;
+  const p = project(0);
+  const a = (await foreign('POST', '/api/sessions', { project: p, classCode: klasse.code, site: { seat: 3, label: 'Bern' } })).data;
+  const b = (await foreign('POST', '/api/sessions', { project: p, classCode: klasse.code, site: { seat: 3 } })).data;
+  assert.deepEqual(a.site, { seat: 3, label: 'Bern' });
+  assert.equal(b.site.seat, 1);
+  // Ohne Freigabe: kein Verbund.
+  assert.equal((await foreign('GET', `/api/classes/${klasse.code}/verbund`)).data.enabled, false);
+  await call('PATCH', `/api/admin/classes/${klasse.code}`, { verbund: { enabled: true } }, token);
+  await call('PUT', `/api/admin/classes/${klasse.code}/infra`, { project: p }, token);
+  let v = (await foreign('GET', `/api/classes/${klasse.code}/verbund`)).data;
+  assert.ok(v.infra);
+  assert.deepEqual(v.sites.map((s) => [s.seat, s.label, 'project' in s]), [[3, 'Bern', false], [1, '', false]]);
+  assert.ok(!JSON.stringify(v).includes(a.code), 'nie Session-Codes anderer');
+  await call('PATCH', `/api/admin/classes/${klasse.code}`, { verbund: { shareSites: true } }, token);
+  v = (await foreign('GET', `/api/classes/${klasse.code}/verbund`)).data;
+  assert.ok(v.sites.every((s) => s.project));
+  // Nur Geändertes seit `since`.
+  v = (await foreign('GET', `/api/classes/${klasse.code}/verbund?since=${v.now}`)).data;
+  assert.ok(!v.infra && v.sites.every((s) => !s.project));
+  // Platz wechseln: belegt → 409, frei → ok.
+  assert.equal((await foreign('PUT', `/api/sessions/${b.code}/site`, { seat: 3 }, { 'X-Leyonet-Writer': b.writer })).status, 409);
+  assert.equal((await foreign('PUT', `/api/sessions/${b.code}/site`, { seat: 7, label: '<b>Genf</b>' }, { 'X-Leyonet-Writer': b.writer })).data.site.label, 'bGenf/b');
+  // Nachrichten: nur mit Schreibrecht einer Session der Klasse.
+  assert.equal((await foreign('POST', `/api/classes/${klasse.code}/messages`, { session: a.code, to: 7, text: 'Hallo' })).status, 403);
+  assert.equal((await foreign('POST', `/api/classes/${klasse.code}/messages`, { session: a.code, to: 7, text: 'Hallo Genf' }, { 'X-Leyonet-Writer': a.writer })).status, 201);
+  const list = (await foreign('GET', `/api/classes/${klasse.code}/messages`)).data;
+  assert.deepEqual(list.map((m) => [m.from, m.to, m.text]), [[3, 7, 'Hallo Genf']]);
+  assert.equal((await foreign('GET', `/api/classes/${klasse.code}/messages?after=${list[0].id}`)).data.length, 0);
+  // An alle (-1) geht, unbekannte Ziele nicht.
+  assert.equal((await foreign('POST', `/api/classes/${klasse.code}/messages`, { session: a.code, to: -1, text: 'An alle' }, { 'X-Leyonet-Writer': a.writer })).status, 201);
+  assert.equal((await foreign('POST', `/api/classes/${klasse.code}/messages`, { session: a.code, to: -2, text: 'x' }, { 'X-Leyonet-Writer': a.writer })).status, 400);
+  // Status vom Dashboard erscheint auf der Karte nur, wenn die Lehrperson sie zeigt.
+  await call('POST', `/api/admin/classes/${klasse.code}/status`, { sites: { 3: { level: 'online', goals: 2, total: 4 }, 99: { level: 'x' } } }, token);
+  assert.equal((await foreign('GET', `/api/classes/${klasse.code}/verbund`)).data.status, undefined);
+  await call('PATCH', `/api/admin/classes/${klasse.code}`, { verbund: { showMap: true } }, token);
+  assert.deepEqual((await foreign('GET', `/api/classes/${klasse.code}/verbund`)).data.status, { 3: { level: 'online', goals: 2, total: 4 } });
+});

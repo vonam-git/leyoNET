@@ -2,6 +2,8 @@ import { evaluateTasks, type GoalResult, type TaskSet } from '../../core';
 import { t } from '../../i18n';
 import { editor } from './editor.svelte';
 import { catalogIdOf, progress } from './progress.svelte';
+import { verbund } from './verbund.svelte';
+import { session } from './session.svelte';
 import { simStore } from './sim.svelte';
 
 /**
@@ -21,9 +23,11 @@ class TaskView {
     this.checking = true;
     // Kurz warten, damit die Oberfläche «prüft …» zeigen kann; die Prüf-Simulationen laufen synchron.
     setTimeout(() => {
-      const results = evaluateTasks(editor.topology, tasks, simStore.sim?.getPacketLog() ?? []);
+      const results = evaluateTasks(verbund.simTopology(editor.topology), tasks, simStore.sim?.getPacketLog() ?? []);
       this.results = results;
       this.checking = false;
+      // Für das Dashboard der Lehrperson: erreichte Lernziele dieser Session.
+      session.progress = { goals: results.filter((r) => r.passed).length, total: results.length };
       // Übung aus dem Katalog vollständig gelöst: im Katalog als erledigt zeigen.
       const id = catalogIdOf(tasks);
       if (id && results.length > 0 && results.every((r) => r.passed || r.manual) && progress.mark(id)) editor.notify(t('catalog.doneNotice'));

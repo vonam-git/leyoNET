@@ -1,0 +1,803 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d9000001",
+        "type": "internet",
+        "name": "Provider",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:89:54:41:00",
+            "ip": "198.51.100.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:89:54:41:01",
+            "ip": "203.0.113.5",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:89:54:41:02",
+            "ip": "203.0.113.9",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:89:54:41:03",
+            "ip": "203.0.113.13",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:89:54:41:04",
+            "ip": "203.0.113.17",
+            "mask": "255.255.255.252"
+          }
+        ],
+        "verbundProvider": true
+      },
+      {
+        "id": "d9000002",
+        "type": "switch",
+        "name": "Switch Zentrale",
+        "position": {
+          "x": 0,
+          "y": 170
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:89:54:42:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:89:54:42:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:89:54:42:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:89:54:42:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:89:54:42:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:89:54:42:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:89:54:42:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:89:54:42:07"
+          }
+        ],
+        "vlanDb": []
+      },
+      {
+        "id": "d9000003",
+        "type": "server",
+        "name": "Zentrale",
+        "position": {
+          "x": -140,
+          "y": 300
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:89:54:43:00",
+            "ip": "198.51.100.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "198.51.100.1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Klassen-Verbund</h1><p>Willkommen in der Zentrale. Dein Standort ist verbunden.</p>"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d100001",
+        "type": "pc",
+        "name": "Team Rot: PC",
+        "position": {
+          "x": -280,
+          "y": -852
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:01:86:A1:00",
+            "ip": "192.168.10.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.10.1"
+      },
+      {
+        "id": "d100002",
+        "type": "switch",
+        "name": "Team Rot: Switch",
+        "position": {
+          "x": -80,
+          "y": -852
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:01:86:A2:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:01:86:A2:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:01:86:A2:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:01:86:A2:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:01:86:A2:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:01:86:A2:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:01:86:A2:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:01:86:A2:07"
+          }
+        ],
+        "vlanDb": []
+      },
+      {
+        "id": "d100003",
+        "type": "router",
+        "name": "Team Rot: Router",
+        "position": {
+          "x": 140,
+          "y": -852
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:01:86:A3:00",
+            "ip": "192.168.10.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:01:86:A3:01",
+            "ip": "203.0.113.6",
+            "mask": "255.255.255.252",
+            "nat": true
+          }
+        ],
+        "verbund": {
+          "iface": 1
+        },
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "203.0.113.5"
+          }
+        ],
+        "portForwards": [
+          {
+            "protocol": "tcp",
+            "port": 80,
+            "to": "192.168.10.80",
+            "toPort": 80
+          }
+        ]
+      },
+      {
+        "id": "d100006",
+        "type": "server",
+        "name": "Team Rot: Webserver",
+        "position": {
+          "x": -280,
+          "y": -712
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:01:86:A6:00",
+            "ip": "192.168.10.80",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.10.1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Standort 1</h1><p>Webseite von Standort 1 im Klassen-Verbund.</p>"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d200001",
+        "type": "pc",
+        "name": "Team Blau: PC",
+        "position": {
+          "x": 652,
+          "y": 80
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:03:0D:41:00",
+            "ip": "192.168.20.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.20.1"
+      },
+      {
+        "id": "d200002",
+        "type": "switch",
+        "name": "Team Blau: Switch",
+        "position": {
+          "x": 852,
+          "y": 80
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:03:0D:42:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:03:0D:42:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:03:0D:42:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:03:0D:42:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:03:0D:42:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:03:0D:42:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:03:0D:42:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:03:0D:42:07"
+          }
+        ],
+        "vlanDb": []
+      },
+      {
+        "id": "d200003",
+        "type": "router",
+        "name": "Team Blau: Router",
+        "position": {
+          "x": 1072,
+          "y": 80
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:03:0D:43:00",
+            "ip": "192.168.20.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:03:0D:43:01",
+            "ip": "203.0.113.10",
+            "mask": "255.255.255.252",
+            "nat": true
+          }
+        ],
+        "verbund": {
+          "iface": 1
+        },
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "203.0.113.9"
+          }
+        ],
+        "portForwards": [
+          {
+            "protocol": "tcp",
+            "port": 80,
+            "to": "192.168.20.80",
+            "toPort": 80
+          }
+        ]
+      },
+      {
+        "id": "d200006",
+        "type": "server",
+        "name": "Team Blau: Webserver",
+        "position": {
+          "x": 652,
+          "y": 220
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:03:0D:46:00",
+            "ip": "192.168.20.80",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.20.1",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Standort 2</h1><p>Webseite von Standort 2 im Klassen-Verbund.</p>"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d300001",
+        "type": "pc",
+        "name": "Team Grün: PC",
+        "position": {
+          "x": -280,
+          "y": 1082
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:04:93:E1:00",
+            "ip": "192.168.30.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.30.1"
+      },
+      {
+        "id": "d300002",
+        "type": "switch",
+        "name": "Team Grün: Switch",
+        "position": {
+          "x": -80,
+          "y": 1082
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:04:93:E2:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:04:93:E2:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:04:93:E2:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:04:93:E2:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:04:93:E2:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:04:93:E2:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:04:93:E2:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:04:93:E2:07"
+          }
+        ],
+        "vlanDb": []
+      },
+      {
+        "id": "d300003",
+        "type": "router",
+        "name": "Team Grün: Router",
+        "position": {
+          "x": 140,
+          "y": 1082
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:04:93:E3:00",
+            "ip": "192.168.30.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:04:93:E3:01",
+            "ip": "203.0.113.14",
+            "mask": "255.255.255.252",
+            "nat": true
+          }
+        ],
+        "verbund": {
+          "iface": 1
+        },
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "203.0.113.13"
+          }
+        ]
+      },
+      {
+        "id": "d400001",
+        "type": "pc",
+        "name": "Team Gelb: PC",
+        "position": {
+          "x": -1212,
+          "y": 150
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:06:1A:81:00",
+            "ip": "192.168.40.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.40.1"
+      },
+      {
+        "id": "d400002",
+        "type": "switch",
+        "name": "Team Gelb: Switch",
+        "position": {
+          "x": -1012,
+          "y": 150
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:06:1A:82:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:06:1A:82:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:06:1A:82:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:06:1A:82:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:06:1A:82:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:06:1A:82:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:06:1A:82:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:06:1A:82:07"
+          }
+        ],
+        "vlanDb": []
+      },
+      {
+        "id": "d400003",
+        "type": "router",
+        "name": "Team Gelb: Router",
+        "position": {
+          "x": -792,
+          "y": 150
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:06:1A:83:00",
+            "ip": "192.168.40.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:06:1A:83:01",
+            "ip": "203.0.113.18",
+            "mask": "255.255.255.252",
+            "nat": true
+          }
+        ],
+        "verbund": {
+          "iface": 1
+        },
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "203.0.113.17"
+          }
+        ]
+      }
+    ],
+    "cables": [
+      {
+        "id": "c9000004",
+        "a": {
+          "device": "d9000001",
+          "iface": 0
+        },
+        "b": {
+          "device": "d9000002",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c9000005",
+        "a": {
+          "device": "d9000003",
+          "iface": 0
+        },
+        "b": {
+          "device": "d9000002",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c100004",
+        "a": {
+          "device": "d100001",
+          "iface": 0
+        },
+        "b": {
+          "device": "d100002",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c100005",
+        "a": {
+          "device": "d100002",
+          "iface": 1
+        },
+        "b": {
+          "device": "d100003",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c100007",
+        "a": {
+          "device": "d100006",
+          "iface": 0
+        },
+        "b": {
+          "device": "d100002",
+          "iface": 2
+        }
+      },
+      {
+        "id": "c200004",
+        "a": {
+          "device": "d200001",
+          "iface": 0
+        },
+        "b": {
+          "device": "d200002",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c200005",
+        "a": {
+          "device": "d200002",
+          "iface": 1
+        },
+        "b": {
+          "device": "d200003",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c200007",
+        "a": {
+          "device": "d200006",
+          "iface": 0
+        },
+        "b": {
+          "device": "d200002",
+          "iface": 2
+        }
+      },
+      {
+        "id": "c300004",
+        "a": {
+          "device": "d300001",
+          "iface": 0
+        },
+        "b": {
+          "device": "d300002",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c300005",
+        "a": {
+          "device": "d300002",
+          "iface": 1
+        },
+        "b": {
+          "device": "d300003",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c400004",
+        "a": {
+          "device": "d400001",
+          "iface": 0
+        },
+        "b": {
+          "device": "d400002",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c400005",
+        "a": {
+          "device": "d400002",
+          "iface": 1
+        },
+        "b": {
+          "device": "d400003",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c9900000",
+        "a": {
+          "device": "d100003",
+          "iface": 1
+        },
+        "b": {
+          "device": "d9000001",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c9900001",
+        "a": {
+          "device": "d200003",
+          "iface": 1
+        },
+        "b": {
+          "device": "d9000001",
+          "iface": 2
+        }
+      },
+      {
+        "id": "c9900002",
+        "a": {
+          "device": "d300003",
+          "iface": 1
+        },
+        "b": {
+          "device": "d9000001",
+          "iface": 3
+        }
+      },
+      {
+        "id": "c9900003",
+        "a": {
+          "device": "d400003",
+          "iface": 1
+        },
+        "b": {
+          "device": "d9000001",
+          "iface": 4
+        }
+      }
+    ],
+    "nextId": 1,
+    "areas": [
+      {
+        "id": "a9000006",
+        "title": "Klassen-Infrastruktur",
+        "color": "purple",
+        "x": -260,
+        "y": -90,
+        "width": 460,
+        "height": 460,
+        "network": "198.51.100.0/24"
+      },
+      {
+        "id": "a199999",
+        "title": "Team Rot",
+        "color": "blue",
+        "x": -400,
+        "y": -972,
+        "width": 660,
+        "height": 380
+      },
+      {
+        "id": "a299999",
+        "title": "Team Blau",
+        "color": "green",
+        "x": 532,
+        "y": -40,
+        "width": 660,
+        "height": 380
+      },
+      {
+        "id": "a399999",
+        "title": "Team Grün",
+        "color": "orange",
+        "x": -400,
+        "y": 962,
+        "width": 660,
+        "height": 240
+      },
+      {
+        "id": "a499999",
+        "title": "Team Gelb",
+        "color": "purple",
+        "x": -1332,
+        "y": 30,
+        "width": 660,
+        "height": 240
+      }
+    ]
+  },
+  "configuration": {}
+}
+

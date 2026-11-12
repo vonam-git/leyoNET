@@ -863,11 +863,184 @@ code {
   border-radius: 3px;
 }
 
+/* --- Klassen-Verbund: Karte wie auf dem Dashboard ------------------------------------- */
+
+.verbund {
+  background: #0b1020;
+  color: #dbe3ee;
+  padding: clamp(64px, 9vw, 120px) 0;
+}
+.verbund h2 {
+  color: #ffffff;
+}
+.verbund-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: center;
+}
+.kicker {
+  margin: 0 0 0.6rem;
+  font: 700 0.85rem/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a78bfa;
+}
+.verbund-text > p {
+  margin-top: 1.2rem;
+}
+.verbund-points {
+  margin: 1.4rem 0 0;
+  padding-left: 1.1em;
+  display: grid;
+  gap: 10px;
+}
+.verbund-points b {
+  color: #ffffff;
+}
+.verbund-show {
+  margin: 0;
+}
+.vb-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  background: radial-gradient(ellipse at center, #17223b, #060912 75%);
+  border: 1px solid #1e293b;
+}
+.vb-link {
+  stroke: #334155;
+  stroke-width: 2;
+  stroke-dasharray: 4 6;
+  transition: stroke 0.6s;
+}
+.vb-link.connected {
+  stroke: #f59e0b;
+  stroke-dasharray: none;
+}
+.vb-link.online,
+.vb-link.services,
+.vb-link.done {
+  stroke-width: 3;
+  stroke-dasharray: 2 14;
+  animation: vb-flow 1.4s linear infinite;
+}
+.vb-link.online {
+  stroke: #4ade80;
+}
+.vb-link.services {
+  stroke: #22d3ee;
+}
+.vb-link.done {
+  stroke: #facc15;
+}
+@keyframes vb-flow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+.vb-core {
+  fill: #6d28d9;
+  stroke: #a78bfa;
+  stroke-width: 2;
+}
+.vb-ring {
+  fill: none;
+  stroke: #a78bfa;
+  stroke-width: 2;
+  transform-origin: 0 0;
+  animation: vb-ring 3s ease-out infinite;
+}
+.vb-ring-2 {
+  animation-delay: 1.5s;
+}
+@keyframes vb-ring {
+  from {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+.vb-hub-name {
+  fill: #ffffff;
+  font: 700 13px var(--sans);
+  text-anchor: middle;
+}
+.vb-hub-count {
+  fill: #c4b5fd;
+  font: 700 13px var(--sans);
+  text-anchor: middle;
+}
+.vb-msg {
+  fill: #f0abfc;
+}
+.vb-card {
+  fill: #0f172a;
+  stroke: #334155;
+  stroke-width: 2;
+  transition: stroke 0.6s, fill 0.6s;
+}
+.vb-led {
+  fill: #475569;
+}
+.vb-name {
+  fill: #f1f5f9;
+  font: 700 14.5px var(--sans);
+}
+.vb-seat {
+  fill: #64748b;
+  font: 700 12px var(--sans);
+  text-anchor: end;
+}
+.vb-state {
+  fill: #94a3b8;
+  font: 12px var(--sans);
+}
+.vb-site.connected .vb-card {
+  stroke: #f59e0b;
+}
+.vb-site.connected .vb-led {
+  fill: #f59e0b;
+}
+.vb-site.online .vb-card {
+  stroke: #22c55e;
+}
+.vb-site.services .vb-card {
+  stroke: #06b6d4;
+}
+.vb-site.done .vb-card {
+  stroke: #eab308;
+  fill: #1c1a0e;
+}
+.vb-site.online .vb-led,
+.vb-site.services .vb-led,
+.vb-site.done .vb-led {
+  fill: #22c55e;
+}
+.vb-ticker {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  min-height: 5.2em;
+  display: grid;
+  gap: 4px;
+  font: 0.85rem/1.4 var(--code);
+  color: #94a3b8;
+}
+.vb-ticker li:first-child {
+  color: #e2e8f0;
+}
+
 /* --- Kleine Bildschirme ------------------------------------------------------------ */
 
 @media (max-width: 1020px) {
   .hero-grid,
   .tech-grid,
+  .verbund-grid,
   .open-grid {
     grid-template-columns: 1fr;
   }
@@ -931,6 +1104,10 @@ code {
   }
   .rows li.new {
     animation: none;
+  }
+  .vb-link,
+  .vb-ring {
+    animation: none !important;
   }
 }
 

@@ -81,6 +81,7 @@ export const CHECK_FIELDS: Record<Check['type'], FieldSpec[]> = {
     { key: 'address', kind: 'text', label: 'seenAddress' },
   ],
   modemOnline: [{ key: 'device', kind: 'device' }],
+  verbundSite: [{ key: 'level', kind: 'choice', optional: true, label: 'verbundLevel', options: ['online', 'services'] }],
   groupLeases: [
     { key: 'device', kind: 'device' },
     { key: 'min', kind: 'number', optional: true },

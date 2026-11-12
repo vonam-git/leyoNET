@@ -48,6 +48,14 @@ Es wird nichts übertragen. Die Admin-Konsole, Sessions und Rückmeldungen sind 
 - Die Lehrperson eröffnet in der Admin-Konsole eine Klasse mit einer **Bezeichnung ohne Personenbezug** (z.B. «INF22a»). Lernende treten mit dem Klassencode bei.
 - Die Lehrperson sieht die Session-Codes und kann die Arbeiten öffnen, aber **keine Namen**. Wer welche Session hat, klärt die Klasse mündlich oder über den Code, ohne dass der Server davon weiss.
 - Löschung: automatisch nach der eingestellten Zeit (Standard 14 Tage) oder mit **Schliessen**.
+- Je Session optional **Platz** (Zahl 1–62) und **Gruppe** (z.B. «Team Rot», höchstens 30 Zeichen). Das Eingabefeld weist darauf hin, keine Personennamen einzutragen. Dazu der Fortschritt bei der geladenen Aufgabe (erfüllte Ziele von gesamt) als zwei Zahlen.
+
+### Klassen-Verbund
+
+- Die **Infrastruktur** der Lehrperson ist ein Netz (technische Konfiguration) bei der Klasse; gelöscht mit der Klasse.
+- Mit «Standorte untereinander sichtbar» erhalten alle mit dem Klassencode die **Netze der anderen Standorte** (ohne Session-Codes), damit die Simulation im eigenen Browser den ganzen Verbund rechnen kann.
+- Den **Zustand** der Standorte berechnet das Dashboard im Browser der Lehrperson und meldet ihn (Stufe und Zahlen) an den Server, nur im Arbeitsspeicher.
+- **Nachrichten** zwischen Standorten: Text der Lernenden, nur im Arbeitsspeicher, höchstens 200 je Klasse und 500 Zeichen, nach 30 Minuten oder einem Neustart weg, nicht protokolliert. Hinweis im Fenster: keine persönlichen Angaben.
 
 ### Prüfungen (Webversion)
 
@@ -64,7 +72,9 @@ Es wird nichts übertragen. Die Admin-Konsole, Sessions und Rückmeldungen sind 
 
 ### Admin
 
-- Ein einziges Passwort aus der Umgebungsvariable `ADMIN_PASSWORD`; es wird nicht gespeichert. Die Anmeldung erzeugt ein Token, das nur im Arbeitsspeicher des Servers und der geöffneten Seite liegt (höchstens 8 Stunden gültig, endet mit dem Neuladen der Seite).
+- Hauptadmin: ein Passwort aus der Umgebungsvariable `ADMIN_PASSWORD`; es wird nicht gespeichert.
+- **Zugänge** für Schulen und Lehrpersonen sind **keine Benutzerkonten**: gespeichert sind nur eine Bezeichnung ohne Personenbezug (z.B. «Schulhaus Nord» oder ein Kürzel), die Art (Schule/Lehrperson), die zugehörige Schule, das Erstellungsdatum und eine Prüfsumme (SHA-256) des Schlüssels. Kein Name, keine E-Mail-Adresse, kein Passwort im Klartext; der Schlüssel wird nur einmal angezeigt. Löschen in der Admin-Konsole entfernt den Zugang sofort samt laufenden Anmeldungen.
+- Die Anmeldung erzeugt ein Token, das nur im Arbeitsspeicher des Servers und der geöffneten Seite liegt (höchstens 8 Stunden gültig, endet mit dem Neuladen der Seite).
 
 ### Was der Server nicht speichert
 

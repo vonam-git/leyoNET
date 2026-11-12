@@ -32,6 +32,7 @@ const LIVE = args.includes('--live');
 const listOf = (flag) => args.flatMap((a, i) => (a === flag && args[i + 1] ? [args[i + 1].replace(/\/+$/, '')] : []));
 const UA = 'leyoNET-Sicherheitspruefung/1 (+https://github.com/vonam-git/leyoNET/blob/main/docs/sicherheit.md)';
 const PAUSE_MS = LIVE ? 350 : 0;
+const LOCAL_ADMIN_PASSWORD = 'sicherheitspruefung-admin-passwort';
 
 // --- Befunde ---------------------------------------------------------------------------------
 
@@ -240,6 +241,14 @@ async function attackApp(base) {
   const seat = await request(`${base}/api/exams/join`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seatCode: 'ZZZZ-ZZZZ' }) });
   check(target, 'platz-unbekannt', 'Unbekannter Platz-Code abgewiesen', 'hoch', seat.status === 404 || seat.status === 429 || seat.status === 400, `${seat.status}`);
 
+  // Klassen-Verbund: ohne gültigen Klassencode nichts lesen, nichts senden.
+  const verbund = await request(`${base}/api/classes/ZZZZ-ZZZZ/verbund`);
+  check(target, 'verbund-unbekannt', 'Verbund einer unbekannten Klasse: 404 ohne Daten', 'hoch', verbund.status === 404 || verbund.status === 429 || verbund.status === 400, `${verbund.status}`);
+  const msgs = await request(`${base}/api/classes/ZZZZ-ZZZZ/messages`);
+  check(target, 'nachrichten-unbekannt', 'Nachrichten einer unbekannten Klasse: 404 ohne Daten', 'hoch', msgs.status === 404 || msgs.status === 429 || msgs.status === 400, `${msgs.status}`);
+  const tenants = await request(`${base}/api/admin/tenants`);
+  check(target, 'zugaenge-gesperrt', 'Zugänge ohne Anmeldung gesperrt', 'hoch', tenants.status === 401, `${tenants.status}`);
+
   const sec = await request(`${base}/.well-known/security.txt`);
   check(target, 'security.txt', 'security.txt vorhanden (Meldestelle für Sicherheitslücken, RFC 9116)', 'hinweis', sec.status === 200 && /^Contact:/m.test(sec.body), `${sec.status}`);
 
@@ -288,6 +297,8 @@ async function attackAppDeep(base) {
     }
   }
 
+  await tenantChecks(base, post, project);
+
   // Raten von Codes: Ratenbegrenzung greift (Session-Codes und Platz-Codes getrennt).
   let limitedSession = false;
   for (let i = 0; i < 40 && !limitedSession; i++) limitedSession = (await request(`${base}/api/sessions/ZZZ${i % 10}-ZZ${String(i).padStart(2, '0')}`)).status === 429;
@@ -310,6 +321,58 @@ async function attackAppDeep(base) {
   const ok = burst.filter((r) => r.status === 200).length;
   const health = await request(`${base}/healthz`);
   check(target, 'last', 'Nach 60 gleichzeitigen Anfragen weiter erreichbar', 'mittel', health.status === 200, `${ok}/60 ok`);
+}
+
+/**
+ * Zugänge und Klassen-Verbund (nur lokal, vor den Ratentests der Anmeldung): Lehrpersonen sehen
+ * einander nicht, haben keine Hauptadmin-Rechte, und Nachrichten brauchen eine Session der Klasse.
+ */
+async function tenantChecks(base, post, project) {
+  const target = base;
+  const json = (res) => {
+    try {
+      return JSON.parse(res.body);
+    } catch {
+      return {};
+    }
+  };
+  const as = (token) => ({ Authorization: `Bearer ${token}` });
+  const call = (method, path, token, body) => request(`${base}/api/admin/${path}`, { method, headers: { 'Content-Type': 'application/json', ...as(token) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  const admin = json(await post('/api/admin/login', { password: LOCAL_ADMIN_PASSWORD })).token;
+  check(target, 'zugang-vorbedingung', 'Hauptadmin-Anmeldung (Vorbedingung)', 'hoch', !!admin, '');
+  if (!admin) return;
+  const a = json(await call('POST', 'tenants', admin, { label: 'Prüfung A', role: 'teacher' }));
+  const b = json(await call('POST', 'tenants', admin, { label: 'Prüfung B', role: 'teacher' }));
+  const tokenA = json(await post('/api/admin/login', { password: a.key })).token;
+  const tokenB = json(await post('/api/admin/login', { password: b.key })).token;
+  check(target, 'zugang-anmelden', 'Lehrperson meldet sich mit Zugangsschlüssel an', 'hoch', !!tokenA && !!tokenB, '');
+  if (!tokenA || !tokenB) return;
+  const tenantList = await request(`${base}/api/admin/tenants`, { headers: as(admin) });
+  check(target, 'zugang-hash', 'Zugangsschlüssel wird nicht gespeichert oder zurückgegeben', 'hoch', !tenantList.body.includes(a.key.split('-').pop()), '');
+  const klasse = json(await call('POST', 'classes', tokenA, { label: 'Prüfklasse' }));
+  const overviewB = json(await call('GET', 'overview', tokenB));
+  check(target, 'zugang-trennung', 'Lehrperson B sieht die Klasse von A nicht', 'hoch', Array.isArray(overviewB.classes) && !overviewB.classes.some((c) => c.code === klasse.code), '');
+  const foreign = await call('GET', `classes/${klasse.code}/sessions?projects=1`, tokenB);
+  check(target, 'zugang-fremde-klasse', 'Lehrperson B liest keine Sessions der Klasse von A', 'hoch', foreign.status === 403 || foreign.status === 404, `${foreign.status}`);
+  const patch = await call('PATCH', `classes/${klasse.code}`, tokenB, { verbund: { enabled: true, shareSites: true } });
+  check(target, 'zugang-fremd-aendern', 'Lehrperson B ändert die Klasse von A nicht', 'hoch', patch.status === 403 || patch.status === 404, `${patch.status}`);
+  for (const [path, method] of [['tenants', 'GET'], ['settings', 'PUT'], ['feedback', 'GET'], ['checks', 'GET']]) {
+    const res = await call(method, path, tokenA, method === 'PUT' ? { maxLevel: 5 } : undefined);
+    check(target, `zugang-recht-${path}`, `Lehrperson hat keinen Zugriff auf ${path}`, 'hoch', res.status === 403, `${res.status}`);
+  }
+  // Nachrichten: nur Sessions der Klasse mit Schreibrecht, gebremst.
+  await call('PATCH', `classes/${klasse.code}`, tokenA, { verbund: { enabled: true } });
+  const member = json(await post('/api/sessions', { project, classCode: klasse.code, site: { seat: 1 } }));
+  const outsider = json(await post('/api/sessions', { project }));
+  const noWriter = await post(`/api/classes/${klasse.code}/messages`, { session: member.code, to: 0, text: 'x' });
+  check(target, 'nachricht-schreiber', 'Nachricht ohne Schreiberkennung abgewiesen', 'hoch', noWriter.status === 403, `${noWriter.status}`);
+  const stranger = await post(`/api/classes/${klasse.code}/messages`, { session: outsider.code, to: 0, text: 'x' }, { 'X-Leyonet-Writer': outsider.writer || '' });
+  check(target, 'nachricht-fremd', 'Nachricht einer Session ausserhalb der Klasse abgewiesen', 'hoch', stranger.status === 403, `${stranger.status}`);
+  let flooded = false;
+  for (let i = 0; i < 10 && !flooded; i++) flooded = (await post(`/api/classes/${klasse.code}/messages`, { session: member.code, to: 0, text: `Test ${i}` }, { 'X-Leyonet-Writer': member.writer || '' })).status === 429;
+  check(target, 'nachricht-flut', 'Nachrichten fluten wird gebremst (429)', 'mittel', flooded, '');
+  const verbund = json(await request(`${base}/api/classes/${klasse.code}/verbund`));
+  check(target, 'verbund-ohne-codes', 'Verbund-Daten enthalten keine Session-Codes', 'hoch', !JSON.stringify(verbund).includes(member.code), '');
 }
 
 // --- Angriffe auf die Website (leyonet.ch) -------------------------------------------------
@@ -359,7 +422,7 @@ async function startLocal() {
   const dataDir = mkdtempSync(join(tmpdir(), 'leyonet-angriff-'));
   const port = 20_000 + Math.floor(Math.random() * 20_000);
   const child = spawn(process.execPath, [join(ROOT, 'server', 'start.cjs')], {
-    env: { ...process.env, PORT: String(port), DATA_DIR: dataDir, ADMIN_PASSWORD: 'sicherheitspruefung-admin-passwort' },
+    env: { ...process.env, PORT: String(port), DATA_DIR: dataDir, ADMIN_PASSWORD: LOCAL_ADMIN_PASSWORD },
     stdio: ['ignore', 'ignore', 'pipe'],
   });
   let stderr = '';
