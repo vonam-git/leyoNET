@@ -25,6 +25,20 @@ describe('Website leyonet.ch', () => {
     for (const [, url] of read(page).matchAll(/<a[^>]+href="([^"]+)"/g)) if (external.test(url!)) expect(url, url).toMatch(allowed);
   });
 
+  it.each(pages)('%s: Stil und Skript mit Versionsangabe (Browser laden nach einem Update keine alte Fassung aus dem Cache)', (page) => {
+    const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string };
+    const html = read(page);
+    for (const [, ref] of html.matchAll(/(?:href|src)="(\/?(?:css|js)\/[^"]+)"/g)) expect(ref, ref).toMatch(new RegExp(`\\?v=${version.replace(/\./g, '\\.')}$`));
+    expect(html).toContain('site.css?v=');
+  });
+
+  it('Bildschirmfotos der Ansichten gibt es hell und dunkel', () => {
+    const html = read('index.html');
+    for (const [, name, same] of html.matchAll(/data-img="([\w-]+)"( data-dark="same")?/g)) {
+      for (const suffix of same ? [''] : ['', '-dark']) for (const size of ['', '-1x']) expect(() => readFileSync(join(site, 'img', `${name}${suffix}${size}.webp`)), `${name}${suffix}${size}`).not.toThrow();
+    }
+  });
+
   it('Skripte nur aus eigenen Dateien, ohne Netzwerkzugriff', () => {
     const js = readFileSync(join(site, 'js', 'site.js'), 'utf8');
     expect(js).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|sendBeacon|document\.cookie|localStorage|innerHTML\s*=/);

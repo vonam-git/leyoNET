@@ -64,6 +64,12 @@ Die Download-Knöpfe zeigen auf `https://github.com/vonam-git/leyoNET/releases/l
 
 4. Den Entwurf unter *Releases* prüfen und **veröffentlichen**. Ab dann laden alle Knöpfe der Website die neue Version.
 5. In `index.html` die Versionsnummer (`data-version`) und allenfalls die Zahlen (Übungen, Demos …) nachführen; ein Test prüft, dass jeder Download-Name im Workflow entsteht.
+6. In allen Seiten die Versionsangabe hinter `css/site.css?v=…` und `js/site.js?v=…` auf die neue Version setzen (auch in den echten `impressum.html` und `datenschutz.html` auf dem Server). Sonst zeigen Browser bis zu 7 Tage die alte Gestaltung aus dem Cache und neue Abschnitte erscheinen ungestaltet. Ein Test prüft die Angabe in den Seiten im Repo.
+7. Bildschirmfotos (`img/<ansicht>.webp`, `-1x.webp` und je eine `-dark`-Fassung) mit dem aktuellen Stand neu aufnehmen: 1440 × 880 Pixel bei doppelter Auflösung, einmal hell und einmal dunkel. Ein Test prüft, dass zu jedem Reiter beide Fassungen da sind.
+
+## Hell und dunkel
+
+Die Seite folgt der Einstellung des Systems; der Schalter oben rechts wechselt für die geöffnete Seite. Gespeichert wird die Wahl nicht (keine Cookies, nichts im Browser), beim nächsten Besuch gilt wieder das System.
 
 ## Sicherheits-Köpfe für nginx (nötig!)
 
