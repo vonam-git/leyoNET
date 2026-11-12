@@ -889,10 +889,16 @@ async function api(req, res, url) {
       while (indexes.sessions.has(code) || fs.existsSync(fileFor(dirs.sessions, code))) code = newCode();
       const now = Date.now();
       const writer = crypto.randomBytes(24).toString('base64url');
-      const item = { code, created: now, updated: now, expires: now + ttl, classCode, project: body.project, writer: writerHash(writer) };
+      // In einer Klasse: Platz (gewünscht oder nächster freier) und Gruppenbezeichnung für den Verbund.
+      let site = null;
+      if (classCode) {
+        const seat = seatFor(classCode, body.site && body.site.seat);
+        if (seat) site = { seat, label: cleanLabel(body.site && body.site.label) };
+      }
+      const item = { code, created: now, updated: now, expires: now + ttl, classCode, ...(site ? { site } : {}), project: body.project, writer: writerHash(writer) };
       store('sessions', code, item);
       leases.set(code, now);
-      return json(res, 201, { code, expires: item.expires, classCode, writer });
+      return json(res, 201, { code, expires: item.expires, classCode, site, writer });
     }
 
     if (tooManyMisses(req, 'session')) return fail(res, 429, 'rateLimited');
@@ -910,6 +916,23 @@ async function api(req, res, url) {
       if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
       leases.set(code, Date.now());
       return json(res, 200, { ok: true, ...about(item) });
+    }
+    // Platz und Gruppe im Klassen-Verbund ändern (nur das schreibende Gerät).
+    if (parts[2] === 'site' && method === 'PUT') {
+      if (!item.classCode) return fail(res, 400, 'notInClass');
+      if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
+      const body = await readBody(req);
+      const current = item.site || {};
+      let seat = current.seat;
+      if (body.seat !== undefined && body.seat !== current.seat) {
+        if (!validSeat(body.seat)) return fail(res, 400, 'badSeat');
+        if (seatFor(item.classCode, body.seat) !== body.seat) return fail(res, 409, 'seatTaken');
+        seat = body.seat;
+      }
+      const site = { seat: seat || seatFor(item.classCode), label: body.label !== undefined ? cleanLabel(body.label) : current.label || '' };
+      if (!site.seat) return fail(res, 409, 'seatTaken');
+      store('sessions', code, { ...item, site });
+      return json(res, 200, { site });
     }
     // Sperren mit PIN (nur das schreibende Gerät); Prüfungsplätze lassen sich nicht sperren.
     if (parts[2] === 'lock') {
@@ -932,7 +955,7 @@ async function api(req, res, url) {
     if (parts.length !== 2) return fail(res, 404, 'unknownSession');
 
     if (method === 'GET') {
-      const base = { code, expires: item.expires, classCode: item.classCode, project: item.project };
+      const base = { code, expires: item.expires, classCode: item.classCode, site: item.site || null, project: item.project };
       // Nur ansehen (z.B. Lehrperson): kein Schreibrecht, verdrängt niemanden.
       if (url.searchParams.get('watch') === '1') return json(res, 200, { ...base, updated: item.updated, watch: true, ...about(item) });
       const pin = req.headers['x-leyonet-pin'];
@@ -1022,7 +1045,69 @@ async function api(req, res, url) {
     const code = normalizeCode(body.classCode);
     const item = code && loadClass(code);
     if (!item) return fail(res, 404, 'unknownClass');
-    return json(res, 200, { classCode: code, label: item.label });
+    const v = verbundOf(item);
+    return json(res, 200, { classCode: code, label: item.label, catalog: item.catalog || EMPTY_CATALOG, verbund: { enabled: v.enabled, shareSites: v.shareSites, showMap: v.showMap } });
+  }
+
+  // --- Klassen-Verbund (öffentlich mit Klassen-Code) ---
+  if (parts[0] === 'classes' && parts[2] === 'verbund' && method === 'GET') {
+    if (limited(req, 'verbund', 600) || tooManyMisses(req, 'class')) return fail(res, 429, 'rateLimited');
+    const code = normalizeCode(parts[1]);
+    const item = code && loadClass(code);
+    if (!item) {
+      countMiss(req, 'class');
+      return fail(res, 404, 'unknownClass');
+    }
+    const v = verbundOf(item);
+    if (!v.enabled) return json(res, 200, { enabled: false });
+    // Nur Geändertes seit `since` mitschicken: Die ganze Klasse fragt alle paar Sekunden.
+    const since = Number(new URL(req.url, 'http://x').searchParams.get('since')) || 0;
+    const members = entries('sessions')
+      .filter((m) => m.classCode === code)
+      .map((m) => loadSession(m.code))
+      .filter((x) => x && x.site);
+    const status = verbundStatus.get(code);
+    return json(res, 200, {
+      enabled: true,
+      label: item.label,
+      shareSites: v.shareSites,
+      showMap: v.showMap,
+      infraUpdated: v.infraUpdated,
+      ...(v.infra && v.infraUpdated > since ? { infra: v.infra } : {}),
+      // Andere Standorte (Netzwerk-Konfiguration) nur, wenn die Lehrperson das freigibt; nie Session-Codes.
+      sites: members.map((x) => ({ seat: x.site.seat, label: x.site.label || '', updated: x.updated, ...(v.shareSites && x.updated > since ? { project: x.project } : {}) })),
+      ...(v.showMap && status ? { status: status.sites, statusTime: status.time } : {}),
+      now: Date.now(),
+    });
+  }
+
+  // Nachrichten im Verbund: nur Mitglieder der Klasse (Session mit Schreibrecht) senden.
+  if (parts[0] === 'classes' && parts[2] === 'messages') {
+    if (limited(req, 'messages', 600)) return fail(res, 429, 'rateLimited');
+    const code = normalizeCode(parts[1]);
+    const item = code && loadClass(code);
+    if (!item || !verbundOf(item).enabled) return fail(res, 404, 'unknownClass');
+    if (method === 'GET') {
+      const after = Number(new URL(req.url, 'http://x').searchParams.get('after')) || 0;
+      return json(res, 200, classMessages(code).filter((m) => m.id > after));
+    }
+    if (method === 'POST') {
+      const body = await readBody(req);
+      const own = normalizeCode(body.session);
+      const sender = own && loadSession(own);
+      if (!sender || sender.classCode !== code || !sender.site || !isWriter(sender, writerOf(req))) return fail(res, 403, 'notInClass');
+      if (limited(req, `msg:${own}`, 6)) return fail(res, 429, 'rateLimited');
+      const text = typeof body.text === 'string' ? body.text.replace(/\u0000/g, '').trim().slice(0, MAX_MESSAGE_TEXT) : '';
+      const subject = cleanLabel(body.subject) || 'Nachricht';
+      const to = body.to === 0 || validSeat(body.to) ? body.to : null;
+      if (!text || to === null) return fail(res, 400, 'emptyText');
+      const list = classMessages(code);
+      const id = (list.at(-1)?.id || 0) + 1;
+      list.push({ id, time: Date.now(), from: sender.site.seat, fromLabel: sender.site.label || '', to, subject, text });
+      while (list.length > MAX_MESSAGES) list.shift();
+      return json(res, 201, { id });
+    }
+    return fail(res, 405, 'methodNotAllowed');
   }
 
   // --- Rückmeldungen ---
@@ -1092,7 +1177,12 @@ async function admin(req, res, parts, method) {
   }
   const who = principal(req);
   if (!who) return fail(res, 401, 'notLoggedIn');
-  const superOnly = () => (who.role === 'super' ? null : fail(res, 403, 'notAllowed'));
+  /** Nur der Hauptadmin: sonst 403 senden und true liefern (Aufrufer bricht ab). */
+  const superOnly = () => {
+    if (who.role === 'super') return false;
+    fail(res, 403, 'notAllowed');
+    return true;
+  };
 
   if (parts[0] === 'logout' && method === 'POST') {
     tokens.delete((req.headers.authorization || '').slice(7));
@@ -1288,13 +1378,16 @@ async function admin(req, res, parts, method) {
 
   if (parts[0] === 'sessions') {
     if (parts.length === 1 && method === 'DELETE') {
+      if (superOnly()) return;
       // Abgaben von Prüfungen bleiben (sie werden mit der Prüfung gelöscht).
       for (const s of entries('sessions')) if (!s.exam) drop('sessions', s.code);
       return json(res, 200, { ok: true });
     }
     const code = normalizeCode(parts[1]);
     const item = code && loadSession(code);
-    if (!item) return fail(res, 404, 'unknownSession');
+    // Zugänge sehen nur Sessions ihrer Klassen und Prüfungen, der Hauptadmin alle.
+    const visible = item && (who.role === 'super' || (item.classCode && canSee(who, loadClass(item.classCode)?.owner)) || (item.exam && canSee(who, loadExam(item.exam.id)?.owner)));
+    if (!visible) return fail(res, 404, 'unknownSession');
     if (method === 'GET') return json(res, 200, { code, project: item.project, classCode: item.classCode, updated: item.updated, connected: connected(code), locked: !!item.lock });
     if (method === 'DELETE') {
       leases.delete(code);
@@ -1306,9 +1399,9 @@ async function admin(req, res, parts, method) {
   return fail(res, 404, 'notFound');
 }
 
-async function adminExams(req, res, parts, method) {
+async function adminExams(req, res, parts, method, who) {
   if (parts.length === 0 && method === 'GET') {
-    return json(res, 200, list(dirs.exams).sort((a, b) => b.created - a.created).map((e) => examSummary(e)));
+    return json(res, 200, list(dirs.exams).filter((e) => canSee(who, e.owner)).sort((a, b) => b.created - a.created).map((e) => examSummary(e)));
   }
   if (parts.length === 0 && method === 'POST') {
     const body = await readBody(req, MAX_EXAM_BODY);
@@ -1347,13 +1440,14 @@ async function adminExams(req, res, parts, method) {
       learner,
       key,
       seats,
+      owner: ownerOf(who),
       ...(body.seb === true ? { seb: { key: newSebKey() } } : {}),
     };
     saveExam(exam);
     return json(res, 201, examSummary(exam, true));
   }
   const exam = loadExam(parts[0]);
-  if (!exam) return fail(res, 404, 'unknownExam');
+  if (!exam || !canSee(who, exam.owner)) return fail(res, 404, 'unknownExam');
   const now = Date.now();
   if (parts.length === 1 && method === 'GET') return json(res, 200, examSummary(exam, true));
   if (parts.length === 1 && method === 'DELETE') {
