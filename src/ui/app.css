@@ -176,6 +176,10 @@ html,
 body {
   margin: 0;
   height: 100%;
+  /* Die App füllt genau das Fenster; die Seite selbst scrollt nie (auch nicht per Fokus oder
+     scrollIntoView, darum clip statt hidden). Sonst bleibt nach Rauszoomen unten ein leerer Streifen. */
+  overflow: hidden;
+  overflow: clip;
 }
 
 body {

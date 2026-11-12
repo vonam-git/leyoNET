@@ -324,6 +324,8 @@ function errorLine(error: TopologyError): string {
       return `% Network address has host bits set (did you mean ${p.suggestion ?? ''}?)`;
     case 'unknownInterface':
       return '% Unknown interface';
+    case 'overlapsInterface':
+      return `% ${p.net ?? ''} overlaps with ${p.iface ?? ''} (${p.other ?? ''})`;
     case 'invalidUser':
       return `% Invalid user name: ${p.name ?? ''}`;
     case 'passwordRequired':

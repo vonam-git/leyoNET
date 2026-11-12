@@ -60,6 +60,21 @@ Läuft leyoNET als Webversion mit Node-Server (siehe [plesk.md](plesk.md)), geht
 6. Ist die Zeit eines Platzes um, nimmt der Server nichts mehr an: Der letzte Stand ist **automatisch abgegeben**, die Lernenden sehen «Abgegeben». «Für alle beenden» beendet alle Plätze sofort.
 7. **Automatisch auswerten:** alle Abgaben werden mit dem hinterlegten Schlüssel korrigiert (wie unten beschrieben, mit Nachkorrektur, CSV und Berichten). **Abgaben herunterladen** speichert eine Datei mit allen Abgaben und dem Schlüssel (`abgaben-….json`); «Abgaben auswerten» liest sie später wieder.
 
+### Nur im Safe Exam Browser (SEB)
+
+Damit die Lernenden während der Prüfung nur leyoNET offen haben, lässt sich eine Server-Prüfung an den [Safe Exam Browser](https://safeexambrowser.org) binden:
+
+1. Beim Anlegen **«Nur im Safe Exam Browser»** ankreuzen (oder später im Prüfungscockpit «Safe Exam Browser verlangen»). Der Server erzeugt einen **zufälligen Prüfungsschlüssel** (256 Bit). Er gilt, **solange die Prüfung läuft**; beim Beenden wird er gelöscht, die SEB-Datei funktioniert danach nicht mehr. «Neuer Schlüssel» macht bereits verteilte Dateien ungültig.
+2. Im Cockpit stehen drei **Zufallspasswörter** (änderbar, «Neue Passwörter» würfelt neu):
+   - **Startpasswort** (Konfigurationspasswort): SEB fragt beim Öffnen der Datei danach; die Datei ist damit verschlüsselt (AES-256). Leer lassen = unverschlüsselt.
+   - **Admin-Passwort:** zum Bearbeiten der SEB-Einstellungen.
+   - **Beenden-Passwort:** um SEB vor dem Ende zu verlassen (z.B. bei einem Problem am Platz).
+   Die Passwörter entstehen im Browser der Lehrperson und werden **nirgends gespeichert** (Admin- und Beenden-Passwort stehen nur als SHA-256-Hash in der Datei). «Passwörter notieren» speichert sie als Textdatei für dich.
+3. **SEB-Datei herunterladen** (`leyonet-<prüfung>.seb`) und an die Prüfungsrechner verteilen (z.B. über das Schulnetz oder einen USB-Stick). Doppelklick startet SEB, fragt nach dem Startpasswort und öffnet leyoNET direkt mit «Prüfung beitreten». Dann wie gewohnt den Platz-Code eingeben.
+4. SEB erlaubt nur Adressen des eigenen Servers, keine Downloads, kein Zurück.
+
+Ohne SEB und ohne den Schlüssel nimmt der Server weder den Beitritt noch das Speichern an («Diese Prüfung läuft nur im Safe Exam Browser»). Geprüft werden der Schlüssel (aus der Start-Adresse) und die Kennung «SEB/…» des Browsers. **Grenze:** Wer die SEB-Datei *und* das Startpasswort hat, könnte den Schlüssel auslesen und mit einem anderen Browser vortäuschen, SEB zu sein. Darum Datei und Startpasswort nicht an die Klasse geben, sondern auf den Prüfungsrechnern bereitstellen; das Startpasswort tippt die Lehrperson ein. Den Safe Exam Browser selbst installiert die Schul-IT; leyoNET liefert nur die Konfiguration.
+
 ### Wer ist wer?
 
 Der Server kennt **keine Namen**, nur Plätze. Die Zuordnung behältst du:

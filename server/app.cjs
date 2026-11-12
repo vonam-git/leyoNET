@@ -347,6 +347,18 @@ const pinFails = new Map();
 
 const digest = (value) => crypto.createHash('sha256').update(String(value)).digest();
 const sameHash = (a, b) => typeof a === 'string' && typeof b === 'string' && a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+
+// --- Safe Exam Browser ---
+// Prüfung «nur im Safe Exam Browser»: Zufallsschlüssel (256 Bit) je Prüfung, steckt in der
+// Start-Adresse der SEB-Datei. Gilt, solange die Prüfung läuft; beim Beenden wird er gelöscht.
+const SEB_KEY = /^[0-9a-f]{64}$/;
+const newSebKey = () => crypto.randomBytes(32).toString('hex');
+/** Anfrage kommt aus dem SEB mit dem Schlüssel dieser Prüfung? (Kennung «SEB/x.y» im User-Agent.) */
+function sebAllowed(req, exam, key) {
+  if (!exam.seb) return true;
+  const ua = String(req.headers['user-agent'] || '');
+  return !!exam.seb.key && typeof key === 'string' && SEB_KEY.test(key) && /\bSEB\/\d/.test(ua) && sameHash(key, exam.seb.key);
+}
 const writerHash = (token) => digest(token).toString('base64url');
 
 function writerOf(req) {
@@ -658,6 +670,7 @@ function examSummary(exam, withSeats = false) {
     created: exam.created,
     expires: exam.expires,
     hasKey: !!exam.key,
+    seb: exam.seb ? { key: exam.seb.key || null } : null,
     seats: withSeats
       ? exam.seats.map((s) => {
           const session = sessions.get(s.id);
@@ -785,6 +798,7 @@ async function api(req, res, url) {
         const seat = exam && exam.seats.find((s) => s.id === item.exam.seat);
         if (!exam || !seat) return fail(res, 404, 'unknownSession');
         if (!exam.started || now > seat.until + EXAM_GRACE_MS) return json(res, 423, { error: 'examClosed', exam: seatStatus(exam, seat) });
+        if (!sebAllowed(req, exam, req.headers['x-leyonet-seb'])) return fail(res, 403, 'sebRequired');
         store('sessions', code, { ...item, project: body.project, updated: now });
         return json(res, 200, { code, expires: item.expires, exam: seatStatus(exam, seat), ...(writer ? { writer } : {}) });
       }
@@ -815,6 +829,7 @@ async function api(req, res, url) {
     const found = seatCode && findSeat(seatCode);
     if (!found) return fail(res, 404, 'unknownSeat');
     const { exam, seat } = found;
+    if (!sebAllowed(req, exam, body.sebKey)) return fail(res, 403, 'sebRequired');
     const status = seatStatus(exam, seat);
     if (status.state === 'waiting') return json(res, 200, { exam: status });
     // Weiterarbeiten: vorhandene Session des Platzes; sonst neue mit der Prüfungsdatei.
@@ -1071,6 +1086,7 @@ async function adminExams(req, res, parts, method) {
       learner,
       key,
       seats,
+      ...(body.seb === true ? { seb: { key: newSebKey() } } : {}),
     };
     saveExam(exam);
     return json(res, 201, examSummary(exam, true));
@@ -1084,6 +1100,15 @@ async function adminExams(req, res, parts, method) {
     remove(path.join(dirs.exams, `${exam.id}.json`));
     return json(res, 200, { ok: true });
   }
+  // Safe Exam Browser verlangen (neuer Schlüssel) oder nicht mehr verlangen.
+  if (parts[1] === 'seb' && parts.length === 2 && method === 'POST') {
+    const body = await readBody(req);
+    if (examState(exam, now) === 'ended') return fail(res, 409, 'examEnded');
+    if (body.on === false) delete exam.seb;
+    else exam.seb = { key: newSebKey() };
+    saveExam(exam);
+    return json(res, 200, examSummary(exam, true));
+  }
   if (parts[1] === 'start' && method === 'POST') {
     if (exam.started) return fail(res, 409, 'alreadyStarted');
     exam.started = now;
@@ -1094,6 +1119,8 @@ async function adminExams(req, res, parts, method) {
   if (parts[1] === 'end' && method === 'POST') {
     if (!exam.started) return fail(res, 409, 'notStarted');
     for (const s of exam.seats) s.until = Math.min(s.until, now);
+    // Der SEB-Schlüssel gilt nur, solange die Prüfung läuft.
+    if (exam.seb) exam.seb = { key: null };
     saveExam(exam);
     return json(res, 200, examSummary(exam, true));
   }

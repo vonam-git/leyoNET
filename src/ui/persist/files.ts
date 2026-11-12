@@ -1,6 +1,6 @@
-/** Bietet Text als Datei zum Herunterladen an, ohne Server. */
-export function downloadText(filename: string, text: string, type = 'application/json') {
-  const url = URL.createObjectURL(new Blob([text], { type }));
+/** Bietet Text (oder Bytes, z.B. eine .seb-Datei) als Datei zum Herunterladen an, ohne Server. */
+export function downloadText(filename: string, text: string | Uint8Array, type = 'application/json') {
+  const url = URL.createObjectURL(new Blob([text as BlobPart], { type }));
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;

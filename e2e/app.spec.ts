@@ -44,6 +44,18 @@ test('zeigt statt einer weissen Seite einen Hinweis, wenn Skripte blockiert sind
   await context.close();
 });
 
+test('die Seite selbst scrollt nie, die App füllt das Fenster (auch kleines Fenster, Rauszoomen)', async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 520 });
+  await page.evaluate(() => {
+    window.scrollTo(0, 600);
+    document.scrollingElement!.scrollTop = 600;
+  });
+  expect(await page.evaluate(() => document.scrollingElement!.scrollTop)).toBe(0);
+  const box = await page.locator('.app').boundingBox();
+  expect(box?.y).toBe(0);
+  expect(Math.round(box!.height)).toBe(520);
+});
+
 test('startet leer im Entwurf', async ({ page }) => {
   await expect(page.getByRole('radio', { name: 'Entwurf' })).toBeChecked();
   await expect(page.getByRole('application').getByRole('button')).toHaveCount(0);
@@ -192,4 +204,17 @@ test('Befehlssuche und Hilfe', async ({ page }) => {
   await page.keyboard.press('Escape');
   await page.keyboard.press('F1');
   await expect(page.getByRole('complementary', { name: 'Hilfe' })).toBeVisible();
+});
+
+test('Rack-Ansicht: Hostname als Etikett, Patchkabel zwischen den Einschüben, Kabel nach aussen als Hinweis', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('netzwerk-simulator.level', 'pro'));
+  await page.reload();
+  await openProject(page, example('rechenzentrum'));
+  await menu(page, 'Ansicht', /Rack/);
+  const rack = page.getByRole('dialog', { name: 'Rack-Ansicht' });
+  await expect(rack.locator('.tape').first()).toHaveText('Spine 1');
+  await expect(rack.locator('path.cable')).toHaveCount(6);
+  await expect(rack.getByRole('list', { name: 'Kabel zu Geräten ausserhalb des Racks' }).first()).toContainText('Web 1');
+  await rack.locator('[data-port="0"]').first().hover(); // Spine 1, Port 1 → Leaf 1
+  await expect(rack.locator('path.cable.hot')).toHaveCount(1);
 });
