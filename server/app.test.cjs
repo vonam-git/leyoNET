@@ -432,6 +432,9 @@ test('Klassen-Verbund: Plätze, Infrastruktur, Standorte nur bei Freigabe, Nachr
   const list = (await foreign('GET', `/api/classes/${klasse.code}/messages`)).data;
   assert.deepEqual(list.map((m) => [m.from, m.to, m.text]), [[3, 7, 'Hallo Genf']]);
   assert.equal((await foreign('GET', `/api/classes/${klasse.code}/messages?after=${list[0].id}`)).data.length, 0);
+  // An alle (-1) geht, unbekannte Ziele nicht.
+  assert.equal((await foreign('POST', `/api/classes/${klasse.code}/messages`, { session: a.code, to: -1, text: 'An alle' }, { 'X-Leyonet-Writer': a.writer })).status, 201);
+  assert.equal((await foreign('POST', `/api/classes/${klasse.code}/messages`, { session: a.code, to: -2, text: 'x' }, { 'X-Leyonet-Writer': a.writer })).status, 400);
   // Status vom Dashboard erscheint auf der Karte nur, wenn die Lehrperson sie zeigt.
   await call('POST', `/api/admin/classes/${klasse.code}/status`, { sites: { 3: { level: 'online', goals: 2, total: 4 }, 99: { level: 'x' } } }, token);
   assert.equal((await foreign('GET', `/api/classes/${klasse.code}/verbund`)).data.status, undefined);

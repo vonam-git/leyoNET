@@ -31,6 +31,7 @@ import {
   setInterfaceIpv6,
   setIpMode,
   setDefaultGateway,
+  setVerbund,
 } from '../core';
 import { t } from '../i18n';
 import { Start, generalSheet, goal, task, unwrap, type CatalogEntry } from './catalogKit';
@@ -978,6 +979,62 @@ const ENTRIES: CatalogEntry[] = [
         tasks: task('vpnSites', 4, [
           goal('vpnSites', 1, { type: 'ping', from: 'PC Zürich', to: 'PC Bern' }),
           goal('vpnSites', 2, { type: 'ping', from: 'PC Bern', to: 'PC Zürich' }),
+        ]),
+      };
+    },
+  },
+  // --- Klassen-Verbund: nur in einer Klasse mit freigegebenem Verbund (Webversion) ---
+  {
+    id: 'verbund-anschluss',
+    stars: 2,
+    verbund: true,
+    features: ['net.verbund', 'net.nat', 'routing.static'],
+    level: 3,
+    build() {
+      const s = new Start()
+        .add('pc', 'PC Standort', -360, 0)
+        .add('switch', 'Switch', -120, 0)
+        .router('Standort-Router', 140, 0, ['192.168.50.1/24'])
+        .link('PC Standort', 'Switch')
+        .link('Switch', 'Standort-Router')
+        .host('PC Standort', '192.168.50.10', '24', '192.168.50.1')
+        .area('Mein Standort', 'teal', -460, -110, 720, 220, '192.168.50.0/24');
+      return {
+        topology: s.topology,
+        tasks: task('verbundUplink', 2, [
+          goal('verbundUplink', 1, { type: 'verbundSite' }),
+          goal('verbundUplink', 2, { type: 'ping', from: 'PC Standort', to: '198.51.100.10' }),
+          goal('verbundUplink', 3, { type: 'http', from: 'PC Standort', url: 'http://198.51.100.10/' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'verbund-webserver',
+    stars: 3,
+    verbund: true,
+    features: ['net.verbund', 'net.nat', 'routing.static', 'service.web'],
+    level: 3,
+    build() {
+      const s = new Start()
+        .add('server', 'Webserver', -360, -60)
+        .add('pc', 'PC Standort', -360, 80)
+        .add('switch', 'Switch', -120, 0)
+        .router('Standort-Router', 140, 0, ['192.168.50.1/24'])
+        .link('Webserver', 'Switch')
+        .link('PC Standort', 'Switch')
+        .link('Switch', 'Standort-Router')
+        .host('Webserver', '192.168.50.80', '24', '192.168.50.1')
+        .host('PC Standort', '192.168.50.10', '24', '192.168.50.1')
+        .web('Webserver', t('catalog.verbundWeb.page'))
+        .apply((t, id) => unwrap(setVerbund(t, id('Standort-Router'), 1)))
+        .area('Mein Standort', 'teal', -460, -170, 720, 330, '192.168.50.0/24');
+      return {
+        topology: s.topology,
+        tasks: task('verbundWeb', 3, [
+          goal('verbundWeb', 1, { type: 'verbundSite' }),
+          goal('verbundWeb', 2, { type: 'verbundSite', level: 'services' }),
+          goal('verbundWeb', 3, { type: 'http', from: 'PC Standort', url: 'http://198.51.100.10/' }),
         ]),
       };
     },

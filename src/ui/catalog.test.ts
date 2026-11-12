@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { Simulation, evaluateTasks, parseProject, serializeProject, type PacketLogEntry, type Topology } from '../core';
+import { Simulation, evaluateTasks, federate, parseProject, serializeProject, type PacketLogEntry, type Topology } from '../core';
 import { setLocale } from '../i18n';
 import { CATALOG } from './catalog';
 import { ANSWERS, SOLUTIONS } from './catalogSolutions';
+import { verbundInfra } from './verbundTemplate';
 
 setLocale('de');
 
@@ -10,7 +11,9 @@ const byName = (t: Topology, name: string) => t.devices.find((d) => d.name === n
 const passed = (t: Topology, id: string, log: readonly PacketLogEntry[] = [], answers?: Record<string, string>) => {
   const entry = CATALOG.find((e) => e.id === id)!;
   const { tasks } = entry.build();
-  return evaluateTasks(t, answers ? { ...tasks, answers } : tasks, log);
+  // Verbund-Aufgaben laufen im zusammengesetzten Netz (Vorlage der Lehrperson, Platz 1).
+  const net = entry.verbund ? federate(verbundInfra(), [{ seat: 1, topology: t, own: true }]).topology : t;
+  return evaluateTasks(net, answers ? { ...tasks, answers } : tasks, log);
 };
 
 /** Mitschnitt im Labornetz M129: Ping in die DMZ, DHCP des Gast-Notebooks, Webseite per Name. */

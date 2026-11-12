@@ -15,6 +15,7 @@
 import { macFor } from './mac';
 import type { Cable, Device, DocArea, TagColor, Topology } from './types';
 import { portMedium } from './links';
+import { addStaticRoute, getDevice, setInterfaceAddress, setInterfaceNat, type Result } from './topology';
 
 export const VERBUND_MAX_SEAT = 62;
 export const VERBUND_NET = '203.0.113';
@@ -198,6 +199,25 @@ export function federate(infra: Topology, sites: readonly VerbundSite[]): Federa
 
 /** Geräte des eigenen Standorts aus einer zusammengesetzten Topologie (zum Speichern). */
 export const isForeignId = (id: string) => num(id) >= 100_000;
+/** Gerät der Klassen-Infrastruktur (im zusammengesetzten Netz). */
+export const isInfraId = (id: string) => num(id) >= 9_000_000;
+
+/**
+ * Adressen des Platzes am Anschluss eintragen: WAN-Adresse /30, Standardroute zum Provider
+ * (ersetzt eine bestehende) und bei Router/Firewall NAT am WAN-Anschluss.
+ */
+export function applyVerbundAddresses(t: Topology, id: string, seat: number): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device?.verbund) return { ok: false, error: { code: 'unknownDevice' } };
+  const a = verbundAddresses(seat);
+  const wan = device.verbund.iface;
+  let r = setInterfaceAddress(t, id, wan, a.site, '30');
+  if (!r.ok) return r;
+  const others = (getDevice(r.value, id)?.routes ?? []).filter((x) => !(x.network === '0.0.0.0' && x.mask === '0.0.0.0'));
+  r = addStaticRoute({ ...r.value, devices: r.value.devices.map((d) => (d.id === id ? { ...d, routes: others } : d)) }, id, { network: '0.0.0.0', mask: '0.0.0.0', gateway: a.provider });
+  if (r.ok && (device.type === 'router' || device.type === 'firewall')) r = setInterfaceNat(r.value, id, wan, true);
+  return r;
+}
 
 // --- Zustand der Standorte (Dashboard) ----------------------------------------------------
 

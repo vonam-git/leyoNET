@@ -8,6 +8,7 @@ import { cablesOf, otherEnd, vlanColor, vlanExists } from '../model/topology';
 import { linkStatus, mediumOf } from '../model/links';
 import { costOf } from '../model/costs';
 import { duplicateAddresses } from '../model/duplicates';
+import { isForeignId, isInfraId } from '../model/federation';
 import { MEDIA, type Device, type DeviceType, type Medium, type TagColor, type Topology } from '../model/types';
 import { formatIp, networkOf, parseIp, parseMask } from '../net/ipv4';
 import { protocolOf } from '../sim/protocol';
@@ -39,6 +40,8 @@ export type Check =
   | { type: 'noDuplicateIp' }
   /** Ping von `from` an `to`; beim Ziel kommt er mit dieser Absenderadresse an (NAT prüfen). */
   | { type: 'seenAs'; from: string; to: string; address: string }
+  /** Klassen-Verbund: Der eigene Standort ist von der Zentrale aus erreichbar (Ping), bei «services» auch seine Webseite. */
+  | { type: 'verbundSite'; level?: 'online' | 'services' }
   /** Modem hat seine Zugangsleitung aufgebaut. */
   | { type: 'modemOnline'; device: string }
   /** Alle (oder mindestens `min`) Rechner der Client-Gruppe haben eine Adresse. */
@@ -98,6 +101,7 @@ export const CHECK_TYPES = [
   'noDuplicateIp',
   'seenAs',
   'modemOnline',
+  'verbundSite',
   'groupLeases',
   'budget',
   'linkUp',
@@ -464,6 +468,23 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       const min = check.min ?? 1;
       return count >= min ? { id, passed: true } : fail(id, 'tooFewNeighbors', { name: device.name, count, min, protocol: check.protocol.toUpperCase() });
     }
+    case 'verbundSite': {
+      // Geprüft im zusammengesetzten Netz (Infrastruktur der Lehrperson plus eigener Standort).
+      const uplink = topology.devices.find((d) => d.verbund && !isForeignId(d.id));
+      const hub = topology.devices.find((d) => d.type === 'server' && isInfraId(d.id));
+      if (!uplink || !hub) return fail(id, 'noVerbund');
+      const address = uplink.interfaces[uplink.verbund!.iface]?.ip;
+      if (!address) return fail(id, 'noAddress', { name: uplink.name });
+      const sim = bootedSimulation(topology);
+      sim.ping(hub.id, address);
+      sim.runUntil(BOOT_MS + ACTION_MS);
+      if (!sim.getDeviceState(hub.id).console.some((l) => l.code === 'ping.reply')) return fail(id, 'verbundUnreachable', { address });
+      if (check.level !== 'services') return { id, passed: true };
+      sim.browse(hub.id, `http://${address}/`);
+      sim.runUntil(sim.now + ACTION_MS);
+      const browser = sim.getDeviceState(hub.id).browser;
+      return browser?.status === 'done' && browser.response?.status === 200 ? { id, passed: true } : fail(id, 'verbundNoWeb', { address });
+    }
     case 'noStorm': {
       const sim = bootedSimulation(topology);
       // Broadcasts auslösen: jedes Endgerät fragt per ARP nach einer unbekannten Adresse.
@@ -772,6 +793,10 @@ export function readTasks(value: unknown, invalid: (path: string) => never, read
           break;
         case 'modemOnline':
           check = { type, device: str(c.device, `${cp}.device`) };
+          break;
+        case 'verbundSite':
+          if (c.level !== undefined && c.level !== 'online' && c.level !== 'services') invalid(`${cp}.level`);
+          check = { type, ...(c.level ? { level: c.level as 'online' | 'services' } : {}) };
           break;
         case 'groupLeases': {
           const min = optNum(c.min, `${cp}.min`);

@@ -20,6 +20,8 @@ import {
   setRoutingMode,
   setInterfaceIpv6,
   setDsLite,
+  setVerbund,
+  applyVerbundAddresses,
   setAftr,
   setInterfaceShutdown,
   setStp,
@@ -188,6 +190,17 @@ export const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
   'cpe-home': (t) => {
     t = unwrap(setInterfaceAddress(t, byName(t, 'Internet-Box'), 0, '203.0.113.2', '30'));
     return unwrap(setDefaultGateway(t, byName(t, 'Internet-Box'), '203.0.113.1'));
+  },
+  // Verbund: Musterlösung für Platz 1 (Adressen hängen vom Platz ab).
+  'verbund-anschluss': (t) => {
+    const r = byName(t, 'Standort-Router');
+    t = unwrap(setVerbund(t, r, 1));
+    return unwrap(applyVerbundAddresses(t, r, 1));
+  },
+  'verbund-webserver': (t) => {
+    const r = byName(t, 'Standort-Router');
+    t = unwrap(applyVerbundAddresses(t, r, 1));
+    return unwrap(addPortForward(t, r, { protocol: 'tcp', port: 80, to: '192.168.50.80', toPort: 80 }));
   },
   'port-forward': (t) => unwrap(addPortForward(t, byName(t, 'Heimrouter'), { protocol: 'tcp', port: 8080, to: '192.168.1.20', toPort: 80 })),
   'snat-mail': (t) => unwrap(addStaticNat(t, byName(t, 'Firmenrouter'), { inside: '192.168.0.25', outside: '203.0.113.5', kind: 'snat' })),

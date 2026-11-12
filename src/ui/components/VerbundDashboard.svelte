@@ -188,7 +188,7 @@
       </div>
       <button onclick={() => void probe()} disabled={busy} title={t('verbund.dash.refreshHint')}>{busy ? '…' : '⟳'}</button>
       <button onclick={fullscreen} title={t('verbund.dash.fullscreen')}>⛶</button>
-      <button onclick={onclose} aria-label={t('dialog.close')}>✕</button>
+      <button onclick={onclose} aria-label={t('about.close')}>✕</button>
     </div>
   </header>
 
