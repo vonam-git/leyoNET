@@ -124,7 +124,8 @@ class VerbundStore {
       this.status = data.status ?? {};
       if (data.now) this.#since = data.now;
       const after = this.messages.at(-1)?.id ?? 0;
-      const fresh = await api<VerbundMessage[]>('GET', `classes/${encodeURIComponent(code)}/messages?after=${after}`);
+      // Zwei Abfragen können sich überholen: nur wirklich neue übernehmen.
+      const fresh = (await api<VerbundMessage[]>('GET', `classes/${encodeURIComponent(code)}/messages?after=${after}`)).filter((m) => m.id > (this.messages.at(-1)?.id ?? 0));
       if (fresh.length) {
         // Beim ersten Laden nicht melden, nur danach neu eingetroffene an mich oder an alle.
         const seat = session.site?.seat;

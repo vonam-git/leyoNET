@@ -4,6 +4,7 @@ import { addDevice, addPortForward, addStaticRoute, configureHost, connect, empt
 import type { Topology } from './types';
 import type { Result } from './topology';
 import { federate, probeSites, verbundAddresses } from './federation';
+import { evaluateGoal } from '../tasks/tasks';
 
 const u = <T>(r: Result<T>): T => {
   if (!r.ok) throw new Error(r.error.code);
@@ -123,5 +124,18 @@ describe('Klassen-Verbund: Zustand der Standorte prüfen', () => {
       [2, 'connected'],
       [3, 'online'],
     ]);
+  });
+});
+
+describe('Klassen-Verbund: Prüfbaustein «Standort im Verbund erreichbar»', () => {
+  const goal = { id: 'z', text: 'x', check: { type: 'verbundSite' as const } };
+  it('ohne Verbund nicht erfüllt, im Verbund mit Adressen erfüllt, Webseite nur mit Weiterleitung', () => {
+    const own = site(1, '192.168.1');
+    expect(evaluateGoal(own, goal)).toMatchObject({ passed: false });
+    const net = federate(infra(), [{ seat: 1, topology: own, own: true }]).topology;
+    expect(evaluateGoal(net, goal)).toMatchObject({ passed: true });
+    expect(evaluateGoal(net, { ...goal, check: { type: 'verbundSite', level: 'services' } })).toMatchObject({ passed: false });
+    const unconfigured = federate(infra(), [{ seat: 1, topology: site(1, '192.168.1', false), own: true }]).topology;
+    expect(evaluateGoal(unconfigured, goal)).toMatchObject({ passed: false });
   });
 });

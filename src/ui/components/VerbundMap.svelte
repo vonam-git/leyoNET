@@ -106,7 +106,7 @@
     <circle r="52" fill="url(#vb-hub)" filter="url(#vb-glow)" />
     <text class="hub-icon" y="-4">🌐</text>
     <text class="hub-name" y="22">{hubName}</text>
-    <text class="hub-count" y="82">{online} / {sites.length} online</text>
+    <text class="hub-count" y="-70">{t('verbund.map.count', { online, total: sites.length })}</text>
   </g>
 
   {#each dots as d (d.id)}

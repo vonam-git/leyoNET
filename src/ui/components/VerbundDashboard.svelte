@@ -95,10 +95,11 @@
           return { seat: m.site.seat, code: m.code, name: siteName(m.site.seat, m.site.label), level, goals, total, present: m.connected };
         })
         .sort((a, b) => a.seat - b.seat);
+      const first = previous.size === 0;
       for (const s of next) {
         const before = previous.get(s.seat);
         if (before !== undefined && before !== s.level) event(t(rank[s.level] > rank[before] ? 'verbund.dash.up' : 'verbund.dash.down', { name: s.name, level: t(`verbund.level.${s.level}`) }), rank[s.level] > rank[before] ? 'up' : 'down');
-        if (before === undefined && previous.size > 0) event(t('verbund.dash.joined', { name: s.name }), 'join');
+        if (before === undefined && !first) event(t('verbund.dash.joined', { name: s.name }), 'join');
         previous.set(s.seat, s.level);
       }
       sites = next;
@@ -112,10 +113,13 @@
     }
   }
 
+  let polling = false;
   async function pollMessages() {
+    if (polling) return;
+    polling = true;
     try {
       const after = messages.at(-1)?.id ?? 0;
-      const fresh = await api<VerbundMessage[]>('GET', `classes/${encodeURIComponent(classCode)}/messages?after=${after}`);
+      const fresh = (await api<VerbundMessage[]>('GET', `classes/${encodeURIComponent(classCode)}/messages?after=${after}`)).filter((m) => m.id > (messages.at(-1)?.id ?? 0));
       if (!fresh.length) return;
       messages = [...messages, ...fresh].slice(-100);
       for (const m of fresh) {
@@ -126,6 +130,8 @@
       }
     } catch {
       /* beim nächsten Mal */
+    } finally {
+      polling = false;
     }
   }
 
@@ -186,7 +192,7 @@
           <button class:active={view === v} aria-pressed={view === v} onclick={() => (view = v)}>{t(`verbund.dash.view.${v}`)}</button>
         {/each}
       </div>
-      <button onclick={() => void probe()} disabled={busy} title={t('verbund.dash.refreshHint')}>{busy ? '…' : '⟳'}</button>
+      <button onclick={() => void probe()} disabled={busy} title={t('verbund.dash.refreshHint')} aria-label={t('verbund.dash.refreshHint')}><span class:spin={busy}>⟳</span></button>
       <button onclick={fullscreen} title={t('verbund.dash.fullscreen')}>⛶</button>
       <button onclick={onclose} aria-label={t('about.close')}>✕</button>
     </div>
@@ -310,6 +316,33 @@
   }
   .seg {
     display: flex;
+  }
+  .spin {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  /* Nur Kacheln: gross für den Beamer. */
+  main.view-tiles .tiles {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  main.view-tiles .tile {
+    padding: 18px 20px;
+    gap: 6px;
+  }
+  main.view-tiles .tile-name {
+    font-size: 1.5rem;
+  }
+  main.view-tiles .tile-state {
+    font-size: 1.1rem;
+  }
+  main.view-tiles .tile-seat {
+    font-size: 1.6rem;
   }
   .seg button {
     border-radius: 0;
@@ -482,6 +515,9 @@
   @media (prefers-reduced-motion: reduce) {
     .tile {
       transition: none;
+    }
+    .spin {
+      animation: none;
     }
   }
 </style>
