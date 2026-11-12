@@ -21,7 +21,7 @@ describe('Website leyonet.ch', () => {
   });
 
   it.each(pages)('%s verlinkt nur bekannte Ziele', (page) => {
-    const allowed = /^(https:\/\/((app|beta)\.)?leyonet\.ch|https:\/\/github\.com\/vonam-git\/leyoNET|https:\/\/www\.gnu\.org\/licenses\/|https:\/\/www\.edoeb\.admin\.ch|https:\/\/www\.hetzner\.com\/|https:\/\/docs\.github\.com\/|mailto:)/;
+    const allowed = /^(https:\/\/((app|beta)\.)?leyonet\.ch|https:\/\/github\.com\/vonam-git\/leyoNET|https:\/\/www\.gnu\.org\/licenses\/|https:\/\/www\.edoeb\.admin\.ch|https:\/\/www\.hetzner\.com\/|https:\/\/docs\.github\.com\/|https:\/\/www\.patreon\.com\/cw\/vonam$|mailto:)/;
     for (const [, url] of read(page).matchAll(/<a[^>]+href="([^"]+)"/g)) if (external.test(url!)) expect(url, url).toMatch(allowed);
   });
 

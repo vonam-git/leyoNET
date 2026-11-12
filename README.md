@@ -188,6 +188,10 @@ Mark unterrichtet Netzwerktechnik und hat jahrelang mit Cisco Packet Tracer und 
 
 leyoNET ist eine eigenständige Neuentwicklung. Von FILIUS (Universität Siegen) und Cisco Packet Tracer stammt nur die Idee; Code, Grafiken und Texte anderer Programme werden nicht verwendet. Details zu allen Bestandteilen: [docs/herkunft.md](docs/herkunft.md).
 
+## Unterstützen
+
+leyoNET ist und bleibt kostenlos. Wer die Weiterentwicklung unterstützen möchte, kann das freiwillig über [Patreon](https://www.patreon.com/cw/vonam) tun.
+
 ## Lizenz
 
 © 2026 Mark v. A. und Mikael v. A. – leyoNET ist freie Software unter der [GNU Affero General Public License v3 oder neuer](LICENSE) (AGPL-3.0-or-later):
