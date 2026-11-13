@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BGP – leyoNET Wiki</title>
+  <meta name="description" content="Das Routing zwischen Providern und Organisationen: autonome Systeme, Nachbarn über TCP 179, angekündigte Netze und der AS-Pfad.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/bgp.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group">
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html">Router</a></li><li><a href="firewall.html">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html" aria-current="page">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#protokolle">Protokolle</a></p>
+      <h1>BGP</h1>
+      <p class="lead">Das Routing zwischen Providern und Organisationen: autonome Systeme, Nachbarn über TCP 179, angekündigte Netze und der AS-Pfad.</p>
+      <dl class="facts"><div><dt>Schicht</dt><dd>7 (über TCP 179)</dd></div><div><dt>Norm</dt><dd>RFC 4271, RFC 6793</dd></div><div><dt>Beispiel</dt><dd><a href="#beispiel">2 Demos</a></dd></div></dl>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#wozu">Wozu</a></li><li><a href="#ablauf">Ablauf</a></li><li><a href="#einrichten">Einrichten</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="wozu">Wozu</h2>
+<p>Im Internet betreibt jede Organisation (Provider, Hochschule, grosse Firma) ihr eigenes <strong>autonomes System</strong> (AS) mit einer AS-Nummer. Innerhalb nutzt sie OSPF oder Ähnliches. Zwischen den autonomen Systemen läuft <strong>BGP</strong>: Es kündigt an, welche Netze über welches AS erreichbar sind, und lässt jede Organisation nach eigenen Regeln entscheiden.</p>
+<h2 id="ablauf">Ablauf</h2>
+<ol><li>Zwei Router werden als <strong>Nachbarn</strong> konfiguriert und bauen eine TCP-Verbindung zu Port 179 auf.</li><li><strong>OPEN:</strong> Sie tauschen AS-Nummer, Router-ID und Hold Time aus.</li><li><strong>KEEPALIVE:</strong> hält die Verbindung am Leben.</li><li><strong>UPDATE:</strong> kündigt Netze an (oder zieht sie zurück), jeweils mit dem <strong>AS-Pfad</strong>: der Liste der autonomen Systeme, über die das Netz erreichbar ist.</li><li><strong>NOTIFICATION:</strong> meldet einen Fehler und beendet die Verbindung.</li></ol>
+<p>Bei mehreren Wegen gewinnt in leyoNET der kürzeste AS-Pfad. Findet ein Router seine eigene AS-Nummer im Pfad, verwirft er die Route: so entstehen keine Schleifen. Zwischen verschiedenen AS heisst die Verbindung <strong>eBGP</strong>, innerhalb <strong>iBGP</strong>.</p>
+<h2 id="einrichten">Einrichten</h2>
+<pre class="code"><code>Router(config)# router bgp 65001
+Router(config-router)# neighbor 172.16.12.2 remote-as 65002
+Router(config-router)# network 10.1.0.0/16
+Router# show ip bgp summary
+Router# show ip bgp</code></pre>
+<p>AS-Nummern von 64512 bis 65534 sind für private Zwecke reserviert, wie private IP-Adressen. Im Rechenzentrum dient BGP auch als Underlay für Leaf-Spine (<a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a>).</p>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
+<p class="muted">Derselbe Text wie in der Hilfe der App (Taste F1).</p>
+<div class="help-block"><h3>BGP</h3>
+<p>BGP verbindet <strong>autonome Systeme</strong> (AS), z.B. Provider und Firmen. Nachbarn werden von Hand eingetragen und sprechen über TCP Port 179: <strong>OPEN</strong>, <strong>KEEPALIVE</strong>, dann <strong>UPDATE</strong> mit den angekündigten Netzen und dem AS-Pfad.</p>
+<ul><li><strong>eBGP</strong> zwischen verschiedenen AS, <strong>iBGP</strong> innerhalb eines AS</li><li>Der kürzeste AS-Pfad gewinnt</li></ul>
+<p>CLI: <code>router bgp 65001</code>, <code>neighbor 10.0.0.2 remote-as 65002</code>, <code>show ip bgp summary</code>.</p></div></section>
+<section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
+<ul class="cards"><li class="card"><strong>BGP zwischen autonomen Systemen</strong><p>Drei Provider (AS 65001–65003) tauschen ihre Netze aus.</p><p class="muted">BGP-Sitzungen über TCP 179, OPEN und UPDATE mit wachsendem AS-Pfad, danach Ping über alle drei Systeme.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=bgp">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/bgp.json">Projektdatei</a></p></li><li class="card"><strong>Rechenzentrum: Leaf-Spine mit BGP und VXLAN</strong><p>Ein Rechenzentrum wie bei grossen Anbietern: zwei Spines, drei Leafs, jeder Leaf an beiden Spines. Das Underlay routet mit eBGP (jeder Leaf ein eigenes AS), das Overlay verlängert VLAN 10 (Web) und VLAN 20 (Datenbank) per VXLAN über alle Leafs.</p><p class="muted">Erst bauen die Switches ihre BGP-Sitzungen auf und lernen die Loopbacks. Dann pingt Web 1 den Server Web 2 und DB 1 den Server DB 2 – beide Male im selben Subnetz, aber über zwei Router-Sprünge. Filter «vxlan» oder «bgp».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=datacenter">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/rechenzentrum.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="5 von 5 Sternen">★★★★★</span> <strong>Zwei autonome Systeme mit BGP</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_bgp-two-as.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="5 von 5 Sternen">★★★★★</span> <strong>Rechenzentrum: Leaf-Spine mit BGP und VXLAN</strong> <span class="muted">· 5 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_datacenter.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
+<section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
+<div class="table-wrap"><table><thead><tr><th>Protokoll</th><th>Schicht</th><th>Vereinfachung in der Simulation</th></tr></thead><tbody><tr><td>BGP-4</td><td>7</td><td>Binär über TCP 179: OPEN, KEEPALIVE, UPDATE, NOTIFICATION; Pfadwahl nach AS-Pfad-Länge; keine Policies</td></tr></tbody></table></div></section>
+<section aria-labelledby="normen"><h2 id="normen">Normen</h2>
+<ul class="norms"><li><a href="https://www.rfc-editor.org/rfc/rfc4271">RFC 4271</a> – A Border Gateway Protocol 4 (BGP-4)</li><li><a href="https://www.rfc-editor.org/rfc/rfc6793">RFC 6793</a> – BGP Support for Four-Octet Autonomous System (AS) Number Space</li></ul></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="ospf.html">OSPF</a> <span class="muted">Link-State-Routing: Nachbarn per Hello, Datenbank aller Verbindungen, kürzeste Wege nach Dijkstra – für IPv4 (OSPFv2) und IPv6 (OSPFv3).</span></li><li><a href="provider.html">Internet (Provider)</a> <span class="muted">Steht für den Provider und den Rest des Internets: öffentliche Adressen, Routing zwischen Kunden, DNS, CGNAT und DS-Lite.</span></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a> <span class="muted">Warum grosse Netze in Schichten gebaut werden, wann ein Collapsed Core genügt und wie ein Rechenzentrum mit Leaf-Spine aussieht.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="rip.html"><span class="muted">Zurück</span>RIP und RIPng</a>
+        <a class="next" href="vrf.html"><span class="muted">Weiter</span>VRF</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/protokolle/bgp.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IPv6 – leyoNET Wiki</title>
+  <meta name="description" content="128-Bit-Adressen, Präfixe, Link-Local, Neighbor Discovery statt ARP und automatische Adressen mit SLAAC.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/ipv6.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group">
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html">Router</a></li><li><a href="firewall.html">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html" aria-current="page">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#protokolle">Protokolle</a></p>
+      <h1>IPv6</h1>
+      <p class="lead">128-Bit-Adressen, Präfixe, Link-Local, Neighbor Discovery statt ARP und automatische Adressen mit SLAAC.</p>
+      <dl class="facts"><div><dt>Schicht</dt><dd>3 (Vermittlung)</dd></div><div><dt>Norm</dt><dd>RFC 8200, RFC 4291, RFC 5952 …</dd></div><div><dt>Beispiel</dt><dd><a href="#beispiel">2 Demos</a></dd></div></dl>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#adressen">Adressen</a></li><li><a href="#neighbor-discovery">Neighbor Discovery</a></li><li><a href="#slaac">SLAAC</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="adressen">Adressen</h2>
+<p>Eine IPv6-Adresse hat 128 Bit, geschrieben als acht Gruppen zu vier Hexadezimalziffern. Führende Nullen fallen weg, eine Folge von Nullgruppen darf einmal durch <code>::</code> ersetzt werden: <code>2001:db8:1:0:0:0:0:10</code> wird <code>2001:db8:1::10</code>.</p>
+<div class="table-wrap"><table><thead><tr><th>Art</th><th>Beispiel</th><th>Zweck</th></tr></thead><tbody><tr><td>Global</td><td><code>2001:db8:1::10/64</code></td><td>weltweit routbar (2001:db8::/32 nur für Beispiele)</td></tr><tr><td>Link-Local</td><td><code>fe80::…</code></td><td>entsteht automatisch, nur im eigenen Netz, z.B. für Router-Nachbarn</td></tr><tr><td>Unique Local</td><td><code>fd00::/8</code></td><td>privat, wie RFC-1918-Adressen bei IPv4</td></tr><tr><td>Multicast</td><td><code>ff02::1</code> (alle), <code>ff02::2</code> (alle Router)</td><td>statt Broadcast</td></tr></tbody></table></div>
+<p>Ein Netz hat in der Regel ein <strong>/64-Präfix</strong>: 64 Bit Netz, 64 Bit für das Gerät.</p>
+<h2 id="neighbor-discovery">Neighbor Discovery</h2>
+<p>IPv6 kennt kein ARP und keinen Broadcast. Stattdessen nutzt es ICMPv6:</p>
+<ul><li><strong>Neighbor Solicitation / Advertisement:</strong> «Wer hat diese Adresse?» an eine Multicast-Adresse, Antwort mit der MAC.</li><li><strong>Router Solicitation / Advertisement:</strong> Router kündigen ihr Präfix, ihr Gateway und Optionen an (z.B. DNS-Server).</li></ul>
+<h2 id="slaac">SLAAC</h2>
+<p>Mit <strong>SLAAC</strong> bildet ein Gerät seine Adresse selbst: Präfix aus dem Router Advertisement, dazu ein Gerätanteil aus der MAC (EUI-64). Ein DHCP-Server ist nicht nötig. Mit gesetztem M-Flag holen sich die Geräte die Adresse stattdessen per <a href="dhcpv6.html">DHCPv6</a>.</p>
+<h2 id="in-leyonet">In leyoNET</h2>
+<p>Oben in der Werkzeugleiste wird die IP-Version des Projekts gewählt: nur IPv4, beides (Dual Stack) oder nur IPv6. Router bekommen je Anschluss ein /64, Endgeräte «automatisch» oder eine feste Adresse.</p>
+<pre class="code"><code>C:\&gt; ipconfig
+C:\&gt; ping 2001:db8:2::20
+C:\&gt; netsh interface ipv6 show neighbors</code></pre>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
+<p class="muted">Derselbe Text wie in der Hilfe der App (Taste F1).</p>
+<div class="help-block"><h3>IPv6</h3>
+<p>IPv6-Adressen sind 128 Bit lang und werden in acht Blöcken zu vier Hex-Ziffern geschrieben, z.B. <strong>2001:db8:1::10/64</strong>. Führende Nullen fallen weg, eine Folge von Null-Blöcken wird zu <strong>::</strong> (RFC 5952). Für Beispiele ist <strong>2001:db8::/32</strong> reserviert, private Netze nutzen <strong>fd00::/8</strong>.</p>
+<p><strong>IP-Version des Projekts</strong> (oben in der Werkzeugleiste): <strong>IPv4</strong> (wie bisher), <strong>v4 + v6</strong> (Dual Stack, beide gleichzeitig) oder <strong>IPv6</strong> (IPv4 ausgeschaltet).</p>
+<ul><li><strong>Link-Local:</strong> Jede IPv6-Schnittstelle hat automatisch eine Adresse <strong>fe80::…</strong>, gebildet aus der MAC (EUI-64). Sie gilt nur auf der eigenen Leitung.</li><li><strong>Neighbor Discovery statt ARP:</strong> Wer die MAC zu einer Adresse sucht, schickt eine <strong>Neighbor Solicitation</strong> an eine Multicast-Gruppe; der Besitzer antwortet mit einem <strong>Neighbor Advertisement</strong>. Vor dem Benutzen prüft jedes Gerät, ob seine Adresse frei ist (<strong>DAD</strong>). Die Nachbarn zeigt <code>netsh interface ipv6 show neighbors</code>.</li><li><strong>SLAAC:</strong> Router schicken <strong>Router Advertisements</strong> mit ihrem Präfix (/64). Endgeräte mit «IPv6 automatisch» bilden daraus selbst eine Adresse und nehmen den Router als Standardgateway.</li><li><strong>DHCPv6:</strong> Ist beim Router-Anschluss «Adressen per DHCPv6» gesetzt, steht im Router Advertisement das M-Flag, und die Endgeräte holen ihre Adresse per Solicit – Advertise – Request – Reply.</li><li><strong>Layer-3-Switch:</strong> Jedes VLAN-Interface (SVI) bekommt eine IPv6-Adresse und kündigt sein Präfix im VLAN an (auch über Trunks). Der Switch routet zwischen den VLANs; mit «no ip routing» nicht.</li><li><strong>Routing:</strong> direkt verbundene Präfixe, statische Routen (Reiter Routing → IPv6-Routen) oder <a href="routing-grundlagen.html">Automatisches Routing</a>.</li><li><strong>Ping und Tracert</strong> funktionieren mit IPv6-Adressen, <code>ipconfig</code> zeigt alle Adressen.</li><li><strong>DNS über IPv6:</strong> Beim Router-Anschluss lässt sich ein <strong>DNS-Server</strong> eintragen. Er steht im Router Advertisement (Option RDNSS, RFC 8106) und in der DHCPv6-Antwort; Endgeräte mit fester Adresse tragen ihn selbst ein. Einträge vom Typ <strong>AAAA</strong> liefern IPv6-Adressen.</li><li><strong>Anwendungen:</strong> Ping, Tracert, Browser, E-Mail und SSH funktionieren über IPv6, mit Adresse oder Namen. Im Dual Stack nimmt ein Gerät mit globaler IPv6-Adresse zuerst den AAAA-Eintrag, sonst den A-Eintrag. In URLs steht eine IPv6-Adresse in eckigen Klammern: <code>http://[2001:db8:1::80]/</code>.</li></ul>
+<p>Dynamisches Routing für IPv6: <a href="ospf.html">OSPFv3 (IPv6)</a> und <a href="rip.html">RIPng (IPv6)</a>.</p>
+<p>Vereinfacht: kein MLD, keine Erweiterungs-Header, keine Privacy-Adressen, kein NAT für IPv6.</p></div></section>
+<section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
+<ul class="cards"><li class="card"><strong>IPv6: SLAAC, DHCPv6 und Neighbor Discovery</strong><p>Ein Router mit zwei IPv6-Netzen. Links bilden die PCs ihre Adresse selbst (SLAAC), rechts holt das Notebook sie per DHCPv6.</p><p class="muted">Router Advertisements, Duplicate Address Detection, dann ein Ping mit Neighbor Solicitation statt ARP. Filter «ndp» zeigt Neighbor Discovery.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ipv6">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ipv6-slaac.json">Projektdatei</a></p></li><li class="card"><strong>Web, Mail und SSH über IPv6</strong><p>Ein reines IPv6-Netz: Der PC erhält Adresse und DNS-Server vom Router (SLAAC und RDNSS), der Schul-DNS kennt AAAA-Einträge, Web- und Mailserver stehen im zweiten Netz.</p><p class="muted">PC 1 löst www.schule.example per AAAA auf, lädt die Seite über TCP und IPv6 und schickt eine Mail per SMTP. Filter «ipv6 and tcp» zeigt den Verkehr der Anwendungen.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ipv6Services">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ipv6-dienste.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>IPv6 einrichten</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_ipv6-router.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
+<section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
+<div class="table-wrap"><table><thead><tr><th>Protokoll</th><th>Schicht</th><th>Vereinfachung in der Simulation</th></tr></thead><tbody><tr><td>IPv6</td><td>3</td><td>Keine Erweiterungs-Header, keine Fragmentierung, keine Flow Labels; Link-Local per EUI-64 (RFC 4291), über Ethernet mit Multicast-MAC 33:33:… (RFC 2464)</td></tr><tr><td>ICMPv6, Neighbor Discovery</td><td>3</td><td>Echo, Destination Unreachable, Time Exceeded; Neighbor und Router Solicitation/Advertisement statt ARP; kein MLD (Multicast-Gruppen ohne Anmeldung), kein Redirect; Router Advertisements alle 30 s</td></tr><tr><td>SLAAC</td><td>3</td><td>Adresse aus Präfix (/64) und EUI-64; Duplicate Address Detection optimistisch (Adresse sofort nutzbar, Konflikt wird gemeldet); keine Privacy-Adressen</td></tr></tbody></table></div></section>
+<section aria-labelledby="normen"><h2 id="normen">Normen</h2>
+<ul class="norms"><li><a href="https://www.rfc-editor.org/rfc/rfc8200">RFC 8200</a> – Internet Protocol, Version 6 (IPv6) Specification</li><li><a href="https://www.rfc-editor.org/rfc/rfc4291">RFC 4291</a> – IP Version 6 Addressing Architecture</li><li><a href="https://www.rfc-editor.org/rfc/rfc5952">RFC 5952</a> – A Recommendation for IPv6 Address Text Representation</li><li><a href="https://www.rfc-editor.org/rfc/rfc4861">RFC 4861</a> – Neighbor Discovery for IP version 6 (IPv6)</li><li><a href="https://www.rfc-editor.org/rfc/rfc4862">RFC 4862</a> – IPv6 Stateless Address Autoconfiguration</li><li><a href="https://www.rfc-editor.org/rfc/rfc3849">RFC 3849</a> – IPv6 Address Prefix Reserved for Documentation</li></ul></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="dhcpv6.html">DHCPv6</a> <span class="muted">Adressen für IPv6 vom Server: Solicit, Advertise, Request, Reply – wann man DHCPv6 statt SLAAC nimmt.</span></li><li><a href="ds-lite.html">DS-Lite</a> <span class="muted">IPv4 durch ein reines IPv6-Netz des Providers: die Internet-Box tunnelt, der AFTR übersetzt per CGNAT.</span></li><li><a href="ipv4.html">IPv4</a> <span class="muted">Adressen, Masken und der IPv4-Kopf: wie ein Paket sein Ziel über viele Netze hinweg findet, mit TTL, Prüfsumme und privaten Adressen.</span></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a> <span class="muted">Echo Request und Reply, «Ziel nicht erreichbar» und «TTL abgelaufen»: wie Ping und Traceroute funktionieren.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="icmp.html"><span class="muted">Zurück</span>ICMP, Ping und Traceroute</a>
+        <a class="next" href="dhcp.html"><span class="muted">Weiter</span>DHCP</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/protokolle/ipv6.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,2384 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "title": "Rechenzentren-Verbund",
+    "devices": [
+      {
+        "id": "d1",
+        "type": "internet",
+        "name": "Provider",
+        "position": {
+          "x": -100,
+          "y": -720
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "ip": "203.0.113.5",
+            "mask": "255.255.255.252",
+            "color": "red",
+            "description": "Kunde RZ Zürich"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:01:01",
+            "ip": "203.0.113.9",
+            "mask": "255.255.255.252",
+            "color": "red",
+            "description": "Kunde RZ Bern"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:01:02",
+            "ip": "203.0.113.13",
+            "mask": "255.255.255.252",
+            "color": "red",
+            "description": "Kunde RZ Basel"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:01:03"
+          }
+        ]
+      },
+      {
+        "id": "d2",
+        "type": "modem",
+        "name": "Modem ZH",
+        "position": {
+          "x": -1490,
+          "y": -59
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "color": "red",
+            "description": "LAN Edge ZH"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:02:01",
+            "color": "red",
+            "description": "Zugang Zürich"
+          }
+        ],
+        "modem": {
+          "kind": "fiber"
+        },
+        "rack": "a25"
+      },
+      {
+        "id": "d3",
+        "type": "router",
+        "name": "Edge ZH",
+        "position": {
+          "x": -1490,
+          "y": 15
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ip": "10.1.255.1",
+            "mask": "255.255.255.252",
+            "color": "yellow",
+            "description": "Transit Core ZH"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:03:01",
+            "ip": "203.0.113.6",
+            "mask": "255.255.255.252",
+            "nat": true,
+            "color": "red",
+            "description": "WAN über Modem ZH"
+          }
+        ],
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "203.0.113.5"
+          },
+          {
+            "network": "10.1.0.0",
+            "mask": "255.255.0.0",
+            "gateway": "10.1.255.2"
+          }
+        ],
+        "vpn": [
+          {
+            "name": "Zürich – Bern",
+            "peer": "203.0.113.10",
+            "local": "10.1.0.0/16",
+            "remote": "10.2.0.0/16",
+            "key": "Schaufenster-RZ-2026"
+          },
+          {
+            "name": "Zürich – Basel",
+            "peer": "203.0.113.14",
+            "local": "10.1.0.0/16",
+            "remote": "10.3.0.0/16",
+            "key": "Schaufenster-RZ-2026"
+          }
+        ],
+        "rack": "a25"
+      },
+      {
+        "id": "d4",
+        "type": "l3switch",
+        "name": "Core ZH",
+        "position": {
+          "x": -1490,
+          "y": 89
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "color": "yellow",
+            "description": "Transit Edge ZH (VLAN 900)",
+            "vlan": 900
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:04:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:04:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:04:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:04:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:04:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:04:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:04:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:04:08",
+            "sfpSlot": true,
+            "sfp": "10G-SR",
+            "color": "teal",
+            "description": "Trunk Dist 1 ZH",
+            "trunk": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:04:09",
+            "sfpSlot": true,
+            "sfp": "10G-SR",
+            "color": "teal",
+            "description": "Trunk Dist 2 ZH",
+            "trunk": true
+          },
+          {
+            "index": 10,
+            "mac": "02:00:00:00:04:0A",
+            "sfpSlot": true
+          },
+          {
+            "index": 11,
+            "mac": "02:00:00:00:04:0B",
+            "sfpSlot": true
+          }
+        ],
+        "vlanDb": [
+          10,
+          20,
+          30,
+          99,
+          900
+        ],
+        "vlanNames": [
+          {
+            "vlan": 10,
+            "name": "SERVER"
+          },
+          {
+            "vlan": 20,
+            "name": "STORAGE"
+          },
+          {
+            "vlan": 30,
+            "name": "BACKUP"
+          },
+          {
+            "vlan": 99,
+            "name": "MGMT"
+          },
+          {
+            "vlan": 900,
+            "name": "TRANSIT"
+          }
+        ],
+        "svis": [
+          {
+            "vlan": 10,
+            "ip": "10.1.10.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "vlan": 20,
+            "ip": "10.1.20.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "vlan": 30,
+            "ip": "10.1.30.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "vlan": 99,
+            "ip": "10.1.99.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "vlan": 900,
+            "ip": "10.1.255.2",
+            "mask": "255.255.255.252"
+          }
+        ],
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "10.1.255.1"
+          }
+        ],
+        "rack": "a25"
+      },
+      {
+        "id": "d7",
+        "type": "switch",
+        "name": "Dist 1 ZH",
+        "position": {
+          "x": -1190,
+          "y": -59
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:07:00",
+            "color": "teal",
+            "description": "Trunk Access A ZH",
+            "trunk": true
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:07:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:07:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:07:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:07:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:07:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:07:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:07:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:07:08",
+            "sfpSlot": true,
+            "sfp": "10G-SR",
+            "color": "teal",
+            "description": "Uplink Core ZH",
+            "trunk": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:07:09",
+            "sfpSlot": true
+          }
+        ],
+        "vlanDb": [
+          10,
+          20,
+          30,
+          99,
+          900
+        ],
+        "vlanNames": [
+          {
+            "vlan": 10,
+            "name": "SERVER"
+          },
+          {
+            "vlan": 20,
+            "name": "STORAGE"
+          },
+          {
+            "vlan": 30,
+            "name": "BACKUP"
+          },
+          {
+            "vlan": 99,
+            "name": "MGMT"
+          },
+          {
+            "vlan": 900,
+            "name": "TRANSIT"
+          }
+        ],
+        "rack": "a26"
+      },
+      {
+        "id": "d9",
+        "type": "switch",
+        "name": "Dist 2 ZH",
+        "position": {
+          "x": -1190,
+          "y": 15
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:09:00",
+            "color": "teal",
+            "description": "Trunk Access B ZH",
+            "trunk": true
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:09:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:09:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:09:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:09:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:09:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:09:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:09:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:09:08",
+            "sfpSlot": true,
+            "sfp": "10G-SR",
+            "color": "teal",
+            "description": "Uplink Core ZH",
+            "trunk": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:09:09",
+            "sfpSlot": true
+          }
+        ],
+        "vlanDb": [
+          10,
+          20,
+          30,
+          99,
+          900
+        ],
+        "vlanNames": [
+          {
+            "vlan": 10,
+            "name": "SERVER"
+          },
+          {
+            "vlan": 20,
+            "name": "STORAGE"
+          },
+          {
+            "vlan": 30,
+            "name": "BACKUP"
+          },
+          {
+            "vlan": 99,
+            "name": "MGMT"
+          },
+          {
+            "vlan": 900,
+            "name": "TRANSIT"
+          }
+        ],
+        "rack": "a26"
+      },
+      {
+        "id": "d11",
+        "type": "switch",
+        "name": "Access A ZH",
+        "position": {
+          "x": -890,
+          "y": -59
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:0B:00",
+            "color": "teal",
+            "description": "Uplink Dist 1 ZH",
+            "trunk": true
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:0B:01",
+            "color": "blue",
+            "description": "Web ZH (VLAN 10)",
+            "vlan": 10
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:0B:02",
+            "color": "blue",
+            "description": "DNS ZH (VLAN 10)",
+            "vlan": 10
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:0B:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:0B:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:0B:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:0B:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:0B:07"
+          }
+        ],
+        "vlanDb": [
+          10,
+          20,
+          30,
+          99,
+          900
+        ],
+        "vlanNames": [
+          {
+            "vlan": 10,
+            "name": "SERVER"
+          },
+          {
+            "vlan": 20,
+            "name": "STORAGE"
+          },
+          {
+            "vlan": 30,
+            "name": "BACKUP"
+          },
+          {
+            "vlan": 99,
+            "name": "MGMT"
+          },
+          {
+            "vlan": 900,
+            "name": "TRANSIT"
+          }
+        ],
+        "rack": "a27"
+      },
+      {
+        "id": "d13",
+        "type": "server",
+        "name": "Web ZH",
+        "position": {
+          "x": -890,
+          "y": 15
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:0D:00",
+            "ip": "10.1.10.20",
+            "mask": "255.255.255.0",
+            "color": "blue",
+            "description": "Uplink Access A ZH"
+          }
+        ],
+        "variant": "rack",
+        "gateway": "10.1.10.1",
+        "dns": "10.1.10.53",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Rechenzentrum Zürich</h1><p>Diese Seite liegt im VLAN 10 (SERVER) des Rechenzentrums Zürich, Netz 10.1.10.0/24.</p><p>Erreicht über den IPsec-Tunnel zwischen den Standorten.</p>"
+            }
+          ]
+        },
+        "rack": "a27"
+      },
+      {
+        "id": "d15",
+        "type": "server",
+        "name": "DNS ZH",
+        "position": {
+          "x": -890,
+          "y": 89
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:0F:00",
+            "ip": "10.1.10.53",
+            "mask": "255.255.255.0",
+            "color": "blue",
+            "description": "Uplink Access A ZH"
+          }
+        ],
+        "variant": "rack",
+        "gateway": "10.1.10.1",
+        "dns": "10.1.10.53",
+        "rack": "a27",
+        "dnsServer": {
+          "records": [
+            {
+              "name": "web.zuerich.rz.example",
+              "type": "A",
+              "value": "10.1.10.20",
+              "ttl": 3600
+            },
+            {
+              "name": "monitoring.zuerich.rz.example",
+              "type": "A",
+              "value": "10.1.99.10",
+              "ttl": 3600
+            },
+            {
+              "name": "web.bern.rz.example",
+              "type": "A",
+              "value": "10.2.10.20",
+              "ttl": 3600
+            },
+            {
+              "name": "app.bern.rz.example",
+              "type": "A",
+              "value": "10.2.10.30",
+              "ttl": 3600
+            },
+            {
+              "name": "web.basel.rz.example",
+              "type": "A",
+              "value": "10.3.10.20",
+              "ttl": 3600
+            }
+          ]
+        }
+      },
+      {
+        "id": "d17",
+        "type": "switch",
+        "name": "Access B ZH",
+        "position": {
+          "x": -590,
+          "y": -59
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:11:00",
+            "color": "teal",
+            "description": "Uplink Dist 2 ZH",
+            "trunk": true
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:11:01",
+            "color": "purple",
+            "description": "NAS ZH (VLAN 20)",
+            "vlan": 20
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:11:02",
+            "color": "orange",
+            "description": "Backup ZH (VLAN 30)",
+            "vlan": 30
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:11:03",
+            "color": "gray",
+            "description": "Monitoring ZH (VLAN 99)",
+            "vlan": 99
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:11:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:11:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:11:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:11:07"
+          }
+        ],
+        "vlanDb": [
+          10,
+          20,
+          30,
+          99,
+          900
+        ],
+        "vlanNames": [
+          {
+            "vlan": 10,
+            "name": "SERVER"
+          },
+          {
+            "vlan": 20,
+            "name": "STORAGE"
+          },
+          {
+            "vlan": 30,
+            "name": "BACKUP"
+          },
+          {
+            "vlan": 99,
+            "name": "MGMT"
+          },
+          {
+            "vlan": 900,
+            "name": "TRANSIT"
+          }
+        ],
+        "rack": "a28"
+      },
+      {
+        "id": "d19",
+        "type": "server",
+        "name": "NAS ZH",
+        "position": {
+          "x": -590,
+          "y": 15
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:13:00",
+            "ip": "10.1.20.10",
+            "mask": "255.255.255.0",
+            "color": "purple",
+            "description": "Uplink Access B ZH"
+          }
+        ],
+        "variant": "rack",
+        "gateway": "10.1.20.1",
+        "dns": "10.1.10.53",
+        "rack": "a28"
+      },
+      {
+        "id": "d21",
+        "type": "server",
+        "name": "Backup ZH",
+        "position": {
+          "x": -590,
+          "y": 89
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:15:00",
+            "ip": "10.1.30.10",
+            "mask": "255.255.255.0",
+            "color": "orange",
+            "description": "Uplink Access B ZH"
+          }
+        ],
+        "variant": "rack",
+        "gateway": "10.1.30.1",
+        "dns": "10.1.10.53",
+        "rack": "a28"
+      },
+      {
+        "id": "d23",
+        "type": "server",
+        "name": "Monitoring ZH",
+        "position": {
+          "x": -590,
+          "y": 163
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:17:00",
+            "ip": "10.1.99.10",
+            "mask": "255.255.255.0",
+            "color": "gray",
+            "description": "Uplink Access B ZH"
+          }
+        ],
+        "variant": "rack",
+        "gateway": "10.1.99.1",
+        "dns": "10.1.10.53",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Monitoring Zürich</h1><p>Alle drei Rechenzentren erreichbar: Zürich, Bern und Basel sind über IPsec-Tunnel verbunden.</p><ul><li>RZ Zürich: Glasfaser</li><li>RZ Bern: Kabel (DOCSIS)</li><li>RZ Basel: VDSL</li></ul>"
+            }
+          ]
+        },
+        "rack": "a28"
+      },
+      {
+        "id": "d32",
+        "type": "modem",
+        "name": "Modem BE",
+        "position": {
+          "x": -110,
+          "y": -59
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:20:00",
+            "color": "red",
+            "description": "LAN Edge BE"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:20:01",
+            "color": "red",
+            "description": "Zugang Bern"
+          }
+        ],
+        "modem": {
+          "kind": "cable"
+        },
+        "rack": "a53"
+      },
+      {
+        "id": "d33",
+        "type": "router",
+        "name": "Edge BE",
+        "position": {
+          "x": -110,
+          "y": 15
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:21:00",
+            "ip": "10.2.255.1",
+            "mask": "255.255.255.252",
+            "color": "yellow",
+            "description": "Transit Core BE"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:21:01",
+            "ip": "203.0.113.10",
+            "mask": "255.255.255.252",
+            "nat": true,
+            "color": "red",
+            "description": "WAN über Modem BE"
+          }
+        ],
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "203.0.113.9"
+          },
+          {
+            "network": "10.2.0.0",
+            "mask": "255.255.0.0",
+            "gateway": "10.2.255.2"
+          }
+        ],
+        "vpn": [
+          {
+            "name": "Bern – Zürich",
+            "peer": "203.0.113.6",
+            "local": "10.2.0.0/16",
+            "remote": "10.1.0.0/16",
+            "key": "Schaufenster-RZ-2026"
+          },
+          {
+            "name": "Bern – Basel",
+            "peer": "203.0.113.14",
+            "local": "10.2.0.0/16",
+            "remote": "10.3.0.0/16",
+            "key": "Schaufenster-RZ-2026"
+          }
+        ],
+        "rack": "a53"
+      },
+      {
+        "id": "d34",
+        "type": "l3switch",
+        "name": "Core BE",
+        "position": {
+          "x": -110,
+          "y": 89
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:22:00",
+            "color": "yellow",
+            "description": "Transit Edge BE (VLAN 900)",
+            "vlan": 900
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:22:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:22:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:22:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:22:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:22:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:22:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:22:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:22:08",
+            "sfpSlot": true,
+            "sfp": "10G-SR",
+            "color": "teal",
+            "description": "Trunk Dist 1 BE",
+            "trunk": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:22:09",
+            "sfpSlot": true,
+            "sfp": "10G-SR",
+            "color": "teal",
+            "description": "Trunk Dist 2 BE",
+            "trunk": true
+          },
+          {
+            "index": 10,
+            "mac": "02:00:00:00:22:0A",
+            "sfpSlot": true
+          },
+          {
+            "index": 11,
+            "mac": "02:00:00:00:22:0B",
+            "sfpSlot": true
+          }
+        ],
+        "vlanDb": [
+          10,
+          20,
+          30,
+          99,
+          900
+        ],
+        "vlanNames": [
+          {
+            "vlan": 10,
+            "name": "SERVER"
+          },
+          {
+            "vlan": 20,
+            "name": "STORAGE"
+          },
+          {
+            "vlan": 30,
+            "name": "BACKUP"
+          },
+          {
+            "vlan": 99,
+            "name": "MGMT"
+          },
+          {
+            "vlan": 900,
+            "name": "TRANSIT"
+          }
+        ],
+        "svis": [
+          {
+            "vlan": 10,
+            "ip": "10.2.10.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "vlan": 20,
+            "ip": "10.2.20.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "vlan": 30,
+            "ip": "10.2.30.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "vlan": 99,
+            "ip": "10.2.99.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "vlan": 900,
+            "ip": "10.2.255.2",
+            "mask": "255.255.255.252"
+          }
+        ],
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "10.2.255.1"
+          }
+        ],
+        "rack": "a53"
+      },
+      {
+        "id": "d37",
+        "type": "switch",
+        "name": "Dist 1 BE",
+        "position": {
+          "x": -110,
+          "y": 163
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:25:00",
+            "color": "teal",
+            "description": "Trunk Access A BE",
+            "trunk": true
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:25:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:25:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:25:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:25:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:25:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:25:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:25:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:25:08",
+            "sfpSlot": true,
+            "sfp": "10G-SR",
+            "color": "teal",
+            "description": "Uplink Core BE",
+            "trunk": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:25:09",
+            "sfpSlot": true
+          }
+        ],
+        "vlanDb": [
+          10,
+          20,
+          30,
+          99,
+          900
+        ],
+        "vlanNames": [
+          {
+            "vlan": 10,
+            "name": "SERVER"
+          },
+          {
+            "vlan": 20,
+            "name": "STORAGE"
+          },
+          {
+            "vlan": 30,
+            "name": "BACKUP"
+          },
+          {
+            "vlan": 99,
+            "name": "MGMT"
+          },
+          {
+            "vlan": 900,
+            "name": "TRANSIT"
+          }
+        ],
+        "rack": "a53"
+      },
+      {
+        "id": "d39",
+        "type": "switch",
+        "name": "Dist 2 BE",
+        "position": {
+          "x": -110,
+          "y": 237
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:27:00",
+            "color": "teal",
+            "description": "Trunk Access B BE",
+            "trunk": true
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:27:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:27:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:27:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:27:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:27:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:27:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:27:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:27:08",
+            "sfpSlot": true,
+            "sfp": "10G-SR",
+            "color": "teal",
+            "description": "Uplink Core BE",
+            "trunk": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:27:09",
+            "sfpSlot": true
+          }
+        ],
+        "vlanDb": [
+          10,
+          20,
+          30,
+          99,
+          900
+        ],
+        "vlanNames": [
+          {
+            "vlan": 10,
+            "name": "SERVER"
+          },
+          {
+            "vlan": 20,
+            "name": "STORAGE"
+          },
+          {
+            "vlan": 30,
+            "name": "BACKUP"
+          },
+          {
+            "vlan": 99,
+            "name": "MGMT"
+          },
+          {
+            "vlan": 900,
+            "name": "TRANSIT"
+          }
+        ],
+        "rack": "a53"
+      },
+      {
+        "id": "d41",
+        "type": "switch",
+        "name": "Access A BE",
+        "position": {
+          "x": 190,
+          "y": -59
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:29:00",
+            "color": "teal",
+            "description": "Uplink Dist 1 BE",
+            "trunk": true
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:29:01",
+            "color": "blue",
+            "description": "Web BE (VLAN 10)",
+            "vlan": 10
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:29:02",
+            "color": "blue",
+            "description": "App BE (VLAN 10)",
+            "vlan": 10
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:29:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:29:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:29:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:29:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:29:07"
+          }
+        ],
+        "vlanDb": [
+          10,
+          20,
+          30,
+          99,
+          900
+        ],
+        "vlanNames": [
+          {
+            "vlan": 10,
+            "name": "SERVER"
+          },
+          {
+            "vlan": 20,
+            "name": "STORAGE"
+          },
+          {
+            "vlan": 30,
+            "name": "BACKUP"
+          },
+          {
+            "vlan": 99,
+            "name": "MGMT"
+          },
+          {
+            "vlan": 900,
+            "name": "TRANSIT"
+          }
+        ],
+        "rack": "a54"
+      },
+      {
+        "id": "d43",
+        "type": "server",
+        "name": "Web BE",
+        "position": {
+          "x": 190,
+          "y": 15
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:2B:00",
+            "ip": "10.2.10.20",
+            "mask": "255.255.255.0",
+            "color": "blue",
+            "description": "Uplink Access A BE"
+          }
+        ],
+        "variant": "rack",
+        "gateway": "10.2.10.1",
+        "dns": "10.1.10.53",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Rechenzentrum Bern</h1><p>Diese Seite liegt im VLAN 10 (SERVER) des Rechenzentrums Bern, Netz 10.2.10.0/24.</p><p>Erreicht über den IPsec-Tunnel zwischen den Standorten.</p>"
+            }
+          ]
+        },
+        "rack": "a54"
+      },
+      {
+        "id": "d45",
+        "type": "server",
+        "name": "App BE",
+        "position": {
+          "x": 190,
+          "y": 89
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:2D:00",
+            "ip": "10.2.10.30",
+            "mask": "255.255.255.0",
+            "color": "blue",
+            "description": "Uplink Access A BE"
+          }
+        ],
+        "variant": "rack",
+        "gateway": "10.2.10.1",
+        "dns": "10.1.10.53",
+        "rack": "a54"
+      },
+      {
+        "id": "d47",
+        "type": "switch",
+        "name": "Access B BE",
+        "position": {
+          "x": 490,
+          "y": -59
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:2F:00",
+            "color": "teal",
+            "description": "Uplink Dist 2 BE",
+            "trunk": true
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:2F:01",
+            "color": "purple",
+            "description": "NAS BE (VLAN 20)",
+            "vlan": 20
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:2F:02",
+            "color": "orange",
+            "description": "Backup BE (VLAN 30)",
+            "vlan": 30
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:2F:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:2F:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:2F:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:2F:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:2F:07"
+          }
+        ],
+        "vlanDb": [
+          10,
+          20,
+          30,
+          99,
+          900
+        ],
+        "vlanNames": [
+          {
+            "vlan": 10,
+            "name": "SERVER"
+          },
+          {
+            "vlan": 20,
+            "name": "STORAGE"
+          },
+          {
+            "vlan": 30,
+            "name": "BACKUP"
+          },
+          {
+            "vlan": 99,
+            "name": "MGMT"
+          },
+          {
+            "vlan": 900,
+            "name": "TRANSIT"
+          }
+        ],
+        "rack": "a55"
+      },
+      {
+        "id": "d49",
+        "type": "server",
+        "name": "NAS BE",
+        "position": {
+          "x": 490,
+          "y": 15
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:31:00",
+            "ip": "10.2.20.10",
+            "mask": "255.255.255.0",
+            "color": "purple",
+            "description": "Uplink Access B BE"
+          }
+        ],
+        "variant": "rack",
+        "gateway": "10.2.20.1",
+        "dns": "10.1.10.53",
+        "rack": "a55"
+      },
+      {
+        "id": "d51",
+        "type": "server",
+        "name": "Backup BE",
+        "position": {
+          "x": 490,
+          "y": 89
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:33:00",
+            "ip": "10.2.30.10",
+            "mask": "255.255.255.0",
+            "color": "orange",
+            "description": "Uplink Access B BE"
+          }
+        ],
+        "variant": "rack",
+        "gateway": "10.2.30.1",
+        "dns": "10.1.10.53",
+        "rack": "a55"
+      },
+      {
+        "id": "d59",
+        "type": "modem",
+        "name": "Modem BS",
+        "position": {
+          "x": 970,
+          "y": -59
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:3B:00",
+            "color": "red",
+            "description": "LAN Edge BS"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:3B:01",
+            "color": "red",
+            "description": "Zugang Basel"
+          }
+        ],
+        "modem": {
+          "kind": "vdsl"
+        },
+        "rack": "a72"
+      },
+      {
+        "id": "d60",
+        "type": "router",
+        "name": "Edge BS",
+        "position": {
+          "x": 970,
+          "y": 15
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:3C:00",
+            "ip": "10.3.255.1",
+            "mask": "255.255.255.252",
+            "color": "yellow",
+            "description": "Transit Core BS"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:3C:01",
+            "ip": "203.0.113.14",
+            "mask": "255.255.255.252",
+            "nat": true,
+            "color": "red",
+            "description": "WAN über Modem BS"
+          }
+        ],
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "203.0.113.13"
+          },
+          {
+            "network": "10.3.0.0",
+            "mask": "255.255.0.0",
+            "gateway": "10.3.255.2"
+          }
+        ],
+        "vpn": [
+          {
+            "name": "Basel – Zürich",
+            "peer": "203.0.113.6",
+            "local": "10.3.0.0/16",
+            "remote": "10.1.0.0/16",
+            "key": "Schaufenster-RZ-2026"
+          },
+          {
+            "name": "Basel – Bern",
+            "peer": "203.0.113.10",
+            "local": "10.3.0.0/16",
+            "remote": "10.2.0.0/16",
+            "key": "Schaufenster-RZ-2026"
+          }
+        ],
+        "rack": "a72"
+      },
+      {
+        "id": "d61",
+        "type": "l3switch",
+        "name": "Core BS",
+        "position": {
+          "x": 970,
+          "y": 89
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:3D:00",
+            "color": "yellow",
+            "description": "Transit Edge BS (VLAN 900)",
+            "vlan": 900
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:3D:01",
+            "color": "teal",
+            "description": "Trunk Access A BS",
+            "trunk": true
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:3D:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:3D:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:3D:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:3D:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:3D:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:3D:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:3D:08",
+            "sfpSlot": true
+          },
+          {
+            "index": 9,
+            "mac": "02:00:00:00:3D:09",
+            "sfpSlot": true
+          },
+          {
+            "index": 10,
+            "mac": "02:00:00:00:3D:0A",
+            "sfpSlot": true
+          },
+          {
+            "index": 11,
+            "mac": "02:00:00:00:3D:0B",
+            "sfpSlot": true
+          }
+        ],
+        "vlanDb": [
+          10,
+          20,
+          30,
+          99,
+          900
+        ],
+        "vlanNames": [
+          {
+            "vlan": 10,
+            "name": "SERVER"
+          },
+          {
+            "vlan": 20,
+            "name": "STORAGE"
+          },
+          {
+            "vlan": 30,
+            "name": "BACKUP"
+          },
+          {
+            "vlan": 99,
+            "name": "MGMT"
+          },
+          {
+            "vlan": 900,
+            "name": "TRANSIT"
+          }
+        ],
+        "svis": [
+          {
+            "vlan": 10,
+            "ip": "10.3.10.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "vlan": 20,
+            "ip": "10.3.20.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "vlan": 30,
+            "ip": "10.3.30.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "vlan": 99,
+            "ip": "10.3.99.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "vlan": 900,
+            "ip": "10.3.255.2",
+            "mask": "255.255.255.252"
+          }
+        ],
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "10.3.255.1"
+          }
+        ],
+        "rack": "a72"
+      },
+      {
+        "id": "d64",
+        "type": "switch",
+        "name": "Access A BS",
+        "position": {
+          "x": 1270,
+          "y": -59
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:40:00",
+            "color": "teal",
+            "description": "Uplink Core BS",
+            "trunk": true
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:40:01",
+            "color": "blue",
+            "description": "Web BS (VLAN 10)",
+            "vlan": 10
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:40:02",
+            "color": "orange",
+            "description": "Backup BS (VLAN 30)",
+            "vlan": 30
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:40:03",
+            "color": "gray",
+            "description": "Monitoring BS (VLAN 99)",
+            "vlan": 99
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:40:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:40:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:40:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:40:07"
+          }
+        ],
+        "vlanDb": [
+          10,
+          20,
+          30,
+          99,
+          900
+        ],
+        "vlanNames": [
+          {
+            "vlan": 10,
+            "name": "SERVER"
+          },
+          {
+            "vlan": 20,
+            "name": "STORAGE"
+          },
+          {
+            "vlan": 30,
+            "name": "BACKUP"
+          },
+          {
+            "vlan": 99,
+            "name": "MGMT"
+          },
+          {
+            "vlan": 900,
+            "name": "TRANSIT"
+          }
+        ],
+        "rack": "a73"
+      },
+      {
+        "id": "d66",
+        "type": "server",
+        "name": "Web BS",
+        "position": {
+          "x": 1270,
+          "y": 15
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:42:00",
+            "ip": "10.3.10.20",
+            "mask": "255.255.255.0",
+            "color": "blue",
+            "description": "Uplink Access A BS"
+          }
+        ],
+        "variant": "rack",
+        "gateway": "10.3.10.1",
+        "dns": "10.1.10.53",
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Rechenzentrum Basel</h1><p>Diese Seite liegt im VLAN 10 (SERVER) des Rechenzentrums Basel, Netz 10.3.10.0/24.</p><p>Erreicht über den IPsec-Tunnel zwischen den Standorten.</p>"
+            }
+          ]
+        },
+        "rack": "a73"
+      },
+      {
+        "id": "d68",
+        "type": "server",
+        "name": "Backup BS",
+        "position": {
+          "x": 1270,
+          "y": 89
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:44:00",
+            "ip": "10.3.30.10",
+            "mask": "255.255.255.0",
+            "color": "orange",
+            "description": "Uplink Access A BS"
+          }
+        ],
+        "variant": "rack",
+        "gateway": "10.3.30.1",
+        "dns": "10.1.10.53",
+        "rack": "a73"
+      },
+      {
+        "id": "d70",
+        "type": "server",
+        "name": "Monitoring BS",
+        "position": {
+          "x": 1270,
+          "y": 163
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:46:00",
+            "ip": "10.3.99.10",
+            "mask": "255.255.255.0",
+            "color": "gray",
+            "description": "Uplink Access A BS"
+          }
+        ],
+        "variant": "rack",
+        "gateway": "10.3.99.1",
+        "dns": "10.1.10.53",
+        "rack": "a73"
+      }
+    ],
+    "cables": [
+      {
+        "id": "c5",
+        "a": {
+          "device": "d4",
+          "iface": 0
+        },
+        "b": {
+          "device": "d3",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c6",
+        "a": {
+          "device": "d3",
+          "iface": 1
+        },
+        "b": {
+          "device": "d2",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c8",
+        "a": {
+          "device": "d4",
+          "iface": 8
+        },
+        "b": {
+          "device": "d7",
+          "iface": 8
+        },
+        "medium": "fiber"
+      },
+      {
+        "id": "c10",
+        "a": {
+          "device": "d4",
+          "iface": 9
+        },
+        "b": {
+          "device": "d9",
+          "iface": 8
+        },
+        "medium": "fiber"
+      },
+      {
+        "id": "c12",
+        "a": {
+          "device": "d7",
+          "iface": 0
+        },
+        "b": {
+          "device": "d11",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c14",
+        "a": {
+          "device": "d11",
+          "iface": 1
+        },
+        "b": {
+          "device": "d13",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c16",
+        "a": {
+          "device": "d11",
+          "iface": 2
+        },
+        "b": {
+          "device": "d15",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c18",
+        "a": {
+          "device": "d9",
+          "iface": 0
+        },
+        "b": {
+          "device": "d17",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c20",
+        "a": {
+          "device": "d17",
+          "iface": 1
+        },
+        "b": {
+          "device": "d19",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c22",
+        "a": {
+          "device": "d17",
+          "iface": 2
+        },
+        "b": {
+          "device": "d21",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c24",
+        "a": {
+          "device": "d17",
+          "iface": 3
+        },
+        "b": {
+          "device": "d23",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c31",
+        "a": {
+          "device": "d2",
+          "iface": 1
+        },
+        "b": {
+          "device": "d1",
+          "iface": 0
+        },
+        "medium": "fiber"
+      },
+      {
+        "id": "c35",
+        "a": {
+          "device": "d34",
+          "iface": 0
+        },
+        "b": {
+          "device": "d33",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c36",
+        "a": {
+          "device": "d33",
+          "iface": 1
+        },
+        "b": {
+          "device": "d32",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c38",
+        "a": {
+          "device": "d34",
+          "iface": 8
+        },
+        "b": {
+          "device": "d37",
+          "iface": 8
+        },
+        "medium": "fiber"
+      },
+      {
+        "id": "c40",
+        "a": {
+          "device": "d34",
+          "iface": 9
+        },
+        "b": {
+          "device": "d39",
+          "iface": 8
+        },
+        "medium": "fiber"
+      },
+      {
+        "id": "c42",
+        "a": {
+          "device": "d37",
+          "iface": 0
+        },
+        "b": {
+          "device": "d41",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c44",
+        "a": {
+          "device": "d41",
+          "iface": 1
+        },
+        "b": {
+          "device": "d43",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c46",
+        "a": {
+          "device": "d41",
+          "iface": 2
+        },
+        "b": {
+          "device": "d45",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c48",
+        "a": {
+          "device": "d39",
+          "iface": 0
+        },
+        "b": {
+          "device": "d47",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c50",
+        "a": {
+          "device": "d47",
+          "iface": 1
+        },
+        "b": {
+          "device": "d49",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c52",
+        "a": {
+          "device": "d47",
+          "iface": 2
+        },
+        "b": {
+          "device": "d51",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c58",
+        "a": {
+          "device": "d32",
+          "iface": 1
+        },
+        "b": {
+          "device": "d1",
+          "iface": 1
+        },
+        "medium": "coax"
+      },
+      {
+        "id": "c62",
+        "a": {
+          "device": "d61",
+          "iface": 0
+        },
+        "b": {
+          "device": "d60",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c63",
+        "a": {
+          "device": "d60",
+          "iface": 1
+        },
+        "b": {
+          "device": "d59",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c65",
+        "a": {
+          "device": "d61",
+          "iface": 1
+        },
+        "b": {
+          "device": "d64",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c67",
+        "a": {
+          "device": "d64",
+          "iface": 1
+        },
+        "b": {
+          "device": "d66",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c69",
+        "a": {
+          "device": "d64",
+          "iface": 2
+        },
+        "b": {
+          "device": "d68",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c71",
+        "a": {
+          "device": "d64",
+          "iface": 3
+        },
+        "b": {
+          "device": "d70",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c76",
+        "a": {
+          "device": "d59",
+          "iface": 1
+        },
+        "b": {
+          "device": "d1",
+          "iface": 2
+        },
+        "medium": "dsl"
+      }
+    ],
+    "nextId": 79,
+    "vlans": [
+      {
+        "id": 10,
+        "color": "blue",
+        "name": "SERVER"
+      },
+      {
+        "id": 20,
+        "color": "purple",
+        "name": "STORAGE"
+      },
+      {
+        "id": 30,
+        "color": "orange",
+        "name": "BACKUP"
+      },
+      {
+        "id": 99,
+        "color": "gray",
+        "name": "MGMT"
+      },
+      {
+        "id": 900,
+        "color": "yellow",
+        "name": "TRANSIT"
+      }
+    ],
+    "areas": [
+      {
+        "id": "a25",
+        "kind": "rack",
+        "title": "Rack ZH-01 Core",
+        "color": "red",
+        "x": -1630,
+        "y": -140,
+        "width": 280,
+        "height": 286,
+        "note": "Core-Schicht: Modem, Edge-Router, Layer-3-Core"
+      },
+      {
+        "id": "a26",
+        "kind": "rack",
+        "title": "Rack ZH-02 Distribution",
+        "color": "teal",
+        "x": -1330,
+        "y": -140,
+        "width": 280,
+        "height": 212,
+        "note": "Distribution-Schicht, 10G-Glasfaser zum Core"
+      },
+      {
+        "id": "a27",
+        "kind": "rack",
+        "title": "Rack ZH-03 Access A",
+        "color": "blue",
+        "x": -1030,
+        "y": -140,
+        "width": 280,
+        "height": 286,
+        "note": "Access-Schicht: Server"
+      },
+      {
+        "id": "a28",
+        "kind": "rack",
+        "title": "Rack ZH-04 Access B",
+        "color": "purple",
+        "x": -730,
+        "y": -140,
+        "width": 280,
+        "height": 360,
+        "note": "Access-Schicht: Storage, Backup, Management"
+      },
+      {
+        "id": "a29",
+        "title": "Rechenzentrum Zürich",
+        "color": "blue",
+        "x": -1660,
+        "y": -320,
+        "width": 1260,
+        "height": 940,
+        "network": "10.1.0.0/16",
+        "note": "Dreistufig: Core → Distribution → Access. Anschluss: Glasfaser, WAN 203.0.113.6/30."
+      },
+      {
+        "id": "a30",
+        "kind": "note",
+        "title": "VLAN-Plan Zürich",
+        "color": "gray",
+        "x": -1630,
+        "y": 330,
+        "width": 1200,
+        "height": 260,
+        "note": "- **VLAN 10 SERVER:** 10.1.10.0/24, Gateway 10.1.10.1\n- **VLAN 20 STORAGE:** 10.1.20.0/24, Gateway 10.1.20.1\n- **VLAN 30 BACKUP:** 10.1.30.0/24, Gateway 10.1.30.1\n- **VLAN 99 MGMT:** 10.1.99.0/24, Gateway 10.1.99.1\n- **VLAN 900 TRANSIT:** 10.1.255.0/30, Gateway 10.1.255.1\n\nPortfarben im Rack = VLAN, Türkis = Trunk, Rot = WAN."
+      },
+      {
+        "id": "a53",
+        "kind": "rack",
+        "title": "Rack BE-01 Core/Distribution",
+        "color": "red",
+        "x": -250,
+        "y": -140,
+        "width": 280,
+        "height": 434,
+        "note": "Core und Distribution in einem Rack"
+      },
+      {
+        "id": "a54",
+        "kind": "rack",
+        "title": "Rack BE-02 Access A",
+        "color": "blue",
+        "x": 50,
+        "y": -140,
+        "width": 280,
+        "height": 286
+      },
+      {
+        "id": "a55",
+        "kind": "rack",
+        "title": "Rack BE-03 Access B",
+        "color": "purple",
+        "x": 350,
+        "y": -140,
+        "width": 280,
+        "height": 286
+      },
+      {
+        "id": "a56",
+        "title": "Rechenzentrum Bern",
+        "color": "green",
+        "x": -280,
+        "y": -320,
+        "width": 960,
+        "height": 940,
+        "network": "10.2.0.0/16",
+        "note": "Zweistufig: Core/Distribution → Access. Anschluss: Kabel (DOCSIS), WAN 203.0.113.10/30."
+      },
+      {
+        "id": "a57",
+        "kind": "note",
+        "title": "VLAN-Plan Bern",
+        "color": "gray",
+        "x": -250,
+        "y": 330,
+        "width": 900,
+        "height": 260,
+        "note": "- **VLAN 10 SERVER:** 10.2.10.0/24, Gateway 10.2.10.1\n- **VLAN 20 STORAGE:** 10.2.20.0/24, Gateway 10.2.20.1\n- **VLAN 30 BACKUP:** 10.2.30.0/24, Gateway 10.2.30.1\n- **VLAN 99 MGMT:** 10.2.99.0/24, Gateway 10.2.99.1\n- **VLAN 900 TRANSIT:** 10.2.255.0/30, Gateway 10.2.255.1\n\nPortfarben im Rack = VLAN, Türkis = Trunk, Rot = WAN."
+      },
+      {
+        "id": "a72",
+        "kind": "rack",
+        "title": "Rack BS-01 Collapsed Core",
+        "color": "red",
+        "x": 830,
+        "y": -140,
+        "width": 280,
+        "height": 286,
+        "note": "Collapsed Core: Core und Distribution im Layer-3-Switch"
+      },
+      {
+        "id": "a73",
+        "kind": "rack",
+        "title": "Rack BS-02 Access",
+        "color": "blue",
+        "x": 1130,
+        "y": -140,
+        "width": 280,
+        "height": 360
+      },
+      {
+        "id": "a74",
+        "title": "Rechenzentrum Basel",
+        "color": "pink",
+        "x": 800,
+        "y": -320,
+        "width": 660,
+        "height": 940,
+        "network": "10.3.0.0/16",
+        "note": "Collapsed Core: Layer-3-Core → Access. Anschluss: VDSL, WAN 203.0.113.14/30."
+      },
+      {
+        "id": "a75",
+        "kind": "note",
+        "title": "VLAN-Plan Basel",
+        "color": "gray",
+        "x": 830,
+        "y": 330,
+        "width": 600,
+        "height": 260,
+        "note": "- **VLAN 10 SERVER:** 10.3.10.0/24, Gateway 10.3.10.1\n- **VLAN 20 STORAGE:** 10.3.20.0/24, Gateway 10.3.20.1\n- **VLAN 30 BACKUP:** 10.3.30.0/24, Gateway 10.3.30.1\n- **VLAN 99 MGMT:** 10.3.99.0/24, Gateway 10.3.99.1\n- **VLAN 900 TRANSIT:** 10.3.255.0/30, Gateway 10.3.255.1\n\nPortfarben im Rack = VLAN, Türkis = Trunk, Rot = WAN."
+      },
+      {
+        "id": "a77",
+        "title": "Provider (Internet)",
+        "color": "yellow",
+        "x": -560,
+        "y": -900,
+        "width": 920,
+        "height": 300,
+        "note": "Öffentliche Transfernetze 203.0.113.0/24 (RFC 5737), je Standort ein /30. Zwischen den Rechenzentren laufen IPsec-Tunnel (Vollvermaschung).",
+        "public": true
+      },
+      {
+        "id": "a78",
+        "kind": "note",
+        "title": "Über dieses Netz",
+        "color": "gray",
+        "x": -1660,
+        "y": -900,
+        "width": 1000,
+        "height": 300,
+        "note": "**Schaufenster leyoNET.** Drei Rechenzentren, drei Bauarten:\n- **Zürich:** dreistufig (Core, Distribution, Access), Glasfaser\n- **Bern:** Core/Distribution zusammen, Kabelmodem\n- **Basel:** Collapsed Core, VDSL\n\nIn der Simulation: Ping, Webseiten und DNS über die VPN-Tunnel. Alle Racks mit Frontplatten: Ansicht → Rack-Ansicht (Taste R)."
+      }
+    ]
+  },
+  "configuration": {}
+}
+

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Server – leyoNET Wiki</title>
+  <meta name="description" content="Das Gerät für Dienste: DHCP, DNS, Webserver und Mailserver, auch als Rack-Server im Rechenzentrum.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/server.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group">
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html" aria-current="page">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html">Router</a></li><li><a href="firewall.html">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#geraete">Geräte</a></p>
+      <h1>Server</h1>
+      <p class="lead">Das Gerät für Dienste: DHCP, DNS, Webserver und Mailserver, auch als Rack-Server im Rechenzentrum.</p>
+      <dl class="facts"><div><dt>Schicht</dt><dd>7 (Dienste)</dd></div><div><dt>Beispiel</dt><dd><a href="#beispiel">2 Demos</a></dd></div></dl>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#wozu">Wozu</a></li><li><a href="#ausfuehrungen">Ausführungen</a></li><li><a href="#feste-adressen">Feste Adressen</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="wozu">Wozu</h2>
+<p>Ein Server stellt anderen Geräten <strong>Dienste</strong> bereit. In leyoNET kann jeder Server einen oder mehrere davon übernehmen; eingeschaltet werden sie unter Erweitert → Dienste:</p>
+<div class="table-wrap"><table><thead><tr><th>Dienst</th><th>was er tut</th><th>Seite</th></tr></thead><tbody><tr><td>DHCP</td><td>verteilt Adressen, Gateway und DNS-Server</td><td><a href="dhcp.html">DHCP</a></td></tr><tr><td>DNS</td><td>übersetzt Namen in Adressen (Zone mit A, AAAA, MX …)</td><td><a href="dns.html">DNS</a></td></tr><tr><td>Web</td><td>liefert eigene HTML-Seiten und Bilder</td><td><a href="http.html">HTTP</a></td></tr><tr><td>Mail</td><td>Postfächer, Versand und Abholung</td><td><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></td></tr></tbody></table></div>
+<h2 id="ausfuehrungen">Ausführungen</h2>
+<p>Im Shop gibt es den Server als Tower und als <strong>Rack-Server</strong>. Rack-Server lassen sich in ein Rack einbauen und erscheinen in der Rack-Ansicht als Einschub. Technisch sind beide gleich.</p>
+<h2 id="feste-adressen">Feste Adressen</h2>
+<p>Server haben in der Regel eine <strong>feste Adresse</strong>, damit Clients sie zuverlässig finden (DNS-Einträge, Gateway-Einstellungen). Der DHCP-Bereich darf diese Adresse nicht enthalten, sonst bekommt ein Client dieselbe Adresse: leyoNET markiert doppelte Adressen mit einem roten Ausrufezeichen.</p>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
+<p class="muted">Derselbe Text wie in der Hilfe der App (Taste F1).</p>
+<div class="help-block"><h3>Server</h3>
+<p>Ein Server bietet Dienste an: <a href="dhcp.html">DHCP</a>, <a href="dns.html">DNS</a>, <a href="http.html">Webserver und Browser</a> und <a href="e-mail.html">E-Mail</a>. Im Shop gibt es ihn leer oder vorkonfiguriert. Der Webserver liefert eigene Seiten (index.html) und ein kleines Bild aus. Als Rack-Ausführung passt er in ein <a href="dokumentieren.html">Racks</a>.</p></div>
+<div class="help-block"><h3>Private und öffentliche Adressen</h3>
+<ul><li><strong>Privat</strong> (10/8, 172.16/12, 192.168/16): nur im eigenen Netz, ins Internet über <a href="nat.html">NAT/PAT</a></li><li><strong>CGNAT</strong> (100.64/10): vom Provider vergeben, der nochmals übersetzt (<a href="nat.html">Carrier-Grade NAT</a>)</li><li><strong>Öffentlich:</strong> weltweit eindeutig</li></ul>
+<p>Mit <strong>A</strong> zeigt die Fläche alle Adressen farbig. Ein Bereich «Öffentliches Netz» markiert Netze mit öffentlichen Adressen, z.B. eine DMZ.</p></div></section>
+<section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
+<ul class="cards"><li class="card"><strong>DNS, TCP und HTTP</strong><p>Ein Notebook ruft über einen Router eine Webseite ab.</p><p class="muted">DNS-Abfrage nach www.schule.example, TCP-Handshake (SYN, SYN-ACK, ACK) und die HTTP-Anfrage im Browser.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=web">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/web.json">Projektdatei</a></p></li><li class="card"><strong>E-Mail: SMTP, POP3, IMAP</strong><p>Anna und Ben nutzen einen gemeinsamen Mailserver.</p><p class="muted">Anna sendet per SMTP, Ben holt die Nachricht per IMAP ab.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=mail">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/mail.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Webseite über DNS aufrufen</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_web-dns.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>UE02 Netzwerkdienste: Webserver, DNS und feste Zuweisungen</strong> <span class="muted">· 19 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M07B_M117_UE02_Netzwerkdienste.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>Ein ganzes Schulzimmer</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_server-group.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="dhcp.html">DHCP</a> <span class="muted">Adressen automatisch verteilen: Discover, Offer, Request, Ack, Lease-Dauer, feste Zuweisungen und DHCP-Relay über Router.</span></li><li><a href="dns.html">DNS</a> <span class="muted">Namen in Adressen übersetzen: Zonen, Einträge (A, AAAA, CNAME, MX, PTR …), Weiterleitung, Cache und nslookup.</span></li><li><a href="http.html">HTTP</a> <span class="muted">Wie der Browser eine Webseite holt: URL, DNS, TCP-Verbindung, GET-Anfrage, Statuscode und Antwort – Byte für Byte.</span></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a> <span class="muted">Wie eine Mail vom Absender über Mailserver und MX-Einträge ins Postfach kommt und wie man sie abholt.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="pc-notebook.html"><span class="muted">Zurück</span>PC und Notebook</a>
+        <a class="next" href="client-gruppe.html"><span class="muted">Weiter</span>Client-Gruppe</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/geraete/server.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

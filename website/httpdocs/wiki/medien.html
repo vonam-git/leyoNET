@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kabel, Glasfaser und Funk – leyoNET Wiki</title>
+  <meta name="description" content="Twisted Pair, Glasfaser mit SFP-Modulen, Koax, Telefonleitung, Funk und seriell – welches Medium wofür und woran man es in leyoNET erkennt.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/medien.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group">
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html" aria-current="page">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html">Router</a></li><li><a href="firewall.html">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#grundlagen">Grundlagen</a></p>
+      <h1>Kabel, Glasfaser und Funk</h1>
+      <p class="lead">Twisted Pair, Glasfaser mit SFP-Modulen, Koax, Telefonleitung, Funk und seriell – welches Medium wofür und woran man es in leyoNET erkennt.</p>
+      <dl class="facts"><div><dt>Schicht</dt><dd>1 (Bitübertragung)</dd></div><div><dt>Norm</dt><dd>IEEE 802.3</dd></div></dl>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#die-medien">Die Medien</a></li><li><a href="#sfp-module">SFP-Module</a></li><li><a href="#link-leds">Link-LEDs</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="die-medien">Die Medien</h2>
+<div class="table-wrap"><table><thead><tr><th>Medium</th><th>Einsatz</th><th>Reichweite (typisch)</th></tr></thead><tbody><tr><td>Twisted Pair (Kupfer, RJ45)</td><td>Endgeräte, Switches im selben Raum</td><td>bis 100 m</td></tr><tr><td>Glasfaser Multimode (SX/SR)</td><td>zwischen Racks und Gebäuden</td><td>einige 100 m</td></tr><tr><td>Glasfaser Singlemode (LX/LR)</td><td>zwischen Standorten</td><td>km</td></tr><tr><td>Koax</td><td>Kabelanschluss (DOCSIS)</td><td>–</td></tr><tr><td>Telefonleitung</td><td>DSL</td><td>wenige km</td></tr><tr><td>Funk</td><td>WLAN, Mobilfunk</td><td>Raum bis Zelle</td></tr><tr><td>seriell</td><td>ältere WAN-Leitungen zwischen Routern</td><td>–</td></tr></tbody></table></div>
+<h2 id="sfp-module">SFP-Module</h2>
+<p>Glasfaser braucht an beiden Enden ein <strong>SFP-Modul</strong> im Einschub. Beide Module müssen zusammenpassen: SX mit SX (Multimode, 1 Gbit/s), SR mit SR (10 Gbit/s), LX/LR für Singlemode. In leyoNET bleibt ein Glasfaserkabel ohne passendes Modul aus; die Link-LED zeigt den Grund.</p>
+<h2 id="link-leds">Link-LEDs</h2>
+<p>An jedem Kabelende leuchtet eine LED: <strong>grün</strong> aktiv, <strong>orange</strong> bei Verkehr, <strong>rot</strong> aus, mit Grund beim Überfahren (Port abgeschaltet, Modul fehlt, Kabelart passt nicht). Kabel lassen sich in Fehlersuche-Übungen auch <strong>beschädigen</strong>: Ein Teil der Rahmen geht verloren.</p>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
+<p class="muted">Derselbe Text wie in der Hilfe der App (Taste F1).</p>
+<div class="help-block"><h3>Kabel und Verbindungen</h3>
+<ul><li><strong>TP-Kabel</strong> (Kupfer, RJ45) für die meisten Verbindungen</li><li><strong>Glasfaser</strong> zwischen SFP-Modulen (<a href="medien.html">SFP-Module</a>)</li><li><strong>WLAN</strong> zum Access Point (<a href="wlan.html">WLAN</a>)</li><li><strong>Seriell</strong> zwischen Routern (<a href="ppp-hdlc.html">Serielle Leitungen</a>)</li><li><strong>Koax, DSL, Mobilfunk</strong> vom Modem oder von der Internet-Box zum Provider (<a href="zugangstechniken.html">Zugangsleitungen</a>)</li></ul>
+<p><strong>Anschluss wählen:</strong> Beim Verbinden steckt der Simulator das Kabel in den nächsten freien Anschluss. Mit «Anschluss: aus Liste wählen» (oben in der Zeichenfläche) erscheint stattdessen eine Liste der Anschlüsse; belegte zeigen, womit sie verbunden sind.</p>
+<p><strong>Schnittstellennamen</strong> (z.B. Gi0/1) an den Kabelenden lassen sich unter <strong>Ansicht</strong> oder mit <strong>P</strong> ein- und ausblenden.</p>
+<p>Passt die Art nicht zum Port, meldet der Simulator das. Kabel lassen sich in der Simulation beschädigen, Ports abschalten.</p></div>
+<div class="help-block"><h3>SFP-Module</h3>
+<p>SFP-Steckplätze nehmen Module auf, die bestimmen, welche Glasfaser passt: <strong>SX/SR</strong> für Multimode (kurze Strecken im Gebäude), <strong>LX/LR</strong> für Singlemode (bis 10 km). Beide Enden brauchen dasselbe Modul. Router und Switches haben ab Werk <strong>keine</strong> SFP-Einschübe: Anzahl im Fenster unter «Allgemein» einstellen, oder einfach ein Modul aus der Palette auf das Gerät ziehen – dann entsteht der Einschub von selbst.</p></div></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>Glasfaseranschluss</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_fiber-ont.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Campus mit Layer-3-Switch und Glasfaser</strong> <span class="muted">· 7 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_l3-campus.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="1 von 5 Sternen">★☆☆☆☆</span> <strong>Gast aussperren</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_port-shutdown.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
+<section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
+<div class="table-wrap"><table><thead><tr><th>Protokoll</th><th>Schicht</th><th>Vereinfachung in der Simulation</th></tr></thead><tbody><tr><td>Ethernet-PHY, 802.11-Funk, DOCSIS, GPON, DSL, LTE</td><td>1</td><td>Nur als Beschreibung (Medium, Rate, Modulation); keine Bitfehler ausser «beschädigtes Kabel»</td></tr></tbody></table></div></section>
+<section aria-labelledby="normen"><h2 id="normen">Normen</h2>
+<ul class="norms"><li><strong>IEEE 802.3</strong> – Ethernet, 1000BASE-T, 1000BASE-SX/LX <span class="muted">(aktuelle Ausgabe: IEEE 802.3-2022)</span></li></ul></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a> <span class="muted">Wie ein Anschluss zum Provider aufgebaut wird – über Koax, Glasfaser, Telefonleitung oder Mobilfunk – und was das Modem dabei aushandelt.</span></li><li><a href="wlan.html">WLAN</a> <span class="muted">Funknetze nach 802.11: SSID, Anmeldung mit Authentication, Association und 4-Way-Handshake, Signalstärke, Roaming und Mesh.</span></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a> <span class="muted">Punkt-zu-Punkt-Verbindungen zwischen Routern ohne ARP, die Kapselung HDLC oder PPP mit LCP und IPCP, und PPPoE bei DSL.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="netzwerkdesign.html"><span class="muted">Zurück</span>Netzwerkdesign: Core, Distribution, Access</a>
+        <a class="next" href="pc-notebook.html"><span class="muted">Weiter</span>PC und Notebook</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/grundlagen/medien.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

@@ -10,6 +10,8 @@
     "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.core.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "wiki": "node scripts/erzeugen.mjs wiki",
+    "schaufenster": "node scripts/erzeugen.mjs schaufenster",
     "verify": "npm run check && npm test && npm run test:server && npm run build",
     "e2e": "npm run build && playwright test",
     "release": "npm run verify && npm run sicherheit && node scripts/release.mjs",

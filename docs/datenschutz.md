@@ -96,6 +96,10 @@ Auch ein vorgeschaltetes CDN oder ein Reverse-Proxy kann protokollieren.
 
 Die Website (`website/httpdocs/`) besteht aus statischen Seiten: keine Cookies, kein Tracking, keine Schriften, Skripte oder Bilder von fremden Servern. Die Downloads sind Links auf die Releases bei GitHub; erst wer darauf klickt, verbindet sich mit github.com, und dort gilt die Datenschutzerklärung von GitHub. Die Datenschutzerklärung der Website (`datenschutz.html`) sagt das im Abschnitt «Downloads». Wie bei jedem Webserver kann das Hosting (Plesk) Zugriffe im Server-Log festhalten; diese Logs gehören zum Hosting, nicht zu leyoNET.
 
+Das **Wiki** (`/wiki/`) besteht ebenfalls nur aus statischen Seiten. Die Suche läuft im Browser über eine mitgelieferte Datei (`suche.js`), Eingaben verlassen das Gerät nicht. Links auf Normen führen zu rfc-editor.org, erst ein Klick verbindet dorthin.
+
+Das **Schaufenster** der App (`?schaufenster`) speichert nichts: weder im Browser noch auf dem Server, und ein vorhandener eigener Stand bleibt unberührt.
+
 ## Prüfung bei jedem Release
 
 `npm run release` führt `scripts/release-checks.mjs` aus und bricht bei einem Fehler ab. Das Ergebnis steht in `release/checks.json` und in der Webversion unter **Admin-Konsole → Systemprüfung**. Geprüft wird automatisch:

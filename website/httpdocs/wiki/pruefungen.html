@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prüfungen durchführen – leyoNET Wiki</title>
+  <meta name="description" content="Prüfungsdatei und Schlüssel, Varianten je Platz, Prüfungsmodus, Safe Exam Browser, Webversion mit Platz-Codes und automatischer Auswertung.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/pruefungen.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group" open>
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html" aria-current="page">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html">Router</a></li><li><a href="firewall.html">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#lehrpersonen">Crashkurs für Lehrpersonen</a></p>
+      <h1>Prüfungen durchführen</h1>
+      <p class="lead">Prüfungsdatei und Schlüssel, Varianten je Platz, Prüfungsmodus, Safe Exam Browser, Webversion mit Platz-Codes und automatischer Auswertung.</p>
+      
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#grundsatz">Grundsatz</a></li><li><a href="#pruefung-erstellen">Prüfung erstellen</a></li><li><a href="#waehrend-der-pruefung">Während der Prüfung</a></li><li><a href="#in-der-webversion">In der Webversion</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="grundsatz">Grundsatz</h2>
+<p>Eine Prüfung besteht aus zwei Dateien: der <strong>Prüfungsdatei</strong> für die Lernenden (Aufgabe, Startnetz, Punkte je Teil, ohne Prüfbausteine und Lösungen) und dem <strong>Schlüssel</strong> für Sie (alle Prüfbausteine, Lösungen, Code zum Beenden). Ausgewertet wird mit dem Schlüssel.</p>
+<h2 id="pruefung-erstellen">Prüfung erstellen</h2>
+<ul><li><strong>Generator:</strong> Werkzeuge → Prüfung erstellen erzeugt ein Firmennetz mit drei Standorten, 75 Punkte, Note = 5 × Punkte / 75 + 1. Je Platz eine eigene Variante ist möglich.</li><li><strong>Jede Aufgabe als Prüfung:</strong> Werkzeuge → Als Prüfung speichern, mit Startnetz leer, nur Geräte, aktuell oder als <strong>Fehlersuche</strong> mit zufälligen Fehlern je Platz.</li><li><strong>Gerechter auswerten:</strong> Teilpunkte, Folgefehler (Gateway «ein Router im eigenen Netz»), Fragen direkt in leyoNET, Bausteine «von Hand».</li></ul>
+<h2 id="waehrend-der-pruefung">Während der Prüfung</h2>
+<p>Beim Öffnen der Prüfungsdatei beginnt der <strong>Prüfungsmodus</strong>: Katalog, Demos, Aufgabeneditor und das Öffnen anderer Dateien sind gesperrt, eine Leiste zeigt Titel, Platz und Zeit. Er übersteht ein Neuladen und endet nur mit Ihrem Code. Für abgesicherte Rechner erzeugt leyoNET eine Konfiguration für den <strong>Safe Exam Browser</strong>.</p>
+<h2 id="in-der-webversion">In der Webversion</h2>
+<p>Prüfungsdatei und Schlüssel in der Admin-Konsole hochladen, Platzkarten mit Platz-Codes drucken, starten. Gespeichert wird alle 20 Sekunden; ist die Zeit um, ist automatisch abgegeben. Das Prüfungscockpit zeigt je Platz, ob er verbunden ist, erlaubt Nachteilsausgleich (+5′, +15′) und «Ansehen» live. Am Ende wertet leyoNET alle Plätze aus, mit Nachkorrektur und Bericht.</p>
+<p>Ablauf, Grenzen und was leyoNET gegen Abschreiben tun kann: <a href="https://github.com/vonam-git/leyoNET/blob/main/docs/pruefungen.md">Prüfungen</a>.</p>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
+<p class="muted">Derselbe Text wie in der Hilfe der App (Taste F1).</p>
+<div class="help-block"><h3>Prüfung in der Webversion</h3>
+<p>In der Webversion laufen Prüfungen über den Server, ohne Dateien hin und her zu schicken.</p>
+<p><strong>Lehrperson</strong> (Werkzeuge → Admin-Konsole → Prüfungen): - Prüfungsdatei und Schlüssel hochladen, Plätze und Minuten festlegen - <strong>Platzkarten drucken</strong> und verteilen: Jeder Platz hat einen eigenen Platz-Code. Wer an welchem Platz sitzt, steht nur in deiner Sitzliste bzw. auf der Karte – der Server kennt keine Namen - <strong>Starten</strong>, je Platz <strong>Nachteilsausgleich</strong> (+5′, +15′, auch nachträglich), <strong>für alle beenden</strong> - <strong>Automatisch auswerten</strong>: alle Abgaben mit dem Schlüssel korrigiert; eine <strong>Namensliste</strong> («07 Anna Muster») lässt sich im Auswertungsfenster einfügen und bleibt nur dort - <strong>Abgaben herunterladen</strong>: eine Datei mit allen Abgaben samt Schlüssel, später unter «Abgaben auswerten» wieder auswertbar</p>
+<p><strong>Lernende:</strong> Datei → Prüfung beitreten … → Platz-Code. Vor dem Start wird gewartet. Der Stand wird <strong>alle 20 Sekunden</strong> gespeichert; ist die Zeit um, gilt der letzte Stand als abgegeben. Nach 60 Tagen löscht der Server alles. <strong>Safe Exam Browser:</strong> Beim Anlegen «Nur im Safe Exam Browser» wählen. Das Cockpit erzeugt eine SEB-Datei mit Start-, Admin- und Beenden-Passwort und einem zufälligen Prüfungsschlüssel, der bis zum Ende der Prüfung gilt. Ohne SEB nimmt der Server weder Beitritt noch Speichern an.</p></div></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a> <span class="muted">Lernziele im Formular zusammenstellen, Ziele aus einer Musterlösung vorschlagen lassen und als Aufgabendatei verteilen.</span></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a> <span class="muted">Arbeitsstand unter einem Code, Klassen-Sessions, Arbeiten der Lernenden live ansehen und die Admin-Konsole mit eigenen Zugängen.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="aufgaben-erstellen.html"><span class="muted">Zurück</span>Eigene Aufgaben erstellen</a>
+        <a class="next" href="webversion.html"><span class="muted">Weiter</span>Webversion: Sessions, Klassen und Ansehen</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/lehrpersonen/pruefungen.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>
