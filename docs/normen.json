@@ -26,6 +26,10 @@
       "titel": "Domain Names – Implementation and Specification",
       "verwendung": "DNS-Nachrichten"
     },
+    "1042": {
+      "titel": "A Standard for the Transmission of IP Datagrams over IEEE 802 Networks",
+      "verwendung": "LLC/SNAP (OUI 00-00-00 und EtherType), z.B. IP über WLAN; Aufbau im Wiki"
+    },
     "1071": {
       "titel": "Computing the Internet Checksum",
       "verwendung": "Prüfsummen in IP, ICMP, UDP, TCP"
@@ -86,6 +90,10 @@
       "titel": "Generic Packet Tunneling in IPv6 Specification",
       "verwendung": "IPv4 in IPv6 (Next Header 4) für DS-Lite"
     },
+    "2474": {
+      "titel": "Definition of the Differentiated Services Field (DS Field) in the IPv4 and IPv6 Headers",
+      "verwendung": "DSCP im IPv4- und IPv6-Kopf"
+    },
     "2516": {
       "titel": "A Method for Transmitting PPP Over Ethernet (PPPoE)",
       "verwendung": "PPPoE bei DSL"
@@ -97,6 +105,10 @@
     "3022": {
       "titel": "Traditional IP Network Address Translator",
       "verwendung": "NAT"
+    },
+    "3168": {
+      "titel": "The Addition of Explicit Congestion Notification (ECN) to IP",
+      "verwendung": "ECN-Bits im IPv4- und IPv6-Kopf, Flags ECE und CWR bei TCP"
     },
     "3596": {
       "titel": "DNS Extensions to Support IP Version 6",
@@ -238,6 +250,14 @@
       "verwendung": "VLAN-Tags, Trunks, Bridging",
       "aktuell": "IEEE 802.1Q-2022",
       "geprueft": "2026-10-30"
+    },
+    {
+      "id": "IEEE 802.2",
+      "organisation": "IEEE",
+      "verwendung": "LLC-Kopf (DSAP, SSAP, Control) in IEEE-802.3-Rahmen, z.B. bei Spanning Tree",
+      "aktuell": "ISO/IEC 8802-2:1998 (IEEE 802.2-1998)",
+      "bemerkung": "IEEE hat 802.2 2010 zurückgezogen und verweist auf ISO/IEC 8802-2, das stabilisiert ist (gültig, ohne Überarbeitung). Das LLC-Format gilt unverändert.",
+      "geprueft": "2026-11-13"
     },
     {
       "id": "IEEE 802.1D",

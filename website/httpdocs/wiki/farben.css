@@ -1,0 +1,151 @@
+/* Kopie von src/ui/farben.css (erzeugt mit npm run wiki) – nicht von Hand ändern. */
+/*
+ * Farben der OSI-Schichten und der Protokolle. Gemeinsam für die App (src/main.ts) und das Wiki
+ * (wird beim Bau nach website/httpdocs/wiki/farben.css kopiert): gleiche Farbe, gleicher Tag überall.
+ */
+:root {
+  /* OSI-Schichten: Paketdetails, Einzelschritt (Auspacken), Aufbau der Rahmen */
+  --osi-7: #8e44ad;
+  --osi-6: #9b59b6;
+  --osi-5: #a569bd;
+  --osi-4: #2e86c1;
+  --osi-3: #16a085;
+  --osi-2: #d68910;
+  --osi-1: #7f8c8d;
+  --proto-arp: #f5e3b3;
+  --proto-icmp: #d6e4fb;
+  --proto-dhcp: #d3f2e5;
+  --proto-dns: #e9dcfb;
+  --proto-tcp: #e3e7ec;
+  --proto-http: #fbdcdc;
+  --proto-mail: #d9f0f7;
+  --proto-routing: #dff3d8;
+  --proto-stp: #f1e4d8;
+  --proto-link: #e4e9f2;
+  --dot-arp: #c27c0e;
+  --dot-icmp: #1d5fd6;
+  --dot-dhcp: #067a52;
+  --dot-dns: #7c3aed;
+  --dot-tcp: #5b6676;
+  --dot-http: #c0262d;
+  --dot-mail: #0e7490;
+  --dot-routing: #3f8f1f;
+  --dot-stp: #8a5a2b;
+  --dot-link: #4b5f8a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --proto-arp: #4a3c14;
+    --proto-icmp: #1c3252;
+    --proto-dhcp: #123a2c;
+    --proto-dns: #33244f;
+    --proto-tcp: #2b3440;
+    --proto-http: #4a1f22;
+    --proto-mail: #133a44;
+    --proto-routing: #24401a;
+    --proto-stp: #3d2c1d;
+    --proto-link: #252f45;
+    --dot-arp: #f5b041;
+    --dot-icmp: #6aa5ff;
+    --dot-dhcp: #3ccf96;
+    --dot-dns: #b794f6;
+    --dot-tcp: #9eaaba;
+    --dot-http: #f2756a;
+    --dot-mail: #5fd0e8;
+    --dot-routing: #8fd16a;
+    --dot-stp: #d6a77a;
+    --dot-link: #9fb3df;
+  }
+}
+
+:root[data-theme='dark'] {
+  --proto-arp: #4a3c14;
+  --proto-icmp: #1c3252;
+  --proto-dhcp: #123a2c;
+  --proto-dns: #33244f;
+  --proto-tcp: #2b3440;
+  --proto-http: #4a1f22;
+  --proto-mail: #133a44;
+  --proto-routing: #24401a;
+  --proto-stp: #3d2c1d;
+  --proto-link: #252f45;
+  --dot-arp: #f5b041;
+  --dot-icmp: #6aa5ff;
+  --dot-dhcp: #3ccf96;
+  --dot-dns: #b794f6;
+  --dot-tcp: #9eaaba;
+  --dot-http: #f2756a;
+  --dot-mail: #5fd0e8;
+  --dot-routing: #8fd16a;
+  --dot-stp: #d6a77a;
+  --dot-link: #9fb3df;
+}
+
+/* Jedes Protokoll hat eine Farbe: Hintergrund in der Paketliste, Punkt in der Animation. */
+.proto-arp {
+  --proto: var(--proto-arp);
+  --dot: var(--dot-arp);
+}
+.proto-icmp,
+.proto-icmpv6 {
+  --proto: var(--proto-icmp);
+  --dot: var(--dot-icmp);
+}
+.proto-dhcp,
+.proto-dhcpv6 {
+  --proto: var(--proto-dhcp);
+  --dot: var(--dot-dhcp);
+}
+.proto-dns {
+  --proto: var(--proto-dns);
+  --dot: var(--dot-dns);
+}
+.proto-tcp {
+  --proto: var(--proto-tcp);
+  --dot: var(--dot-tcp);
+}
+.proto-http {
+  --proto: var(--proto-http);
+  --dot: var(--dot-http);
+}
+.proto-ssh {
+  --proto: var(--proto-tcp);
+  --dot: #111827;
+}
+.proto-smtp,
+.proto-pop3,
+.proto-imap {
+  --proto: var(--proto-mail);
+  --dot: var(--dot-mail);
+}
+
+.proto-ospf,
+.proto-rip,
+.proto-bgp {
+  --proto: var(--proto-routing);
+  --dot: var(--dot-routing);
+}
+.proto-stp {
+  --proto: var(--proto-stp);
+  --dot: var(--dot-stp);
+}
+.proto-esp,
+.proto-ikev2 {
+  --proto: color-mix(in srgb, #7c3aed 16%, var(--surface));
+  --dot: #7c3aed;
+}
+
+/* Leitungsprotokolle: PPP, DOCSIS, GPON, DSL, Mobilfunk, WLAN-Verwaltung. */
+.proto-ppp-lcp,
+.proto-ppp-ipcp,
+.proto-docsis,
+.proto-pppoe,
+.proto-gpon,
+.proto-dsl,
+.proto-vdsl,
+.proto-lte,
+.proto-802-11 {
+  --proto: var(--proto-link);
+  --dot: var(--dot-link);
+}

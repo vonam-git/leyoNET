@@ -6,9 +6,9 @@ schicht: 2 (Sicherung)
 hilfe: [vlan, trunk, routerOnAStick]
 demos: [vlanStp, routerOnAStick]
 uebungen: [vlans, vlan-colors, router-on-a-stick, m145-ue03, m145-ue04, m145-x2]
-normen: [IEEE 802.1Q]
+normen: [IEEE 802.1Q, IEEE 802.3]
 protokolle: [Ethernet II, 802.1Q]
-verwandt: [switch, layer3-switch, stp, netzwerkdesign]
+verwandt: [switch, layer3-switch, stp, netzwerkdesign, rahmen-und-pakete]
 ---
 ## Wozu
 
@@ -26,6 +26,14 @@ Der **802.1Q-Tag** sind 4 Byte nach den MAC-Adressen: EtherType `0x8100`, Priori
 > Ein Switch leitet nur VLANs weiter, die er kennt. Auch ein Switch, der ein VLAN nur über Trunks weitergibt, braucht es in seiner VLAN-Datenbank.
 
 ![VLANs mit Trunk und Spanning Tree in der Simulation](vlanStp)
+
+## Der 802.1Q-Tag
+
+Auf dem Trunk fügt der Switch nach der Quell-MAC 4 Byte ein: TPID 0x8100 und darin die VLAN-Nummer. Am Access-Port nimmt er den Tag wieder weg. Weil sich der Rahmen ändert, rechnet der Switch die FCS neu.
+
+{{format dot1q}}
+
+{{format ethernet2q}}
 
 ## Routing zwischen VLANs
 

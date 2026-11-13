@@ -52,6 +52,11 @@ export class Part {
     return this.field(key, shown, u16(n));
   }
 
+  /** 16 Bit, niederwertigstes Byte zuerst (IEEE 802.11 zählt so). */
+  le16(key: string, n: number, shown: string | number = n) {
+    return this.field(key, shown, [n & 0xff, (n >>> 8) & 0xff]);
+  }
+
   u32(key: string, n: number, shown: string | number = n) {
     return this.field(key, shown, u32(n));
   }
@@ -125,5 +130,34 @@ export function internetChecksum(bytes: ArrayLike<number>): number {
   while (sum >> 16) sum = (sum & 0xffff) + (sum >> 16);
   return ~sum & 0xffff;
 }
+
+/**
+ * CRC-32 wie in der Rahmenprüfsumme (FCS) von Ethernet (IEEE 802.3, Abschnitt 3.2.9) und WLAN
+ * (IEEE 802.11): Polynom 0x04C11DB7 bitweise gespiegelt (0xEDB88320), Start 0xFFFFFFFF,
+ * am Schluss invertiert. Gesendet wird das niederwertigste Byte zuerst.
+ */
+const CRC32_TABLE = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+export function crc32(bytes: ArrayLike<number>): number {
+  let c = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) c = CRC32_TABLE[(c ^ bytes[i]!) & 0xff]! ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+/** FCS-16 von PPP in HDLC-ähnlicher Rahmung (RFC 1662, Anhang C): Start 0xFFFF, Polynom 0x8408, invertiert. */
+export function fcs16(bytes: ArrayLike<number>): number {
+  let c = 0xffff;
+  for (let i = 0; i < bytes.length; i++) {
+    c ^= bytes[i]!;
+    for (let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0x8408 : c >>> 1;
+  }
+  return ~c & 0xffff;
+}
+
+/** Wert niederwertigstes Byte zuerst (so stehen CRC-32 und FCS-16 im Rahmen). */
+export const le = (n: number, bytes: number) => Array.from({ length: bytes }, (_, i) => (n >>> (8 * i)) & 0xff);
 
 export const hex = (n: number, digits: number) => `0x${n.toString(16).padStart(digits, '0')}`;

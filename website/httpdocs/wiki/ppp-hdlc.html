@@ -7,11 +7,13 @@
   <meta name="description" content="Punkt-zu-Punkt-Verbindungen zwischen Routern ohne ARP, die Kapselung HDLC oder PPP mit LCP und IPCP, und PPPoE bei DSL.">
   <link rel="canonical" href="https://leyonet.ch/wiki/ppp-hdlc.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
-  <link rel="stylesheet" href="wiki.css?v=1.5.0">
-  <script src="../js/site.js?v=1.5.0" defer></script>
-  <script src="suche.js?v=1.5.0" defer></script>
-  <script src="wiki.js?v=1.5.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.1">
+  <link rel="stylesheet" href="farben.css?v=1.5.1">
+  <link rel="stylesheet" href="aufbau.css?v=1.5.1">
+  <link rel="stylesheet" href="wiki.css?v=1.5.1">
+  <script src="../js/site.js?v=1.5.1" defer></script>
+  <script src="suche.js?v=1.5.1" defer></script>
+  <script src="wiki.js?v=1.5.1" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -60,7 +62,7 @@
       </details>
       <details class="wiki-group">
         <summary>Grundlagen</summary>
-        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="rahmen-und-pakete.html">Aufbau von Rahmen und Paketen</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
       </details>
       <details class="wiki-group">
         <summary>Geräte</summary>
@@ -76,7 +78,7 @@
       <h1>Serielle Leitungen: HDLC, PPP und PPPoE</h1>
       <p class="lead">Punkt-zu-Punkt-Verbindungen zwischen Routern ohne ARP, die Kapselung HDLC oder PPP mit LCP und IPCP, und PPPoE bei DSL.</p>
       <dl class="facts"><div><dt>Schicht</dt><dd>2 (Sicherung)</dd></div><div><dt>Norm</dt><dd>RFC 1661, RFC 1662, RFC 1332 …</dd></div><div><dt>Beispiel</dt><dd><a href="#beispiel">Demo ansehen</a></dd></div></dl>
-      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#punkt-zu-punkt">Punkt-zu-Punkt</a></li><li><a href="#kapselung">Kapselung</a></li><li><a href="#pppoe">PPPoE</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#punkt-zu-punkt">Punkt-zu-Punkt</a></li><li><a href="#kapselung">Kapselung</a></li><li><a href="#der-ppp-rahmen">Der PPP-Rahmen</a></li><li><a href="#pppoe">PPPoE</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
       <article class="prose">
 <h2 id="punkt-zu-punkt">Punkt-zu-Punkt</h2>
 <p>Eine serielle Leitung verbindet genau zwei Router. Weil es nur einen Empfänger gibt, braucht es keine MAC-Adressen und kein ARP. Früher waren solche Standleitungen die übliche WAN-Verbindung zwischen Standorten; das Prinzip lebt in DSL und Mobilfunk weiter.</p>
@@ -87,6 +89,8 @@
 Router(config-if)# encapsulation ppp
 Router(config-if)# ip address 10.0.0.1/30</code></pre>
 <p>Der Port muss vorher im Formular auf «seriell» stehen.</p>
+<h2 id="der-ppp-rahmen">Der PPP-Rahmen</h2>
+<figure class="lx-figure"><figure class="lx-format lx-o2"><div class="lx-format-head"><span class="lx-tag proto-ppp-rfc-1662-">PPP (RFC 1662)</span><span class="lx-muted">Rahmen · RFC 1662, RFC 1661</span></div><div class="lx-scroll"><div class="lx-band lx-o2"><div class="lx-byte lx-g2 phy" title="0x7E markiert Anfang und Ende jedes Rahmens auf der Leitung."><span class="lx-f-name">Flag</span><span class="lx-f-size">1 Byte</span><span class="lx-f-value">0x7E</span></div><div class="lx-byte lx-g2" title="Immer 0xFF (alle Stationen): Auf einer Punkt-zu-Punkt-Leitung gibt es nur eine Gegenseite." data-start="0" data-len="1"><span class="lx-f-name">Adresse</span><span class="lx-f-size">1 Byte</span><span class="lx-f-value">0xff</span></div><div class="lx-byte lx-g2" title="Immer 0x03 (Unnumbered Information)." data-start="1" data-len="1"><span class="lx-f-name">Steuerung</span><span class="lx-f-size">1 Byte</span><span class="lx-f-value">0x03</span></div><div class="lx-byte lx-g2" title="Was steckt drin: 0x0021 IPv4, 0x0057 IPv6, 0xC021 LCP, 0x8021 IPCP (RFC 1661)." data-start="2" data-len="2"><span class="lx-f-name">Protokoll</span><span class="lx-f-size">2 Byte</span><span class="lx-f-value">0x0021</span></div><div class="lx-byte lx-g24 payload" title="Das Paket oder die Steuernachricht, ohne Aushandlung höchstens 1500 Byte (MRU)." data-start="4" data-len="60"><span class="lx-f-name">Information</span><span class="lx-f-size">≤ 1500 Byte</span><span class="lx-f-value">60 Byte</span></div><div class="lx-byte lx-g2" title="Prüfsumme FCS-16 über Adresse bis Information (auf Wunsch FCS-32)." data-start="64" data-len="2"><span class="lx-f-name">FCS</span><span class="lx-f-size">2 Byte</span><span class="lx-f-value">0xef53</span></div><div class="lx-byte lx-g2 phy" title="Schliessendes Flag 0x7E (kann zugleich das öffnende des nächsten Rahmens sein)."><span class="lx-f-name">Flag</span><span class="lx-f-size">1 Byte</span><span class="lx-f-value">0x7E</span></div></div></div><figcaption class="lx-muted">Von links nach rechts, in der Reihenfolge, in der die Bytes gesendet werden. Grau gestrichelt: steht in keinem Mitschnitt (Schicht 1 oder Rahmung der Leitung). Zeigen auf ein Feld erklärt es.</figcaption></figure><div class="table-wrap"><table class="lx-fields"><thead><tr><th>Feld</th><th>Länge</th><th>Wert im Beispiel</th><th>Bedeutung</th></tr></thead><tbody><tr class="phy"><td>Flag<span class="lx-muted"> (Rahmung, nicht im Mitschnitt)</span></td><td class="lx-nowrap">1 Byte</td><td class="lx-mono">0x7E</td><td>0x7E markiert Anfang und Ende jedes Rahmens auf der Leitung.</td></tr><tr><td>Adresse</td><td class="lx-nowrap">1 Byte</td><td class="lx-mono">0xff</td><td>Immer 0xFF (alle Stationen): Auf einer Punkt-zu-Punkt-Leitung gibt es nur eine Gegenseite.</td></tr><tr><td>Steuerung</td><td class="lx-nowrap">1 Byte</td><td class="lx-mono">0x03</td><td>Immer 0x03 (Unnumbered Information).</td></tr><tr><td>Protokoll</td><td class="lx-nowrap">2 Byte</td><td class="lx-mono">0x0021</td><td>Was steckt drin: 0x0021 IPv4, 0x0057 IPv6, 0xC021 LCP, 0x8021 IPCP (RFC 1661).</td></tr><tr><td>Information</td><td class="lx-nowrap">≤ 1500 Byte</td><td class="lx-mono">60 Byte</td><td>Das Paket oder die Steuernachricht, ohne Aushandlung höchstens 1500 Byte (MRU).</td></tr><tr><td>FCS</td><td class="lx-nowrap">2 Byte</td><td class="lx-mono">0xef53</td><td>Prüfsumme FCS-16 über Adresse bis Information (auf Wunsch FCS-32).</td></tr><tr class="phy"><td>Flag<span class="lx-muted"> (Rahmung, nicht im Mitschnitt)</span></td><td class="lx-nowrap">1 Byte</td><td class="lx-mono">0x7E</td><td>Schliessendes Flag 0x7E (kann zugleich das öffnende des nächsten Rahmens sein).</td></tr></tbody></table></div><figcaption>Werte: Echter Rahmen aus der Demo <a href="https://app.leyonet.ch/?schaufenster=ppp">«Serielle WAN-Leitung mit PPP»</a> (Nr. 12, 66 Byte), so zeigt ihn auch die Paketliste in leyoNET.</figcaption></figure>
 <h2 id="pppoe">PPPoE</h2>
 <p>Bei DSL läuft PPP über Ethernet: <strong>PPPoE</strong>. Zuerst sucht das Modem den Zugangsrechner des Providers (PADI, PADO, PADR, PADS), dann folgen LCP, die Anmeldung mit Benutzer und Passwort (PAP) und IPCP, das die öffentliche Adresse zuteilt. Mehr dazu unter <a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a>.</p>
 <section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
@@ -100,7 +104,7 @@ Router(config-if)# ip address 10.0.0.1/30</code></pre>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Standorte über eine serielle Leitung</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_serial-wan.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
-<div class="table-wrap"><table><thead><tr><th>Protokoll</th><th>Schicht</th><th>Vereinfachung in der Simulation</th></tr></thead><tbody><tr><td>PPP (LCP, IPCP), Cisco-HDLC</td><td>2</td><td>Keine Authentisierung auf seriellen Leitungen</td></tr><tr><td>PPPoE</td><td>2</td><td>Discovery (PADI/PADO/PADR/PADS) und Session; Anmeldung mit PAP</td></tr></tbody></table></div></section>
+<div class="table-wrap"><table><thead><tr><th>Protokoll</th><th>Schicht</th><th>Vereinfachung in der Simulation</th></tr></thead><tbody><tr><td>PPP (LCP, IPCP), Cisco-HDLC</td><td>2</td><td>Keine Authentisierung auf seriellen Leitungen; FCS-16 im Rahmen, Flags und Bit-Stopfen nicht (pcap ohne FCS)</td></tr><tr><td>PPPoE</td><td>2</td><td>Discovery (PADI/PADO/PADR/PADS) und Session; Anmeldung mit PAP</td></tr></tbody></table></div></section>
 <section aria-labelledby="normen"><h2 id="normen">Normen</h2>
 <ul class="norms"><li><a href="https://www.rfc-editor.org/rfc/rfc1661">RFC 1661</a> – The Point-to-Point Protocol (PPP)</li><li><a href="https://www.rfc-editor.org/rfc/rfc1662">RFC 1662</a> – PPP in HDLC-like Framing</li><li><a href="https://www.rfc-editor.org/rfc/rfc1332">RFC 1332</a> – The PPP Internet Protocol Control Protocol (IPCP)</li><li><a href="https://www.rfc-editor.org/rfc/rfc2516">RFC 2516</a> – A Method for Transmitting PPP Over Ethernet (PPPoE)</li></ul></section>
 <section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
@@ -115,7 +119,7 @@ Router(config-if)# ip address 10.0.0.1/30</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.1 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>

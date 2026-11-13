@@ -35,7 +35,14 @@ verwandt: [ethernet-mac, ipv4]
 | `protokolle` | Zeilen aus der Übersicht in `docs/protokolle.md` (Vereinfachungen), getrennt mit `;` | `docs/protokolle.md` |
 | `verwandt` | Weiterlesen | andere Wiki-Seiten |
 
-Im Text: `## Überschrift`, `### Unterüberschrift`, Aufzählungen, Tabellen, Codeblöcke, `> Hinweis`, **fett**, *kursiv*, `Code`, `[Text](https://…)` und `[[seite]]` bzw. `[[seite|Text]]` für Wiki-Verweise. Eine Zeile `{{katalog}}` fügt die ganze Übungsliste ein, `{{demos}}` alle Demo-Netze.
+Im Text: `## Überschrift`, `### Unterüberschrift`, Aufzählungen, Tabellen, Codeblöcke, `> Hinweis`, **fett**, *kursiv*, `Code`, `[Text](https://…)` und `[[seite]]` bzw. `[[seite|Text]]` für Wiki-Verweise. Eine Zeile `{{katalog}}` fügt die ganze Übungsliste ein, `{{demos}}` alle Demo-Netze. Für Rahmen und Pakete (gleiche Darstellung wie die Paketdetails der App, aus `src/ui/aufbau.ts`, Werte aus echten Rahmen der Demos in `src/ui/frameExamples.ts`):
+
+- `{{osi}}`: die sieben Schichten mit Farben und den Protokollen als Tags
+- `{{aufbau http}}`: Verschachtelung eines Beispielrahmens, mit «Nächste Hülle einpacken»
+- `{{paket http}}`: der Rahmen wie in den Paketdetails, mit Hex-Ansicht und Markierung
+- `{{format ipv4}}`: Kopf nach Norm als Bild und Feldtabelle (Formate in `src/core/wire/formats.ts`: `ethernet2`, `ethernet2q`, `dot1q`, `ieee8023`, `wlan`, `ppp`, `arp`, `ipv4`, `ipv6`, `icmp`, `tcp`, `udp`)
+
+Beispiele: `http`, `vlan`, `arp`, `stp`, `ppp`, `wlan`, `ipv6`. Liefert eine Demo den Rahmen nicht mehr, schlägt der Bau fehl.
 
 ## Regeln
 

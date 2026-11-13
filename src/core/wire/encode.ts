@@ -27,7 +27,7 @@ import {
   type TcpSegment,
   type UdpDatagram,
 } from '../sim/frames';
-import { Part, hex, internetChecksum, ipBytes, latin1, macBytes, u16, u32, utf8, type WireField, type WireLayer } from './part';
+import { Part, crc32, fcs16, hex, internetChecksum, ipBytes, latin1, le, macBytes, u16, u32, utf8, type WireField, type WireLayer } from './part';
 import { ip6Bytes } from '../net/ipv6';
 
 export type { WireField, WireLayer, OsiLayer } from './part';
@@ -807,8 +807,17 @@ function ethernet(frame: EthernetFrame, inner: Part, etherType: number, header =
   if (etherType) p.u16('eth.type', etherType, `${hex(etherType, 4)} (${{ 0x0800: 'IPv4', 0x86dd: 'IPv6', 0x0806: 'ARP', 0x8863: 'PPPoE Discovery', 0x8864: 'PPPoE Session', 0x888e: '802.1X', 0x8809: 'Slow Protocols' }[etherType] ?? ''})`);
   else p.u16('eth.length', inner.length, `${inner.length} (IEEE 802.3)`);
   p.append(inner);
+  // Mindestlänge 64 Byte mit FCS: kürzere Rahmen füllt der Sender mit Nullen auf (IEEE 802.3, 3.2.8).
+  if (p.length < 60) p.field('eth.padding', `${60 - p.length} × 0x00`, new Array(60 - p.length).fill(0));
+  fcs32(p, 'eth.fcs');
   p.close(2, frame.vlan !== undefined ? `${header} + 802.1Q` : header, 0, { note: 'note.ethernet' });
   return p;
+}
+
+/** Rahmenprüfsumme CRC-32 über alle bisherigen Bytes anhängen (Ethernet, WLAN). */
+function fcs32(p: Part, key: string) {
+  const crc = crc32(p.bytes);
+  p.field(key, `${hex(crc, 8)} (CRC-32)`, le(crc, 4));
 }
 
 // --- Steuermeldungen der Zugangstechniken und WLAN ---------------------------------
@@ -837,11 +846,11 @@ function wlan80211(frame: EthernetFrame, c: LinkControl, from: string): { part: 
   const subtype = SUBTYPES[c.message] ?? 0;
   const fc = eapol ? 0x08 : subtype << 4;
   p.field('wlan.fc', eapol ? 'Data' : `Management, ${c.message}`, [fc, eapol ? (frame.dst === from ? 0x02 : 0x01) : 0]);
-  p.u16('wlan.duration', 0x013a, '314 µs');
+  p.le16('wlan.duration', 0x013a, '314 µs');
   p.mac('wlan.addr1', frame.dst || 'FF:FF:FF:FF:FF:FF');
   p.mac('wlan.addr2', frame.src);
   p.mac('wlan.bssid', c.fields?.bssid ? String(c.fields.bssid) : frame.dst || frame.src);
-  p.u16('wlan.seq', 0x0010);
+  p.le16('wlan.seq', 0x0010);
   const ssid = utf8(String(c.fields?.ssid ?? ''));
   const rates = ie(1, [0x8c, 0x12, 0x98, 0x24, 0xb0, 0x48, 0x60, 0x6c]);
   const rsn = ie(48, [1, 0, 0x00, 0x0f, 0xac, 4, 1, 0, 0x00, 0x0f, 0xac, 4, 1, 0, 0x00, 0x0f, 0xac, 2, 0, 0]);
@@ -853,29 +862,30 @@ function wlan80211(frame: EthernetFrame, c: LinkControl, from: string): { part: 
     p.field('wlan.llc', 'SNAP, 802.1X (0x888e)', [0xaa, 0xaa, 0x03, 0, 0, 0, 0x88, 0x8e]);
     p.field('wlan.eapol', `${c.message} (WPA2 4-Way-Handshake)`, [2, 3, ...u16(key.length), ...key]);
   } else if (c.message === 'Authentication') {
-    p.u16('wlan.authAlgorithm', 0, '0 (Open System)');
-    p.u16('wlan.authSeq', Number(c.fields?.seq ?? 1));
-    p.u16('wlan.status', 0, '0 (Successful)');
+    p.le16('wlan.authAlgorithm', 0, '0 (Open System)');
+    p.le16('wlan.authSeq', Number(c.fields?.seq ?? 1));
+    p.le16('wlan.status', 0, '0 (Successful)');
   } else if (c.message.endsWith('Response') && c.message.includes('ssociation')) {
-    p.u16('wlan.capability', secured ? 0x0011 : 0x0001);
-    p.u16('wlan.status', 0, '0 (Successful)');
-    p.u16('wlan.aid', 0xc001, '1');
+    p.le16('wlan.capability', secured ? 0x0011 : 0x0001);
+    p.le16('wlan.status', 0, '0 (Successful)');
+    p.le16('wlan.aid', 0xc001, '1');
     p.field('wlan.rates', '6, 9, 12, 18, 24, 36, 48, 54 Mbit/s', rates);
   } else {
     if (c.message === 'Probe Response') {
       p.field('wlan.timestamp', '', new Array(8).fill(0));
-      p.u16('wlan.beaconInterval', 100, '100 TU (102.4 ms)');
-      p.u16('wlan.capability', secured ? 0x0011 : 0x0001, secured ? '0x0011 (ESS, Privacy)' : '0x0001 (ESS)');
+      p.le16('wlan.beaconInterval', 100, '100 TU (102.4 ms)');
+      p.le16('wlan.capability', secured ? 0x0011 : 0x0001, secured ? '0x0011 (ESS, Privacy)' : '0x0001 (ESS)');
     }
     if (c.message.endsWith('ssociation Request')) {
-      p.u16('wlan.capability', 0x0011);
-      p.u16('wlan.listenInterval', 10);
+      p.le16('wlan.capability', 0x0011);
+      p.le16('wlan.listenInterval', 10);
       if (c.message.startsWith('Reassociation')) p.mac('wlan.currentAp', frame.dst);
     }
     p.field('wlan.ssid', String(c.fields?.ssid ?? ''), ie(0, ssid));
     p.field('wlan.rates', '6, 9, 12, 18, 24, 36, 48, 54 Mbit/s', rates);
     if (c.message === 'Probe Response' && secured) p.field('wlan.rsn', 'WPA2, CCMP, PSK', rsn);
   }
+  fcs32(p, 'wlan.fcs');
   p.close(2, eapol ? 'IEEE 802.11 + EAPOL' : 'IEEE 802.11', 0, { note: 'note.wlan' });
   return { part: p, linkType: LINKTYPE.ieee80211 };
 }
@@ -1012,15 +1022,15 @@ export function physicalLayer(medium: Medium, frameLength: number, frame: Ethern
   };
   const info = describe[frame.access === 'gpon' ? 'fiber' : medium];
   const standard = frame.access === 'gpon' ? 'GPON (ITU-T G.984)' : info.standard;
-  // Ethernet: Präambel 7 + SFD 1 + Prüfsumme (FCS) 4 + Pause 12 Byte kommen auf der Leitung dazu; Mindestgrösse 60.
-  const onWire = ethernetLike && medium !== 'wireless' ? Math.max(frameLength, 60) + 4 + 8 + 12 : frameLength;
+  // Ethernet: Präambel 7 + SFD 1 vor dem Rahmen und eine Pause von 12 Byte danach (Rahmen samt FCS mindestens 64 Byte).
+  const onWire = ethernetLike && medium !== 'wireless' ? frameLength + 8 + 12 : frameLength;
   const fields: WireField[] = [
     { key: 'phy.standard', value: standard, start: 0, length: 0 },
     { key: 'phy.rate', value: info.rate, start: 0, length: 0 },
     { key: 'phy.signal', value: info.signal, start: 0, length: 0 },
     { key: 'phy.frameBytes', value: String(frameLength), start: 0, length: 0 },
   ];
-  if (onWire !== frameLength) fields.push({ key: 'phy.wireBytes', value: `${onWire} (+ preamble, FCS, IFG)`, start: 0, length: 0 });
+  if (onWire !== frameLength) fields.push({ key: 'phy.wireBytes', value: `${onWire} (+ preamble, SFD, IFG)`, start: 0, length: 0 });
   return { osi: 1, protocol: standard, start: 0, length: 0, fields, note: ethernetLike ? 'note.phyEthernet' : undefined };
 }
 
@@ -1041,15 +1051,22 @@ export function dissect(frame: EthernetFrame, medium: Medium = 'tp'): Dissection
       p.u8('ppp.control', 0x03, '0x03 (UI)');
       p.u16('ppp.protocol', pppProtocol, `${hex(pppProtocol, 4)} (${{ 0x0021: 'IPv4', 0xc021: 'LCP', 0x8021: 'IPCP' }[pppProtocol] ?? ''})`);
       p.append(part);
+      const pcap = [...p.bytes];
+      const fcs = fcs16(p.bytes);
+      p.field('ppp.fcs', `${hex(fcs, 4)} (FCS-16)`, le(fcs, 2));
       p.close(2, 'PPP (RFC 1662)', 0, { note: 'note.serial' });
-      result = { part: p, linkType: LINKTYPE.pppHdlc };
+      // Mitschnitte von PPP enthalten die FCS üblicherweise nicht.
+      return finish({ part: p, linkType: null }, medium, frame, { pcap, linkType: LINKTYPE.pppHdlc });
     } else {
       p.u8('hdlc.address', 0x0f, '0x0f (Unicast)');
       p.u8('hdlc.control', 0x00);
       p.u16('hdlc.protocol', 0x0800, '0x0800 (IPv4)');
       p.append(part);
+      const pcap = [...p.bytes];
+      const fcs = fcs16(p.bytes);
+      p.field('hdlc.fcs', `${hex(fcs, 4)} (FCS-16)`, le(fcs, 2));
       p.close(2, 'Cisco HDLC', 0, { note: 'note.serial' });
-      result = { part: p, linkType: LINKTYPE.ciscoHdlc };
+      return finish({ part: p, linkType: null }, medium, frame, { pcap, linkType: LINKTYPE.ciscoHdlc });
     }
   } else {
     const { part, etherType } = payloadPart(frame);

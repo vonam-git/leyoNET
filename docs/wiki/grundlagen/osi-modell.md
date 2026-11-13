@@ -6,11 +6,15 @@ schicht: 1 bis 7
 hilfe: [osi]
 demos: [gateway]
 uebungen: [m129-lab-a3]
-verwandt: [ethernet-mac, ipv4, tcp]
+verwandt: [rahmen-und-pakete, ethernet-mac, ipv4, tcp]
 ---
 ## Die sieben Schichten
 
 Das OSI-Modell teilt die Kommunikation in Schichten. Jede Schicht löst eine Aufgabe und nutzt dafür die Schicht darunter. Im Unterricht arbeitet man meist mit fünf: Die Schichten 5 und 6 gehen im Alltag in der Anwendung auf (wie im TCP/IP-Modell).
+
+Jede Schicht hat in leyoNET eine feste Farbe, in der Paketliste, im Einzelschritt und hier im Wiki. Die Tags zeigen die Protokolle, die leyoNET auf dieser Schicht simuliert, in denselben Farben wie in der Paketliste.
+
+{{osi}}
 
 | Schicht | Name | Aufgabe | Beispiele | Gerät |
 |---|---|---|---|---|
@@ -22,12 +26,11 @@ Das OSI-Modell teilt die Kommunikation in Schichten. Jede Schicht löst eine Auf
 
 ## Kapselung
 
-Wenn ein Browser eine Webseite anfragt, entsteht eine HTTP-Anfrage (Schicht 7). TCP setzt einen Kopf mit den Ports davor (Schicht 4), IP einen Kopf mit Absender- und Zieladresse (Schicht 3), Ethernet einen Kopf mit den MAC-Adressen (Schicht 2). Auf dem Kabel (Schicht 1) liegen am Ende nur Bits.
+Wenn ein Browser eine Webseite anfragt, entsteht eine HTTP-Anfrage (Schicht 7). TCP setzt einen Kopf mit den Ports davor (Schicht 4), IP einen Kopf mit Absender- und Zieladresse (Schicht 3), Ethernet einen Kopf mit den MAC-Adressen und am Ende die Prüfsumme FCS (Schicht 2). Auf dem Kabel (Schicht 1) liegen am Ende nur Bits, angeführt von Präambel und SFD.
 
-```
-[ Ethernet | IPv4 | TCP | HTTP-Anfrage ]
-  Schicht 2  3      4     7
-```
+{{aufbau http}}
+
+Wie jeder Kopf Feld für Feld aufgebaut ist, zeigt [[rahmen-und-pakete]].
 
 Auf dem Weg packt jedes Gerät nur so weit aus, wie es muss: Ein **Switch** schaut bis Schicht 2 (MAC-Adresse), ein **Router** bis Schicht 3 (IP-Adresse) und setzt einen neuen Ethernet-Kopf für das nächste Netz. Erst das **Ziel** packt alles aus.
 

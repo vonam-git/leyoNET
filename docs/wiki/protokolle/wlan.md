@@ -8,7 +8,7 @@ demos: [wlan]
 uebungen: [wlan]
 normen: [IEEE 802.11, IEEE 802.1X]
 protokolle: [802.11 Management, EAPOL]
-verwandt: [access-point, ethernet-mac]
+verwandt: [access-point, ethernet-mac, rahmen-und-pakete]
 ---
 ## Wie ein Gerät ins WLAN kommt
 
@@ -18,6 +18,12 @@ Ein Access Point sendet regelmässig **Beacons** mit seiner SSID. Ein Client, de
 2. **Association:** Der Client bittet um Aufnahme, der Access Point bestätigt.
 3. **4-Way-Handshake** (EAPOL): Beide leiten aus dem Passwort und Zufallszahlen einen gemeinsamen Schlüssel ab, ohne das Passwort zu senden. Stimmt das Passwort nicht, scheitert dieser Schritt.
 4. Danach fliessen Daten, z.B. die DHCP-Anfrage.
+
+## Der WLAN-Rahmen
+
+Der Kopf nach IEEE 802.11 hat bis zu vier Adressen und endet wie Ethernet mit einer FCS (CRC-32). Werte aus einer Verwaltungsnachricht der Simulation.
+
+{{format wlan}}
 
 ## Signal, Roaming und Mesh
 

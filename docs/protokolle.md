@@ -7,13 +7,13 @@ Der Simulator sendet Pakete, die den Standards folgen. Jeder Rahmen lässt sich 
 | Schicht | Protokoll | Standard | Vereinfachung |
 |---|---|---|---|
 | 1 | Ethernet-PHY, 802.11-Funk, DOCSIS, GPON, DSL, LTE | IEEE 802.3, 802.11, ITU-T | Nur als Beschreibung (Medium, Rate, Modulation); keine Bitfehler ausser «beschädigtes Kabel» |
-| 2 | Ethernet II, 802.1Q | IEEE 802.3, 802.1Q | Ohne Präambel und FCS, wie in den meisten Mitschnitten |
+| 2 | Ethernet II, 802.1Q | IEEE 802.3, 802.1Q | Mit FCS (CRC-32) und Auffüllen auf 64 Byte; Präambel, SFD und Pause nur als Angabe auf Schicht 1; kein Jumbo-Rahmen |
 | 2–4 | VXLAN | RFC 7348 | Innerer Ethernet-Rahmen in UDP 4789 mit VNI; VTEPs aus fester Liste (Ingress Replication), MAC-Lernen im Datenpfad; kein EVPN, keine Multicast-Gruppen |
 | 2 | LACP | IEEE 802.1AX | LACPDU (Slow Protocols, 0x8809) mit Actor/Partner, kurze Zeiten (1 s, Partner gilt 3 s); keine Prioritäten, kein Marker-Protokoll; Verteilung nach Hash der MAC-Adressen |
 | 2 | STP | IEEE 802.1D | Verkürzte Zeiten; Ports zu Endgeräten leiten sofort weiter (wie PortFast) |
 | 2 | ARP, Gratuitous ARP, Proxy-ARP | RFC 826, RFC 5227 | – |
 | 2 | 802.11 Management, EAPOL | IEEE 802.11, 802.11i | Authentication, Association/Reassociation und 4-Way-Handshake als Ablauf; keine echte Verschlüsselung |
-| 2 | PPP (LCP, IPCP), Cisco-HDLC | RFC 1661, RFC 1662, RFC 1332 | Keine Authentisierung auf seriellen Leitungen |
+| 2 | PPP (LCP, IPCP), Cisco-HDLC | RFC 1661, RFC 1662, RFC 1332 | Keine Authentisierung auf seriellen Leitungen; FCS-16 im Rahmen, Flags und Bit-Stopfen nicht (pcap ohne FCS) |
 | 2 | PPPoE | RFC 2516 | Discovery (PADI/PADO/PADR/PADS) und Session; Anmeldung mit PAP |
 | 3 | IPv4 | RFC 791 | Keine Fragmentierung (MSS 1460 verhindert sie), keine Optionen |
 | 3 | ICMP | RFC 792 | Echo, Destination Unreachable, Time Exceeded |

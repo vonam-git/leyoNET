@@ -41,6 +41,7 @@ export * from './model/costs';
 export * from './net/dynamic';
 export * from './wire/encode';
 export { toPcapng } from './wire/pcap';
+export * from './wire/formats';
 export { ACCESS_PROFILES, type AccessProfile } from './sim/access';
 export type { OspfState, OspfNeighbor } from './sim/ospf';
 export type { BgpPeerInfo } from './sim/bgp';

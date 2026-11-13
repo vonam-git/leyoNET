@@ -1,7 +1,7 @@
 ---
 titel: Subnetting und VLSM
 kurz: Ein Netz in kleinere aufteilen, Masken und Präfixe lesen, Hostbereich und Broadcast berechnen – gleichmässig oder nach Bedarf.
-reihenfolge: 3
+reihenfolge: 4
 schicht: 3 (Vermittlung)
 hilfe: [subnetting, ipcalc]
 uebungen: [subnetting-vlsm, m129-sub-a1, m129-sub-a2, m117-ue03-a3]

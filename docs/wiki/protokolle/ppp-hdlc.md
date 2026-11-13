@@ -31,6 +31,10 @@ Router(config-if)# ip address 10.0.0.1/30
 
 Der Port muss vorher im Formular auf «seriell» stehen.
 
+## Der PPP-Rahmen
+
+{{format ppp}}
+
 ## PPPoE
 
 Bei DSL läuft PPP über Ethernet: **PPPoE**. Zuerst sucht das Modem den Zugangsrechner des Providers (PADI, PADO, PADR, PADS), dann folgen LCP, die Anmeldung mit Benutzer und Passwort (PAP) und IPCP, das die öffentliche Adresse zuteilt. Mehr dazu unter [[zugangstechniken]].

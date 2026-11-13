@@ -81,6 +81,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('tool.sniffer', 'tools', 1),
   f('tool.osi', 'tools', 1),
   f('tool.hex', 'tools', 4),
+  f('tool.frame', 'tools', 2),
   f('tool.pcap', 'tools', 4),
   f('tool.ipCalculator', 'tools', 1),
   f('tool.areas', 'tools', 1),

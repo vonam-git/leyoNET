@@ -8,7 +8,7 @@ demos: [ipv6, ipv6Services]
 uebungen: [ipv6-router]
 normen: [RFC 8200, RFC 4291, RFC 5952, RFC 4861, RFC 4862, RFC 3849]
 protokolle: [IPv6; ICMPv6, Neighbor Discovery; SLAAC]
-verwandt: [dhcpv6, ds-lite, ipv4, icmp]
+verwandt: [rahmen-und-pakete, dhcpv6, ds-lite, ipv4, icmp]
 ---
 ## Adressen
 
@@ -22,6 +22,14 @@ Eine IPv6-Adresse hat 128 Bit, geschrieben als acht Gruppen zu vier Hexadezimalz
 | Multicast | `ff02::1` (alle), `ff02::2` (alle Router) | statt Broadcast |
 
 Ein Netz hat in der Regel ein **/64-Präfix**: 64 Bit Netz, 64 Bit für das Gerät.
+
+## Der IPv6-Kopf
+
+Der Kopf ist immer 40 Byte lang, zehn Zeilen zu 32 Bit; die beiden Adressen belegen acht davon. Werte aus einem RIPng-Paket der Simulation.
+
+{{format ipv6}}
+
+Unterschiede zu IPv4 auf einen Blick: [[rahmen-und-pakete]].
 
 ## Neighbor Discovery
 

@@ -16,6 +16,10 @@ import { CATALOG } from '../ui/catalog';
 import { generalSheet } from '../ui/catalogKit';
 import { DEMOS } from '../ui/demos';
 import { HELP_GROUPS, HELP_TOPICS, parseHelp, type HelpPart } from '../ui/help';
+import { FORMATS, readFormat, type FormatId } from '../core';
+import { setLocale, t } from '../i18n';
+import { encapsulationView, fieldTableView, formatView, hexView, layerValues, osiLayersView, osiOverviewView, toHtml } from '../ui/aufbau';
+import { frameExample, type ExampleId } from '../ui/frameExamples';
 import { escapeHtml, render, type Heading, type LinkResolver } from './markdown';
 
 export const AREAS = [
@@ -156,6 +160,10 @@ export function buildWiki(root: string, version: string): WikiBuild {
   const index = readFileSync(join(root, 'website/httpdocs/index.html'), 'utf8');
   const logo = /<svg viewBox="30 50 470 100"[\s\S]*?<\/svg>/.exec(index)?.[0] ?? 'leyoNET';
   const v = `?v=${version}`;
+  setLocale('de');
+
+  // Farben und Aufbau: dieselben Stylesheets wie die App (src/ui), damit alles gleich aussieht.
+  for (const css of ['farben', 'aufbau']) files.set(`${css}.css`, `/* Kopie von src/ui/${css}.css (erzeugt mit npm run wiki) – nicht von Hand ändern. */\n${readFileSync(join(root, `src/ui/${css}.css`), 'utf8')}`);
 
   // --- Prüfungen der Kopfzeilen ------------------------------------------------------
   const seen = new Set<string>();
@@ -247,6 +255,8 @@ export function buildWiki(root: string, version: string): WikiBuild {
   <link rel="canonical" href="https://leyonet.ch/wiki/${o.path}">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../css/site.css${v}">
+  <link rel="stylesheet" href="farben.css${v}">
+  <link rel="stylesheet" href="aufbau.css${v}">
   <link rel="stylesheet" href="wiki.css${v}">
   <script src="../js/site.js${v}" defer></script>
   <script src="suche.js${v}" defer></script>
@@ -311,14 +321,51 @@ ${o.body}
       return `<tr><td>${escapeHtml(texts[`demo.${d.id}.title`] ?? d.id)}</td><td>${page ? `<a href="${page.slug}.html">${escapeHtml(page.title)}</a>` : ''}</td><td><a href="${APP}?schaufenster=${d.id}">Live ansehen</a></td></tr>`;
     }).join('')}</tbody></table></div>`;
 
+  // --- Rahmen und Pakete aus den Demos (wie in den Paketdetails der App) ---------------
+  const EXAMPLE_FOR: Record<FormatId, ExampleId> = { ethernet2: 'http', ethernet2q: 'vlan', dot1q: 'vlan', ieee8023: 'stp', wlan: 'wlan', ppp: 'ppp', arp: 'arp', ipv4: 'http', ipv6: 'ipv6', icmp: 'vlan', tcp: 'http', udp: 'ipv6' };
+  const exampleCaption = (id: ExampleId) => {
+    const ex = frameExample(id);
+    const title = texts[`demo.${ex.demo}.title`] ?? ex.demo;
+    return `Echter Rahmen aus der Demo <a href="${APP}?schaufenster=${ex.demo}">«${escapeHtml(title)}»</a> (Nr. ${ex.entry.id}, ${ex.wire.bytes.length} Byte), so zeigt ihn auch die Paketliste in leyoNET.`;
+  };
+  const encapFigure = (id: ExampleId) =>
+    `<figure class="lx-figure lx-steps">${toHtml(encapsulationView(frameExample(id).wire, t))}<figcaption>${exampleCaption(id)}</figcaption></figure>`;
+  const packetFigure = (id: ExampleId) => {
+    const { wire } = frameExample(id);
+    return `<figure class="lx-figure lx-packet">${toHtml(osiLayersView(wire, t, { showEmpty: true }))}<p class="lx-muted lx-packet-hint">Zeige auf ein Feld: Die Bytes leuchten unten in der Hex-Ansicht auf.</p>${toHtml(hexView(wire.bytes, 'Bytes (hex)'))}<figcaption>${exampleCaption(id)}</figcaption></figure>`;
+  };
+  const formatFigure = (id: FormatId) => {
+    const format = FORMATS[id];
+    const ex = frameExample(EXAMPLE_FOR[id]);
+    let values = null;
+    if (id === 'dot1q') {
+      const eth = ex.wire.layers.find((l) => l.protocol === 'Ethernet II + 802.1Q')!;
+      values = readFormat(format, ex.wire.bytes, { start: eth.start + 12, length: 4 });
+    } else {
+      const layer = ex.wire.layers.find((l) => layerValues(ex.wire, l)?.format.id === id);
+      if (!layer) throw new Error(`kein ${id} im Beispiel ${ex.id}`);
+      values = layerValues(ex.wire, layer)!.values;
+    }
+    return `<figure class="lx-figure">${toHtml(formatView(format, t, values, { allOptional: true }))}${toHtml(fieldTableView(format, t, values))}<figcaption>Werte: ${exampleCaption(ex.id)}</figcaption></figure>`;
+  };
+
   // --- Seiten -----------------------------------------------------------------------
   pages.forEach((p, i) => {
     const area = AREAS.find((a) => a.id === p.area)!;
     const rendered = render(p.body, links(p.file));
     const headings = rendered.headings;
-    const html = rendered.html.replace(/<p>\{\{(\w+)\}\}<\/p>/g, (_, name: string) => {
+    const html = rendered.html.replace(/<p>\{\{(\w+)(?: ([\w-]+))?\}\}<\/p>/g, (_, name: string, arg?: string) => {
       if (name === 'katalog') return catalogTable();
       if (name === 'demos') return demoTable();
+      try {
+        if (name === 'osi') return toHtml(osiOverviewView(t));
+        if (name === 'aufbau' && arg) return encapFigure(arg as ExampleId);
+        if (name === 'paket' && arg) return packetFigure(arg as ExampleId);
+        if (name === 'format' && arg && arg in FORMATS) return formatFigure(arg as FormatId);
+      } catch (e) {
+        errors.push(`${p.file}: {{${name} ${arg}}}: ${(e as Error).message}`);
+        return '';
+      }
       errors.push(`${p.file}: unbekannter Platzhalter {{${name}}}`);
       return '';
     });

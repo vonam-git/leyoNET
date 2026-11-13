@@ -9,7 +9,7 @@ Die Auswahl öffnet sich über den Profil-Chip in der Werkzeugleiste oder **Werk
 | Profil | Zielgruppe | Neu freigeschaltet |
 |---|---|---|
 | 1 Einstieg | 1. Lehrjahr | PC, Notebook, Switch, Router, Server, automatisches Routing, DHCP, Paketliste, OSI-Ansicht, IP-Rechner, Bereiche, Snapshots, Aufgaben erstellen |
-| 2 Grundlagen | 1.–2. Lehrjahr | Access Point, Internet, Internet-Box (CPE), Glasfaser, WLAN, DNS, Web, Ports abschalten, statische Routen, Adressanzeige, Stockwerke, Kosten |
+| 2 Grundlagen | 1.–2. Lehrjahr | Access Point, Internet, Internet-Box (CPE), Glasfaser, WLAN, DNS, Web, Ports abschalten, statische Routen, Adressanzeige, Stockwerke, Kosten, Aufbau der Rahmen (Kopf nach Norm, Verschachtelung) |
 | 3 Fortgeschritten | 2.–3. Lehrjahr | Client-Gruppen, Firewall als Gerät, Modems, Zugangsleitungen, E-Mail, Kabelschäden, VLANs, STP, WLAN-Mesh/Roaming, DHCP-Relay, NAT, Firewall, CLI, Loopbacks, Racks, Preise im Shop, MAC-Adressen ändern |
 | 4 Profi | 3.–4. Lehrjahr, Modul 145 | Layer-3-Switch, Zugriffslisten (ACL) auf Ports und VLAN-Interfaces, Subinterfaces, Port-Channel (LACP), IPv6 (SLAAC, DHCPv6, Neighbor Discovery), DS-Lite, VPN (IPsec), serielle Leitungen, statisches NAT, CGNAT, SSH, RIP, OSPF, Hex-Ansicht, pcap-Export |
 | 5 Studium | Fachhochschule, Rechenzentrum und Provider | BGP, VRF (mehrere Routingtabellen), VXLAN (Leaf-Spine) |
@@ -68,4 +68,4 @@ Die Richtlinie gilt sofort für alle Sitzungen. In der lokalen Datei und der Des
 | Dienste | `service.dhcp`, `service.dns`, `service.web`, `service.mail` |
 | Netzwerk | `net.portShutdown`, `net.macEdit`, `net.cableDamage`, `net.vlan`, `net.stp`, `net.wlanMesh`, `net.dhcpRelay`, `net.nat`, `net.subinterfaces`, `net.staticNat`, `net.cgnat`, `net.firewall`, `net.acl`, `net.vpn`, `net.ipv6`, `net.dsLite`, `net.cli`, `net.ssh` |
 | Routing | `routing.auto`, `routing.static`, `routing.rip`, `routing.ospf`, `routing.bgp` |
-| Werkzeuge | `tool.sniffer`, `tool.osi`, `tool.hex`, `tool.pcap`, `tool.ipCalculator`, `tool.areas`, `tool.snapshots`, `tool.addressBadges`, `tool.floors`, `tool.costs`, `tool.prices`, `tool.racks`, `tool.taskEditor` |
+| Werkzeuge | `tool.sniffer`, `tool.osi`, `tool.hex`, `tool.frame`, `tool.pcap`, `tool.ipCalculator`, `tool.areas`, `tool.snapshots`, `tool.addressBadges`, `tool.floors`, `tool.costs`, `tool.prices`, `tool.racks`, `tool.taskEditor` |

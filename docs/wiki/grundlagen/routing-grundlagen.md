@@ -1,7 +1,7 @@
 ---
 titel: Wie Routing funktioniert
 kurz: Standardgateway, Routing-Tabelle, längstes Präfix und administrative Distanz – und wann man statisch, automatisch oder dynamisch routet.
-reihenfolge: 4
+reihenfolge: 5
 schicht: 3 (Vermittlung)
 hilfe: [autoRouting]
 demos: [gateway, autoRouting]

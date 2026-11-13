@@ -1,0 +1,886 @@
+/*
+ * Aufbau von Rahmen und Paketen im leyoNET-Stil: OSI-Schichten, Kapselung, Kopf nach Norm, Hex.
+ * Gemeinsam für die App (src/main.ts) und das Wiki (beim Bau nach website/httpdocs/wiki/aufbau.css
+ * kopiert). Farben aus farben.css. Keine style-Attribute: Lage und Farbe stehen als Klassen hier,
+ * weil die Website nur eigene Stylesheets erlaubt (CSP style-src 'self').
+ */
+.lx-osi-stack,
+.lx-encap,
+.lx-format,
+.lx-hex,
+.lx-overview,
+.lx-fields {
+  --lx-surface: var(--surface, var(--paper, #ffffff));
+  --lx-surface-2: var(--surface-2, var(--bar, #eef1f5));
+  --lx-border: var(--border, var(--line, #d3d9e1));
+  --lx-text: var(--text, #18212c);
+  --lx-muted: var(--muted, #55606f);
+  --lx-accent: var(--accent, #1d5fd6);
+  --lx-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
+}
+.lx-muted {
+  color: var(--lx-muted);
+}
+.lx-mono {
+  font-family: var(--lx-mono);
+}
+.lx-nowrap {
+  white-space: nowrap;
+}
+.lx-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* --- OSI-Schichten (Paketdetails) ------------------------------------------------- */
+
+.lx-osi {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  margin-bottom: 4px;
+  border: 1px solid var(--lx-border);
+  border-left: 4px solid var(--osi);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--lx-surface);
+}
+.lx-osi.empty {
+  opacity: 0.55;
+  font-size: 0.9em;
+}
+.lx-osi.empty .lx-osi-label {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 4px;
+  padding: 1px 6px;
+}
+.lx-osi.empty .lx-osi-body {
+  padding: 1px 6px;
+}
+.lx-osi-label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 6px;
+  background: var(--lx-surface-2);
+  font-size: 0.875em;
+  cursor: help;
+}
+.lx-osi-label strong {
+  font-size: 1.15em;
+  color: var(--osi);
+}
+.lx-osi-body {
+  padding: 3px 6px;
+  min-width: 0;
+}
+.lx-osi-body details + details {
+  border-top: 1px dashed var(--lx-border);
+}
+.lx-osi-body summary {
+  cursor: pointer;
+  padding: 2px 0;
+  font-weight: 600;
+}
+.lx-osi-body dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1px 10px;
+  margin: 2px 0 4px;
+}
+.lx-osi-body dt {
+  color: var(--lx-muted);
+}
+.lx-osi-body dd {
+  margin: 0;
+  font-family: var(--lx-mono);
+  overflow-wrap: anywhere;
+}
+.lx-field {
+  all: unset;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.lx-field:hover,
+.lx-field:focus-visible,
+.lx-field.on {
+  background: color-mix(in srgb, var(--lx-accent) 22%, transparent);
+  color: var(--lx-text);
+}
+.lx-osi-body pre {
+  margin: 4px 0;
+  padding: 6px;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 0.94em;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--lx-surface-2);
+  border-radius: 4px;
+}
+.lx-note {
+  margin: 0 0 4px;
+  font-size: 0.9em;
+  color: var(--lx-muted);
+  font-style: italic;
+}
+
+/* --- Hex-Ansicht -------------------------------------------------------------------- */
+
+.lx-hex {
+  font-family: var(--lx-mono);
+  font-size: 0.9em;
+  background: var(--lx-surface-2);
+  border-radius: 4px;
+  padding: 4px 6px;
+  overflow-x: auto;
+}
+.lx-hex-line {
+  display: flex;
+  gap: 10px;
+  white-space: pre;
+}
+.lx-offset {
+  color: var(--lx-muted);
+}
+.lx-hex-bytes span {
+  margin-right: 0.45em;
+}
+.lx-hex .hl {
+  background: color-mix(in srgb, var(--lx-accent) 35%, transparent);
+  border-radius: 2px;
+}
+
+/* --- Tags der Protokolle (gleiche Farben wie die Paketliste) --------------------------- */
+
+.lx-tag {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--proto, color-mix(in srgb, var(--osi, #7f8c8d) 16%, var(--lx-surface, #ffffff)));
+  color: var(--lx-text, inherit);
+}
+.lx-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* --- OSI-Übersicht ------------------------------------------------------------------ */
+
+.lx-overview {
+  list-style: none;
+  margin: 0 0 1em;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.lx-overview li {
+  display: grid;
+  grid-template-columns: 2.2em minmax(8em, 12em) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--lx-border);
+  border-left: 4px solid var(--osi);
+  border-radius: 6px;
+  background: var(--lx-surface);
+}
+.lx-overview-num {
+  font-weight: 700;
+  font-size: 1.25em;
+  color: var(--osi);
+  text-align: center;
+}
+.lx-overview-name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.lx-overview-name .lx-muted {
+  font-size: 0.85em;
+}
+@media (max-width: 560px) {
+  .lx-overview li {
+    grid-template-columns: 2em minmax(0, 1fr);
+  }
+  .lx-overview .lx-tags {
+    grid-column: 1 / -1;
+  }
+}
+
+/* --- Kapselung ---------------------------------------------------------------------- */
+
+.lx-encap {
+  display: grid;
+  gap: 3px;
+  align-items: stretch;
+  min-width: max-content;
+  font-size: 0.85em;
+}
+.lx-encap-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2px 8px 2px 0;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.lx-encap-label strong {
+  color: var(--osi);
+  font-size: 1.1em;
+}
+.lx-encap-label span {
+  color: var(--lx-muted);
+  font-size: 0.9em;
+}
+.lx-encap-head,
+.lx-encap-payload {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.lx-encap-head {
+  background: color-mix(in srgb, var(--osi) 30%, var(--lx-surface));
+  border: 1px solid color-mix(in srgb, var(--osi) 60%, var(--lx-surface));
+  font-weight: 600;
+}
+.lx-encap-head.gap {
+  background: var(--lx-surface-2);
+  border-style: dashed;
+  font-weight: 400;
+  color: var(--lx-muted);
+}
+.lx-encap-size {
+  font-weight: 400;
+  font-size: 0.9em;
+  color: var(--lx-muted);
+}
+.lx-encap-payload {
+  align-items: center;
+  text-align: center;
+  color: var(--lx-muted);
+  background: color-mix(in srgb, var(--osi) 9%, var(--lx-surface));
+  border: 1px dashed color-mix(in srgb, var(--osi) 55%, var(--lx-surface));
+}
+.lx-encap-payload.data {
+  border-style: solid;
+  color: var(--lx-text);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--osi) 22%, var(--lx-surface));
+}
+
+/* --- Kopf nach Norm ----------------------------------------------------------------- */
+
+.lx-format {
+  margin: 1em 0 1.4em;
+}
+.lx-format-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-bottom: 6px;
+}
+.lx-format figcaption {
+  margin-top: 4px;
+  font-size: 0.85em;
+}
+.lx-bits {
+  display: grid;
+  grid-template-columns: repeat(32, minmax(0.8em, 1fr));
+  gap: 2px;
+  min-width: 34em;
+  font-size: 0.85em;
+}
+.lx-ruler {
+  color: var(--lx-muted);
+  font-family: var(--lx-mono);
+  font-size: 0.85em;
+  border-left: 1px solid var(--lx-border);
+  padding-left: 2px;
+}
+.lx-bit,
+.lx-byte {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  padding: 4px 3px;
+  text-align: center;
+  line-height: 1.2;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--osi) 18%, var(--lx-surface));
+  border: 1px solid color-mix(in srgb, var(--osi) 55%, var(--lx-surface));
+  overflow: hidden;
+}
+.lx-bit.payload,
+.lx-byte.payload {
+  background: var(--lx-surface-2);
+  border-style: dashed;
+}
+.lx-bit.optional,
+.lx-byte.optional {
+  border-style: dashed;
+}
+.lx-bit.cont {
+  opacity: 0.85;
+}
+.lx-f-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.lx-f-size {
+  font-size: 0.85em;
+  color: var(--lx-muted);
+}
+.lx-f-value {
+  font-family: var(--lx-mono);
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+.lx-band {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: stretch;
+  min-height: 4.6em;
+  font-size: 0.85em;
+}
+.lx-byte {
+  flex: 1 1 auto;
+  min-width: 3.4em;
+}
+.lx-band .lx-f-value {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  font-size: 0.85em;
+}
+.lx-byte.phy {
+  background: var(--lx-surface-2);
+  border-style: dashed;
+  color: var(--lx-muted);
+}
+@media (max-width: 640px) {
+  .lx-band {
+    flex-wrap: wrap;
+  }
+  .lx-byte {
+    flex-basis: 28%;
+  }
+  /* Feldtabelle gestapelt: Name, Länge und Wert oben, Bedeutung darunter. */
+  .lx-fields thead {
+    display: none;
+  }
+  .lx-fields tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 10px;
+    padding: 6px 0;
+  }
+  .lx-fields td {
+    padding: 0 8px;
+    border: 0;
+  }
+  .lx-fields td:nth-child(3),
+  .lx-fields td:nth-child(4) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Kopf nach Norm unter einer Schicht der Paketdetails */
+.lx-norm > summary {
+  cursor: pointer;
+  color: var(--lx-muted, var(--muted));
+  font-size: 0.92em;
+  margin: 2px 0;
+}
+.lx-norm .lx-format {
+  margin: 4px 0 8px;
+}
+
+/* --- Feldtabelle -------------------------------------------------------------------- */
+
+.lx-fields td:first-child {
+  font-weight: 600;
+}
+.lx-fields tr.phy td {
+  color: var(--lx-muted);
+}
+
+/* --- Einpacken Schritt für Schritt (Wiki) --------------------------------------------- */
+
+.lx-steps .lx-encap > .later {
+  visibility: hidden;
+}
+.lx-steps-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 6px 0 10px;
+}
+
+/* --- Farben und Lage als Klassen (erzeugt, siehe Kopf) ------------------------------ */
+.lx-o1 {
+  --osi: var(--osi-1);
+}
+.lx-o2 {
+  --osi: var(--osi-2);
+}
+.lx-o3 {
+  --osi: var(--osi-3);
+}
+.lx-o4 {
+  --osi: var(--osi-4);
+}
+.lx-o5 {
+  --osi: var(--osi-5);
+}
+.lx-o6 {
+  --osi: var(--osi-6);
+}
+.lx-o7 {
+  --osi: var(--osi-7);
+}
+.lx-r1 {
+  grid-row-start: 1;
+}
+.lx-r2 {
+  grid-row-start: 2;
+}
+.lx-r3 {
+  grid-row-start: 3;
+}
+.lx-r4 {
+  grid-row-start: 4;
+}
+.lx-r5 {
+  grid-row-start: 5;
+}
+.lx-r6 {
+  grid-row-start: 6;
+}
+.lx-r7 {
+  grid-row-start: 7;
+}
+.lx-r8 {
+  grid-row-start: 8;
+}
+.lx-r9 {
+  grid-row-start: 9;
+}
+.lx-r10 {
+  grid-row-start: 10;
+}
+.lx-r11 {
+  grid-row-start: 11;
+}
+.lx-r12 {
+  grid-row-start: 12;
+}
+.lx-r13 {
+  grid-row-start: 13;
+}
+.lx-r14 {
+  grid-row-start: 14;
+}
+.lx-r15 {
+  grid-row-start: 15;
+}
+.lx-r16 {
+  grid-row-start: 16;
+}
+.lx-r17 {
+  grid-row-start: 17;
+}
+.lx-r18 {
+  grid-row-start: 18;
+}
+.lx-r19 {
+  grid-row-start: 19;
+}
+.lx-r20 {
+  grid-row-start: 20;
+}
+.lx-r21 {
+  grid-row-start: 21;
+}
+.lx-r22 {
+  grid-row-start: 22;
+}
+.lx-r23 {
+  grid-row-start: 23;
+}
+.lx-r24 {
+  grid-row-start: 24;
+}
+.lx-r25 {
+  grid-row-start: 25;
+}
+.lx-r26 {
+  grid-row-start: 26;
+}
+.lx-r27 {
+  grid-row-start: 27;
+}
+.lx-r28 {
+  grid-row-start: 28;
+}
+.lx-r29 {
+  grid-row-start: 29;
+}
+.lx-r30 {
+  grid-row-start: 30;
+}
+.lx-r31 {
+  grid-row-start: 31;
+}
+.lx-r32 {
+  grid-row-start: 32;
+}
+.lx-r33 {
+  grid-row-start: 33;
+}
+.lx-r34 {
+  grid-row-start: 34;
+}
+.lx-r35 {
+  grid-row-start: 35;
+}
+.lx-r36 {
+  grid-row-start: 36;
+}
+.lx-r37 {
+  grid-row-start: 37;
+}
+.lx-r38 {
+  grid-row-start: 38;
+}
+.lx-r39 {
+  grid-row-start: 39;
+}
+.lx-r40 {
+  grid-row-start: 40;
+}
+.lx-rsp2 {
+  grid-row-end: span 2;
+}
+.lx-rsp3 {
+  grid-row-end: span 3;
+}
+.lx-rsp4 {
+  grid-row-end: span 4;
+}
+.lx-rsp5 {
+  grid-row-end: span 5;
+}
+.lx-rsp6 {
+  grid-row-end: span 6;
+}
+.lx-rsp7 {
+  grid-row-end: span 7;
+}
+.lx-rsp8 {
+  grid-row-end: span 8;
+}
+.lx-c1 {
+  grid-column-start: 1;
+}
+.lx-c2 {
+  grid-column-start: 2;
+}
+.lx-c3 {
+  grid-column-start: 3;
+}
+.lx-c4 {
+  grid-column-start: 4;
+}
+.lx-c5 {
+  grid-column-start: 5;
+}
+.lx-c6 {
+  grid-column-start: 6;
+}
+.lx-c7 {
+  grid-column-start: 7;
+}
+.lx-c8 {
+  grid-column-start: 8;
+}
+.lx-c9 {
+  grid-column-start: 9;
+}
+.lx-c10 {
+  grid-column-start: 10;
+}
+.lx-c11 {
+  grid-column-start: 11;
+}
+.lx-c12 {
+  grid-column-start: 12;
+}
+.lx-c13 {
+  grid-column-start: 13;
+}
+.lx-c14 {
+  grid-column-start: 14;
+}
+.lx-c15 {
+  grid-column-start: 15;
+}
+.lx-c16 {
+  grid-column-start: 16;
+}
+.lx-c17 {
+  grid-column-start: 17;
+}
+.lx-c18 {
+  grid-column-start: 18;
+}
+.lx-c19 {
+  grid-column-start: 19;
+}
+.lx-c20 {
+  grid-column-start: 20;
+}
+.lx-c21 {
+  grid-column-start: 21;
+}
+.lx-c22 {
+  grid-column-start: 22;
+}
+.lx-c23 {
+  grid-column-start: 23;
+}
+.lx-c24 {
+  grid-column-start: 24;
+}
+.lx-c25 {
+  grid-column-start: 25;
+}
+.lx-c26 {
+  grid-column-start: 26;
+}
+.lx-c27 {
+  grid-column-start: 27;
+}
+.lx-c28 {
+  grid-column-start: 28;
+}
+.lx-c29 {
+  grid-column-start: 29;
+}
+.lx-c30 {
+  grid-column-start: 30;
+}
+.lx-c31 {
+  grid-column-start: 31;
+}
+.lx-c32 {
+  grid-column-start: 32;
+}
+.lx-c33 {
+  grid-column-start: 33;
+}
+.lx-s1 {
+  grid-column-end: span 1;
+}
+.lx-s2 {
+  grid-column-end: span 2;
+}
+.lx-s3 {
+  grid-column-end: span 3;
+}
+.lx-s4 {
+  grid-column-end: span 4;
+}
+.lx-s5 {
+  grid-column-end: span 5;
+}
+.lx-s6 {
+  grid-column-end: span 6;
+}
+.lx-s7 {
+  grid-column-end: span 7;
+}
+.lx-s8 {
+  grid-column-end: span 8;
+}
+.lx-s9 {
+  grid-column-end: span 9;
+}
+.lx-s10 {
+  grid-column-end: span 10;
+}
+.lx-s11 {
+  grid-column-end: span 11;
+}
+.lx-s12 {
+  grid-column-end: span 12;
+}
+.lx-s13 {
+  grid-column-end: span 13;
+}
+.lx-s14 {
+  grid-column-end: span 14;
+}
+.lx-s15 {
+  grid-column-end: span 15;
+}
+.lx-s16 {
+  grid-column-end: span 16;
+}
+.lx-s17 {
+  grid-column-end: span 17;
+}
+.lx-s18 {
+  grid-column-end: span 18;
+}
+.lx-s19 {
+  grid-column-end: span 19;
+}
+.lx-s20 {
+  grid-column-end: span 20;
+}
+.lx-s21 {
+  grid-column-end: span 21;
+}
+.lx-s22 {
+  grid-column-end: span 22;
+}
+.lx-s23 {
+  grid-column-end: span 23;
+}
+.lx-s24 {
+  grid-column-end: span 24;
+}
+.lx-s25 {
+  grid-column-end: span 25;
+}
+.lx-s26 {
+  grid-column-end: span 26;
+}
+.lx-s27 {
+  grid-column-end: span 27;
+}
+.lx-s28 {
+  grid-column-end: span 28;
+}
+.lx-s29 {
+  grid-column-end: span 29;
+}
+.lx-s30 {
+  grid-column-end: span 30;
+}
+.lx-s31 {
+  grid-column-end: span 31;
+}
+.lx-s32 {
+  grid-column-end: span 32;
+}
+.lx-g2 {
+  flex-grow: 2;
+}
+.lx-g3 {
+  flex-grow: 3;
+}
+.lx-g4 {
+  flex-grow: 4;
+}
+.lx-g5 {
+  flex-grow: 5;
+}
+.lx-g6 {
+  flex-grow: 6;
+}
+.lx-g7 {
+  flex-grow: 7;
+}
+.lx-g8 {
+  flex-grow: 8;
+}
+.lx-g9 {
+  flex-grow: 9;
+}
+.lx-g10 {
+  flex-grow: 10;
+}
+.lx-g11 {
+  flex-grow: 11;
+}
+.lx-g12 {
+  flex-grow: 12;
+}
+.lx-g13 {
+  flex-grow: 13;
+}
+.lx-g14 {
+  flex-grow: 14;
+}
+.lx-g15 {
+  flex-grow: 15;
+}
+.lx-g16 {
+  flex-grow: 16;
+}
+.lx-g17 {
+  flex-grow: 17;
+}
+.lx-g18 {
+  flex-grow: 18;
+}
+.lx-g19 {
+  flex-grow: 19;
+}
+.lx-g20 {
+  flex-grow: 20;
+}
+.lx-g21 {
+  flex-grow: 21;
+}
+.lx-g22 {
+  flex-grow: 22;
+}
+.lx-g23 {
+  flex-grow: 23;
+}
+.lx-g24 {
+  flex-grow: 24;
+}
+.lx-encap.lx-n1 {
+  grid-template-columns: auto repeat(1, auto) minmax(7em, 1fr) repeat(1, auto);
+}
+.lx-encap.lx-n2 {
+  grid-template-columns: auto repeat(2, auto) minmax(7em, 1fr) repeat(2, auto);
+}
+.lx-encap.lx-n3 {
+  grid-template-columns: auto repeat(3, auto) minmax(7em, 1fr) repeat(3, auto);
+}
+.lx-encap.lx-n4 {
+  grid-template-columns: auto repeat(4, auto) minmax(7em, 1fr) repeat(4, auto);
+}
+.lx-encap.lx-n5 {
+  grid-template-columns: auto repeat(5, auto) minmax(7em, 1fr) repeat(5, auto);
+}
+.lx-encap.lx-n6 {
+  grid-template-columns: auto repeat(6, auto) minmax(7em, 1fr) repeat(6, auto);
+}
+.lx-encap.lx-n7 {
+  grid-template-columns: auto repeat(7, auto) minmax(7em, 1fr) repeat(7, auto);
+}
+.lx-encap.lx-n8 {
+  grid-template-columns: auto repeat(8, auto) minmax(7em, 1fr) repeat(8, auto);
+}
+.lx-encap.lx-n9 {
+  grid-template-columns: auto repeat(9, auto) minmax(7em, 1fr) repeat(9, auto);
+}

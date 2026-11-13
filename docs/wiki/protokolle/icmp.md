@@ -19,6 +19,12 @@ ICMP (Internet Control Message Protocol) transportiert Kontroll- und Fehlermeldu
 | 3 | Destination Unreachable | kein Weg zum Netz, Host nicht erreichbar, Port geschlossen |
 | 11 | Time Exceeded | TTL ist unterwegs auf 0 gefallen |
 
+## Der ICMP-Kopf
+
+ICMP steckt direkt im IP-Paket (Protokoll 1). Die ersten 4 Byte sind bei allen Meldungen gleich; was danach kommt, hängt vom Typ ab. Beim Ping sind es Kennung und Sequenznummer.
+
+{{format icmp}}
+
 ## Ping
 
 `ping 192.168.2.10` schickt vier Echo Requests. Jede Antwort zeigt die Zeit und die TTL des Antwortpakets; aus der TTL lässt sich abschätzen, wie viele Router dazwischen liegen. «Zeitüberschreitung» heisst: keine Antwort, aber auch keine Fehlermeldung, oft ein fehlender Rückweg.

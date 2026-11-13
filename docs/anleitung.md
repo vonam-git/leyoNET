@@ -200,7 +200,9 @@ Zwei Kabel zwischen denselben Switches oder ein Ring bilden eine Schleife. Ohne 
 In der Simulation zeigt die Paketliste unten jeden Rahmen. Ein Klick öffnet die Details:
 
 - **OSI-Ansicht** von Schicht 7 (Anwendung) bis 1 (Leitung). Leere Schichten sind grau.
-- **Hex-Ansicht** (ab Profil 4): die echten Bytes. Ein Klick auf ein Feld markiert seine Bytes.
+- **Aufbau nach Norm** (ab Profil 2): Unter jeder Schicht zeigt ein Klick den Kopf als Bild, wie ihn die RFC bzw. IEEE-Norm zeichnet, mit den Werten dieses Rahmens. Zeigen auf ein Feld erklärt es.
+- **Verschachtelung** (ab Profil 2): wie die Schichten ineinanderstecken, mit Kopf, Nutzdaten und Prüfsumme FCS und ihren Längen in Byte.
+- **Hex-Ansicht** (ab Profil 4): die echten Bytes, beim Ethernet-Rahmen mit Füllbytes und FCS am Ende. Ein Klick auf ein Feld markiert seine Bytes.
 - **Filter** wie in Wireshark: `dhcp`, `ip.addr == 10.0.0.1`, `tcp.port == 80`, `host PC1`, verknüpft mit `and`, `or`, `not`. Die Knöpfe unter dem Filter setzen häufige Ausdrücke.
 - **Jedes Paket nur einmal** (eingeschaltet): Ein Switch gibt einen Rahmen unverändert weiter; er erscheint dann nur beim ersten Kabel. Ausschalten, um den Weg über jeden Switch zu sehen. Nach einem Router erscheint das Paket wieder, weil der Router einen neuen Rahmen baut (neue MAC-Adressen).
 - **pcap**: speichert den Mitschnitt für Wireshark.
