@@ -12,11 +12,29 @@ const workflow = readFileSync(join(root, '.github', 'workflows', 'desktop.yml'),
 const external = /^(https?:)?\/\//;
 
 describe('Website leyonet.ch', () => {
+  it('Kontaktformular: nur mailto, Adresse geprüft, Felder kodiert', () => {
+    const js = read('js/site.js');
+    const block = /Kontakt:[\s\S]*?\n  }\n/.exec(js)?.[0] ?? '';
+    expect(block).toContain('mailto:');
+    expect(block).not.toMatch(/fetch|XMLHttpRequest|sendBeacon|innerHTML|localStorage|document\.cookie/);
+    expect(block).toMatch(/encodeURIComponent\(subject\)/);
+    expect(block).toMatch(/encodeURIComponent\(body\)/);
+    expect(block).toMatch(/\/\^\[\\w\.\+-\]\+\$\/\.test\(user\)/);
+    expect(read('impressum.vorlage.html')).toMatch(/data-user="\[/);
+  });
+
   it.each(pages)('%s lädt nichts von fremden Servern', (page) => {
     const html = read(page);
     for (const [, url] of html.matchAll(/<(?:script|img|source|iframe)[^>]+(?:src|srcset)="([^"]+)"/g)) expect(url, url).not.toMatch(external);
     for (const [, url] of html.matchAll(/<link[^>]+href="([^"]+)"/g)) expect(url, url).not.toMatch(/^(https?:)?\/\/(?!leyonet\.ch\/)/);
-    expect(html).not.toMatch(/<iframe|<form/i);
+    expect(html).not.toMatch(/<iframe/i);
+    // Einziges Formular: Kontakt im Impressum, ohne Ziel auf einem Server (öffnet nur das E-Mail-Programm).
+    for (const [form] of html.matchAll(/<form[^>]*>/gi)) {
+      expect(page, 'Formular nur im Impressum').toBe('impressum.vorlage.html');
+      expect(form).toMatch(/class="contact"/);
+      expect(form).toMatch(/\shidden[\s>]/);
+      expect(form).not.toMatch(/\s(action|method|formaction)=/i);
+    }
     expect(html).not.toMatch(/<script>(?!\s*<\/script>)/i);
   });
 

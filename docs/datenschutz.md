@@ -98,6 +98,10 @@ Die Website (`website/httpdocs/`) besteht aus statischen Seiten: keine Cookies, 
 
 Das **Wiki** (`/wiki/`) besteht ebenfalls nur aus statischen Seiten. Die Suche läuft im Browser über eine mitgelieferte Datei (`suche.js`), Eingaben verlassen das Gerät nicht. Links auf Normen führen zu rfc-editor.org, erst ein Klick verbindet dorthin.
 
+**Kontakt:** Das Formular im Impressum ist kein Webformular. Es baut im Browser einen `mailto:`-Link und öffnet damit das eigene E-Mail-Programm; die Website nimmt nichts entgegen und speichert nichts. Die E-Mail-Adresse steht nur in der echten `impressum.html` auf dem Server, nicht im Repo (Vorlage mit Platzhaltern). Die Datenschutzerklärung nennt Zweck und Aufbewahrung im Abschnitt «Kontakt per E-Mail».
+
+**Patreon:** Die Website, das README und das Programm (*Hilfe → leyoNET unterstützen*, Fenster «Über») verlinken auf Patreon. Eingebunden wird nichts; erst ein Klick öffnet die Seite im Browser. Im Prüfungsmodus ist der Befehl gesperrt.
+
 Das **Schaufenster** der App (`?schaufenster`) speichert nichts: weder im Browser noch auf dem Server, und ein vorhandener eigener Stand bleibt unberührt.
 
 ## Prüfung bei jedem Release

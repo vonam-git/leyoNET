@@ -7,11 +7,11 @@
   <meta name="description" content="Mehrere Kabel zu einer logischen Leitung bündeln: mehr Bandbreite, Ausfallsicherheit und kein blockierter Port.">
   <link rel="canonical" href="https://leyonet.ch/wiki/lacp.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -97,7 +97,7 @@ Switch# show etherchannel summary</code></pre>
 <ul><li>Auf <strong>beiden</strong> Switches dieselben Ports in einen Channel legen (Reiter <strong>Switching</strong>, Spalte Port-Channel, oder <code>channel-group 1 mode active</code>).</li><li><strong>LACP</strong> (IEEE 802.1AX) handelt das Bündel aus: Mindestens eine Seite muss <strong>aktiv</strong> sein, die andere darf <strong>passiv</strong> sein. <strong>Fest (on)</strong> bündelt ohne Aushandlung; ist die Gegenseite falsch eingestellt, entsteht eine Schleife.</li><li>Alle Ports eines Channels brauchen dieselbe VLAN- bzw. Trunk-Einstellung; abweichende Ports stellt der Switch aus. <code>interface port-channel 1</code> stellt alle auf einmal ein.</li><li>Führt ein Port zu einem anderen Switch oder hat die Gegenseite keinen Channel, bleibt er ausgestellt (keine Schleife).</li><li>Jede Verbindung nimmt je nach MAC-Adressen ein Kabel; fällt eines aus, laufen alle über die übrigen.</li></ul>
 <p><code>show etherchannel summary</code> zeigt den Zustand (P gebündelt, s ausgestellt). Mehrere Kabel ohne Channel bilden eine Schleife: siehe <a href="stp.html">Spanning Tree (STP)</a>.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>Port-Channel mit LACP</strong><p>Zwei Kabel zwischen zwei Switches werden mit LACP zu einer Leitung gebündelt: doppelte Bandbreite, Ausfallsicherheit, keine Schleife.</p><p class="muted">Filter «lacp»: Beide Switches tauschen jede Sekunde LACPDUs aus. Dann pingt der PC Büro den PC Labor über den Channel. Spanning Tree blockiert keinen der beiden Ports.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=portChannel">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/port-channel.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/portChannel.webp" width="700" height="312" alt="Demo «Port-Channel mit LACP» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/portChannel-dark.webp" width="700" height="312" alt="Demo «Port-Channel mit LACP» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Port-Channel mit LACP</strong><p>Zwei Kabel zwischen zwei Switches werden mit LACP zu einer Leitung gebündelt: doppelte Bandbreite, Ausfallsicherheit, keine Schleife.</p><p class="muted">Filter «lacp»: Beide Switches tauschen jede Sekunde LACPDUs aus. Dann pingt der PC Büro den PC Labor über den Channel. Spanning Tree blockiert keinen der beiden Ports.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=portChannel">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/port-channel.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Zusatz 3: Port-Channel zwischen den Stockwerken</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M145_Zusatzuebungen.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
@@ -116,10 +116,11 @@ Switch# show etherchannel summary</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

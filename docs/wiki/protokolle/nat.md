@@ -25,6 +25,8 @@ Bei **PAT** (Port Address Translation, auch NAT-Overload) teilen sich alle Gerä
 
 Die **NAT-Tabelle** (`show ip nat translations` oder in der Simulation beim Router) zeigt diese Einträge.
 
+![NAT in der Simulation: Der Router ersetzt die private Absenderadresse](nat)
+
 ## Von aussen hinein
 
 Von aussen kann niemand eine Verbindung zu einem privaten Gerät beginnen, die Tabelle kennt den Weg nicht. Dafür gibt es:

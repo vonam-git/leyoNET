@@ -2,7 +2,8 @@
  * Kleiner Markdown-Übersetzer für das Wiki (eigene Umsetzung, ohne fremde Pakete).
  * Unterstützt: ## und ### Überschriften, Absätze, Aufzählungen (- und 1.), Hinweise (> ),
  * Codeblöcke (```), Tabellen (| a | b |), **fett**, *kursiv*, `Code`, [Text](Adresse)
- * und Wiki-Verweise [[seite]] bzw. [[seite|Text]]. Alles wird maskiert, HTML im Text ist Text.
+ * Wiki-Verweise [[seite]] bzw. [[seite|Text]] und Bilder ![Beschreibung](name) auf eigener Zeile.
+ * Alles wird maskiert, HTML im Text ist Text.
  */
 
 export interface LinkResolver {
@@ -10,6 +11,8 @@ export interface LinkResolver {
   wiki(slug: string): { title: string; href: string } | null;
   /** Fehler melden (unbekannter Verweis, verbotene Adresse …). */
   error(message: string): void;
+  /** Bild aus wiki/bilder als HTML (hell und dunkel), oder null, wenn es fehlt. */
+  image?(name: string, alt: string): string | null;
 }
 
 export const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -66,7 +69,7 @@ export function render(markdown: string, links: LinkResolver): { html: string; h
   const headings: Heading[] = [];
   const used = new Set<string>();
   let i = 0;
-  const isBlockStart = (l: string) => /^(#{2,3} |- |\d+\. |> |```|\|)/.test(l) || l.trim() === '';
+  const isBlockStart = (l: string) => /^(#{2,3} |- |\d+\. |> |```|\||!\[)/.test(l) || l.trim() === '';
   while (i < lines.length) {
     const line = lines[i]!;
     if (line.trim() === '') {
@@ -81,6 +84,14 @@ export function render(markdown: string, links: LinkResolver): { html: string; h
       used.add(id);
       headings.push({ level, text: h[2]!, id });
       html.push(`<h${level} id="${id}">${inline(h[2]!, links)}</h${level}>`);
+      i++;
+      continue;
+    }
+    const img = /^!\[([^\]]*)\]\(([\w-]+)\)$/.exec(line.trim());
+    if (img) {
+      const figure = links.image?.(img[2]!, img[1]!) ?? null;
+      if (!figure) links.error(`Bild fehlt: ${img[2]}`);
+      else html.push(figure);
       i++;
       continue;
     }

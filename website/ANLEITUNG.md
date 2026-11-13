@@ -34,7 +34,8 @@ Adresse und E-Mail gehören nicht ins öffentliche Repo. Im Repo liegen darum nu
 
 1. Vorlage kopieren, Platzhalter ersetzen, als `impressum.html` bzw. `datenschutz.html` speichern.
 2. In Plesk unter *Dateien* in den Dokumentstamm (`leyonet-repo/website/httpdocs`) hochladen. *Git → Pull Updates* lässt diese Dateien in Ruhe, weil Git sie nicht kennt.
-3. Ändert sich eine Vorlage im Repo (z.B. ein neuer Abschnitt), die echte Seite auf dem Server gleich nachführen.
+3. Im Impressum beim Kontaktformular `data-user` (Teil vor dem @) und `data-domain` (Teil nach dem @) eintragen. Solange dort noch die Platzhalter in eckigen Klammern stehen, bleibt das Formular versteckt.
+4. Ändert sich eine Vorlage im Repo (z.B. ein neuer Abschnitt), die echte Seite auf dem Server gleich nachführen.
 
 Die Vorlagen selbst liefert der Server nicht aus (`.htaccess`). In der Schweiz ist eine Datenschutzerklärung nötig, sobald Personendaten anfallen (das sind schon die Zugriffsprotokolle des Webservers); eine Kontaktadresse gehört ins Impressum.
 

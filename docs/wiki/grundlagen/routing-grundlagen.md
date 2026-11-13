@@ -12,6 +12,8 @@ verwandt: [statisches-routing, ospf, router]
 
 Bevor ein Gerät sendet, vergleicht es die Zieladresse mit seinem eigenen Netz (Adresse und Maske). Liegt das Ziel im selben Netz, fragt es per [[arp]] direkt nach der MAC des Ziels. Liegt es woanders, schickt es das Paket an sein **Standardgateway**, den Router im eigenen Netz.
 
+![Ein Ping ins andere Netz geht über das Standardgateway](gateway)
+
 ## Die Routing-Tabelle
 
 Ein Router entscheidet für jedes Paket anhand seiner **Routing-Tabelle**: Zu jedem Zielnetz steht, über welchen Nachbarn (Next Hop) oder Anschluss es weitergeht.

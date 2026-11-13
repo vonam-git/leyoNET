@@ -7,11 +7,11 @@
   <meta name="description" content="Adressen automatisch verteilen: Discover, Offer, Request, Ack, Lease-Dauer, feste Zuweisungen und DHCP-Relay über Router.">
   <link rel="canonical" href="https://leyonet.ch/wiki/dhcp.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -83,6 +83,7 @@
 <h2 id="dora">DORA</h2>
 <div class="table-wrap"><table><thead><tr><th>Schritt</th><th>von → an</th><th>Inhalt</th></tr></thead><tbody><tr><td><strong>D</strong>iscover</td><td>Client → Broadcast</td><td>«Ist hier ein DHCP-Server?» (Client hat noch keine Adresse: 0.0.0.0)</td></tr><tr><td><strong>O</strong>ffer</td><td>Server → Client</td><td>Angebot: Adresse, Maske, Gateway, DNS, Lease-Dauer</td></tr><tr><td><strong>R</strong>equest</td><td>Client → Broadcast</td><td>«Ich nehme das Angebot dieses Servers»</td></tr><tr><td><strong>A</strong>ck</td><td>Server → Client</td><td>Bestätigung; ab jetzt gilt die Adresse</td></tr></tbody></table></div>
 <p>Nach der halben Lease-Dauer erneuert der Client. Mit <code>ipconfig /release</code> gibt er die Adresse zurück, mit <code>/renew</code> holt er eine neue. Ohne Antwort wiederholt er das Discover und meldet nach drei Versuchen «kein Server».</p>
+<figure class="shot-figure"><picture class="img-light"><img src="bilder/dhcp.webp" width="700" height="331" alt="DHCP in der Simulation: Discover, Offer, Request, Acknowledge" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/dhcp-dark.webp" width="700" height="331" alt="DHCP in der Simulation: Discover, Offer, Request, Acknowledge" loading="lazy" decoding="async"></picture><figcaption>DHCP in der Simulation: Discover, Offer, Request, Acknowledge</figcaption></figure>
 <h2 id="feste-zuweisungen-und-relay">Feste Zuweisungen und Relay</h2>
 <ul><li><strong>Reservierung:</strong> Ein Gerät mit einer bestimmten MAC-Adresse bekommt immer dieselbe Adresse, z.B. ein Drucker.</li><li><strong>DHCP-Relay:</strong> DHCP-Anfragen sind Broadcasts und kommen nicht über Router. Ein Router oder Layer-3-Switch mit <code>ip helper-address</code> leitet sie an einen zentralen Server weiter und trägt das Netz der Anfrage ein (GIADDR). Der Server wählt danach den passenden Bereich.</li><li><strong>Pools auf dem Router:</strong> Router und Layer-3-Switches können auch selbst DHCP-Server sein (<code>ip dhcp pool</code>).</li></ul>
 <h2 id="typische-fehler">Typische Fehler</h2>
@@ -114,10 +115,11 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

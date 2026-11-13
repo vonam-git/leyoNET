@@ -7,11 +7,11 @@
   <meta name="description" content="Namen in Adressen übersetzen: Zonen, Einträge (A, AAAA, CNAME, MX, PTR …), Weiterleitung, Cache und nslookup.">
   <link rel="canonical" href="https://leyonet.ch/wiki/dns.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -100,7 +100,7 @@ C:\&gt; ipconfig /flushdns</code></pre>
 <ul><li><strong>A</strong> und <strong>AAAA</strong>: Name → IPv4- bzw. IPv6-Adresse</li><li><strong>CNAME</strong>: Alias auf einen anderen Namen (der Server folgt der Kette)</li><li><strong>MX</strong>: Mailserver einer Domain, der kleinste Vorrang gewinnt</li><li><strong>TXT</strong>: Text, z.B. eine SPF-Regel</li><li><strong>NS</strong>: Nameserver der Domain</li><li><strong>PTR</strong>: Adresse → Name (Rückwärtsauflösung unter in-addr.arpa bzw. ip6.arpa)</li></ul>
 <p>Namen aus der eigenen Zone beantwortet der Server <strong>autorisierend</strong>. Mit einer <strong>Weiterleitung</strong> fragt er für alle anderen Namen einen weiteren Server (z.B. den des Providers) und antwortet «nicht autorisierend». Testen mit <code>nslookup -type=MX schule.example</code>, <code>nslookup 192.168.0.3</code> (PTR) oder <code>nslookup name server</code> (bestimmten Server fragen).</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>DNS mit Weiterleitung</strong><p>Schul-DNS mit Zone schule.example (A, CNAME, MX, TXT, NS, PTR), der unbekannte Namen an den DNS des Providers weiterleitet.</p><p class="muted">PC 1 löst einen Alias über zwei CNAME auf, fragt den Mailserver (MX) ab und öffnet eine Seite beim Provider: Der Schul-DNS leitet die Frage weiter und antwortet «nicht autorisierend».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=dns">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/dns.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/dns.webp" width="700" height="331" alt="Demo «DNS mit Weiterleitung» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/dns-dark.webp" width="700" height="331" alt="Demo «DNS mit Weiterleitung» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>DNS mit Weiterleitung</strong><p>Schul-DNS mit Zone schule.example (A, CNAME, MX, TXT, NS, PTR), der unbekannte Namen an den DNS des Providers weiterleitet.</p><p class="muted">PC 1 löst einen Alias über zwei CNAME auf, fragt den Mailserver (MX) ab und öffnet eine Seite beim Provider: Der Schul-DNS leitet die Frage weiter und antwortet «nicht autorisierend».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=dns">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/dns.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Webseite über DNS aufrufen</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_web-dns.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>UE02 Netzwerkdienste: Webserver, DNS und feste Zuweisungen</strong> <span class="muted">· 19 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M07B_M117_UE02_Netzwerkdienste.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Protokollanalyse – Auftrag 3: ARP, DNS und HTTP</strong> <span class="muted">· 7 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M129_Protokollanalyse.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
@@ -119,10 +119,11 @@ C:\&gt; ipconfig /flushdns</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

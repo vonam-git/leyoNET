@@ -30,6 +30,8 @@ Content-Length: 412
 <h1>Stundenplan</h1>…
 ```
 
+![Browser ruft eine Seite ab: DNS, TCP-Verbindung, HTTP](web)
+
 ## Statuscodes
 
 | Code | Bedeutung |

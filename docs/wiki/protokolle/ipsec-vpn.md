@@ -33,6 +33,8 @@ Im Tunnelmodus packt **ESP** (Encapsulating Security Payload) das ganze ursprün
 
 Im Internet sieht man nur die öffentlichen Adressen der Router, nicht, wer innen mit wem spricht. Tunnelverkehr geht am NAT vorbei.
 
+![Site-to-Site-VPN: Pakete laufen verschlüsselt durch den Tunnel](vpn)
+
 ## In leyoNET
 
 Unter Erweitert → VPN beim Router: Name, Adresse des Partners, eigenes und entferntes Netz, Schlüssel. In der Simulation zeigt der Reiter den Zustand des Tunnels; die Paketliste zeigt IKE und ESP mit echten Köpfen. Die Verschlüsselung selbst ist nur angedeutet.

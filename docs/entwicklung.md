@@ -1,6 +1,6 @@
 # Entwicklung
 
-Erzeugte Inhalte: `npm run wiki` (Wiki unter `website/httpdocs/wiki/` aus `docs/wiki/`), `npm run schaufenster` (`docs/beispiele/rz-verbund.json` aus `src/ui/showcase.build.ts`), `npm run arbeitsblaetter` (PDFs). Was bei jedem Release an der Doku geprüft wird: [doku-pruefung.md](doku-pruefung.md).
+Erzeugte Inhalte: `npm run wiki` (Wiki unter `website/httpdocs/wiki/` aus `docs/wiki/`), `npm run schaufenster` (`docs/beispiele/rz-verbund.json` aus `src/ui/showcase.build.ts`), `npm run arbeitsblaetter` (PDFs). Bilder und Animationen im Wiki (`website/httpdocs/wiki/bilder/`): Server lokal starten, mit `scripts/wiki/aufnahme.cjs` Standbilder (`still`) und Zeitlupen-Bildfolgen (`anim`) aus dem Schaufenster aufnehmen, dann `python3 scripts/wiki/bilder.py <standbilder> <animationen> website/httpdocs/wiki/bilder` (WebP, hell und dunkel, `masse.json`) und `npm run wiki`. In einer Wiki-Seite bindet eine eigene Zeile `!` + `[Beschreibung]` + `(Demo-Kennung)` das Bild ein (z.B. für `arpPing`). Was bei jedem Release an der Doku geprüft wird: [doku-pruefung.md](doku-pruefung.md).
 
 Voraussetzung: Node.js 20 oder neuer.
 

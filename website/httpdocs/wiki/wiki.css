@@ -421,3 +421,44 @@
     display: block;
   }
 }
+
+/* --- Bilder hell/dunkel, Animationen ---------------------------------------------- */
+
+.shot-figure {
+  margin: 0 0 1.2rem;
+}
+.shot-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--canvas);
+}
+.card .shot-figure {
+  margin: 0 0 12px;
+}
+.img-dark {
+  display: none;
+}
+.theme-dark .img-dark {
+  display: block;
+}
+.theme-dark .shot-figure:has(.img-dark) .img-light {
+  display: none;
+}
+.shot-figure figcaption {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--icmp-bg);
+  color: var(--icmp-ink);
+  font: 700 0.72rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

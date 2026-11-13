@@ -7,11 +7,11 @@
   <meta name="description" content="Distanzvektor-Routing: Router erzählen ihren Nachbarn, welche Netze sie in wie vielen Hops erreichen – einfach, aber mit Grenzen.">
   <link rel="canonical" href="https://leyonet.ch/wiki/rip.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -98,7 +98,7 @@ Router# show ip route</code></pre>
 <p>RIPng (RFC 2080) ist <a href="rip.html">RIP</a> für IPv6: Router schicken ihre Tabelle regelmässig (im Simulator alle 5 s) per <strong>UDP 521</strong> an <strong>ff02::9</strong>, mit ihrer Link-Local-Adresse als Absender und Hop Limit 255. Die Metrik ist die Anzahl Router; 16 heisst unerreichbar. Split Horizon wie bei RIP v2.</p>
 <p>CLI: <code>router ripng</code>, <code>network eth0</code> (Anschluss statt Netz), <code>redistribute connected</code>, <code>default-information originate</code>, <code>show ipv6 ripng</code>, <code>show ipv6 route</code> (Code R).</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>RIP</strong><p>Dasselbe Dreieck, diesmal mit RIP v2 (Distanzvektor).</p><p class="muted">Regelmässige Updates per UDP 520; die Metrik zählt Hops.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=rip">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/rip.json">Projektdatei</a></p></li><li class="card"><strong>RIPng für IPv6</strong><p>Drei Router lernen ihre IPv6-Präfixe per RIPng: Distanzvektor mit Hop-Anzahl, wie RIP v2.</p><p class="muted">Updates per UDP 521 an ff02::9. Die IPv6-Routingtabelle füllt sich mit R-Routen, tracert findet den Weg zu PC 2.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ripng">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ripng.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/rip.webp" width="700" height="298" alt="Demo «RIP» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/rip-dark.webp" width="700" height="298" alt="Demo «RIP» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>RIP</strong><p>Dasselbe Dreieck, diesmal mit RIP v2 (Distanzvektor).</p><p class="muted">Regelmässige Updates per UDP 520; die Metrik zählt Hops.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=rip">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/rip.json">Projektdatei</a></p></li><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/ripng.webp" width="700" height="298" alt="Demo «RIPng für IPv6» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/ripng-dark.webp" width="700" height="298" alt="Demo «RIPng für IPv6» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>RIPng für IPv6</strong><p>Drei Router lernen ihre IPv6-Präfixe per RIPng: Distanzvektor mit Hop-Anzahl, wie RIP v2.</p><p class="muted">Updates per UDP 521 an ff02::9. Die IPv6-Routingtabelle füllt sich mit R-Routen, tracert findet den Weg zu PC 2.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ripng">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ripng.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>RIP in der Kette</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_rip-chain.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
@@ -117,10 +117,11 @@ Router# show ip route</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

@@ -7,11 +7,11 @@
   <meta name="description" content="Mehrere getrennte Routing-Tabellen auf einem Router: zwei Kunden mit denselben Adressen über dasselbe Gerät, ohne dass sie sich sehen.">
   <link rel="canonical" href="https://leyonet.ch/wiki/vrf.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -99,7 +99,7 @@ Router# ping vrf KUNDE-A 10.0.0.10</code></pre>
 <p>Im Formular: Reiter <strong>VRF</strong>. Befehlszeile:</p>
 <ul><li><code>vrf definition KUNDE-A</code></li><li>am Interface <code>vrf forwarding KUNDE-A</code></li><li><code>ip route vrf KUNDE-A 0.0.0.0/0 10.1.1.2</code></li><li><code>show vrf</code>, <code>show ip route vrf KUNDE-A</code>, <code>ping vrf KUNDE-A 10.9.0.10</code></li></ul></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>VRF: zwei Kunden, gleiche Adressen</strong><p>Ein Provider-Router trennt zwei Kunden mit VRFs. Beide verwenden 10.0.0.0/24 und 10.9.0.0/24 und sehen sich trotzdem nie.</p><p class="muted">Beide PCs rufen http://10.9.0.10/ auf, dieselbe Adresse. Kunde A bekommt die Seite seines Servers, Kunde B die seines. Filter «http».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vrf">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vrf.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/vrf.webp" width="700" height="311" alt="Demo «VRF: zwei Kunden, gleiche Adressen» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/vrf-dark.webp" width="700" height="311" alt="Demo «VRF: zwei Kunden, gleiche Adressen» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>VRF: zwei Kunden, gleiche Adressen</strong><p>Ein Provider-Router trennt zwei Kunden mit VRFs. Beide verwenden 10.0.0.0/24 und 10.9.0.0/24 und sehen sich trotzdem nie.</p><p class="muted">Beide PCs rufen http://10.9.0.10/ auf, dieselbe Adresse. Kunde A bekommt die Seite seines Servers, Kunde B die seines. Filter «http».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vrf">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vrf.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>VRF: Zwei Kunden mit denselben Netzen</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_vrf-customers.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
@@ -114,10 +114,11 @@ Router# ping vrf KUNDE-A 10.0.0.10</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

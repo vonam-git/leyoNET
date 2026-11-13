@@ -7,11 +7,11 @@
   <meta name="description" content="Link-State-Routing: Nachbarn per Hello, Datenbank aller Verbindungen, kürzeste Wege nach Dijkstra – für IPv4 (OSPFv2) und IPv6 (OSPFv3).">
   <link rel="canonical" href="https://leyonet.ch/wiki/ospf.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -83,6 +83,7 @@
 <h2 id="ablauf">Ablauf</h2>
 <ol><li><strong>Hello:</strong> Router senden regelmässig Hello-Pakete an <code>224.0.0.5</code>. Wer antwortet und dieselben Werte hat (Area, Netz, Intervalle), wird <strong>Nachbar</strong>.</li><li><strong>Datenbankabgleich:</strong> Nachbarn tauschen Beschreibungen (DBD) aus, fordern fehlende Einträge an (LSR) und schicken sie (LSU), bestätigt mit LSAck.</li><li><strong>SPF-Berechnung:</strong> Jeder Router berechnet aus der Datenbank seine Routen; sie erscheinen mit «O» in der Tabelle.</li></ol>
 <p>Die <strong>Router-ID</strong> ist die höchste Loopback-Adresse, sonst die höchste Interface-Adresse. Die Kosten eines Anschlusses lassen sich einstellen; der Weg mit der kleinsten Summe gewinnt.</p>
+<figure class="shot-figure animated"><picture class="img-light"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/ospf.webp"><img src="bilder/ospf-anim.webp" width="960" height="427" alt="OSPF in der Simulation: Hello-Pakete und Austausch der Routen" loading="lazy" decoding="async"></picture><picture class="img-dark"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/ospf-dark.webp"><img src="bilder/ospf-anim-dark.webp" width="960" height="427" alt="OSPF in der Simulation: Hello-Pakete und Austausch der Routen" loading="lazy" decoding="async"></picture><figcaption><span class="badge">Zeitlupe</span> OSPF in der Simulation: Hello-Pakete und Austausch der Routen</figcaption></figure>
 <h2 id="einrichten">Einrichten</h2>
 <pre class="code"><code>Router(config)# router ospf
 Router(config-router)# network 10.0.0.0/24 area 0
@@ -104,7 +105,7 @@ Router# show ip route</code></pre>
 <p>CLI: <code>router ospf6</code>, <code>ospf6 router-id 1.1.1.1</code>, <code>interface eth0 area 0</code>, <code>show ipv6 ospf6 neighbor</code>, <code>show ipv6 ospf6 database</code>, <code>show ipv6 route</code> (Code O). Layer-3-Switches sprechen OSPFv3 auf ihren VLAN-Interfaces.</p>
 <p>Vereinfacht wie OSPFv2: keine DR/BDR-Wahl, keine Netz- und Link-LSAs, eine Area.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>OSPF</strong><p>Drei Router im Dreieck lernen ihre Netze per OSPF.</p><p class="muted">Hello, DBD, LSU, LSAck in der Paketliste; die Routing-Tabelle füllt sich mit O-Routen. Danach ein Kabel entfernen: OSPF rechnet neu.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ospf">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ospf.json">Projektdatei</a></p></li><li class="card"><strong>OSPFv3 für IPv6</strong><p>Dieselben drei Router wie bei OSPF, aber nur mit IPv6: Sie lernen ihre Präfixe per OSPFv3.</p><p class="muted">Hellos an ff02::5 von den Link-Local-Adressen, danach DBD, LSR, LSU, LSAck. Die IPv6-Routingtabelle füllt sich mit O-Routen; tracert geht über den kürzesten Weg.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ospfv3">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ospfv3.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><strong>OSPF</strong><p>Drei Router im Dreieck lernen ihre Netze per OSPF.</p><p class="muted">Hello, DBD, LSU, LSAck in der Paketliste; die Routing-Tabelle füllt sich mit O-Routen. Danach ein Kabel entfernen: OSPF rechnet neu.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ospf">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ospf.json">Projektdatei</a></p></li><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/ospfv3.webp" width="700" height="298" alt="Demo «OSPFv3 für IPv6» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/ospfv3-dark.webp" width="700" height="298" alt="Demo «OSPFv3 für IPv6» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>OSPFv3 für IPv6</strong><p>Dieselben drei Router wie bei OSPF, aber nur mit IPv6: Sie lernen ihre Präfixe per OSPFv3.</p><p class="muted">Hellos an ff02::5 von den Link-Local-Adressen, danach DBD, LSR, LSU, LSAck. Die IPv6-Routingtabelle füllt sich mit O-Routen; tracert geht über den kürzesten Weg.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ospfv3">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ospfv3.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Routing mit OSPF</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_ospf-triangle.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Loopbacks und OSPF</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_loopback-ospf.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="5 von 5 Sternen">★★★★★</span> <strong>UE10 Netzwerkdesign: Three-Tier (Core, Distribution, Access)</strong> <span class="muted">· 5 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M145_UE10_Three_Tier.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
@@ -123,10 +124,11 @@ Router# show ip route</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

@@ -14,6 +14,8 @@ verwandt: [switch, vlan, lacp]
 
 Zwei Kabel zwischen Switches erhöhen die Ausfallsicherheit, bilden aber eine **Schleife**. Ein Broadcast wird endlos im Kreis geschickt und vervielfacht sich: ein **Broadcast-Sturm**. Nach Sekunden ist das Netz voll, die MAC-Tabellen springen hin und her.
 
+![Broadcast-Sturm ohne Spanning Tree: Rahmen kreisen ohne Ende](storm)
+
 ## Die Lösung: ein Baum
 
 Das Spanning Tree Protocol macht aus dem vermaschten Netz einen Baum ohne Schleifen:

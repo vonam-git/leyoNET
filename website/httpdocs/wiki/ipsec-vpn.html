@@ -7,11 +7,11 @@
   <meta name="description" content="Zwei Standorte sicher über das Internet verbinden: IKEv2 handelt den Tunnel aus, ESP verpackt die Pakete.">
   <link rel="canonical" href="https://leyonet.ch/wiki/ipsec-vpn.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -88,6 +88,7 @@
 <p>Im Tunnelmodus packt <strong>ESP</strong> (Encapsulating Security Payload) das ganze ursprüngliche IP-Paket ein und setzt einen neuen IP-Kopf davor, von Router zu Router:</p>
 <pre class="code lang-text"><code>[ IP 198.51.100.1 → 203.0.113.1 | ESP (SPI, Nr.) | verschlüsselt: IP 192.168.1.10 → 192.168.2.20 | ICMP ]</code></pre>
 <p>Im Internet sieht man nur die öffentlichen Adressen der Router, nicht, wer innen mit wem spricht. Tunnelverkehr geht am NAT vorbei.</p>
+<figure class="shot-figure animated"><picture class="img-light"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/vpn.webp"><img src="bilder/vpn-anim.webp" width="960" height="427" alt="Site-to-Site-VPN: Pakete laufen verschlüsselt durch den Tunnel" loading="lazy" decoding="async"></picture><picture class="img-dark"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/vpn-dark.webp"><img src="bilder/vpn-anim-dark.webp" width="960" height="427" alt="Site-to-Site-VPN: Pakete laufen verschlüsselt durch den Tunnel" loading="lazy" decoding="async"></picture><figcaption><span class="badge">Zeitlupe</span> Site-to-Site-VPN: Pakete laufen verschlüsselt durch den Tunnel</figcaption></figure>
 <h2 id="in-leyonet">In leyoNET</h2>
 <p>Unter Erweitert → VPN beim Router: Name, Adresse des Partners, eigenes und entferntes Netz, Schlüssel. In der Simulation zeigt der Reiter den Zustand des Tunnels; die Paketliste zeigt IKE und ESP mit echten Köpfen. Die Verschlüsselung selbst ist nur angedeutet.</p>
 <section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
@@ -100,7 +101,7 @@
 <p>Danach reisen die Pakete in <strong>ESP</strong> (IP-Protokoll 50): aussen die öffentlichen Router-Adressen, innen das ganze Originalpaket verschlüsselt. In der Paketliste und im OSI-Fenster sieht man beide Köpfe; ein Mitschnitt im Internet zeigt nur unlesbare Bytes. Für Tunnelverkehr gilt kein NAT, das entfernte Netz braucht keine Route.</p>
 <p>Vereinfacht: keine echte Kryptografie, kein Rekeying, kein NAT-Traversal. Filter: <code>esp</code>, <code>ike</code>, <code>vpn</code>. Siehe auch <a href="paketfilter.html">Firewall</a>.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>VPN: Zwei Standorte verbinden</strong><p>Zürich und Bern sind über das Internet verbunden. Ein IPsec-Tunnel zwischen den Routern macht daraus ein gemeinsames Firmennetz.</p><p class="muted">Der PC in Zürich pingt den Server in Bern. Zuerst handeln die Router den Tunnel mit IKEv2 aus, dann laufen die Pakete verschlüsselt in ESP. Filter «vpn».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vpn">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vpn.json">Projektdatei</a></p></li><li class="card"><strong>Rechenzentren-Verbund</strong><p>Drei Rechenzentren in drei Bauarten: Zürich dreistufig (Core, Distribution, Access), Bern mit zusammengelegtem Core und Distribution, Basel als Collapsed Core. Alle Geräte sind in Racks eingebaut, die Ports tragen die Farbe ihres VLANs. Angeschlossen sind die Standorte über Glasfaser, Kabelmodem und VDSL, verbunden mit IPsec-Tunneln.</p><p class="muted">Ein Server in Zürich pingt das NAS in Bern durch den VPN-Tunnel, das Monitoring ruft die Webseite in Basel über ihren DNS-Namen ab, Bern fragt den DNS-Server in Zürich, und Basel pingt das Monitoring in Zürich.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=rzVerbund">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/rz-verbund.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><strong>VPN: Zwei Standorte verbinden</strong><p>Zürich und Bern sind über das Internet verbunden. Ein IPsec-Tunnel zwischen den Routern macht daraus ein gemeinsames Firmennetz.</p><p class="muted">Der PC in Zürich pingt den Server in Bern. Zuerst handeln die Router den Tunnel mit IKEv2 aus, dann laufen die Pakete verschlüsselt in ESP. Filter «vpn».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vpn">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vpn.json">Projektdatei</a></p></li><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/rzVerbund.webp" width="700" height="311" alt="Demo «Rechenzentren-Verbund» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/rzVerbund-dark.webp" width="700" height="311" alt="Demo «Rechenzentren-Verbund» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Rechenzentren-Verbund</strong><p>Drei Rechenzentren in drei Bauarten: Zürich dreistufig (Core, Distribution, Access), Bern mit zusammengelegtem Core und Distribution, Basel als Collapsed Core. Alle Geräte sind in Racks eingebaut, die Ports tragen die Farbe ihres VLANs. Angeschlossen sind die Standorte über Glasfaser, Kabelmodem und VDSL, verbunden mit IPsec-Tunneln.</p><p class="muted">Ein Server in Zürich pingt das NAS in Bern durch den VPN-Tunnel, das Monitoring ruft die Webseite in Basel über ihren DNS-Namen ab, Bern fragt den DNS-Server in Zürich, und Basel pingt das Monitoring in Zürich.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=rzVerbund">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/rz-verbund.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>VPN: Zürich und Bern verbinden</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_vpn-sites.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
@@ -119,10 +120,11 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

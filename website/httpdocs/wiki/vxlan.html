@@ -7,11 +7,11 @@
   <meta name="description" content="VLANs über ein geroutetes Netz verlängern: Ethernet-Rahmen in UDP 4789, VNI statt VLAN-Nummer, VTEPs auf Layer-3-Switches.">
   <link rel="canonical" href="https://leyonet.ch/wiki/vxlan.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -100,7 +100,7 @@ Switch# show nve peers</code></pre>
 <ul><li>VLAN und VNI verbinden: im VLAN <code>vn-segment 10010</code>.</li><li>Tunnelquelle: meist ein <a href="router.html">Loopback-Interfaces</a> (<code>interface nve1</code>, <code>source-interface loopback0</code>), im Underlay per OSPF oder statisch erreichbar.</li><li>Andere VTEPs fest eintragen (Ingress Replication): <code>member vni 10010 peer-ip 10.255.0.2</code>. Broadcasts und unbekannte Ziele gehen an alle, gelernte MAC-Adressen nur an ihren VTEP («Flood and Learn»).</li><li>Rahmen von nicht eingetragenen VTEPs werden verworfen.</li></ul>
 <p>Im Formular: Reiter <strong>Switching</strong>, Abschnitt VXLAN. Anzeigen: <code>show nve vni</code>, <code>show nve peers</code>, <code>show mac address-table</code> (Einträge «nve1»). <strong>EVPN</strong> (BGP verteilt die MAC-Adressen) ist nicht nachgebildet.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>VXLAN zwischen zwei Standorten</strong><p>Zwei Layer-3-Switches verlängern VLAN 10 per VXLAN über ein geroutetes Netz (OSPF). Die PCs in Zürich und Bern liegen im selben Subnetz.</p><p class="muted">Erst lernen die Switches über OSPF die Loopbacks (10.255.0.1 und .2). Dann pingt der PC Zürich den PC Bern: ARP und Ping laufen verpackt in UDP 4789 über den Spine. Filter «vxlan».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vxlan">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vxlan.json">Projektdatei</a></p></li><li class="card"><strong>Rechenzentrum: Leaf-Spine mit BGP und VXLAN</strong><p>Ein Rechenzentrum wie bei grossen Anbietern: zwei Spines, drei Leafs, jeder Leaf an beiden Spines. Das Underlay routet mit eBGP (jeder Leaf ein eigenes AS), das Overlay verlängert VLAN 10 (Web) und VLAN 20 (Datenbank) per VXLAN über alle Leafs.</p><p class="muted">Erst bauen die Switches ihre BGP-Sitzungen auf und lernen die Loopbacks. Dann pingt Web 1 den Server Web 2 und DB 1 den Server DB 2 – beide Male im selben Subnetz, aber über zwei Router-Sprünge. Filter «vxlan» oder «bgp».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=datacenter">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/rechenzentrum.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/vxlan.webp" width="700" height="298" alt="Demo «VXLAN zwischen zwei Standorten» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/vxlan-dark.webp" width="700" height="298" alt="Demo «VXLAN zwischen zwei Standorten» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>VXLAN zwischen zwei Standorten</strong><p>Zwei Layer-3-Switches verlängern VLAN 10 per VXLAN über ein geroutetes Netz (OSPF). Die PCs in Zürich und Bern liegen im selben Subnetz.</p><p class="muted">Erst lernen die Switches über OSPF die Loopbacks (10.255.0.1 und .2). Dann pingt der PC Zürich den PC Bern: ARP und Ping laufen verpackt in UDP 4789 über den Spine. Filter «vxlan».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vxlan">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vxlan.json">Projektdatei</a></p></li><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/datacenter.webp" width="700" height="298" alt="Demo «Rechenzentrum: Leaf-Spine mit BGP und VXLAN» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/datacenter-dark.webp" width="700" height="298" alt="Demo «Rechenzentrum: Leaf-Spine mit BGP und VXLAN» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Rechenzentrum: Leaf-Spine mit BGP und VXLAN</strong><p>Ein Rechenzentrum wie bei grossen Anbietern: zwei Spines, drei Leafs, jeder Leaf an beiden Spines. Das Underlay routet mit eBGP (jeder Leaf ein eigenes AS), das Overlay verlängert VLAN 10 (Web) und VLAN 20 (Datenbank) per VXLAN über alle Leafs.</p><p class="muted">Erst bauen die Switches ihre BGP-Sitzungen auf und lernen die Loopbacks. Dann pingt Web 1 den Server Web 2 und DB 1 den Server DB 2 – beide Male im selben Subnetz, aber über zwei Router-Sprünge. Filter «vxlan» oder «bgp».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=datacenter">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/rechenzentrum.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="5 von 5 Sternen">★★★★★</span> <strong>Rechenzentrum: Leaf-Spine mit BGP und VXLAN</strong> <span class="muted">· 5 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_datacenter.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
@@ -119,10 +119,11 @@ Switch# show nve peers</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

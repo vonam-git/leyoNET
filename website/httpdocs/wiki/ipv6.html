@@ -7,11 +7,11 @@
   <meta name="description" content="128-Bit-Adressen, Präfixe, Link-Local, Neighbor Discovery statt ARP und automatische Adressen mit SLAAC.">
   <link rel="canonical" href="https://leyonet.ch/wiki/ipv6.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -101,7 +101,7 @@ C:\&gt; netsh interface ipv6 show neighbors</code></pre>
 <p>Dynamisches Routing für IPv6: <a href="ospf.html">OSPFv3 (IPv6)</a> und <a href="rip.html">RIPng (IPv6)</a>.</p>
 <p>Vereinfacht: kein MLD, keine Erweiterungs-Header, keine Privacy-Adressen, kein NAT für IPv6.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>IPv6: SLAAC, DHCPv6 und Neighbor Discovery</strong><p>Ein Router mit zwei IPv6-Netzen. Links bilden die PCs ihre Adresse selbst (SLAAC), rechts holt das Notebook sie per DHCPv6.</p><p class="muted">Router Advertisements, Duplicate Address Detection, dann ein Ping mit Neighbor Solicitation statt ARP. Filter «ndp» zeigt Neighbor Discovery.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ipv6">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ipv6-slaac.json">Projektdatei</a></p></li><li class="card"><strong>Web, Mail und SSH über IPv6</strong><p>Ein reines IPv6-Netz: Der PC erhält Adresse und DNS-Server vom Router (SLAAC und RDNSS), der Schul-DNS kennt AAAA-Einträge, Web- und Mailserver stehen im zweiten Netz.</p><p class="muted">PC 1 löst www.schule.example per AAAA auf, lädt die Seite über TCP und IPv6 und schickt eine Mail per SMTP. Filter «ipv6 and tcp» zeigt den Verkehr der Anwendungen.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ipv6Services">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ipv6-dienste.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/ipv6.webp" width="700" height="311" alt="Demo «IPv6: SLAAC, DHCPv6 und Neighbor Discovery» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/ipv6-dark.webp" width="700" height="311" alt="Demo «IPv6: SLAAC, DHCPv6 und Neighbor Discovery» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>IPv6: SLAAC, DHCPv6 und Neighbor Discovery</strong><p>Ein Router mit zwei IPv6-Netzen. Links bilden die PCs ihre Adresse selbst (SLAAC), rechts holt das Notebook sie per DHCPv6.</p><p class="muted">Router Advertisements, Duplicate Address Detection, dann ein Ping mit Neighbor Solicitation statt ARP. Filter «ndp» zeigt Neighbor Discovery.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ipv6">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ipv6-slaac.json">Projektdatei</a></p></li><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/ipv6Services.webp" width="700" height="311" alt="Demo «Web, Mail und SSH über IPv6» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/ipv6Services-dark.webp" width="700" height="311" alt="Demo «Web, Mail und SSH über IPv6» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Web, Mail und SSH über IPv6</strong><p>Ein reines IPv6-Netz: Der PC erhält Adresse und DNS-Server vom Router (SLAAC und RDNSS), der Schul-DNS kennt AAAA-Einträge, Web- und Mailserver stehen im zweiten Netz.</p><p class="muted">PC 1 löst www.schule.example per AAAA auf, lädt die Seite über TCP und IPv6 und schickt eine Mail per SMTP. Filter «ipv6 and tcp» zeigt den Verkehr der Anwendungen.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ipv6Services">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ipv6-dienste.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>IPv6 einrichten</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_ipv6-router.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
@@ -120,10 +120,11 @@ C:\&gt; netsh interface ipv6 show neighbors</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

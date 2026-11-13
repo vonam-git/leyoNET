@@ -39,6 +39,7 @@ const KEY = 'netzwerk-simulator.exam';
 export const EXAM_BLOCKED_DIALOGS = new Set(['examJoin', 'catalog', 'demos', 'taskEditor', 'exam', 'examExport', 'review', 'features', 'admin', 'session']);
 export const EXAM_BLOCKED_COMMANDS = new Set([
   'file.new',
+  'help.support',
   'file.demos',
   'file.session',
   'file.examJoin',

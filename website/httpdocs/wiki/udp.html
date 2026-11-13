@@ -7,11 +7,11 @@
   <meta name="description" content="Der schnelle, verbindungslose Transport für DNS, DHCP und RIP: ohne Handshake, ohne Bestätigung, nur Ports und Prüfsumme.">
   <link rel="canonical" href="https://leyonet.ch/wiki/udp.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -85,7 +85,7 @@
 <p>Für eine kurze Frage mit kurzer Antwort wäre ein Handshake teurer als die Nachricht selbst: DNS fragt einfach noch einmal, wenn keine Antwort kommt. DHCP funktioniert sogar, bevor das Gerät eine Adresse hat. Bei Sprache und Video ist ein verspätetes Paket ohnehin wertlos.</p>
 <div class="table-wrap"><table><thead><tr><th>Port</th><th>Dienst</th></tr></thead><tbody><tr><td>53</td><td>DNS</td></tr><tr><td>67 / 68</td><td>DHCP (Server / Client)</td></tr><tr><td>520</td><td>RIP</td></tr><tr><td>4789</td><td>VXLAN</td></tr></tbody></table></div>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>DNS mit Weiterleitung</strong><p>Schul-DNS mit Zone schule.example (A, CNAME, MX, TXT, NS, PTR), der unbekannte Namen an den DNS des Providers weiterleitet.</p><p class="muted">PC 1 löst einen Alias über zwei CNAME auf, fragt den Mailserver (MX) ab und öffnet eine Seite beim Provider: Der Schul-DNS leitet die Frage weiter und antwortet «nicht autorisierend».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=dns">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/dns.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/dns.webp" width="700" height="331" alt="Demo «DNS mit Weiterleitung» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/dns-dark.webp" width="700" height="331" alt="Demo «DNS mit Weiterleitung» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>DNS mit Weiterleitung</strong><p>Schul-DNS mit Zone schule.example (A, CNAME, MX, TXT, NS, PTR), der unbekannte Namen an den DNS des Providers weiterleitet.</p><p class="muted">PC 1 löst einen Alias über zwei CNAME auf, fragt den Mailserver (MX) ab und öffnet eine Seite beim Provider: Der Schul-DNS leitet die Frage weiter und antwortet «nicht autorisierend».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=dns">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/dns.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Protokollanalyse – Auftrag 2: DHCP</strong> <span class="muted">· 5 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M129_Protokollanalyse.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
@@ -104,10 +104,11 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

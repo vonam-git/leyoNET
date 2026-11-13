@@ -9,7 +9,7 @@
  *
  * Erzeugt statische Seiten in website/httpdocs/wiki/ (siehe wiki.test.ts, «npm run wiki»).
  */
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import de from '../i18n/de.json';
 import { CATALOG } from '../ui/catalog';
@@ -174,7 +174,26 @@ export function buildWiki(root: string, version: string): WikiBuild {
   for (const d of DEMOS) if (!pages.some((p) => p.demos.includes(d.id))) errors.push(`Demo ohne Wiki-Seite: ${d.id}`);
   for (const topic of HELP_TOPICS) if (!byHelp.has(topic)) errors.push(`Hilfethema ohne Wiki-Seite: ${topic}`);
 
+  // --- Bilder (wiki/bilder, erzeugt mit scripts/wiki/bilder.py) -------------------------
+  const sizesFile = join(root, 'website/httpdocs/wiki/bilder/masse.json');
+  const sizes = (existsSync(sizesFile) ? JSON.parse(readFileSync(sizesFile, 'utf8')) : {}) as Record<string, [number, number]>;
+  const has = (name: string) => !!sizes[name] && existsSync(join(root, `website/httpdocs/wiki/bilder/${name}.webp`));
+  /** Bild hell und dunkel (je nach Design), animiert mit Standbild bei «weniger Bewegung». */
+  const figure = (name: string, alt: string, caption?: string): string | null => {
+    if (!has(name)) return null;
+    const anim = has(`${name}-anim`);
+    const one = (dark: boolean) => {
+      const still = dark && has(`${name}-dark`) ? `${name}-dark` : name;
+      const moving = anim ? (dark && has(`${name}-anim-dark`) ? `${name}-anim-dark` : `${name}-anim`) : null;
+      const [w, h] = sizes[moving ?? still]!;
+      const img = `<img src="bilder/${moving ?? still}.webp" width="${w}" height="${h}" alt="${escapeHtml(alt)}" loading="lazy" decoding="async">`;
+      return `<picture class="${dark ? 'img-dark' : 'img-light'}">${moving ? `<source media="(prefers-reduced-motion: reduce)" srcset="bilder/${still}.webp">` : ''}${img}</picture>`;
+    };
+    return `<figure class="shot-figure${anim ? ' animated' : ''}">${one(false)}${has(`${name}-dark`) ? one(true) : ''}${caption || anim ? `<figcaption>${anim ? '<span class="badge">Zeitlupe</span> ' : ''}${escapeHtml(caption ?? alt)}</figcaption>` : ''}</figure>`;
+  };
+
   const links = (file: string): LinkResolver => ({
+    image: (name, alt) => figure(name, alt, alt),
     wiki: (slug) => {
       const p = bySlug.get(slug);
       return p ? { title: p.title, href: `${p.slug}.html` } : null;
@@ -260,6 +279,7 @@ ${o.body}
       <ul>
         <li><a href="${REPO}">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>
@@ -319,7 +339,9 @@ ${o.body}
         html: `<ul class="cards">${p.demos
           .map((id) => {
             const demo = DEMOS.find((d) => d.id === id)!;
-            return `<li class="card"><strong>${escapeHtml(texts[`demo.${id}.title`] ?? id)}</strong><p>${escapeHtml(texts[`demo.${id}.text`] ?? '')}</p><p class="muted">${escapeHtml(texts[`demo.${id}.show`] ?? '')}</p><p class="card-actions"><a class="btn btn-small btn-ink" href="${APP}?schaufenster=${id}">Live ansehen</a> <a class="link" href="${REPO}/blob/main/docs/beispiele/${demo.file}">Projektdatei</a></p></li>`;
+            const title = texts[`demo.${id}.title`] ?? id;
+            const shot = p.body.includes(`](${id})`) ? '' : figure(id, `Demo «${title}» in leyoNET`, has(`${id}-anim`) ? `So sieht es in der Simulation aus: Jeder Punkt ist ein Rahmen auf dem Kabel.` : undefined) ?? '';
+            return `<li class="card">${shot}<strong>${escapeHtml(title)}</strong><p>${escapeHtml(texts[`demo.${id}.text`] ?? '')}</p><p class="muted">${escapeHtml(texts[`demo.${id}.show`] ?? '')}</p><p class="card-actions"><a class="btn btn-small btn-ink" href="${APP}?schaufenster=${id}">Live ansehen</a> <a class="link" href="${REPO}/blob/main/docs/beispiele/${demo.file}">Projektdatei</a></p></li>`;
           })
           .join('')}</ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, ${p.demos.some((id) => DEMOS.find((d) => d.id === id)?.tour?.length) ? 'mit Führung Schritt für Schritt.' : 'zum Vorführen.'}</p>`,
       });

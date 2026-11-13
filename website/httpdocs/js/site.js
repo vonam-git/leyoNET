@@ -31,6 +31,24 @@
     if (!root.dataset.theme) applyTheme();
   });
 
+  /* --- Kontakt: Nachricht im eigenen E-Mail-Programm öffnen (nichts geht an den Server) ---- */
+  const contact = document.querySelector('form.contact');
+  const user = contact?.dataset.user ?? '';
+  const domain = contact?.dataset.domain ?? '';
+  // Nur eine eingetragene, schlichte Adresse (keine Platzhalter, keine Zusätze wie ?cc=).
+  if (contact && /^[\w.+-]+$/.test(user) && /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) {
+    contact.hidden = false;
+    contact.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = new FormData(contact);
+      const from = String(data.get('absender') || '').trim();
+      const body = `${String(data.get('nachricht') || '').trim()}${from ? `\n\n${from}` : ''}`;
+      const subject = `leyoNET: ${data.get('thema')}`;
+      const to = `${user}@${domain}`;
+      location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    });
+  }
+
   /* --- Hero: Ping über einen Router, wie in der Simulation ------------------------- */
   const X = { pc: 66, sw: 240, r: 410, srv: 551 };
   const FRAMES = [
