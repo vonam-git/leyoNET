@@ -70,4 +70,4 @@ Die Signalstärke hängt vom Abstand zwischen Client und Access Point und von St
 
 ## Bewusst nicht simuliert
 
-IPv6, HTTPS/TLS, VPN/IPsec, QoS, Multicast-Routing, Link-Aggregation, Rapid-STP, VRRP/HSRP, Firewalls mit Zugriffslisten. Einige davon sind Kandidaten für spätere Versionen.
+HTTPS/TLS mit echter Verschlüsselung, QoS, Multicast-Routing, Rapid-STP, VRRP/HSRP, EVPN, MPLS, Bitfehler und Dämpfung auf der Leitung. Was davon später dazukommt, entscheidet der Unterricht.

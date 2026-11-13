@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subnetting und VLSM – leyoNET Wiki</title>
+  <meta name="description" content="Ein Netz in kleinere aufteilen, Masken und Präfixe lesen, Hostbereich und Broadcast berechnen – gleichmässig oder nach Bedarf.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/subnetting.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group">
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html" aria-current="page">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html">Router</a></li><li><a href="firewall.html">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#grundlagen">Grundlagen</a></p>
+      <h1>Subnetting und VLSM</h1>
+      <p class="lead">Ein Netz in kleinere aufteilen, Masken und Präfixe lesen, Hostbereich und Broadcast berechnen – gleichmässig oder nach Bedarf.</p>
+      <dl class="facts"><div><dt>Schicht</dt><dd>3 (Vermittlung)</dd></div><div><dt>Norm</dt><dd>RFC 1918</dd></div></dl>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#netzanteil-und-hostanteil">Netzanteil und Hostanteil</a></li><li><a href="#beispiel">Beispiel</a></li><li><a href="#vlsm-nach-bedarf">VLSM: nach Bedarf</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#ueben">Üben</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="netzanteil-und-hostanteil">Netzanteil und Hostanteil</h2>
+<p>Eine IPv4-Adresse hat 32 Bit. Die <strong>Maske</strong> sagt, wie viele Bit vorne das Netz bezeichnen; der Rest nummeriert die Geräte im Netz. <code>/24</code> (255.255.255.0) heisst 24 Bit Netz, 8 Bit Host.</p>
+<div class="table-wrap"><table><thead><tr><th>Präfix</th><th>Maske</th><th>Adressen</th><th>nutzbar</th></tr></thead><tbody><tr><td>/24</td><td>255.255.255.0</td><td>256</td><td>254</td></tr><tr><td>/25</td><td>255.255.255.128</td><td>128</td><td>126</td></tr><tr><td>/26</td><td>255.255.255.192</td><td>64</td><td>62</td></tr><tr><td>/27</td><td>255.255.255.224</td><td>32</td><td>30</td></tr><tr><td>/30</td><td>255.255.255.252</td><td>4</td><td>2 (Transfernetz zwischen Routern)</td></tr></tbody></table></div>
+<p>Die erste Adresse ist die <strong>Netzadresse</strong>, die letzte der <strong>Broadcast</strong>; dazwischen liegen die Geräteadressen.</p>
+<h2 id="beispiel">Beispiel</h2>
+<p>Das Netz <code>192.168.10.0/24</code> soll in vier gleich grosse Netze geteilt werden. Vier Netze brauchen 2 Bit mehr: <code>/26</code>. Jedes Netz hat 64 Adressen:</p>
+<div class="table-wrap"><table><thead><tr><th>Netz</th><th>Hostbereich</th><th>Broadcast</th></tr></thead><tbody><tr><td>192.168.10.0/26</td><td>.1 – .62</td><td>192.168.10.63</td></tr><tr><td>192.168.10.64/26</td><td>.65 – .126</td><td>192.168.10.127</td></tr><tr><td>192.168.10.128/26</td><td>.129 – .190</td><td>192.168.10.191</td></tr><tr><td>192.168.10.192/26</td><td>.193 – .254</td><td>192.168.10.255</td></tr></tbody></table></div>
+<h2 id="vlsm-nach-bedarf">VLSM: nach Bedarf</h2>
+<p>Bei <strong>VLSM</strong> (variable Masken) bekommt jedes Netz nur so viel, wie es braucht. Man beginnt mit dem grössten: 100 Geräte brauchen /25, 50 Geräte /26, die Router-Verbindung /30. So bleibt Adressraum für später.</p>
+<aside class="callout"><p>In leyoNET rechnet der <strong>IP-Rechner</strong> (Taste I) beides vor, in Dezimal und Binär, und überträgt die Werte auf Knopfdruck. Ein <strong>Bereich</strong> mit Netzadresse zeigt Hostbereich und Broadcast direkt auf der Zeichenfläche.</p></aside>
+<p>Private Adressen für eigene Netze stehen in RFC 1918: 10.0.0.0/8, 172.16.0.0/12 und 192.168.0.0/16.</p>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
+<p class="muted">Derselbe Text wie in der Hilfe der App (Taste F1).</p>
+<div class="help-block"><h3>Subnetze</h3>
+<p>Ein Netz lässt sich in kleinere Subnetze teilen, indem man das Präfix verlängert: Aus 192.168.1.0/24 werden zwei /25 oder vier /26. Pro Subnetz gehen zwei Adressen ab (Netz- und Broadcastadresse). Mit VLSM bekommt jedes Subnetz genau die Grösse, die es braucht. Der <a href="subnetting.html">IP-Rechner</a> rechnet beides.</p></div>
+<div class="help-block"><h3>IP-Rechner</h3>
+<p>Taste <strong>I</strong> oder der Knopf neben einem Adressfeld öffnet den Rechner. Er zeigt Netz, Broadcast, erste und letzte Adresse, Anzahl Hosts, Wildcard und die Binärdarstellung. Unten teilt er ein Netz gleichmässig oder nach Bedarf (VLSM). <strong>Übernehmen</strong> trägt die Werte direkt ins Gerät ein.</p></div></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Subnetze nach Bedarf (VLSM)</strong> <span class="muted">· 4 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_subnetting-vlsm.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>Subnetting – Auftrag 1: Vier gleich grosse Subnetze</strong> <span class="muted">· 12 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M129_Subnetting.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Subnetting – Auftrag 2: Subnetze nach Bedarf (VLSM)</strong> <span class="muted">· 9 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M129_Subnetting.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>UE03 Router01 – Auftrag 3: Maske /25</strong> <span class="muted">· 6 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M06C_M117_UE03_Router01.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
+<section aria-labelledby="normen"><h2 id="normen">Normen</h2>
+<ul class="norms"><li><a href="https://www.rfc-editor.org/rfc/rfc1918">RFC 1918</a> – Address Allocation for Private Internets</li></ul></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="ipv4.html">IPv4</a> <span class="muted">Adressen, Masken und der IPv4-Kopf: wie ein Paket sein Ziel über viele Netze hinweg findet, mit TTL, Prüfsumme und privaten Adressen.</span></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a> <span class="muted">Standardgateway, Routing-Tabelle, längstes Präfix und administrative Distanz – und wann man statisch, automatisch oder dynamisch routet.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="ethernet-mac.html"><span class="muted">Zurück</span>Ethernet und MAC-Adressen</a>
+        <a class="next" href="routing-grundlagen.html"><span class="muted">Weiter</span>Wie Routing funktioniert</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/grundlagen/subnetting.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

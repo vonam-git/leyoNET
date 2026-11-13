@@ -1,192 +1,96 @@
-<p align="center"><img src="branding/leyoNET.svg" alt="leyoNET" width="420" /></p>
+<p align="center"><img src="branding/leyoNET.svg" alt="leyoNET" width="380" /></p>
 
-# leyoNET
+<p align="center"><strong>Netzwerke bauen, simulieren und verstehen.</strong><br />Ein Netzwerk-Simulator für den Informatik-Unterricht, vom ersten Lehrjahr bis zur Fachhochschule.</p>
 
-**Netzwerke bauen, simulieren und verstehen.** Website: [leyonet.ch](https://leyonet.ch) · im Browser: [app.leyonet.ch](https://app.leyonet.ch)
+<p align="center">
+  <a href="https://app.leyonet.ch/"><strong>Im Browser starten</strong></a> ·
+  <a href="https://app.leyonet.ch/?schaufenster">Live-Schaufenster</a> ·
+  <a href="https://github.com/vonam-git/leyoNET/releases/latest">Herunterladen</a> ·
+  <a href="https://leyonet.ch/wiki/">Wiki</a> ·
+  <a href="https://leyonet.ch">leyonet.ch</a>
+</p>
 
-[![CI](https://github.com/vonam-git/leyoNET/actions/workflows/ci.yml/badge.svg)](https://github.com/vonam-git/leyoNET/actions/workflows/ci.yml)
+<p align="center">
+  <a href="https://github.com/vonam-git/leyoNET/actions/workflows/ci.yml"><img src="https://github.com/vonam-git/leyoNET/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/Lizenz-AGPL--3.0-blue" alt="Lizenz AGPL-3.0" /></a>
+  <img src="https://img.shields.io/badge/offline-eine%20HTML--Datei-success" alt="Offline als eine HTML-Datei" />
+</p>
 
-leyoNET ist ein Simulator für Rechnernetze im Informatik-Unterricht, vom ersten Lehrjahr (Informatik EFZ) bis zur Fachhochschule. Lernende bauen Topologien auf, konfigurieren Geräte und beobachten den Verkehr auf Paketebene. Läuft vollständig im Browser, offline, ohne Konten und ohne externe Dienste. Oberfläche auf Deutsch und Englisch, mit hellem und dunklem Design.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/bilder/schaufenster-dark.webp" />
+  <img src="docs/bilder/schaufenster.webp" alt="leyoNET: Rechenzentren-Verbund mit drei Standorten in Racks, der Webbrowser in Zürich ruft über DNS und IPsec die Seite in Basel ab" />
+</picture>
 
-Die ursprüngliche Anforderungsbeschreibung steht in [docs/konzept.md](docs/konzept.md).
+<p align="center"><sub>Das <a href="https://app.leyonet.ch/?schaufenster">Schaufenster</a>: drei Rechenzentren mit Core, Distribution und Access, angeschlossen über Glasfaser, Kabel und VDSL, verbunden mit IPsec. Läuft live, nur zum Ansehen.</sub></p>
 
-**Dokumentation:** [Anleitung für Lernende](docs/anleitung.md) · [Hinweise für Lehrpersonen](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Prüfungen](docs/pruefungen.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Normen und automatische Prüfungen](docs/normen.md) · [Richtpreise](docs/preise.md) · [Befehlszeile](docs/cli.md) · [Datenschutz](docs/datenschutz.md) · [IT-Sicherheit](docs/sicherheit.md) · [ISDS-Konzept für Schulen](docs/isds-konzept.md) · [DSFA-Abklärung](docs/dsfa-abklaerung.md) · [Installation](docs/installation.md) · [Webversion auf Plesk](docs/plesk.md) · [Desktop](docs/desktop.md)
+## Was leyoNET kann
 
-## Sofort loslegen
+Geräte aus dem Shop ziehen, verkabeln, konfigurieren – und dann zusehen, wie jedes Paket über die Leitung geht. Vom ersten ARP bis zum BGP-Update, in echten Bytes nach Norm.
 
-```bash
-git clone https://github.com/vonam-git/leyoNET.git
-```
+<table>
+  <tr>
+    <td width="50%"><img src="docs/bilder/rack-dark.webp" alt="Rack-Ansicht mit Switches und Servern, Ports in VLAN-Farben und Patchkabeln" /><br /><strong>Racks und Frontplatten</strong><br />Geräte als Einschübe, Ports in der Farbe ihres VLANs, Patchkabel, SFP-Module und Link-LEDs.</td>
+    <td width="50%"><img src="docs/bilder/simulation.webp" alt="Simulation mit Paketliste, OSI-Schichten und Hex-Ansicht" /><br /><strong>Pakete wie in Wireshark</strong><br />Paketliste mit OSI-Schichten, Hex-Ansicht, Filtern (<code>icmp and ip.dst == …</code>) und pcapng-Export.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/bilder/geraetefenster.webp" alt="Gerätefenster eines Routers mit OSPF-Nachbarn und Routing-Tabelle" /><br /><strong>Geräte wie echt konfigurieren</strong><br />Formulare mit Reitern oder Befehlszeile im Stil von FRRouting und Cisco IOS, mit <code>?</code>, Tab und SSH.</td>
+    <td><img src="docs/bilder/dashboard.webp" alt="Dashboard des Klassen-Verbunds auf dem Beamer" /><br /><strong>Klassen-Verbund mit Dashboard</strong><br />Jede Gruppe baut einen Standort, alle hängen an einer Infrastruktur. Der Beamer zeigt live, wer online ist.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/bilder/katalog.webp" alt="Aufgaben-Katalog mit Sternen und Themen" /><br /><strong>Über 70 Übungen, die sich selbst prüfen</strong><br />Von ★ bis ★★★★★, mit Arbeitsblatt (PDF) und Reihen für die Module 117, 129 und 145.</td>
+    <td><img src="docs/bilder/entwurf.webp" alt="Entwurf mit Layer-3-Switch und farbigen VLAN-Bereichen" /><br /><strong>Sauber dokumentiert</strong><br />Bereiche mit Netz und VLAN, Notizen, Stockwerke, Snapshots und Richtpreise in CHF.</td>
+  </tr>
+</table>
 
-Dann **`release/leyonet.html`** doppelklicken – fertig, ohne Installation und ohne Internet. Alle Wege (Datei verteilen, Schulserver mit Docker, selbst bauen) beschreibt [docs/installation.md](docs/installation.md), dazu die [Webversion mit Node.js auf Plesk](docs/plesk.md) (Sessions mit Code, Klassen, [Klassen-Verbund](docs/verbund.md), Prüfungen, Rückmeldungen, Admin-Konsole mit Zugängen) und die [Desktop-Version für Windows, macOS und Linux](docs/desktop.md).
+## Für den Unterricht
 
-## Stand
+- **Fünf Funktionsprofile** vom 1. Lehrjahr (PC, Switch, Router, DHCP) bis zum Studium (BGP, VRF, VXLAN). Wer nur das Nötige sieht, verliert sich nicht.
+- **Demos zu jedem Protokoll**, viele mit Führung Schritt für Schritt – vorführen per Knopfdruck.
+- **Prüfungen** mit Punkten und Schweizer Note, Variante je Platz, Nachteilsausgleich, Safe Exam Browser und automatischer Auswertung.
+- **Klassen-Verbund** und **Ansehen**: Lehrpersonen schauen jeder Session zu, ohne etwas zu verändern.
+- **Webversion für die Schule** mit Klassen, eigenen Zugängen für Schulen und Lehrpersonen, Aufgaben ein- und ausblenden.
+- **Crashkurs und Theorie** im [Wiki](https://leyonet.ch/wiki/): für Lehrpersonen der Einstieg in 30 Minuten, für Lernende jedes Gerät und Protokoll mit Beispiel und Norm.
 
-| Etappe | Inhalt | Status |
-|---|---|---|
-| M1 | Topologie-Editor, Speichern/Laden als .json | ✅ |
-| M2 | Simulationskern, ARP, IPv4 im gleichen Subnetz, Paketliste | ✅ |
-| M3 | Switch-Lerntabelle, Subnetting, Router mit statischen Routen | ✅ |
-| M4 | Aktionsmodus mit Desktop: Ping, Traceroute, DHCP; Schichtenansicht | ✅ |
-| M5 | DNS, TCP/UDP, HTTP | ✅ |
-| M6 | E-Mail, Aufgabenformat mit automatischer Prüfung | ✅ |
-| M7 | Deployment (Variante A und B) | ✅ |
-| + | Kabel umstecken/beschädigen, DHCP-Relay, Internet mit NAT, VLANs und Spanning Tree, schnelle Paketliste | ✅ |
-| + | Aufgaben-Formular, Abgaben auswerten, Oberflächentests, CI | ✅ |
-| + | Basis-/Pro-Modus, Router-on-a-Stick, Layer-3-Switch, Befehlszeile (FRRouting-Stil), SSH | ✅ |
-| + | WLAN mit Access Point, Mesh über Stockwerke, TP/Glasfaser/Funk, Link-LEDs, Farbtags | ✅ |
-| + | Dokumentationsmodus mit Bereichen, Stockwerke, Snapshots, Rack-Ansicht | ✅ |
-| + | Desktop-Installer (Tauri), Plesk-Testumgebung, Lizenzhinweise im Build | ✅ |
-| + | SFP-Module für Glasfaser, Racks auf der Karte, Bereiche kopieren, hell/dunkel, Englisch statt Französisch | ✅ |
-| + | Webversion mit Node.js: Sessions mit Code, Klassen-Sessions, Rückmeldungen, Admin-Konsole (erlaubte Modi, Pro, Aufbewahrung) | ✅ |
-| + | Aufgabenkatalog mit Schwierigkeit 1–5 Sterne | ✅ |
-| v0.4 | Zwei Modi (Entwurf, Simulation), Menüleiste, Befehlssuche, Tastenkürzel, F1-Hilfe, Funktionsprofile 1–5 mit Funktionsdatei | ✅ |
-| v0.4 | Shop mit Varianten und Richtpreisen, Kosten in CHF/EUR/USD, Server, Client-Gruppen | ✅ |
-| v0.4 | Serielle Leitungen (HDLC/PPP), statisches NAT, CGNAT, OSPF, RIP, BGP, Modems (DOCSIS, GPON, LTE, ADSL, VDSL) | ✅ |
-| v0.4 | WLAN-Roaming, Broadcast-Sturm ohne STP, VLAN-Farben, Adressanzeige privat/öffentlich, IP-Rechner | ✅ |
-| v0.4 | Sniffer nach OSI mit echten Bytes, Hex-Ansicht, Filtersprache, pcapng-Export; Release-Prüfung Datenschutz/Sicherheit/Lizenzen | ✅ |
-| v0.5 | Neuer Name **leyoNET** mit Logo, Lizenz AGPL-3.0, Herkunftsnachweis | ✅ |
-| v0.6 | **IPv6**: IP-Version wählbar (IPv4, Dual Stack, IPv6), Neighbor Discovery, SLAAC, DHCPv6, ICMPv6, IPv6-Routing; **DS-Lite** mit CGNAT; Projektname, Mehrfachauswahl, automatisches Routing | ✅ |
-| v0.7 | **Firewall** (zustandsbehafteter Paketfilter auf Routern und Endgeräten) und **Site-to-Site-VPN** mit IPsec (IKEv2, ESP); Demos und Übungen dazu | ✅ |
-| v0.8 | **Prüfungen** mit Punkten und Note, Prüfungsgenerator; Übungen zum Modul 117 mit ausfüllbaren Arbeitsblättern (PDF); DHCP mit festen Zuweisungen | ✅ |
-| v0.9 | **Prüfungsdatei ohne Lösungen** mit Schlüssel, Prüfungsmodus mit Code, eigene Variante je Platz, **Fehlersuche-Prüfungen**, Ziele aus einer Musterlösung, Fragen, Teilpunkte und Folgefehler, Dokumentation prüfen, Nachkorrektur, Berichte, Hinweis auf ähnliche Abgaben | ✅ |
-| v0.10 | **Prüfungen in der Webversion**: Platz-Codes und Platzkarten, Start/Ende durch die Lehrperson, Speichern alle 20 s, automatische Abgabe, Nachteilsausgleich je Platz, automatische Auswertung, Abgaben als Datei, Namensliste nur im Browser | ✅ |
-| v0.10.3 | MAC-Adressen ändern und doppelte MAC vorführen (Warnung, «MAC springt» am Switch, Demo), Adapter und MAC in der Schnellansicht, Bereiche in der Grösse verstellbar, Simulation zurücksetzen und Schritt zurück | ✅ |
-| v1.0 | **Erste öffentliche Version** mit Website [leyonet.ch](https://leyonet.ch), Webversion [app.leyonet.ch](https://app.leyonet.ch), Installern für Windows, macOS und Linux; Testumgebung mit `LEYONET_CHANNEL=beta`, Schutz der Webversion vor Überlastung | ✅ |
-| v1.1 | **IPv6 vollständig**: DNS vollwertig (A, AAAA, CNAME, MX, TXT, NS, PTR, Weiterleitung, `nslookup -type`), DNS-Server per RDNSS/DHCPv6, Web, Mail und SSH über IPv6, Firewall für IPv6, IPv6 auf Layer-3-Switches (SVIs), **OSPFv3** und **RIPng**; macOS-Installer ad hoc signiert | ✅ |
-| v1.2 | **Rechenzentrum und Campus**: VLAN-Datenbank, Trunk mit erlaubten und nativem VLAN, Port-Channel (LACP), Loopbacks, VRF, VXLAN, Firewall als Gerät, ACLs an Ports und VLAN-Interfaces, DHCP-Pools auf Router und L3-Switch; Demo Leaf-Spine mit BGP und VXLAN; Reihe **M145** mit Arbeitsblättern, Katalogsuche mit Themen; Befehlszeile verschiebbar mit Einfügen ganzer Konfigurationen und Verlauf; Paketfilter «TCP-Verbindung folgen»; Prüfungscockpit live (Platz nur einmal offen, ansehen, freigeben), Session-Sperre mit PIN | ✅ |
-| v1.3 | **Prüfung im Safe Exam Browser** (SEB-Datei mit Start-, Admin- und Beenden-Passwort, Prüfungsschlüssel bis Prüfungsende); Rack mit Etikett und Patchkabeln (Ansicht und Zeichenfläche); Router lehnt zwei Interfaces im selben Netz ab; Session ansehen ohne Aufgabenfenster, mit Hinweis auf neuen Stand; Musterlösungen der Arbeitsblätter für Lehrpersonen auf Anfrage | ✅ |
-| **v1.4** | **Klassen-Verbund**: Standorte der Lernenden (Platz und Gruppe) an einer Klassen-Infrastruktur mit Provider und Zentrale, Simulation des ganzen Verbunds, **Dashboard für den Beamer** mit Karte, Kacheln und ehrlichen Stufen, Nachrichten zwischen Standorten, Verbund-Übungen und Demo; **eigene Zugänge für Schulen und Lehrpersonen** (ohne Personendaten); Aufgaben und ganze Module je Instanz und Klasse ein- und ausblenden; Sicherheit und Datenschutz für Schulen (Codes raten gebremst, automatische Angriffe bei jedem Release, Live-Prüfung, security.txt, ISDS-Konzept, DSFA-Abklärung) | ✅ |
+## Technisch ernst gemeint
 
-## Entwicklung
+| | |
+|---|---|
+| **Protokolle** | Ethernet, ARP, VLAN (802.1Q), STP, LACP, WLAN mit WPA2 · IPv4, IPv6 mit SLAAC und DHCPv6, ICMP, NAT/PAT, CGNAT, DS-Lite · statisch, OSPFv2/v3, RIP/RIPng, BGP-4, VRF, VXLAN · TCP, UDP · DHCP, DNS, HTTP, SMTP, POP3, IMAP, SSH · Firewall, ACL, IPsec (IKEv2, ESP) · DOCSIS, GPON, VDSL, LTE, PPP |
+| **Echte Bytes** | Jeder Rahmen wird nach Norm kodiert; der Export öffnet sich in Wireshark. 65 zitierte Normen (RFC, IEEE, ITU-T) stehen in einem Verzeichnis, das wöchentlich mit dem RFC-Index abgeglichen wird. |
+| **Wiederholbar** | Diskrete Ereignis-Simulation: derselbe Ablauf ergibt immer dieselbe Paketfolge. Darum lässt sich jede Demo und jede Musterlösung automatisch prüfen. |
+| **Geprüft** | Über 680 Tests des Kerns, Server-Tests, Oberflächentests und über 100 automatische Angriffe bei jedem Release. |
+| **Überall** | Eine einzige HTML-Datei (läuft offline, auch vom USB-Stick), Webversion mit Node.js ohne Abhängigkeiten, Desktop für Windows, macOS und Linux. Deutsch und Englisch, hell und dunkel. |
+| **Datenschutz** | Keine Konten, keine Cookies, kein Tracking, keine externen Ressourcen. Die Einzeldatei kann technisch keine Verbindung aufbauen (CSP `connect-src 'none'`). |
 
-Voraussetzung: Node.js 20 oder neuer.
+## Loslegen
 
-**Branches:** `develop` ist der Entwicklungsstand (Testversion auf Plesk, siehe [docs/plesk.md](docs/plesk.md)), `main` die stabile Version. Gearbeitet wird auf `develop`; vor dem Arbeiten `git pull`, vor dem Push `npm run release`.
+- **Im Browser:** [app.leyonet.ch](https://app.leyonet.ch) – sofort, ohne Installation.
+- **Eine Datei:** [`leyonet.html`](https://github.com/vonam-git/leyoNET/releases/latest/download/leyonet.html) herunterladen und doppelklicken.
+- **Installieren:** Windows, macOS und Linux unter [Releases](https://github.com/vonam-git/leyoNET/releases/latest).
+- **Eigener Schulserver:** [Installation](docs/installation.md) mit Docker oder [Plesk](docs/plesk.md).
+
+## Dokumentation
+
+**Lernende:** [Anleitung](docs/anleitung.md) · [Befehlszeile](docs/cli.md) · [Wiki](https://leyonet.ch/wiki/)<br />
+**Lehrpersonen:** [Hinweise](docs/lehrpersonen.md) · [Funktionsprofile](docs/funktionsprofile.md) · [Aufgaben erstellen](docs/aufgaben.md) · [Prüfungen](docs/pruefungen.md) · [Klassen-Verbund](docs/verbund.md)<br />
+**Technik:** [Alle Funktionen](docs/funktionen.md) · [Protokolle und Vereinfachungen](docs/protokolle.md) · [Normen](docs/normen.md) · [Entwicklung](docs/entwicklung.md) · [Versionen](docs/versionen.md)<br />
+**Schulen:** [Datenschutz](docs/datenschutz.md) · [IT-Sicherheit](docs/sicherheit.md) · [ISDS-Konzept](docs/isds-konzept.md) · [DSFA-Abklärung](docs/dsfa-abklaerung.md) · [Desktop](docs/desktop.md)
+
+## Mitentwickeln
 
 ```bash
 npm ci
-npm run dev      # Entwicklungsserver auf http://localhost:5173/dev.html
-npm test         # Tests des Simulationskerns
-npm run test:server    # Tests des Node.js-Servers (Webversion)
-npm run server   # Webversion lokal auf http://localhost:3000 (ADMIN_PASSWORD setzen für die Admin-Konsole)
-npm run check    # Typprüfung (UI und DOM-freier Kern)
-npm run build    # erzeugt dist/index.html
-npm run verify   # alles zusammen: Typprüfung, Tests, Server-Tests, Build (vor jedem Commit)
-npm run release  # verify + release/leyonet.html neu erzeugen und offline prüfen
-npm run e2e      # Oberflächentests (Playwright) gegen den Build
-npm run desktop:dev    # Desktop-Fenster (Tauri, braucht Rust)
-npm run desktop:build  # Installer für das eigene System
+npm run dev       # http://localhost:5173/dev.html
+npm run release   # Typprüfung, Tests, Build, release/leyonet.html (vor jedem Commit)
 ```
 
-Die Oberflächentests laden keine eigenen Browser herunter, sondern nutzen den installierten: unter Windows Edge, sonst Chrome (anderer Kanal mit `PW_CHANNEL`, z.B. `PW_CHANNEL=chromium` nach `npx playwright install chromium`, oder ein beliebiges Chromium mit `PW_EXECUTABLE=/pfad/zu/chromium`).
-
-`npm run build` erzeugt **eine einzige Datei** `dist/index.html`, die alle Skripte und Stile enthält. `npm run release` kopiert sie nach `release/leyonet.html` (diese Datei ist eingecheckt, damit sie ohne Node.js nutzbar ist) und führt die Release-Prüfung aus (`scripts/release-checks.mjs`): Sie bricht ab, falls die Datei externe Ressourcen, Tracker oder Cookies enthält, die CSP fehlt, Sicherheits-Header fehlen oder eine Lizenz nicht freigegeben ist, und schreibt den Bericht nach `release/checks.json` (sichtbar in der Admin-Konsole). **Nach Änderungen am Code vor dem Push `npm run release` ausführen**, sonst bleibt die verteilte Datei auf dem alten Stand.
-
-GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) führt bei jedem Push `npm run release` (inklusive Server-Tests) und die Oberflächentests aus und schlägt fehl, wenn die eingecheckte `release/leyonet.html` nicht zum Code passt.
-
-Schulserver: `docker compose up -d --build` (siehe [docs/installation.md](docs/installation.md#b-schulserver-mit-docker)).
-
-## Aufbau
-
-```
-src/
-  core/   Simulationskern und Dateiformat: reines TypeScript, ohne DOM
-  ui/     Svelte-Oberfläche (Editor, Palette, Inspektor)
-  i18n/   Sprachdateien (de.json, en.json; ein Test prüft gleiche Schlüssel)
-server/   Node.js-Server der Webversion (ohne Abhängigkeiten): Sessions, Klassen, Prüfungen, Rückmeldungen, Admin
-docs/     Anleitung, Lehrpersonen, Funktionsprofile, Protokolle, Normen, Aufgaben, Befehlszeile, Datenschutz, Installation, Plesk, Desktop
-scripts/  Release, Lizenzhinweise, Release-Prüfung (Datenschutz, Sicherheit, Lizenzen)
-```
-
-Regeln, die das Projekt technisch absichert:
-
-- **Der Kern kennt keine Oberfläche.** `tsconfig.core.json` prüft `src/core` ohne DOM-Typen; ein Zugriff auf `document` oder `window` schlägt bei `npm run check` fehl. So bleibt der Kern ohne Browser testbar.
-- **Unveränderliche Topologie.** Jede Operation in `core/model/topology.ts` liefert eine neue Topologie oder einen Fehlercode. Undo/Redo speichert daher einfach frühere Stände.
-- **Fehlermeldungen kommen aus den Sprachdateien.** Der Kern liefert nur Code und Parameter (z.B. `noFreeInterface`), die Oberfläche übersetzt.
-- **Deterministische MAC-Adressen** aus der Gerätenummer (`02:00:…`, lokal administriert).
-
-## Simulation
-
-`core/sim/simulation.ts` ist eine diskrete Ereignis-Simulation: Jede Kabelübertragung und jeder Timer ist ein Ereignis mit virtuellem Zeitstempel in einer Prioritätswarteschlange (`core/sim/queue.ts`). Ereignisse zur gleichen Zeit laufen in Einfügereihenfolge, darum ergibt derselbe Ablauf immer dieselbe Paketfolge, und Tests können sie exakt prüfen.
-
-- Schnittstelle für die Oberfläche: `step()`, `runUntil(t)`, `getPacketLog()`, `getDeviceState(id)`, `ping(id, ziel)`.
-- Pakete sind verschachtelte Objekte (`core/sim/frames.ts`): Ethernet-Rahmen → ARP oder IPv4 → ICMP.
-- Jedes Kabel braucht 1 ms. In der Simulation läuft die virtuelle Zeit synchron zur echten; im Entwurf pausiert sie, Zustände wie ARP-Tabellen bleiben erhalten.
-- Wird ein Kabel während einer Übertragung entfernt, geht der Rahmen verloren und ist in der Paketliste so markiert.
-- Switches lernen MAC-Adressen pro Port (5 Minuten gültig). Vermittlungsrechner leiten nach längstem Präfix weiter, senken die TTL und melden Probleme per ICMP («Ziel nicht erreichbar», «TTL abgelaufen»). Modems bauen ihre Zugangsleitung nach Standard auf (DOCSIS, GPON, LTE, ADSL/VDSL mit PPPoE), siehe [docs/protokolle.md](docs/protokolle.md).
-- Endgeräte haben einen Desktop (Doppelklick in der Simulation) mit Befehlszeile: `ping`, `tracert`, `ipconfig [/release|/renew]`, `arp [-a|-d]`, `cls`, `help`.
-- DHCP: Rechner können DHCP-Server sein; Clients beziehen beim Start der Simulation per Discover/Offer/Request/Ack eine Adresse und erneuern nach der halben Lease-Dauer.
-- DNS: Rechner können DNS-Server mit eigener Zone sein (A- und MX-Einträge, ohne Rekursion). Clients haben einen Cache gemäss TTL; `nslookup`, `ipconfig /displaydns` und `/flushdns` machen ihn sichtbar. `ping` und `tracert` akzeptieren Namen.
-- TCP: Drei-Wege-Handshake, Sequenz- und Bestätigungsnummern (in Bytes), Aufteilung in Segmente (MSS 1460), Wiederholung nach 1 s (höchstens 3-mal), Abbau mit FIN, RST bei geschlossenem Port; `netstat` zeigt Verbindungen.
-- HTTP/1.1 bytegenau (UTF-8, Content-Length in Bytes): Server können Webserver mit editierbaren HTML-Seiten und kleinen Bildern sein. Der Webbrowser zeigt jeden Schritt (DNS, TCP, GET, Antwort) und die Seite; Links darin lösen simulierte Abrufe aus. Seiten laufen in einem Sandbox-Frame ohne Skripte.
-- E-Mail: Rechner können Mailserver sein (Domain, Postfächer). SMTP zum Versenden, auch zwischen Domains über MX-Einträge; POP3 (abholen und löschen) und IMAP (Nachrichten bleiben auf dem Server). Das E-Mail-Programm zeigt den ganzen Protokolldialog.
-- Paketliste mit OSI-Ansicht (Schicht 7 bis 1) aus echten Bytes, Hex-Ansicht mit Feldmarkierung, Anzeigefilter wie in Wireshark (`dhcp or ip.addr == 10.0.0.1`) und pcapng-Export; Vereinfachungen sind pro Schicht vermerkt. Zeitlauf-Regler mit Anhalten, Einzelschritt und Zeitlupe, in der die Rahmen als Punkte über die Kabel wandern.
-- Kabel lassen sich auf andere Anschlüsse umstecken und können beschädigt sein (0–100 % Paketverlust, für Fehlersuche-Übungen; ein Zufallsgenerator mit festem Startwert hält Abläufe wiederholbar).
-- Router können als DHCP-Relay einen zentralen DHCP-Server für mehrere Netze nutzen; der Server hat dafür weitere Bereiche.
-- Das Gerät «Internet» leitet wie ein Provider weiter und verwirft private Adressen. Router übersetzen mit NAT (inkl. Port-Übersetzung), statischem NAT 1:1 (SNAT/DNAT mit Proxy-ARP) und bieten Portweiterleitungen. Der Provider kann CGNAT (100.64.0.0/10) einsetzen.
-- VLANs: Switch-Ports gehören zu einem VLAN (Access) oder übertragen als Trunk alle VLANs mit 802.1Q-Tag; die MAC-Tabelle gilt je VLAN.
-- Spanning Tree (vereinfacht, verkürzte Zeiten): Switches wählen per BPDU eine Root-Bridge und blockieren redundante Ports; nach einem Ausfall wird neu berechnet. Schleifen sind erlaubt; ohne STP erkennt der Simulator den Broadcast-Sturm, warnt beim Verkabeln und zeigt ein Banner mit den betroffenen Geräten. Ports zu Endgeräten leiten sofort weiter (wie PortFast).
-- **Erweiterte Einstellungen**: Rechts nur die Grundeinstellungen, alles Weitere in einem Fenster mit Reitern (Adressen, Anschlüsse, Routing, NAT, DHCP, VLAN & STP, WLAN, Dienste …); mit ◀ ▶ direkt zum nächsten Gerät. Die Routing-Tabelle ist farbig nach Herkunft und direkt bearbeitbar. Eingaben speichern beim Verlassen des Feldes, ohne «Übernehmen».
-- **IPv6** (ab Profil 4): IP-Version des Projekts wählbar (nur IPv4, Dual Stack, nur IPv6). Link-Local-Adressen, Neighbor Discovery statt ARP, SLAAC und DHCPv6 über Router Advertisements, ICMPv6 (Ping, Tracert), statisches und automatisches IPv6-Routing, echte Bytes und pcap. **DS-Lite**: Die Internet-Box tunnelt IPv4 in IPv6 zum AFTR des Providers, der per CGNAT übersetzt.
-- **Automatisches Routing** für Einsteiger: ein Häkchen beim Router, und er kennt alle Netze im Plan (Weg über die wenigsten Router, Standardroute zum Internet). Ohne Häkchen wählt man statisches oder dynamisches Routing (OSPF, RIP, BGP).
-- **Mehrfachauswahl**: Auswahlrahmen, Umschalt+Klick und Strg+A; die Auswahl gemeinsam verschieben, mit Strg+C/Strg+V samt Kabeln kopieren oder duplizieren.
-- **Demo-Netze**: zu jedem Protokoll ein fertig konfiguriertes Netz, per Knopfdruck geöffnet oder vorgeführt (Simulation startet, Ping/Webseite/E-Mail laufen automatisch); viele auch **Schritt für Schritt** mit einem Avatar als Lehrperson, den alle selbst einstellen können. Jede Demo wird bei jedem Release geprüft.
-- **Prüfungen** mit Punkten und Note (Schweizer Skala): Die Lernenden erhalten eine Prüfungsdatei ohne Prüfbausteine und Lösungen, die Lehrperson einen Schlüssel. Generator «Firmennetz mit drei Standorten» (eine Variante je Platz möglich), jede Aufgabe als Prüfung (auch Fehlersuche mit zufälligen Fehlern je Platz), Ziele aus einer Musterlösung vorschlagen, Fragen, Teilpunkte und Folgefehler. Prüfungsmodus mit Code der Lehrperson. In der Webversion über den Server: Platz-Codes, automatische Abgabe, Nachteilsausgleich je Platz, automatische Auswertung. «Abgaben auswerten» mit Schlüssel, Nachkorrektur, Berichten und Hinweis auf ähnliche Abgaben. Siehe [docs/pruefungen.md](docs/pruefungen.md). Neue Prüfbausteine für Gerätenamen, Adressen, DHCP-/DNS-Konfiguration und Bereiche; DHCP-Server mit festen Zuweisungen nach MAC-Adresse.
-- **Firewall** (ab Profil 3): Regeln von oben nach unten (Erlauben/Verbieten nach Protokoll, Port, Quelle, Ziel, Eingang) mit Standardregel, zustandsbehaftet oder zustandslos; Router filtern weitergeleitete Pakete, Endgeräte eingehende. Trefferzähler und Konsolenmeldungen zeigen, was blockiert wurde. Auch als **eigenes Gerät** mit Zonen WAN, LAN, DMZ und OPT, das ab Werk filtert. Alles auch auf der Befehlszeile (`firewall rule …`, `show firewall`).
-- **Port-Channel (LACP)**, **VRF**, **VXLAN** und **Loopbacks** (ab Profil 3/4): mehrere Kabel zwischen Switches bündeln, getrennte Routingtabellen auf einem Router, VLANs über geroutete Netze verlängern; mit Demos, im Formular und auf der Befehlszeile. VLANs müssen auf jedem Switch angelegt sein, Trunks lassen nur erlaubte VLANs durch.
-- **Zugriffslisten (ACL)** auf Switches (ab Profil 4): benannte ACLs im Stil von Cisco (`ip access-list extended`, `permit tcp … eq 80`, `ip access-group NAME in`), zustandslos mit implizitem deny, im Formular oder auf der Befehlszeile, mit Trefferzählern.
-- **VPN** (ab Profil 4): Site-to-Site-Tunnel mit IPsec zwischen zwei Routern. IKEv2 handelt den Tunnel aus (gemeinsamer Schlüssel, Netze), danach laufen die Pakete in ESP verpackt durchs Internet; echte Köpfe im Mitschnitt, Verschlüsselung nur simuliert.
-- **SNAT und DNAT** getrennt: PAT, statisches SNAT, Portweiterleitung, statisches DNAT und 1:1-NAT; die NAT-Tabelle zeigt die Art jedes Eintrags.
-- **Fenster und Bereiche**: Geräte-Fenster verschiebbar und mehrere gleichzeitig offen; Shop, Eigenschaften und Paketliste lassen sich ein- und ausfahren.
-- **Einzelschritt mit OSI-Farben**: Pakete zeigen ihre Schichten ineinander; jeder Schritt packt ein ankommendes Paket eine Schicht weiter aus (Switch bis 2, Router bis 3, Ziel ganz). Maus über Gerät, Kabel oder Paket zeigt Details; mehrere Desktops lassen sich minimieren.
-- **Internet-Box (CPE)**: Modem, Router mit NAT, DHCP-Server und vier LAN-Buchsen in einem Gerät, mit Kabel-, Glasfaser- oder VDSL-Zugang.
-- **Funktionsprofile 1–5** (1. Lehrjahr bis Studium) oder eigene Auswahl blenden Funktionen ein und aus; Lehrpersonen verteilen die Auswahl als Datei, in der Webversion setzt der Admin Grenzen ([docs/funktionsprofile.md](docs/funktionsprofile.md)). Projekte, die mehr nutzen, schalten die nötigen Funktionen beim Öffnen ein.
-- **Router-on-a-Stick**: Router-Subinterfaces mit 802.1Q-Tag (`eth0.10`) an einem Trunk-Port; jedes ist Gateway eines VLANs.
-- **Layer-3-Switch**: Switch mit VLAN-Interfaces (SVIs) als Gateways, routet zwischen VLANs (`ip routing`), auch mit DHCP-Relay.
-- **Befehlszeile** für Router und Switches im Stil von FRRouting (vtysh), mit Abkürzungen, `?`, Tab und `do`; Zugang per Doppelklick (Konsole) oder per `ssh` vom PC über simuliertes TCP. Befehlsreferenz: [docs/cli.md](docs/cli.md).
-- **Verbindungsarten**: TP-Kabel, Glasfaser, Funk (WLAN), seriell (HDLC/PPP mit LCP/IPCP), Koax, Telefonleitung (DSL) und Mobilfunk. Jedes Kabelende zeigt eine Link-LED (grün aktiv, orange bei Verkehr, rot aus mit Grund); beim Verbinden wählt der Simulator den nächsten freien Anschluss oder zeigt eine Liste, Anschlüsse haben Farbtags und Beschreibungen, Ports lassen sich jederzeit abschalten (`shutdown`), auch in der Simulation.
-- **WLAN**: Access Points mit SSID, WPA2-Passwort, Band und Kanal; Endgeräte mit WLAN-Profil. Die Signalqualität hängt von Abstand und Stockwerken ab. **Mesh**: Access Points mit Mesh-Betrieb verbinden sich per Funk, auch über Stockwerke. **Roaming**: Wird ein Client in der Simulation verschoben, meldet er sich beim näheren Access Point mit derselben SSID an (Reassociation, Gratuitous ARP).
-- **Stockwerke**: Geräte und Bereiche liegen auf Stockwerken; die Ansicht zeigt alle oder eines.
-- **Dokumentation im Entwurf**: farbige Bereiche mit Titel, Netz (Netzadresse, Maske, Hostbereich und Broadcast werden berechnet), VLAN, Notiz und «öffentliches Netz»; VLANs mit Name und Farbe färben die Switch-Ports automatisch.
-- **Snapshots**: benannte Zwischenstände, automatisch vor jedem Start der Simulation und alle fünf Minuten bei Änderungen; sie werden mit dem Projekt gespeichert.
-- **Frontansicht und Rack**: Switch-Ports wie auf dem Gerät, Umstecken per Klick; die Rack-Ansicht zeigt alle Netzwerkgeräte pro Stockwerk.
-- **Dynamisches Routing**: OSPFv2 (Hello, DBD, LSR, LSU, LSAck, SPF nach Dijkstra), RIP v2 und BGP-4 (binär nach RFC 4271 über TCP 179); administrative Distanz entscheidet zwischen Quellen. Konfiguration per Formular oder CLI.
-- **Server und Client-Gruppen**: eigenes Server-Gerät für DHCP, DNS, Web und Mail; eine Client-Gruppe steht für bis zu 500 PCs, die ihre Adressen per DHCP beziehen.
-- **Kosten**: Richtpreise für alle Geräte, Kabel und Module, Total in CHF, EUR oder USD; Aufgaben können ein Budget verlangen. Preise im Shop je nach Profil ein- oder ausgeblendet; jeder Preis wird automatisch auf Plausibilität geprüft, die Marktprüfung erinnert halbjährlich ([docs/preise.md](docs/preise.md)).
-- **Doppelte Adressen**: Rotes Ausrufezeichen am Gerät, wenn zwei Geräte im selben Netz dieselbe IP-Adresse haben (auch per DHCP).
-- **IP-Rechner** (Taste I): Netz, Broadcast, Hostbereich, Binärdarstellung, Subnetting gleichmässig oder nach Bedarf (VLSM), Werte direkt übernehmen.
-- Konfigurationen werden nur auf Lesbarkeit geprüft. Fachliche Fehler (Gateway ausserhalb des Netzes, Netzadresse als Geräteadresse) sind erlaubt und werden als Warnung erklärt, damit Lehrpersonen Fehlersuche-Aufgaben bauen können.
-
-## Aufgaben
-
-Der **Aufgaben-Katalog** im Simulator enthält 30 Übungen von ★ bis ★★★★★, jede mit automatischer Prüfung ([docs/lehrpersonen.md](docs/lehrpersonen.md)). Aufgabendateien enthalten zusätzlich Lernziele, die der Simulator auf Knopfdruck prüft (z.B. «PC 1 erreicht PC 2 per Ping»). Lehrpersonen erstellen sie direkt im Simulator in einem Formular (oder als JSON) und werten mit «Abgaben auswerten …» die Dateien einer ganzen Klasse auf einmal aus, mit Export als CSV für Excel. Beschreibung aller Prüfbausteine: [docs/aufgaben.md](docs/aufgaben.md). Musteraufgabe: [docs/aufgaben/zwei-subnetze.json](docs/aufgaben/zwei-subnetze.json).
-
-## Beispiele
-
-[docs/beispiele](docs/beispiele) enthält fertige Projekte; im Programm stehen sie unter **Datei → Demo-Netze …** (auch neu: `arp-ping`, `statische-routen`, `ospf`, `rip`, `bgp`, `seriell-ppp`, `broadcast-sturm`, `cpe-heimnetz`). Zum Beispiel `zwei-subnetze.json` (PC 1 erreicht über Router 1 einen Switch mit zwei Geräten im zweiten Subnetz) `dhcp.json` (ein Server vergibt drei Clients ihre Adressen) `web.json` (ein Notebook bezieht per DHCP Adresse und DNS-Server und ruft über einen Router `http://www.schule.example/` ab) `mail.json` (Anna und Ben schreiben sich E-Mails über einen gemeinsamen Mailserver) `heimnetz-nat.json` (Heimnetz mit NAT, öffentlicher Webserver, Portweiterleitung auf ein NAS) `vlan-stp.json` (drei Switches im Ring mit Spanning Tree, zwei VLANs über Trunks), `router-on-a-stick.json` (zwei VLANs, ein Router mit Subinterfaces, SSH-Zugang `admin` / `Netz2026`), `layer3-switch.json` (Core-Switch routet zwischen drei VLANs, zentraler DHCP-Server über Relay, dokumentierte Bereiche) und `wlan-mesh.json` (zwei Mesh-Access-Points im EG und OG). Ein Test stellt sicher, dass alle Beispiele gültig bleiben.
-
-## Datenschutz
-
-Ausgelegt auf revDSG und DSGVO, Details und eine Textvorlage für Schulen in [docs/datenschutz.md](docs/datenschutz.md):
-
-- Keine Konten, keine Namen, keine E-Mail-Adressen, kein Tracking, keine Cookies, keine externen Schriften oder CDNs.
-- Lokale Datei und Desktop-Version: Content-Security-Policy mit `connect-src 'none'`, die Seite kann technisch keine Netzwerkverbindung aufbauen. Projekte liegen in IndexedDB im Browserprofil und lassen sich als `.json` exportieren.
-- Webversion: Sessions enthalten nur die Netzwerk-Konfiguration unter einem Zufallscode und werden automatisch gelöscht (Standard 24 Stunden, einstellbar). Klassen tragen nur eine Bezeichnung wie «INF22a». IP-Adressen werden nicht gespeichert.
-
-## Projektdatei
-
-Klartext-JSON mit `meta` (Format und Version), `topology` (Geräte, Anschlüsse mit MAC, IP und Maske, Kabel mit Medium, Dokumentationsbereiche, Stockwerke), `configuration` (geräteübergreifende Einstellungen, derzeit leer) und optional `snapshots` (Zwischenstände). Gerätebezogene Einstellungen wie Gateway und DNS-Server liegen direkt beim Gerät. Beim Öffnen wird die Datei vollständig geprüft; unbekannte Felder werden verworfen, und Fehler nennen die betroffene Stelle (z.B. `topology.devices[2].type`).
+Aufbau, Regeln und alle Befehle: [docs/entwicklung.md](docs/entwicklung.md). Gearbeitet wird auf `develop`, `main` ist die stabile Version.
 
 ## Geschichte
 
-Mark unterrichtet Netzwerktechnik und hat jahrelang mit Cisco Packet Tracer und FILIUS gearbeitet. Daraus entstand der Wunsch nach einem Werkzeug, das moderner ist, mehr kann, im Browser läuft und sich trotzdem lokal installieren lässt. Das Grundgerüst baute er zusammen mit seinem Bruder Mika, danach entwickelte Mark es mit seinen Ideen aus dem Unterricht weiter. Die eigentliche Programmierarbeit erledigt eine KI; Ideen, Entscheidungen und Verantwortung liegen bei den beiden.
+Mark unterrichtet Netzwerktechnik. Nach Jahren mit anderen Simulatoren wollte er ein Werkzeug, das moderner ist, mehr kann, im Browser läuft und sich trotzdem lokal installieren lässt. Das Grundgerüst baute er mit seinem Bruder Mika; seither kommt jede Idee aus dem Unterricht dazu. Programmiert wird mit Hilfe künstlicher Intelligenz – Ideen, Erfahrung und Verantwortung liegen bei Mark und Mika. «leyo» sind die Anfangsbuchstaben von Marks Kindern; das Symbol zeigt ein «l» und ein «y» aus Netzwerkknoten: «ly» für «love you».
 
-«leyo» sind die Anfangsbuchstaben von Marks Kindern. Das Symbol zeigt ein «l» und ein «y» aus Netzwerkknoten: «ly» für «love you».
-
-## Herkunft
-
-leyoNET ist eine eigenständige Neuentwicklung. Von FILIUS (Universität Siegen) und Cisco Packet Tracer stammt nur die Idee; Code, Grafiken und Texte anderer Programme werden nicht verwendet. Details zu allen Bestandteilen: [docs/herkunft.md](docs/herkunft.md).
+leyoNET ist eine eigenständige Neuentwicklung ohne fremden Code, fremde Grafiken oder Texte ([Herkunft](docs/herkunft.md)).
 
 ## Unterstützen
 
@@ -194,12 +98,4 @@ leyoNET ist und bleibt kostenlos. Wer die Weiterentwicklung unterstützen möcht
 
 ## Lizenz
 
-© 2026 Mark v. A. und Mikael v. A. – leyoNET ist freie Software unter der [GNU Affero General Public License v3 oder neuer](LICENSE) (AGPL-3.0-or-later):
-
-- Schulen, Lehrpersonen und Lernende dürfen leyoNET frei nutzen, kopieren und weitergeben, auch als Webversion auf dem eigenen Server.
-- Wer leyoNET verändert und weitergibt oder als Webdienst anbietet, muss den Quellcode seiner Fassung unter derselben Lizenz zugänglich machen.
-- **Name und Logo** sind nicht Teil der Lizenz; veränderte Fassungen brauchen einen eigenen Namen ([NOTICE.md](NOTICE.md)).
-
-Versionen bis 0.4.0 (damals «Netzwerk-Simulator») wurden unter der MIT-Lizenz veröffentlicht.
-
-Eingebaute Software anderer (z.B. die Svelte-Laufzeit) steht unter MIT-kompatiblen Lizenzen; die Hinweise liegen in [release/THIRD_PARTY_NOTICES.md](release/THIRD_PARTY_NOTICES.md) und erscheinen unter **Über**. Der Build prüft die Lizenzen und bricht bei einer nicht freigegebenen ab. Die Desktop-Version liefert zusätzlich die Lizenzen der Rust-Pakete mit ([docs/desktop.md](docs/desktop.md)). Die Befehlszeile bildet die Syntax von FRRouting und Cisco IOS nur nach und enthält keinen Code daraus ([docs/cli.md](docs/cli.md#lizenzen)).
+© 2026 Mark v. A. und Mikael v. A. – freie Software unter der [GNU Affero General Public License v3 oder neuer](LICENSE). Schulen dürfen leyoNET frei nutzen, kopieren und auf dem eigenen Server betreiben; wer es verändert und weitergibt oder als Webdienst anbietet, legt den Quellcode offen. **Name und Logo** sind nicht Teil der Lizenz ([NOTICE.md](NOTICE.md)). Versionen bis 0.4.0 (damals «Netzwerk-Simulator») erschienen unter MIT. Lizenzen eingebauter Software: [release/THIRD_PARTY_NOTICES.md](release/THIRD_PARTY_NOTICES.md).

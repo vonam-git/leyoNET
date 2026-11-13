@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Funktionsprofile wählen – leyoNET Wiki</title>
+  <meta name="description" content="Fünf Profile vom ersten Lehrjahr bis zum Studium, eigene Auswahl und eine Funktionsdatei für die ganze Klasse.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/profile.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group" open>
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html" aria-current="page">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html">Router</a></li><li><a href="firewall.html">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#lehrpersonen">Crashkurs für Lehrpersonen</a></p>
+      <h1>Funktionsprofile wählen</h1>
+      <p class="lead">Fünf Profile vom ersten Lehrjahr bis zum Studium, eigene Auswahl und eine Funktionsdatei für die ganze Klasse.</p>
+      
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#warum-profile">Warum Profile</a></li><li><a href="#profil-einstellen-und-verteilen">Profil einstellen und verteilen</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="warum-profile">Warum Profile</h2>
+<p>Wer zum ersten Mal ein Netz baut, braucht keine BGP-Einstellungen. leyoNET blendet darum jede Funktion aus, die das gewählte Profil nicht braucht: im Shop, in Menüs, Formularen und in der Hilfe. Daten im Projekt bleiben erhalten.</p>
+<div class="table-wrap"><table><thead><tr><th>Profil</th><th>Stufe</th><th>Neu dazu (Auswahl)</th></tr></thead><tbody><tr><td>1 Einstieg</td><td>1. Lehrjahr</td><td>PC, Notebook, Switch, Router, Server, automatisches Routing, DHCP, Paketliste</td></tr><tr><td>2 Grundlagen</td><td>1.–2. Lehrjahr</td><td>WLAN, Internet, Internet-Box, Glasfaser, DNS, Web, statische Routen, Kosten</td></tr><tr><td>3 Fortgeschritten</td><td>2.–3. Lehrjahr</td><td>VLANs, STP, NAT, Firewall, Modems, E-Mail, Befehlszeile, Racks</td></tr><tr><td>4 Profi</td><td>3.–4. Lehrjahr, Modul 145</td><td>Layer-3-Switch, ACL, Port-Channel, IPv6, VPN, OSPF, RIP, serielle Leitungen, Hex-Ansicht</td></tr><tr><td>5 Studium</td><td>Fachhochschule</td><td>BGP, VRF, VXLAN</td></tr></tbody></table></div>
+<p>Die vollständige Zuordnung steht in der Dokumentation <a href="https://github.com/vonam-git/leyoNET/blob/main/docs/funktionsprofile.md">Funktionsprofile</a>.</p>
+<h2 id="profil-einstellen-und-verteilen">Profil einstellen und verteilen</h2>
+<ul><li>Der <strong>Profil-Chip</strong> in der Werkzeugleiste (oder Werkzeuge → Funktionsumfang) wählt das Profil. Einzelne Funktionen lassen sich dazu- oder wegschalten («Eigene Auswahl»).</li><li><strong>Datei speichern</strong> legt die Auswahl als kleine Datei ab. Die Lernenden laden sie mit Werkzeuge → Funktionsauswahl laden. Mit «sperren» können sie sie nicht mehr ändern.</li><li>In der <strong>Webversion</strong> setzt die Admin-Konsole Grenzen für alle (höchstes Profil, erlaubte Funktionen).</li><li>Öffnet jemand ein Projekt oder eine Übung, die mehr braucht, schaltet leyoNET die nötigen Funktionen ein und meldet es.</li></ul>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
+<p class="muted">Derselbe Text wie in der Hilfe der App (Taste F1).</p>
+<div class="help-block"><h3>Funktionsumfang</h3>
+<p>Damit Einsteiger nicht von Optionen erschlagen werden, lässt sich jede Funktion ausblenden.</p>
+<ul><li><strong>Profil 1</strong> Einstieg (1. Lehrjahr) bis <strong>Profil 5</strong> Studium</li><li><strong>Eigene Auswahl</strong>: einzelne Funktionen ein- oder ausschalten</li><li>Lehrpersonen speichern die Auswahl als Datei und können sie sperren</li><li>In der Webversion legt der Admin ein Standard- und Höchstprofil fest und kann Funktionen ganz sperren</li></ul>
+<p>Öffnet man ein Projekt, das mehr nutzt, werden die nötigen Funktionen eingeschaltet, sofern erlaubt.</p></div></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a> <span class="muted">Der Aufgaben-Katalog mit über 70 Übungen, die sich selbst prüfen, die Arbeitsblätter dazu und wie man Abgaben einer ganzen Klasse auswertet.</span></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a> <span class="muted">Arbeitsstand unter einem Code, Klassen-Sessions, Arbeiten der Lernenden live ansehen und die Admin-Konsole mit eigenen Zugängen.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="simulation-verstehen.html"><span class="muted">Zurück</span>Simulation und Paketliste verstehen</a>
+        <a class="next" href="dokumentieren.html"><span class="muted">Weiter</span>Netze dokumentieren</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/lehrpersonen/profile.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

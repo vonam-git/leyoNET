@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Firewall – leyoNET Wiki</title>
+  <meta name="description" content="Ein eigenes Gerät, das ab Werk filtert: Zonen WAN, LAN, DMZ und OPT, zustandsbehaftete Regeln und Schutz der Firewall selbst.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/firewall.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group">
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html">Router</a></li><li><a href="firewall.html" aria-current="page">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#geraete">Geräte</a></p>
+      <h1>Firewall</h1>
+      <p class="lead">Ein eigenes Gerät, das ab Werk filtert: Zonen WAN, LAN, DMZ und OPT, zustandsbehaftete Regeln und Schutz der Firewall selbst.</p>
+      <dl class="facts"><div><dt>Schicht</dt><dd>3 und 4</dd></div><div><dt>Beispiel</dt><dd><a href="#beispiel">Demo ansehen</a></dd></div></dl>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#wozu">Wozu</a></li><li><a href="#zonen">Zonen</a></li><li><a href="#regeln-lesen">Regeln lesen</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="wozu">Wozu</h2>
+<p>Eine Firewall steht zwischen Netzen, denen man unterschiedlich traut: dem Internet, dem internen Netz und einer <strong>DMZ</strong> für Server, die von aussen erreichbar sein sollen. Sie routet wie ein <a href="router.html">Router</a>, lässt aber nur durch, was eine Regel erlaubt.</p>
+<h2 id="zonen">Zonen</h2>
+<div class="table-wrap"><table><thead><tr><th>Anschluss</th><th>Zone</th><th>ab Werk</th></tr></thead><tbody><tr><td>eth0</td><td>WAN (Internet)</td><td>neue Verbindungen von hier verboten</td></tr><tr><td>eth1</td><td>LAN (intern)</td><td>darf hinaus</td></tr><tr><td>eth2</td><td>DMZ (öffentliche Server)</td><td>darf hinaus</td></tr><tr><td>eth3 …</td><td>OPT (weitere)</td><td>darf hinaus</td></tr></tbody></table></div>
+<p>Die Firewall ist <strong>zustandsbehaftet</strong>: Antworten auf erlaubte Verbindungen kommen ohne eigene Regel zurück. Für einen Webserver in der DMZ braucht es eine Regel wie «Erlauben TCP 80 zum Webserver, eingehend an WAN», meist zusammen mit einer Portweiterleitung (<a href="nat.html">NAT und PAT</a>). Anders als ein Router schützt sie mit ihren Regeln auch <strong>sich selbst</strong>: Vom WAN antwortet sie ab Werk weder auf Ping noch auf SSH.</p>
+<h2 id="regeln-lesen">Regeln lesen</h2>
+<p>Die Regeln gelten von oben nach unten, die erste passende entscheidet, am Ende steht die Standardregel. In der Simulation zählt jede Regel ihre Treffer, und die Konsole meldet blockierte Pakete. Wie Regeln aufgebaut sind, erklärt <a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a>.</p>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
+<p class="muted">Derselbe Text wie in der Hilfe der App (Taste F1).</p>
+<div class="help-block"><h3>Firewall</h3>
+<p>Eine <strong>Firewall</strong> als eigenes Gerät: Sie routet wie ein Router, filtert aber ab Werk. Die Anschlüsse heissen nach ihrer <strong>Zone</strong>:</p>
+<ul><li><strong>eth0 (WAN)</strong>: zum Internet bzw. Provider</li><li><strong>eth1 (LAN)</strong>: internes Netz</li><li><strong>eth2 (DMZ)</strong>: Server, die von aussen erreichbar sein sollen</li><li><strong>eth3 … (OPT)</strong>: weitere Zonen</li></ul>
+<p><strong>Ab Werk:</strong> zustandsbehaftet, von LAN, DMZ und OPT nach aussen erlaubt, alles andere verboten. Antworten kommen zurück, neue Verbindungen vom WAN brauchen eine eigene Regel, z.B. «Erlauben TCP 80 zum Webserver, eingehend an WAN». Anders als ein Router schützt sie mit denselben Regeln auch <strong>sich selbst</strong>: Vom WAN antwortet sie ab Werk weder auf Ping noch auf SSH (Pakete der eigenen VPN-Gegenstellen sind ausgenommen).</p>
+<p>Einstellen im Reiter <strong>Firewall</strong> oder auf der Befehlszeile (<code>firewall rule allow tcp any 192.168.2.80 port 80 in wan</code>, <code>show firewall</code>). Daneben kann sie alles, was ein Router kann: <a href="nat.html">NAT/PAT</a>, <a href="nat.html">Port-Weiterleitung</a>, <a href="ipsec-vpn.html">VPN (IPsec)</a>, statische und dynamische Routen. Siehe <a href="paketfilter.html">Firewall</a>.</p></div></section>
+<section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
+<ul class="cards"><li class="card"><strong>Firewall-Gerät und ACL</strong><p>Eine eigene Firewall trennt WAN, LAN und DMZ; eine Zugriffsliste am Switch-Port lässt Gäste nur auf den Webserver.</p><p class="muted">«Aussen» ruft den Webserver in der DMZ auf (erlaubt) und pingt den Büro-PC (Firewall blockiert). Dann pingt das Gast-Notebook den Büro-PC (ACL verwirft) und ruft den Webserver auf (erlaubt). Filter «tcp.port == 80 or icmp».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=firewallZones">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/firewall-zonen.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Firewall: DMZ absichern</strong> <span class="muted">· 4 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_firewall-dmz.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Gast-Port mit Zugriffsliste</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_acl-guest.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a> <span class="muted">Regeln von oben nach unten, Standardregel, zustandsbehaftet oder zustandslos – wie ein Router oder eine Firewall entscheidet, was durch darf.</span></li><li><a href="nat.html">NAT und PAT</a> <span class="muted">Private Netze ins Internet bringen: Port-Übersetzung (PAT), Portweiterleitung, statisches SNAT und DNAT, 1:1-NAT und CGNAT beim Provider.</span></li><li><a href="acl.html">Zugriffslisten (ACL)</a> <span class="muted">Benannte Listen mit permit und deny am Switch-Port oder VLAN-Interface: zustandslos, erste passende Regel gilt, am Ende implizit verweigert.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="router.html"><span class="muted">Zurück</span>Router</a>
+        <a class="next" href="access-point.html"><span class="muted">Weiter</span>Access Point</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/geraete/firewall.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

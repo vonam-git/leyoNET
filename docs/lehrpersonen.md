@@ -14,6 +14,10 @@ Profile und Funktionsdateien: [funktionsprofile.md](funktionsprofile.md).
 
 ## Demo-Netze zum Vorführen
 
+**Schaufenster:** [app.leyonet.ch/?schaufenster](https://app.leyonet.ch/?schaufenster) zeigt den Rechenzentren-Verbund (drei Rechenzentren, Racks mit VLAN-Farben, Modems, IPsec) schreibgeschützt in einer Schleife, z.B. für den Beamer am Infotag. Mit `?schaufenster=<Demo>` läuft jede andere Demo so, die Namen stehen im Wiki unter [Crashkurs → Alle Demo-Netze](https://leyonet.ch/wiki/crashkurs.html#alle-demo-netze).
+
+**Crashkurs und Theorie:** Das [Wiki](https://leyonet.ch/wiki/) erklärt den Einstieg in 30 Minuten und hat zu jedem Gerät und Protokoll eine Theorieseite mit Beispiel und Norm, passend für die Lernenden.
+
 **Datei → Demo-Netze …** (oder ▶ in der Werkzeugleiste) enthält zu jedem Protokoll ein fertig konfiguriertes Netz. **Vorführen** lädt es, startet die Simulation und löst nach kurzer Zeit die passende Aktion aus, mit geöffnetem Desktop (z.B. Ping, `tracert`, Webseite, E-Mail). So lässt sich ein Protokoll im Unterricht ohne Vorbereitung zeigen. **Öffnen** lädt das Netz nur, zum Erklären oder Verändern. Das bisherige Projekt holt «Rückgängig» zurück.
 
 | Thema | Demo | Was die Klasse sieht |
@@ -34,6 +38,8 @@ Profile und Funktionsdateien: [funktionsprofile.md](funktionsprofile.md).
 | Zugang | NAT, Internet-Box (CPE), serielle Leitung mit PPP, WLAN-Mesh | NAT-Tabelle, DOCSIS-Aufbau, LCP/IPCP, Mesh |
 | Sicherheit | Firewall mit DMZ; Firewall-Gerät und ACL | Webseite erlaubt, Ping blockiert, Trefferzähler je Regel; Zonen WAN/LAN/DMZ, ACL am Switch-Port verwirft Gast-Pings |
 | Sicherheit | VPN zwischen zwei Standorten | IKEv2-Aushandlung, ESP-Pakete im Internet, Tunnelstatus |
+| Routing | Rechenzentren-Verbund | drei Bauarten (dreistufig, Core/Distribution, Collapsed Core), Racks mit VLAN-Farben, Glasfaser/Kabel/VDSL, IPsec-Vollnetz, DNS über alle Standorte |
+| Routing | Klassen-Verbund | Standorte an der Zentrale, Ping durch NAT, Webseite per Portweiterleitung |
 
 **Schritt für Schritt** (bei ARP/Ping, Gateway, DHCP, DNS/HTTP, SNAT, DNAT, Internet-Box, DS-Lite, Firewall, Firewall-Gerät mit ACL, VPN, VXLAN, Port-Channel und Rechenzentrum): Ein Avatar als Lehrperson erklärt den Testfall in kleinen Schritten. Er hebt Geräte hervor, öffnet die passenden Einstellungen, startet Aktionen und hält die Simulation an, damit die Klasse im Einzelschritt mitgeht. Jede Person kann den Avatar selbst einstellen (Frisur, Bart, Brille, Hautton, Shirt, Headset); gespeichert wird nur das Aussehen, im eigenen Browser.
 
@@ -43,43 +49,7 @@ Tipp: Vorführen, dann mit **Leertaste** anhalten und mit **N** im Einzelschritt
 
 **Werkzeuge → Aufgaben-Katalog** enthält fertige Übungen mit automatischer Prüfung. Jede Übung schaltet beim Start die Funktionen ein, die sie braucht, sofern Profil und Admin das erlauben. Für jede gibt es im Code eine Musterlösung, die ein Test bei jedem Build prüft (`src/ui/catalog.test.ts`).
 
-| Sterne | Übung | Inhalt |
-|---|---|---|
-| ★ | Zwei Rechner verbinden | direkt verkabeln, Adressen im selben Netz |
-| ★ | Pakete mitschneiden | ARP-Anfrage und -Antwort in der Paketliste finden |
-| ★ | Büro mit Budget | Switch wählen und verkabeln, Kosten unter einer Grenze |
-| ★ | Gast aussperren | Switch-Port abschalten, ohne das Kabel zu ziehen |
-| ★ | Wer hat die Adresse doppelt? | doppelte IP-Adresse finden und beheben |
-| ★ | Drei Router, automatisch geroutet | automatisches Routing einschalten, auch beim Router in der Mitte |
-| ★★ | Kleines LAN mit Switch | Switch und Adressen |
-| ★★ | Zwei Netze mit einem Router | Router und Gateways |
-| ★★ | Ein ganzes Schulzimmer | Client-Gruppe mit 25 PCs per DHCP versorgen |
-| ★★ | VLANs dokumentieren | VLANs benennen und einfärben |
-| ★★ | Glasfaseranschluss | ONT per Glasfaser mit dem Provider verbinden |
-| ★★ | Zwei Router, zwei statische Routen | Hin- und Rückweg mit statischen Routen |
-| ★★ | Internet-Box anschliessen | CPE mit WAN-Adresse und Provider-Gateway einrichten |
-| ★★★ | Adressen per DHCP verteilen | DHCP-Server |
-| ★★★ | Webseite über DNS aufrufen | DNS-Eintrag und Client-Konfiguration |
-| ★★★ | WLAN im Klassenzimmer | Access Point und WLAN-Clients |
-| ★★★ | Schleife ohne Sturm | Broadcast-Sturm erkennen und mit STP beheben |
-| ★★★ | Ins Internet mit NAT | NAT und Standardroute |
-| ★★★ | VDSL-Anschluss | Telefonleitung, Training und PPPoE |
-| ★★★ | Subnetze nach Bedarf (VLSM) | VLSM mit dem IP-Rechner |
-| ★★★ | RIP in der Kette | dynamisches Routing mit RIP |
-| ★★★ | Das NAS von unterwegs erreichen | Portweiterleitung (DNAT) |
-| ★★★ | IPv6 einrichten | Router-Präfixe setzen, PCs per SLAAC |
-| ★★★ | Firewall: DMZ absichern | Standardregel «Verbieten», nur HTTP zum Webserver, LAN darf hinaus |
-| ★★★★ | DS-Lite einrichten | IPv4 im IPv6-Tunnel, AFTR mit CGNAT |
-| ★★★★ | VPN: Zürich und Bern verbinden | IPsec-Tunnel gespiegelt auf beiden Routern |
-| ★★★★ | Netze mit VLANs trennen | Access-Ports |
-| ★★★★ | Router-on-a-Stick | Trunks und Subinterfaces |
-| ★★★★ | Standorte über eine serielle Leitung | serielle Leitung mit PPP und statischen Routen |
-| ★★★★ | Routing mit OSPF | Nachbarschaften und gelernte Routen |
-| ★★★★ | Webserver mit eigener öffentlicher Adresse | 1:1-NAT |
-| ★★★★ | SNAT: feste Absenderadresse für den Mailserver | statisches SNAT, ohne Zugang von aussen |
-| ★★★★ | DNAT: Webserver unter eigener Adresse | statisches DNAT, ausgehend weiter PAT |
-| ★★★★★ | Campus mit Layer-3-Switch und Glasfaser | SVIs, DHCP-Relay, Glasfaser-Uplinks |
-| ★★★★★ | Zwei autonome Systeme mit BGP | eBGP, angekündigte Netze |
+Die vollständige, immer aktuelle Liste aller Übungen mit Sternen, Modulreihe und passender Theorieseite steht im Wiki unter [Übungen und Arbeitsblätter](https://leyonet.ch/wiki/uebungen-einsetzen.html#alle-uebungen); sie wird bei jedem Release aus dem Katalog erzeugt.
 
 ## Modul 117: Übungen, Arbeitsblätter und Prüfung
 

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IPv4 – leyoNET Wiki</title>
+  <meta name="description" content="Adressen, Masken und der IPv4-Kopf: wie ein Paket sein Ziel über viele Netze hinweg findet, mit TTL, Prüfsumme und privaten Adressen.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/ipv4.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group">
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html">Router</a></li><li><a href="firewall.html">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html" aria-current="page">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#protokolle">Protokolle</a></p>
+      <h1>IPv4</h1>
+      <p class="lead">Adressen, Masken und der IPv4-Kopf: wie ein Paket sein Ziel über viele Netze hinweg findet, mit TTL, Prüfsumme und privaten Adressen.</p>
+      <dl class="facts"><div><dt>Schicht</dt><dd>3 (Vermittlung)</dd></div><div><dt>Norm</dt><dd>RFC 791, RFC 1918, RFC 5737</dd></div><div><dt>Beispiel</dt><dd><a href="#beispiel">Demo ansehen</a></dd></div></dl>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#adressen">Adressen</a></li><li><a href="#der-ipv4-kopf">Der IPv4-Kopf</a></li><li><a href="#typische-fehler">Typische Fehler</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="adressen">Adressen</h2>
+<p>Eine IPv4-Adresse hat 32 Bit, geschrieben als vier Zahlen von 0 bis 255: <code>192.168.1.10</code>. Zusammen mit der <strong>Maske</strong> (<code>255.255.255.0</code> oder <code>/24</code>) sagt sie, in welchem Netz ein Gerät liegt (<a href="subnetting.html">Subnetting und VLSM</a>).</p>
+<div class="table-wrap"><table><thead><tr><th>Bereich</th><th>Zweck</th></tr></thead><tbody><tr><td>10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16</td><td>privat, nur im eigenen Netz (RFC 1918)</td></tr><tr><td>100.64.0.0/10</td><td>Provider-NAT (CGNAT)</td></tr><tr><td>127.0.0.0/8</td><td>das Gerät selbst (Loopback)</td></tr><tr><td>169.254.0.0/16</td><td>selbst vergeben, wenn DHCP fehlt</td></tr><tr><td>192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24</td><td>für Beispiele und Dokumentation (RFC 5737)</td></tr></tbody></table></div>
+<h2 id="der-ipv4-kopf">Der IPv4-Kopf</h2>
+<div class="table-wrap"><table><thead><tr><th>Feld</th><th>Bedeutung</th></tr></thead><tbody><tr><td>Version, Länge</td><td>4, Kopflänge (meist 20 Byte)</td></tr><tr><td>Gesamtlänge</td><td>Kopf und Nutzdaten in Byte</td></tr><tr><td>TTL</td><td>höchstens so viele Router; jeder zieht 1 ab</td></tr><tr><td>Protokoll</td><td>was drin steckt: 1 ICMP, 6 TCP, 17 UDP, 50 ESP, 89 OSPF</td></tr><tr><td>Prüfsumme</td><td>über den Kopf, jeder Router rechnet neu (wegen der TTL)</td></tr><tr><td>Absender, Ziel</td><td>IP-Adressen; bleiben auf dem ganzen Weg gleich (ausser bei NAT)</td></tr></tbody></table></div>
+<p>Auf dem Weg durch mehrere Netze wechselt der Ethernet-Kopf an jedem Router, der IP-Kopf bleibt; nur TTL und Prüfsumme ändern sich.</p>
+<h2 id="typische-fehler">Typische Fehler</h2>
+<ul><li><strong>Falsche Maske:</strong> Zwei Geräte meinen, im selben Netz zu sein, sind es aber nicht (oder umgekehrt).</li><li><strong>Gateway ausserhalb des Netzes:</strong> leyoNET erlaubt die Eingabe, warnt aber; so lassen sich Fehlersuche-Aufgaben bauen.</li><li><strong>Doppelte Adresse:</strong> Zwei Geräte mit derselben Adresse im selben Netz; leyoNET markiert beide mit einem roten Ausrufezeichen.</li></ul>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
+<p class="muted">Derselbe Text wie in der Hilfe der App (Taste F1).</p>
+<div class="help-block"><h3>IP-Adressen</h3>
+<p>Jedes Gerät im Netz braucht eine <strong>IP-Adresse</strong> und eine <strong>Maske</strong> (z.B. 192.168.1.10/24). Die Maske sagt, welcher Teil das Netz ist. Liegt das Ziel in einem anderen Netz, schickt das Gerät das Paket an sein <strong>Gateway</strong> (den Router). Der <strong>DNS-Server</strong> übersetzt Namen in Adressen.</p>
+<p>Siehe auch <a href="subnetting.html">Subnetze</a>, <a href="server.html">Private und öffentliche Adressen</a> und <a href="subnetting.html">IP-Rechner</a>.</p>
+<p>Gespeichert wird, sobald du das Feld verlässt (Tab, Enter oder Klick daneben, auch auf ein anderes Gerät). Fehlt die Maske, setzt leyoNET die übliche Maske der Adressklasse ein (z.B. /24 für 192.168.x.x); sie lässt sich jederzeit ändern.</p></div>
+<div class="help-block"><h3>Doppelte Adressen</h3>
+<p>Haben zwei Geräte im selben Netz dieselbe IP-Adresse, erscheint am Gerät ein rotes <strong>!</strong>, die Adresse ist rot, und das Formular zeigt eine Warnung. In der Simulation zählen auch per DHCP bezogene Adressen.</p>
+<p>Im selben Netz heisst: verbunden über Kabel, Switches, Access Points oder Modems, ohne Router dazwischen. Hinter verschiedenen Routern (z.B. zwei Heimnetze mit 192.168.1.1) ist dieselbe private Adresse erlaubt.</p></div></section>
+<section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
+<ul class="cards"><li class="card"><strong>Standardgateway</strong><p>Zwei Subnetze, verbunden über einen Router.</p><p class="muted">PC 1 erkennt, dass das Ziel in einem anderen Netz liegt, und schickt das Paket an seinen Router. Die TTL sinkt um eins.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=gateway">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/zwei-subnetze.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>Zwei Netze mit einem Router</strong> <span class="muted">· 4 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_two-subnets.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="1 von 5 Sternen">★☆☆☆☆</span> <strong>Wer hat die Adresse doppelt?</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_duplicate-ip.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="1 von 5 Sternen">★☆☆☆☆</span> <strong>UE03 Router01 – Auftrag 1: Ein Netz mit zwei Switches</strong> <span class="muted">· 6 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M06C_M117_UE03_Router01.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="1 von 5 Sternen">★☆☆☆☆</span> <strong>UE03 Router01 – Auftrag 2: Zwei Netze an denselben Switches</strong> <span class="muted">· 6 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M06C_M117_UE03_Router01.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
+<section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
+<div class="table-wrap"><table><thead><tr><th>Protokoll</th><th>Schicht</th><th>Vereinfachung in der Simulation</th></tr></thead><tbody><tr><td>IPv4</td><td>3</td><td>Keine Fragmentierung (MSS 1460 verhindert sie), keine Optionen</td></tr></tbody></table></div></section>
+<section aria-labelledby="normen"><h2 id="normen">Normen</h2>
+<ul class="norms"><li><a href="https://www.rfc-editor.org/rfc/rfc791">RFC 791</a> – Internet Protocol</li><li><a href="https://www.rfc-editor.org/rfc/rfc1918">RFC 1918</a> – Address Allocation for Private Internets</li><li><a href="https://www.rfc-editor.org/rfc/rfc5737">RFC 5737</a> – IPv4 Address Blocks Reserved for Documentation</li></ul></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="subnetting.html">Subnetting und VLSM</a> <span class="muted">Ein Netz in kleinere aufteilen, Masken und Präfixe lesen, Hostbereich und Broadcast berechnen – gleichmässig oder nach Bedarf.</span></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a> <span class="muted">Standardgateway, Routing-Tabelle, längstes Präfix und administrative Distanz – und wann man statisch, automatisch oder dynamisch routet.</span></li><li><a href="arp.html">ARP</a> <span class="muted">Wie ein Gerät zur IP-Adresse im eigenen Netz die MAC-Adresse findet – mit Broadcast-Anfrage, Antwort und Cache.</span></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a> <span class="muted">Echo Request und Reply, «Ziel nicht erreichbar» und «TTL abgelaufen»: wie Ping und Traceroute funktionieren.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="wlan.html"><span class="muted">Zurück</span>WLAN</a>
+        <a class="next" href="icmp.html"><span class="muted">Weiter</span>ICMP, Ping und Traceroute</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/protokolle/ipv4.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

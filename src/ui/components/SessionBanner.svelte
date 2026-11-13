@@ -4,6 +4,8 @@
   import { editor } from '../state/editor.svelte';
   import { session } from '../state/session.svelte';
   import { startWatch, stopWatch } from '../watch';
+  import { showcase } from '../state/showcase.svelte';
+  import { tour } from '../state/tour.svelte';
 
   /**
    * Hinweise zur Online-Session: Ansehen einer fremden Session (nur lesen, wird laufend
@@ -45,7 +47,15 @@
   }
 </script>
 
-{#if session.watching}
+{#if showcase.active && showcase.demo}
+  {@const demo = showcase.demo}
+  <div class="banner showcase" role="status">
+    <strong>✨ {t('showcase.title', { title: t(`demo.${demo.id}.title`) })}</strong>
+    <span>{t('showcase.text')}</span>
+    {#if demo.tour?.length}<button onclick={() => tour.start(demo)}>{t('showcase.tour')}</button>{/if}
+    <button class="primary" onclick={() => showcase.leave()}>{t('showcase.leave')}</button>
+  </div>
+{:else if session.watching}
   <div class="banner watch" role="status">
     <strong>👁 {t('watch.title', { code: session.watching.label ?? session.watching.code })}</strong>
     <span>{t('watch.readOnly')}</span>
@@ -94,6 +104,9 @@
     .fresh {
       animation: none;
     }
+  }
+  .showcase {
+    background: color-mix(in srgb, #7c3aed 14%, var(--surface));
   }
   .taken {
     background: var(--warning-soft);

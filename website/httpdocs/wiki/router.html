@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Router – leyoNET Wiki</title>
+  <meta name="description" content="Verbindet Netze miteinander: Routing-Tabelle, Standardgateway, NAT, DHCP-Relay, dynamisches Routing, VPN und Befehlszeile.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/router.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group">
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html" aria-current="page">Router</a></li><li><a href="firewall.html">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#geraete">Geräte</a></p>
+      <h1>Router</h1>
+      <p class="lead">Verbindet Netze miteinander: Routing-Tabelle, Standardgateway, NAT, DHCP-Relay, dynamisches Routing, VPN und Befehlszeile.</p>
+      <dl class="facts"><div><dt>Schicht</dt><dd>3 (Vermittlung)</dd></div><div><dt>Beispiel</dt><dd><a href="#beispiel">Demo ansehen</a></dd></div></dl>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#wozu">Wozu</a></li><li><a href="#was-ein-router-in-leyonet-kann">Was ein Router in leyoNET kann</a></li><li><a href="#befehlszeile">Befehlszeile</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="wozu">Wozu</h2>
+<p>Ein Router verbindet verschiedene Netze. Jeder Anschluss liegt in einem eigenen Netz und hat eine eigene Adresse; diese Adresse ist das <strong>Standardgateway</strong> der Geräte in diesem Netz. Für jedes Paket entscheidet der Router anhand seiner Routing-Tabelle, wohin es weitergeht (<a href="routing-grundlagen.html">Wie Routing funktioniert</a>). Broadcasts leitet er nicht weiter: Er trennt Broadcast-Domänen.</p>
+<h2 id="was-ein-router-in-leyonet-kann">Was ein Router in leyoNET kann</h2>
+<div class="table-wrap"><table><thead><tr><th>Funktion</th><th>Seite</th></tr></thead><tbody><tr><td>statische Routen, automatisches Routing</td><td><a href="statisches-routing.html">Statisches Routing</a>, <a href="routing-grundlagen.html">Wie Routing funktioniert</a></td></tr><tr><td>OSPF, RIP, BGP (auch über IPv6)</td><td><a href="ospf.html">OSPF</a>, <a href="rip.html">RIP und RIPng</a>, <a href="bgp.html">BGP</a></td></tr><tr><td>NAT, Portweiterleitung, SNAT/DNAT</td><td><a href="nat.html">NAT und PAT</a></td></tr><tr><td>Subinterfaces für VLANs (Router-on-a-Stick)</td><td><a href="vlan.html">VLAN und Trunks</a></td></tr><tr><td>DHCP-Relay und DHCP-Pools</td><td><a href="dhcp.html">DHCP</a></td></tr><tr><td>Paketfilter, IPsec-VPN, VRF</td><td><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a>, <a href="ipsec-vpn.html">IPsec-VPN</a>, <a href="vrf.html">VRF</a></td></tr><tr><td>serielle Leitungen (HDLC, PPP)</td><td><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></td></tr><tr><td>Loopbacks, Befehlszeile, SSH</td><td><a href="ssh.html">SSH</a></td></tr></tbody></table></div>
+<p>Zwei Anschlüsse desselben Routers dürfen nicht im selben Netz liegen; leyoNET lehnt das ab wie ein echtes Gerät.</p>
+<h2 id="befehlszeile">Befehlszeile</h2>
+<p>Ein Doppelklick auf den Router öffnet in der Simulation die <strong>Konsole</strong>. Die Befehle folgen dem Stil von FRRouting und Cisco IOS, mit Abkürzungen, <code>?</code> und Tab:</p>
+<pre class="code"><code>Router&gt; enable
+Router# configure terminal
+Router(config)# interface eth0
+Router(config-if)# ip address 192.168.1.1/24
+Router(config-if)# exit
+Router(config)# ip route 0.0.0.0/0 203.0.113.1
+Router(config)# do show ip route</code></pre>
+<p>Die vollständige Befehlsreferenz steht in der Dokumentation <a href="https://github.com/vonam-git/leyoNET/blob/main/docs/cli.md">Befehlszeile</a>.</p>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
+<p class="muted">Derselbe Text wie in der Hilfe der App (Taste F1).</p>
+<div class="help-block"><h3>Router</h3>
+<p>Verbindet verschiedene Netze. Jede Schnittstelle liegt in einem anderen Netz. Der Router entscheidet anhand der Routingtabelle (<a href="statisches-routing.html">Routing</a>), wohin ein Paket geht.</p>
+<ul><li>Ports als <strong>Ethernet</strong> oder <strong>seriell</strong> (<a href="ppp-hdlc.html">Serielle Leitungen</a>)</li><li><a href="nat.html">NAT/PAT</a>, <a href="nat.html">1:1-NAT (statisches NAT)</a>, <a href="nat.html">Port-Weiterleitung</a></li><li>dynamisches Routing: <a href="ospf.html">OSPF</a>, <a href="rip.html">RIP</a>, <a href="bgp.html">BGP</a></li><li>DHCP-Relay und Subinterfaces (<a href="vlan.html">Router-on-a-Stick</a>)</li></ul></div>
+<div class="help-block"><h3>Befehlszeile</h3>
+<p>Router, Firewall und Switches lassen sich per Befehlszeile konfigurieren (angelehnt an Cisco IOS und FRRouting). Öffnen: Doppelklick auf das Gerät oder «Befehlszeile» im Fenster. Alles, was du in der CLI einstellst, erscheint auch in den Formularen und umgekehrt.</p>
+<p><strong>Bedienung:</strong> <code>Tab</code> ergänzt, <code>?</code> zeigt die Möglichkeiten, <code>↑</code>/<code>↓</code> holt frühere Befehle (bleiben bis zum Neuladen erhalten, auch nach dem Wechsel zwischen Entwurf und Simulation). <strong>Rechtsklick fügt ein</strong>; mehrere Zeilen (z.B. eine ganze <code>show running-config</code>) werden nacheinander ausgeführt. Abkürzungen wie <code>conf t</code>, <code>int g0/0</code>, <code>sh ip ro</code> gehen. Ein Befehl einer anderen Ebene (z.B. <code>interface vlan 10</code> mitten in <code>router ospf</code>) springt dorthin.</p>
+<p><strong>Modi:</strong> <code>enable</code> (privilegiert), <code>configure terminal</code> (Konfiguration), <code>interface …</code>, <code>vlan …</code>, <code>router ospf 1</code>, <code>ip dhcp pool …</code>, <code>ip access-list extended …</code>; <code>exit</code> eine Ebene zurück, <code>end</code> ganz hinaus.</p>
+<p><strong>`do`:</strong> Aus dem Konfigurationsmodus einen Anzeige-Befehl ausführen, ohne hinauszugehen: <code>do show ip interface brief</code>, <code>do ping 192.168.1.1</code>, <code>do write</code>.</p>
+<p><strong>Beispiele:</strong> - Adresse: <code>interface eth0</code> → <code>ip address 192.168.1.1 255.255.255.0</code> → <code>no shutdown</code> - VLAN und Access-Port: <code>vlan 10</code> → <code>name ENTWICKLUNG</code> → <code>interface port1</code> → <code>switchport access vlan 10</code> - Trunk: <code>interface port8</code> → <code>switchport mode trunk</code> → <code>switchport trunk allowed vlan 10,20</code> - Router-on-a-Stick: <code>interface eth0.10</code> → <code>encapsulation dot1q 10</code> → <code>ip address 192.168.10.1/24</code> - Layer-3-Switch: <code>ip routing</code> → <code>interface vlan 10</code> → <code>ip address 192.168.10.1/24</code> → <code>ip helper-address 192.168.20.200</code> - Statische Route: <code>ip route 10.0.0.0 255.0.0.0 192.168.1.254</code> - OSPF: <code>router ospf 1</code> → <code>network 0.0.0.0 255.255.255.255 area 0</code> - DHCP-Pool: <code>ip dhcp excluded-address 192.168.10.1 192.168.10.9</code> → <code>ip dhcp pool VLAN10</code> → <code>network 192.168.10.0 255.255.255.0</code> → <code>default-router 192.168.10.1</code> - ACL: <code>ip access-list extended GAST</code> → <code>permit tcp any host 192.168.1.80 eq 80</code> → <code>interface port2</code> → <code>ip access-group GAST in</code> - Port-Channel: <code>interface range port7 - 8</code> → <code>channel-group 1 mode active</code> - Kontrolle: <code>show running-config</code>, <code>show ip route</code>, <code>show vlan brief</code>, <code>show interfaces trunk</code>, <code>show ip ospf neighbor</code>, <code>show access-lists</code>, <code>show ip dhcp binding</code>, <code>show etherchannel summary</code></p>
+<p>Alle Befehle: Dokumentation <code>docs/cli.md</code>.</p></div>
+<div class="help-block"><h3>Loopback-Interfaces</h3>
+<p>Ein <strong>Loopback</strong> ist ein Interface ohne Kabel, das immer aktiv ist. Üblich ist eine /32-Adresse (z.B. 10.255.0.1/32).</p>
+<ul><li><strong>Router-ID:</strong> OSPF nimmt die höchste Loopback-Adresse, sonst die höchste Interface-Adresse.</li><li>OSPF kündigt einen Loopback als Host-Route (/32) an und sendet dort keine Hellos.</li><li>Feste Verwaltungsadresse: erreichbar, solange irgendein Weg zum Gerät besteht.</li><li>Quelle von Tunneln, z.B. <a href="vxlan.html">VXLAN</a>.</li></ul>
+<p>Router, Firewall und Layer-3-Switch; im Reiter <strong>Adressen</strong> oder auf der Befehlszeile: <code>interface loopback0</code>, <code>ip address 10.255.0.1/32</code>, <code>no interface loopback0</code>.</p></div></section>
+<section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
+<ul class="cards"><li class="card"><strong>Statische Routen</strong><p>Zwei Router, jeder kennt das entfernte Netz über eine statische Route.</p><p class="muted">«tracert» zeigt beide Router als Zwischenstationen. Eine Route löschen und erneut versuchen: Zielnetz nicht erreichbar.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=static">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/statische-routen.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>Zwei Netze mit einem Router</strong> <span class="muted">· 4 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_two-subnets.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>Zwei Router, zwei statische Routen</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_static-routes.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Loopbacks und OSPF</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_loopback-ospf.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Routing – Auftrag 1: Drei Router statisch verbinden</strong> <span class="muted">· 11 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M129_Routing.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a> <span class="muted">Standardgateway, Routing-Tabelle, längstes Präfix und administrative Distanz – und wann man statisch, automatisch oder dynamisch routet.</span></li><li><a href="statisches-routing.html">Statisches Routing</a> <span class="muted">Routen von Hand eintragen: Zielnetz, Maske und Next Hop, Standardroute, Hin- und Rückweg und die häufigsten Fehler.</span></li><li><a href="nat.html">NAT und PAT</a> <span class="muted">Private Netze ins Internet bringen: Port-Übersetzung (PAT), Portweiterleitung, statisches SNAT und DNAT, 1:1-NAT und CGNAT beim Provider.</span></li><li><a href="layer3-switch.html">Layer-3-Switch</a> <span class="muted">Ein Switch, der auch routet: VLAN-Interfaces (SVIs) als Gateways, Routing zwischen VLANs, DHCP-Relay, OSPF und VXLAN.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="layer3-switch.html"><span class="muted">Zurück</span>Layer-3-Switch</a>
+        <a class="next" href="firewall.html"><span class="muted">Weiter</span>Firewall</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/geraete/router.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

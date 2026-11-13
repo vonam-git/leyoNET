@@ -57,6 +57,7 @@
           <li><a href="#verbund">Verbund</a></li>
           <li><a href="#technik">Technik</a></li>
           <li><a href="#download">Download</a></li>
+          <li><a href="wiki/">Wiki</a></li>
         </ul>
       </nav>
       <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
@@ -76,7 +77,7 @@
           <p class="lead">leyoNET ist ein Netzwerk-Simulator für den Informatik-Unterricht. Geräte verkabeln, Adressen vergeben, und dann zusehen, wie jedes Paket über die Leitung geht – vom ersten ARP bis zur Antwort.</p>
           <div class="cta">
             <a class="btn btn-ink" href="https://app.leyonet.ch/">Im Browser starten</a>
-            <a class="btn btn-line" href="#download">Herunterladen</a>
+            <a class="btn btn-line" href="https://app.leyonet.ch/?schaufenster">Live-Schaufenster</a>
           </div>
           <ul class="facts">
             <li>Kostenlos und quelloffen</li>
@@ -151,18 +152,20 @@
         <h2>So sieht es aus</h2>
         <p class="section-lead">Echte Bildschirmfotos, keine Entwürfe. Alles läuft im Browserfenster, ohne Installation.</p>
         <div class="tabs" role="tablist" aria-label="Ansichten">
-          <button role="tab" id="tab-entwurf" aria-controls="panel-views" aria-selected="true" data-img="entwurf" data-caption="Entwurf: Geräte aus dem Shop ziehen, verkabeln, Netze als farbige Bereiche dokumentieren. Hier ein Layer-3-Switch mit drei VLANs.">Entwurf</button>
+          <button role="tab" id="tab-rz" aria-controls="panel-views" aria-selected="true" data-img="schaufenster" data-caption="Schaufenster: drei Rechenzentren mit Core, Distribution und Access, angeschlossen über Glasfaser, Kabel und VDSL, verbunden mit IPsec. Zürich ruft über DNS die Webseite in Basel ab. Live unter app.leyonet.ch/?schaufenster.">Rechenzentrum</button>
+          <button role="tab" id="tab-racks" aria-controls="panel-views" aria-selected="false" data-img="rack" data-caption="Rack-Ansicht: Switches und Server als Einschübe, Ports in der Farbe ihres VLANs, Patchkabel und Link-LEDs.">Racks</button>
+          <button role="tab" id="tab-entwurf" aria-controls="panel-views" aria-selected="false" data-img="entwurf" data-caption="Entwurf: Geräte aus dem Shop ziehen, verkabeln, Netze als farbige Bereiche dokumentieren. Hier ein Layer-3-Switch mit drei VLANs.">Entwurf</button>
           <button role="tab" id="tab-simulation" aria-controls="panel-views" aria-selected="false" data-img="simulation" data-caption="Simulation: Ping über einen Router. Die Paketliste zeigt jeden Rahmen, die Detailansicht seine Schichten aus echten Bytes.">Simulation</button>
           <button role="tab" id="tab-geraet" aria-controls="panel-views" aria-selected="false" data-img="geraetefenster" data-caption="Gerätefenster: Routingtabelle, OSPF-Nachbarn und ARP-Tabelle eines Routers, während OSPF-Hellos durchs Netz laufen.">Gerätefenster</button>
           <button role="tab" id="tab-katalog" aria-controls="panel-views" aria-selected="false" data-img="katalog" data-caption="Aufgaben-Katalog: über 70 Übungen von einem bis fünf Sternen, mit Themen und Suche. Was gelöst ist, bleibt markiert.">Katalog</button>
           <button role="tab" id="tab-dashboard" aria-controls="panel-views" aria-selected="false" data-img="dashboard" data-dark="same" data-caption="Klassen-Verbund: Das Dashboard für den Beamer zeigt, welche Standorte der Klasse angeschlossen, online oder fertig sind – berechnet in der Simulation.">Dashboard</button>
         </div>
-        <figure class="shot" id="panel-views" role="tabpanel" aria-labelledby="tab-entwurf">
+        <figure class="shot" id="panel-views" role="tabpanel" aria-labelledby="tab-rz">
           <div class="window">
             <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span><em>app.leyonet.ch</em></div>
-            <img src="img/entwurf-1x.webp" srcset="img/entwurf-1x.webp 1440w, img/entwurf.webp 2880w" sizes="(min-width: 1180px) 1100px, 100vw" width="1440" height="880" alt="leyoNET im Entwurf mit einem Layer-3-Switch, drei VLANs und farbigen Bereichen" loading="lazy">
+            <img src="img/schaufenster-1x.webp" srcset="img/schaufenster-1x.webp 1440w, img/schaufenster.webp 2880w" sizes="(min-width: 1180px) 1100px, 100vw" width="1440" height="880" alt="leyoNET: Rechenzentren-Verbund mit drei Standorten, der Webbrowser in Zürich zeigt die Seite aus Basel" loading="lazy">
           </div>
-          <figcaption>Entwurf: Geräte aus dem Shop ziehen, verkabeln, Netze als farbige Bereiche dokumentieren. Hier ein Layer-3-Switch mit drei VLANs.</figcaption>
+          <figcaption>Schaufenster: drei Rechenzentren mit Core, Distribution und Access, angeschlossen über Glasfaser, Kabel und VDSL, verbunden mit IPsec. Zürich ruft über DNS die Webseite in Basel ab. Live unter app.leyonet.ch/?schaufenster.</figcaption>
         </figure>
       </div>
     </section>
@@ -173,7 +176,7 @@
         <h2 id="numbers-title" class="visually-hidden">leyoNET in Zahlen</h2>
         <dl class="counters">
           <div><dt>Übungen mit automatischer Prüfung</dt><dd data-count="70" data-suffix="+">70+</dd></div>
-          <div><dt>fertige Demo-Netze, viele Schritt für Schritt</dt><dd data-count="36">36</dd></div>
+          <div><dt>fertige Demo-Netze, viele Schritt für Schritt</dt><dd data-count="37">37</dd></div>
           <div><dt>Gerätetypen vom Notebook bis zum Provider</dt><dd data-count="12">12</dd></div>
           <div><dt>zitierte Normen: RFC, IEEE 802, ITU-T</dt><dd data-count="64">64</dd></div>
           <div><dt>automatische Tests vor jeder Version</dt><dd data-count="680" data-suffix="+">680+</dd></div>
@@ -402,6 +405,7 @@ Content-Security-Policy:
     <div class="wrap foot-row">
       <p>leyoNET wird von Mark und Mika in der Schweiz entwickelt.</p>
       <ul>
+        <li><a href="wiki/">Wiki</a></li>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
         <li><a href="impressum.html">Impressum</a></li>

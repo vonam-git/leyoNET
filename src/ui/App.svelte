@@ -2,6 +2,7 @@
   import Splitter from './components/Splitter.svelte';
   import { onMount, untrack } from 'svelte';
   import { takeSebKey } from './seb';
+  import { showcase } from './state/showcase.svelte';
   import { verbund } from './state/verbund.svelte';
   import { parseProject, serializeProject } from '../core';
   import { locale, t } from '../i18n';
@@ -98,6 +99,17 @@
   });
 
   async function restore() {
+    // Schaufenster: Demo zeigen statt eigenen Stand laden; gespeichert wird nichts.
+    const featured = showcase.fromUrl();
+    if (featured) {
+      if (ui.online) {
+        const config = await session.loadConfig();
+        if (config) ui.setPolicy(normalizePolicy(config.policy));
+      }
+      showcase.start(featured);
+      restored = true;
+      return;
+    }
     // Webversion: Regeln des Admins laden und eine laufende Session fortsetzen.
     // Ohne Session beginnt die Webversion leer (keine Reste aus dem Browser).
     if (ui.online) {
@@ -136,6 +148,7 @@
     const flush = () => {
       clearTimeout(timer);
       pendingSave = null;
+      if (showcase.active) return;
       const json = serializeProject(topology, tasks, snapshots);
       if (!ui.online) saveAutosave(json);
       else session.schedule(json, topology.devices.length > 0);

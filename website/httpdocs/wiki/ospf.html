@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OSPF – leyoNET Wiki</title>
+  <meta name="description" content="Link-State-Routing: Nachbarn per Hello, Datenbank aller Verbindungen, kürzeste Wege nach Dijkstra – für IPv4 (OSPFv2) und IPv6 (OSPFv3).">
+  <link rel="canonical" href="https://leyonet.ch/wiki/ospf.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group">
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html">Router</a></li><li><a href="firewall.html">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html" aria-current="page">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#protokolle">Protokolle</a></p>
+      <h1>OSPF</h1>
+      <p class="lead">Link-State-Routing: Nachbarn per Hello, Datenbank aller Verbindungen, kürzeste Wege nach Dijkstra – für IPv4 (OSPFv2) und IPv6 (OSPFv3).</p>
+      <dl class="facts"><div><dt>Schicht</dt><dd>3 (IP-Protokoll 89)</dd></div><div><dt>Norm</dt><dd>RFC 2328, RFC 5340</dd></div><div><dt>Beispiel</dt><dd><a href="#beispiel">2 Demos</a></dd></div></dl>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#die-idee">Die Idee</a></li><li><a href="#ablauf">Ablauf</a></li><li><a href="#einrichten">Einrichten</a></li><li><a href="#ospf-oder-rip">OSPF oder RIP?</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="die-idee">Die Idee</h2>
+<p>Bei OSPF (Open Shortest Path First) kennt jeder Router die ganze Landkarte seines Bereichs (<strong>Area</strong>): welche Router es gibt und welche Verbindungen mit welchen <strong>Kosten</strong>. Daraus berechnet jeder selbst mit dem <strong>Dijkstra-Algorithmus</strong> die kürzesten Wege. Fällt eine Leitung aus, verbreitet sich die Änderung sofort, und alle rechnen neu.</p>
+<h2 id="ablauf">Ablauf</h2>
+<ol><li><strong>Hello:</strong> Router senden regelmässig Hello-Pakete an <code>224.0.0.5</code>. Wer antwortet und dieselben Werte hat (Area, Netz, Intervalle), wird <strong>Nachbar</strong>.</li><li><strong>Datenbankabgleich:</strong> Nachbarn tauschen Beschreibungen (DBD) aus, fordern fehlende Einträge an (LSR) und schicken sie (LSU), bestätigt mit LSAck.</li><li><strong>SPF-Berechnung:</strong> Jeder Router berechnet aus der Datenbank seine Routen; sie erscheinen mit «O» in der Tabelle.</li></ol>
+<p>Die <strong>Router-ID</strong> ist die höchste Loopback-Adresse, sonst die höchste Interface-Adresse. Die Kosten eines Anschlusses lassen sich einstellen; der Weg mit der kleinsten Summe gewinnt.</p>
+<h2 id="einrichten">Einrichten</h2>
+<pre class="code"><code>Router(config)# router ospf
+Router(config-router)# network 10.0.0.0/24 area 0
+Router(config-router)# network 192.168.1.0/24 area 0
+Router# show ip ospf neighbor
+Router# show ip route</code></pre>
+<p><strong>OSPFv3</strong> macht dasselbe für IPv6: Nachbarn über Link-Local-Adressen, Konfiguration je Anschluss statt mit <code>network</code>.</p>
+<h2 id="ospf-oder-rip">OSPF oder RIP?</h2>
+<p>OSPF konvergiert schneller, rechnet mit Kosten statt Hops und skaliert besser. <a href="rip.html">RIP und RIPng</a> ist einfacher zu verstehen und für kleine Netze ausreichend.</p>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
+<p class="muted">Derselbe Text wie in der Hilfe der App (Taste F1).</p>
+<div class="help-block"><h3>OSPF</h3>
+<p>OSPF ist ein Link-State-Protokoll: Jeder Router beschreibt seine Verbindungen (LSA), alle sammeln diese Karte und berechnen mit Dijkstra die kürzesten Wege.</p>
+<ul><li><strong>Hello</strong> findet Nachbarn (Standard alle 10 s, im Simulator verkürzt auf 2 s) (Multicast 224.0.0.5)</li><li><strong>DBD, LSR, LSU, LSAck</strong> gleichen die Datenbank ab, bis der Nachbar <strong>Full</strong> ist</li><li>Kosten pro Schnittstelle (Standard 10), einstellbar mit <code>ip ospf cost</code></li></ul>
+<p>CLI: <code>router ospf</code>, <code>network 10.0.0.0/24 area 0</code> (oder mit Wildcard <code>0.0.0.255</code>), <code>show ip ospf neighbor</code>.</p></div>
+<div class="help-block"><h3>OSPFv3 (IPv6)</h3>
+<p>OSPFv3 (RFC 5340) ist OSPF für IPv6. Der Ablauf ist derselbe wie bei <a href="ospf.html">OSPF</a>: Hello, DBD, LSR, LSU, LSAck, dann <strong>Full</strong> und Dijkstra. Unterschiede:</p>
+<ul><li>Die Router sprechen über ihre <strong>Link-Local-Adressen</strong>; Hellos gehen an <strong>ff02::5</strong>, IPv6 Next Header 89.</li><li>Man nimmt <strong>Anschlüsse</strong> auf, nicht Netze (in FRRouting <code>ipv6 ospf6 area 0</code> am Interface).</li><li>Die <strong>Router-ID</strong> bleibt eine 32-Bit-Zahl in IPv4-Schreibweise. Hat ein Router keine IPv4-Adresse, sollte man sie setzen (der Simulator bildet sonst eine aus der MAC).</li><li>Router-LSAs beschreiben nur die Verbindungen, die Netze stehen in <strong>Intra-Area-Prefix-LSAs</strong>.</li><li>Der nächste Hop in der Routingtabelle ist die Link-Local-Adresse des Nachbarn.</li></ul>
+<p>CLI: <code>router ospf6</code>, <code>ospf6 router-id 1.1.1.1</code>, <code>interface eth0 area 0</code>, <code>show ipv6 ospf6 neighbor</code>, <code>show ipv6 ospf6 database</code>, <code>show ipv6 route</code> (Code O). Layer-3-Switches sprechen OSPFv3 auf ihren VLAN-Interfaces.</p>
+<p>Vereinfacht wie OSPFv2: keine DR/BDR-Wahl, keine Netz- und Link-LSAs, eine Area.</p></div></section>
+<section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
+<ul class="cards"><li class="card"><strong>OSPF</strong><p>Drei Router im Dreieck lernen ihre Netze per OSPF.</p><p class="muted">Hello, DBD, LSU, LSAck in der Paketliste; die Routing-Tabelle füllt sich mit O-Routen. Danach ein Kabel entfernen: OSPF rechnet neu.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ospf">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ospf.json">Projektdatei</a></p></li><li class="card"><strong>OSPFv3 für IPv6</strong><p>Dieselben drei Router wie bei OSPF, aber nur mit IPv6: Sie lernen ihre Präfixe per OSPFv3.</p><p class="muted">Hellos an ff02::5 von den Link-Local-Adressen, danach DBD, LSR, LSU, LSAck. Die IPv6-Routingtabelle füllt sich mit O-Routen; tracert geht über den kürzesten Weg.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ospfv3">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ospfv3.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Routing mit OSPF</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_ospf-triangle.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Loopbacks und OSPF</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_loopback-ospf.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="5 von 5 Sternen">★★★★★</span> <strong>UE10 Netzwerkdesign: Three-Tier (Core, Distribution, Access)</strong> <span class="muted">· 5 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M145_UE10_Three_Tier.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
+<section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
+<div class="table-wrap"><table><thead><tr><th>Protokoll</th><th>Schicht</th><th>Vereinfachung in der Simulation</th></tr></thead><tbody><tr><td>OSPFv2</td><td>3</td><td>Router-LSAs und externe LSAs (Redistribution), keine Summary-LSAs zwischen Areas, kein DR/BDR (Nachbarn wie Punkt-zu-Punkt); Hello 2 s statt 10 s; hängt ein Datenbankabgleich (verlorenes DBD/LSR/LSU), wird er nach zwei Hello-Intervallen wiederholt; Hellos aus einem fremden Subnetz bilden keine Nachbarschaft</td></tr><tr><td>OSPFv3</td><td>3</td><td>Wie OSPFv2, aber über IPv6 (Next Header 89, ff02::5, Absender Link-Local); Anschlüsse statt Netze, Router-LSAs plus Intra-Area-Prefix-LSAs, AS-External-LSAs; Prüfsumme über den IPv6-Pseudo-Header; Router-ID ohne IPv4 aus der MAC; keine Link-LSAs, kein DR/BDR</td></tr></tbody></table></div></section>
+<section aria-labelledby="normen"><h2 id="normen">Normen</h2>
+<ul class="norms"><li><a href="https://www.rfc-editor.org/rfc/rfc2328">RFC 2328</a> – OSPF Version 2</li><li><a href="https://www.rfc-editor.org/rfc/rfc5340">RFC 5340</a> – OSPF for IPv6</li></ul></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="rip.html">RIP und RIPng</a> <span class="muted">Distanzvektor-Routing: Router erzählen ihren Nachbarn, welche Netze sie in wie vielen Hops erreichen – einfach, aber mit Grenzen.</span></li><li><a href="statisches-routing.html">Statisches Routing</a> <span class="muted">Routen von Hand eintragen: Zielnetz, Maske und Next Hop, Standardroute, Hin- und Rückweg und die häufigsten Fehler.</span></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a> <span class="muted">Standardgateway, Routing-Tabelle, längstes Präfix und administrative Distanz – und wann man statisch, automatisch oder dynamisch routet.</span></li><li><a href="router.html">Router</a> <span class="muted">Verbindet Netze miteinander: Routing-Tabelle, Standardgateway, NAT, DHCP-Relay, dynamisches Routing, VPN und Befehlszeile.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="statisches-routing.html"><span class="muted">Zurück</span>Statisches Routing</a>
+        <a class="next" href="rip.html"><span class="muted">Weiter</span>RIP und RIPng</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/protokolle/ospf.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NAT und PAT – leyoNET Wiki</title>
+  <meta name="description" content="Private Netze ins Internet bringen: Port-Übersetzung (PAT), Portweiterleitung, statisches SNAT und DNAT, 1:1-NAT und CGNAT beim Provider.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/nat.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group">
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html">Router</a></li><li><a href="firewall.html">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html" aria-current="page">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#protokolle">Protokolle</a></p>
+      <h1>NAT und PAT</h1>
+      <p class="lead">Private Netze ins Internet bringen: Port-Übersetzung (PAT), Portweiterleitung, statisches SNAT und DNAT, 1:1-NAT und CGNAT beim Provider.</p>
+      <dl class="facts"><div><dt>Schicht</dt><dd>3 und 4</dd></div><div><dt>Norm</dt><dd>RFC 3022, RFC 6598, RFC 1918</dd></div><div><dt>Beispiel</dt><dd><a href="#beispiel">3 Demos</a></dd></div></dl>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#warum-nat">Warum NAT</a></li><li><a href="#pat-viele-geraete-eine-adresse">PAT: viele Geräte, eine Adresse</a></li><li><a href="#von-aussen-hinein">Von aussen hinein</a></li><li><a href="#cgnat">CGNAT</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="warum-nat">Warum NAT</h2>
+<p>Private Adressen (RFC 1918) dürfen nicht ins Internet; der Provider verwirft sie. Und öffentliche IPv4-Adressen sind knapp: Ein Haushalt oder eine Schule bekommt oft nur eine. <strong>NAT</strong> (Network Address Translation) am Router ersetzt beim Hinausgehen die private Absenderadresse durch die öffentliche und merkt sich die Zuordnung, damit die Antwort zurückfindet.</p>
+<h2 id="pat-viele-geraete-eine-adresse">PAT: viele Geräte, eine Adresse</h2>
+<p>Bei <strong>PAT</strong> (Port Address Translation, auch NAT-Overload) teilen sich alle Geräte die öffentliche Adresse; unterschieden werden sie am Port:</p>
+<div class="table-wrap"><table><thead><tr><th>innen</th><th>aussen</th></tr></thead><tbody><tr><td>192.168.1.10:49152</td><td>203.0.113.2:1024</td></tr><tr><td>192.168.1.11:49152</td><td>203.0.113.2:1025</td></tr></tbody></table></div>
+<p>Die <strong>NAT-Tabelle</strong> (<code>show ip nat translations</code> oder in der Simulation beim Router) zeigt diese Einträge.</p>
+<h2 id="von-aussen-hinein">Von aussen hinein</h2>
+<p>Von aussen kann niemand eine Verbindung zu einem privaten Gerät beginnen, die Tabelle kennt den Weg nicht. Dafür gibt es:</p>
+<div class="table-wrap"><table><thead><tr><th>Art</th><th>Wirkung</th><th>Beispiel</th></tr></thead><tbody><tr><td>Portweiterleitung (DNAT)</td><td>Port der öffentlichen Adresse → internes Gerät</td><td>TCP 443 → NAS 192.168.1.20</td></tr><tr><td>statisches DNAT</td><td>eigene öffentliche Adresse → internes Gerät, eingehend</td><td>Webserver unter 203.0.113.80</td></tr><tr><td>statisches SNAT</td><td>internes Gerät geht immer mit fester Adresse hinaus</td><td>Mailserver mit fester Absenderadresse</td></tr><tr><td>1:1-NAT</td><td>beides zusammen</td><td>Server in der DMZ</td></tr></tbody></table></div>
+<h2 id="cgnat">CGNAT</h2>
+<p>Viele Provider haben selbst zu wenig öffentliche Adressen. Sie geben ihren Kunden Adressen aus <strong>100.64.0.0/10</strong> (RFC 6598) und übersetzen im eigenen Netz ein zweites Mal. Für Portweiterleitungen von aussen ist das ein Problem: Die Kundin besitzt keine öffentliche Adresse mehr. Eine Lösung ist IPv6 oder <a href="ds-lite.html">DS-Lite</a>.</p>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
+<p class="muted">Derselbe Text wie in der Hilfe der App (Taste F1).</p>
+<div class="help-block"><h3>NAT/PAT</h3>
+<p>Private Adressen sind im Internet nicht erreichbar. NAT ersetzt deshalb Adressen beim Übergang zwischen innen und aussen. Man unterscheidet zwei Richtungen:</p>
+<ul><li><strong>SNAT</strong> (Source NAT) ersetzt die <strong>Quelladresse</strong> ausgehender Pakete. Häufigste Form ist <strong>PAT</strong> (Masquerading): Alle teilen sich die Router-Adresse und werden über Ports unterschieden. Mit <strong>statischem SNAT</strong> geht ein Gerät immer mit einer festen öffentlichen Adresse hinaus. Antworten kommen über die gemerkte Verbindung zurück, neue Verbindungen von aussen nicht.</li><li><strong>DNAT</strong> (Destination NAT) ersetzt die <strong>Zieladresse</strong> eingehender Pakete: als <a href="nat.html">Port-Weiterleitung</a> (ein Port) oder als <strong>statisches DNAT</strong> (eine ganze öffentliche Adresse). Die Antworten verlassen den Router wieder mit der öffentlichen Adresse.</li></ul>
+<p><strong>1:1-NAT</strong> verbindet beides (<a href="nat.html">1:1-NAT (statisches NAT)</a>). Eingestellt wird alles im Reiter <strong>NAT</strong> der erweiterten Einstellungen; die NAT-Tabelle in der Simulation zeigt die Art jedes Eintrags. Siehe auch <a href="nat.html">Carrier-Grade NAT</a>.</p></div>
+<div class="help-block"><h3>1:1-NAT (statisches NAT)</h3>
+<p>Ordnet einer inneren Adresse fest eine äussere zu, in beide Richtungen: ausgehend ersetzt der Router die Absenderadresse (<strong>SNAT</strong>), eingehend die Zieladresse (<strong>DNAT</strong>). So ist z.B. ein Server unter einer eigenen öffentlichen Adresse erreichbar und geht auch mit ihr hinaus. Der Router beantwortet ARP-Anfragen für die äussere Adresse (Proxy-ARP).</p>
+<p>Soll nur eine Richtung gelten, gibt es im Reiter NAT <strong>statisches SNAT</strong> bzw. <strong>statisches DNAT</strong> (<a href="nat.html">NAT/PAT</a>).</p>
+<p>CLI: <code>ip nat inside source static 192.168.1.10 203.0.113.10</code> (nur 1:1).</p></div>
+<div class="help-block"><h3>Port-Weiterleitung</h3>
+<p>Leitet Anfragen an einen Port der öffentlichen Adresse (z.B. TCP 80) an ein Gerät im privaten Netz weiter. So wird ein Webserver hinter NAT von aussen erreichbar. Hinter <a href="nat.html">Carrier-Grade NAT</a> funktioniert das nicht, weil die öffentliche Adresse dem Provider gehört.</p></div>
+<div class="help-block"><h3>Carrier-Grade NAT</h3>
+<p>Weil IPv4-Adressen knapp sind, geben viele Provider ihren Kunden nur eine Adresse aus 100.64.0.0/10 und übersetzen selbst nochmals ins öffentliche Netz. Der Kunde hat dann doppeltes NAT und kann keine Ports weiterleiten. Einschalten beim Internet-Gerät pro Kundenport.</p></div></section>
+<section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
+<ul class="cards"><li class="card"><strong>NAT und Portweiterleitung</strong><p>Heimnetz mit privaten Adressen hinter einem Router mit NAT.</p><p class="muted">Der PC öffnet eine öffentliche Webseite; in der NAT-Tabelle des Routers erscheint die Übersetzung auf die öffentliche Adresse.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=nat">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/heimnetz-nat.json">Projektdatei</a></p></li><li class="card"><strong>SNAT: Quelladresse ersetzen</strong><p>Firmennetz mit PAT für alle und statischem SNAT für den Mailserver.</p><p class="muted">PC 1 erscheint aussen als 203.0.113.2 mit fremdem Port (PAT), der Mailserver immer als 203.0.113.5 (statisches SNAT). Die NAT-Tabelle des Routers zeigt beide Arten.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=snat">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/snat.json">Projektdatei</a></p></li><li class="card"><strong>DNAT: Zieladresse ersetzen</strong><p>Interner Webserver unter einer eigenen öffentlichen Adresse, dazu eine Portweiterleitung zum NAS.</p><p class="muted">«Aussen» ruft 203.0.113.5 auf; der Router ersetzt das Ziel durch 192.168.0.80 und die Antwort geht wieder mit 203.0.113.5 hinaus. Danach http://203.0.113.2:8080/ testen (Portweiterleitung).</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=dnat">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/dnat.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Ins Internet mit NAT</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_internet-nat.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Das NAS von unterwegs erreichen</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_port-forward.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Webserver mit eigener öffentlicher Adresse</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_static-nat-dmz.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>SNAT: feste Absenderadresse für den Mailserver</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_snat-mail.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>DNAT: Webserver unter eigener Adresse</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_dnat-web.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Routing – Auftrag 2: Ins Internet mit NAT</strong> <span class="muted">· 5 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M129_Routing.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
+<section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
+<div class="table-wrap"><table><thead><tr><th>Protokoll</th><th>Schicht</th><th>Vereinfachung in der Simulation</th></tr></thead><tbody><tr><td>NAT: PAT, statisches SNAT, DNAT (Portweiterleitung, statisch), 1:1-NAT, CGNAT</td><td>3</td><td>Endpunktunabhängige Zuordnung; keine Application Layer Gateways; SNAT und DNAT merken sich Verbindungen für die Antworten</td></tr></tbody></table></div></section>
+<section aria-labelledby="normen"><h2 id="normen">Normen</h2>
+<ul class="norms"><li><a href="https://www.rfc-editor.org/rfc/rfc3022">RFC 3022</a> – Traditional IP Network Address Translator</li><li><a href="https://www.rfc-editor.org/rfc/rfc6598">RFC 6598</a> – IANA-Reserved IPv4 Prefix for Shared Address Space</li><li><a href="https://www.rfc-editor.org/rfc/rfc1918">RFC 1918</a> – Address Allocation for Private Internets</li></ul></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="provider.html">Internet (Provider)</a> <span class="muted">Steht für den Provider und den Rest des Internets: öffentliche Adressen, Routing zwischen Kunden, DNS, CGNAT und DS-Lite.</span></li><li><a href="internet-box.html">Internet-Box (CPE)</a> <span class="muted">Das Gerät vom Provider für zu Hause: Modem, Router mit NAT, DHCP-Server und kleiner Switch in einem Gehäuse.</span></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a> <span class="muted">Regeln von oben nach unten, Standardregel, zustandsbehaftet oder zustandslos – wie ein Router oder eine Firewall entscheidet, was durch darf.</span></li><li><a href="ipv4.html">IPv4</a> <span class="muted">Adressen, Masken und der IPv4-Kopf: wie ein Paket sein Ziel über viele Netze hinweg findet, mit TTL, Prüfsumme und privaten Adressen.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="ssh.html"><span class="muted">Zurück</span>SSH</a>
+        <a class="next" href="ds-lite.html"><span class="muted">Weiter</span>DS-Lite</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/protokolle/nat.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

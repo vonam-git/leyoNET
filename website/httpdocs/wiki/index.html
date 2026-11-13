@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>leyoNET Wiki – Netzwerktechnik mit Beispielen</title>
+  <meta name="description" content="Crashkurs für Lehrpersonen und Theorie zu jedem Netzwerkgerät und Protokoll, mit Beispielen zum Ansehen in leyoNET und Links zu den Normen.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group" open>
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html">Router</a></li><li><a href="firewall.html">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <h1>leyoNET Wiki</h1>
+      <p class="lead">Netzwerktechnik zum Nachschlagen – mit Beispielen, die man in leyoNET sofort ansehen und ausprobieren kann. Für Lernende vom ersten Lehrjahr bis zur Fachhochschule, und ein Crashkurs für Lehrpersonen.</p>
+      <div class="wiki-start-actions"><a class="btn btn-ink" href="crashkurs.html">Crashkurs für Lehrpersonen</a> <a class="btn" href="osi-modell.html">Mit den Grundlagen beginnen</a> <a class="btn" href="https://app.leyonet.ch/?schaufenster">Schaufenster ansehen</a></div>
+      <section class="wiki-area" id="lehrpersonen" aria-labelledby="lehrpersonen-h">
+        <h2 id="lehrpersonen-h">Crashkurs für Lehrpersonen</h2>
+        <p class="muted">In kurzen Schritten vom ersten Netz bis zur Prüfung und zum Klassen-Verbund.</p>
+        <ul class="area-list"><li><a href="crashkurs.html"><strong>Crashkurs: in 30 Minuten startklar</strong><span>Der schnellste Weg für Lehrpersonen: was leyoNET ist, wie man es startet und womit man in der ersten Lektion beginnt.</span></a></li><li><a href="erstes-netz.html"><strong>Das erste Netz in 10 Minuten</strong><span>Zwei PCs, ein Switch und ein Ping: Shop, Verkabeln, Konfigurieren und der Wechsel in die Simulation.</span></a></li><li><a href="simulation-verstehen.html"><strong>Simulation und Paketliste verstehen</strong><span>Was in der Simulation passiert, wie man Pakete findet, Schicht für Schicht auspackt und als Mitschnitt für Wireshark speichert.</span></a></li><li><a href="profile.html"><strong>Funktionsprofile wählen</strong><span>Fünf Profile vom ersten Lehrjahr bis zum Studium, eigene Auswahl und eine Funktionsdatei für die ganze Klasse.</span></a></li><li><a href="dokumentieren.html"><strong>Netze dokumentieren</strong><span>Bereiche mit Netz und VLAN, Notizen, Racks, Stockwerke, Snapshots und Richtpreise: wie ein Netzplan entsteht, den man auch abgeben kann.</span></a></li><li><a href="uebungen-einsetzen.html"><strong>Übungen und Arbeitsblätter im Unterricht</strong><span>Der Aufgaben-Katalog mit über 70 Übungen, die sich selbst prüfen, die Arbeitsblätter dazu und wie man Abgaben einer ganzen Klasse auswertet.</span></a></li><li><a href="aufgaben-erstellen.html"><strong>Eigene Aufgaben erstellen</strong><span>Lernziele im Formular zusammenstellen, Ziele aus einer Musterlösung vorschlagen lassen und als Aufgabendatei verteilen.</span></a></li><li><a href="pruefungen.html"><strong>Prüfungen durchführen</strong><span>Prüfungsdatei und Schlüssel, Varianten je Platz, Prüfungsmodus, Safe Exam Browser, Webversion mit Platz-Codes und automatischer Auswertung.</span></a></li><li><a href="webversion.html"><strong>Webversion: Sessions, Klassen und Ansehen</strong><span>Arbeitsstand unter einem Code, Klassen-Sessions, Arbeiten der Lernenden live ansehen und die Admin-Konsole mit eigenen Zugängen.</span></a></li><li><a href="klassen-verbund.html"><strong>Klassen-Verbund im Unterricht</strong><span>Jede Gruppe baut einen Standort und schliesst ihn an Ihre Infrastruktur an; das Dashboard auf dem Beamer zeigt live, wer wirklich online ist.</span></a></li><li><a href="faq.html"><strong>Häufige Fragen</strong><span>Datenschutz, Internetzugang, Speichern, Geräte im Schulzimmer und was leyoNET bewusst nicht kann.</span></a></li></ul>
+      </section>
+      <section class="wiki-area" id="grundlagen" aria-labelledby="grundlagen-h">
+        <h2 id="grundlagen-h">Grundlagen</h2>
+        <p class="muted">Schichtenmodell, Adressen, Routing und Netzwerkdesign: das Fundament für alles Weitere.</p>
+        <ul class="area-list"><li><a href="osi-modell.html"><strong>OSI-Modell und Kapselung</strong><span>Sieben Schichten, die jede Netzwerkverbindung beschreiben, und warum ein Paket wie eine russische Puppe aufgebaut ist.</span></a></li><li><a href="ethernet-mac.html"><strong>Ethernet und MAC-Adressen</strong><span>Wie Rahmen im lokalen Netz adressiert werden, wie ein Switch lernt, wohin er sie schicken muss, und was passiert, wenn eine MAC doppelt vorkommt.</span></a></li><li><a href="subnetting.html"><strong>Subnetting und VLSM</strong><span>Ein Netz in kleinere aufteilen, Masken und Präfixe lesen, Hostbereich und Broadcast berechnen – gleichmässig oder nach Bedarf.</span></a></li><li><a href="routing-grundlagen.html"><strong>Wie Routing funktioniert</strong><span>Standardgateway, Routing-Tabelle, längstes Präfix und administrative Distanz – und wann man statisch, automatisch oder dynamisch routet.</span></a></li><li><a href="netzwerkdesign.html"><strong>Netzwerkdesign: Core, Distribution, Access</strong><span>Warum grosse Netze in Schichten gebaut werden, wann ein Collapsed Core genügt und wie ein Rechenzentrum mit Leaf-Spine aussieht.</span></a></li><li><a href="medien.html"><strong>Kabel, Glasfaser und Funk</strong><span>Twisted Pair, Glasfaser mit SFP-Modulen, Koax, Telefonleitung, Funk und seriell – welches Medium wofür und woran man es in leyoNET erkennt.</span></a></li></ul>
+      </section>
+      <section class="wiki-area" id="geraete" aria-labelledby="geraete-h">
+        <h2 id="geraete-h">Geräte</h2>
+        <p class="muted">Jedes Gerät aus dem Shop: wozu es dient, was es kann und wie man es in leyoNET einrichtet.</p>
+        <ul class="area-list"><li><a href="pc-notebook.html"><strong>PC und Notebook</strong><span>Endgeräte mit Desktop: Befehlszeile, Webbrowser, E-Mail und Netzwerkeinstellungen – fest oder per DHCP.</span></a></li><li><a href="server.html"><strong>Server</strong><span>Das Gerät für Dienste: DHCP, DNS, Webserver und Mailserver, auch als Rack-Server im Rechenzentrum.</span></a></li><li><a href="client-gruppe.html"><strong>Client-Gruppe</strong><span>Ein Symbol für viele gleiche Rechner, z.B. ein ganzes Schulzimmer – praktisch, um DHCP-Bereiche und Netzgrössen zu üben.</span></a></li><li><a href="switch.html"><strong>Switch</strong><span>Verbindet Geräte im selben Netz, lernt MAC-Adressen, trennt Netze mit VLANs und verhindert Schleifen mit Spanning Tree.</span></a></li><li><a href="layer3-switch.html"><strong>Layer-3-Switch</strong><span>Ein Switch, der auch routet: VLAN-Interfaces (SVIs) als Gateways, Routing zwischen VLANs, DHCP-Relay, OSPF und VXLAN.</span></a></li><li><a href="router.html"><strong>Router</strong><span>Verbindet Netze miteinander: Routing-Tabelle, Standardgateway, NAT, DHCP-Relay, dynamisches Routing, VPN und Befehlszeile.</span></a></li><li><a href="firewall.html"><strong>Firewall</strong><span>Ein eigenes Gerät, das ab Werk filtert: Zonen WAN, LAN, DMZ und OPT, zustandsbehaftete Regeln und Schutz der Firewall selbst.</span></a></li><li><a href="access-point.html"><strong>Access Point</strong><span>Spannt ein WLAN auf: SSID, Band, Kanal und WPA2-Passwort, mehrere Access Points für Roaming und Mesh über Stockwerke.</span></a></li><li><a href="modem.html"><strong>Modem</strong><span>Setzt die Zugangsleitung um: Kabel (DOCSIS), Glasfaser (GPON), VDSL, ADSL oder Mobilfunk – geroutet wird dahinter.</span></a></li><li><a href="internet-box.html"><strong>Internet-Box (CPE)</strong><span>Das Gerät vom Provider für zu Hause: Modem, Router mit NAT, DHCP-Server und kleiner Switch in einem Gehäuse.</span></a></li><li><a href="provider.html"><strong>Internet (Provider)</strong><span>Steht für den Provider und den Rest des Internets: öffentliche Adressen, Routing zwischen Kunden, DNS, CGNAT und DS-Lite.</span></a></li></ul>
+      </section>
+      <section class="wiki-area" id="protokolle" aria-labelledby="protokolle-h">
+        <h2 id="protokolle-h">Protokolle</h2>
+        <p class="muted">Jedes Protokoll mit Ablauf, Aufbau der Pakete, Beispiel zum Ansehen und Norm.</p>
+        <ul class="area-list"><li><a href="arp.html"><strong>ARP</strong><span>Wie ein Gerät zur IP-Adresse im eigenen Netz die MAC-Adresse findet – mit Broadcast-Anfrage, Antwort und Cache.</span></a></li><li><a href="vlan.html"><strong>VLAN und Trunks</strong><span>Ein Switch, mehrere getrennte Netze: Access-Ports, Trunks mit 802.1Q-Tag, natives VLAN und Routing zwischen VLANs.</span></a></li><li><a href="stp.html"><strong>Spanning Tree (STP)</strong><span>Redundante Kabel ohne Broadcast-Sturm: Root-Bridge, Port-Rollen, blockierte Ports und was ohne STP passiert.</span></a></li><li><a href="lacp.html"><strong>Port-Channel und LACP</strong><span>Mehrere Kabel zu einer logischen Leitung bündeln: mehr Bandbreite, Ausfallsicherheit und kein blockierter Port.</span></a></li><li><a href="wlan.html"><strong>WLAN</strong><span>Funknetze nach 802.11: SSID, Anmeldung mit Authentication, Association und 4-Way-Handshake, Signalstärke, Roaming und Mesh.</span></a></li><li><a href="ipv4.html"><strong>IPv4</strong><span>Adressen, Masken und der IPv4-Kopf: wie ein Paket sein Ziel über viele Netze hinweg findet, mit TTL, Prüfsumme und privaten Adressen.</span></a></li><li><a href="icmp.html"><strong>ICMP, Ping und Traceroute</strong><span>Echo Request und Reply, «Ziel nicht erreichbar» und «TTL abgelaufen»: wie Ping und Traceroute funktionieren.</span></a></li><li><a href="ipv6.html"><strong>IPv6</strong><span>128-Bit-Adressen, Präfixe, Link-Local, Neighbor Discovery statt ARP und automatische Adressen mit SLAAC.</span></a></li><li><a href="dhcp.html"><strong>DHCP</strong><span>Adressen automatisch verteilen: Discover, Offer, Request, Ack, Lease-Dauer, feste Zuweisungen und DHCP-Relay über Router.</span></a></li><li><a href="dhcpv6.html"><strong>DHCPv6</strong><span>Adressen für IPv6 vom Server: Solicit, Advertise, Request, Reply – wann man DHCPv6 statt SLAAC nimmt.</span></a></li><li><a href="dns.html"><strong>DNS</strong><span>Namen in Adressen übersetzen: Zonen, Einträge (A, AAAA, CNAME, MX, PTR …), Weiterleitung, Cache und nslookup.</span></a></li><li><a href="tcp.html"><strong>TCP</strong><span>Zuverlässige Verbindungen zwischen Programmen: Ports, Drei-Wege-Handshake, Sequenz- und Bestätigungsnummern, Wiederholung und Abbau.</span></a></li><li><a href="udp.html"><strong>UDP</strong><span>Der schnelle, verbindungslose Transport für DNS, DHCP und RIP: ohne Handshake, ohne Bestätigung, nur Ports und Prüfsumme.</span></a></li><li><a href="http.html"><strong>HTTP</strong><span>Wie der Browser eine Webseite holt: URL, DNS, TCP-Verbindung, GET-Anfrage, Statuscode und Antwort – Byte für Byte.</span></a></li><li><a href="e-mail.html"><strong>E-Mail: SMTP, POP3 und IMAP</strong><span>Wie eine Mail vom Absender über Mailserver und MX-Einträge ins Postfach kommt und wie man sie abholt.</span></a></li><li><a href="ssh.html"><strong>SSH</strong><span>Router und Switches aus der Ferne verwalten: Benutzer, Passwort und Verwaltungsnetz, statt mit dem Konsolenkabel daneben zu stehen.</span></a></li><li><a href="nat.html"><strong>NAT und PAT</strong><span>Private Netze ins Internet bringen: Port-Übersetzung (PAT), Portweiterleitung, statisches SNAT und DNAT, 1:1-NAT und CGNAT beim Provider.</span></a></li><li><a href="ds-lite.html"><strong>DS-Lite</strong><span>IPv4 durch ein reines IPv6-Netz des Providers: die Internet-Box tunnelt, der AFTR übersetzt per CGNAT.</span></a></li><li><a href="statisches-routing.html"><strong>Statisches Routing</strong><span>Routen von Hand eintragen: Zielnetz, Maske und Next Hop, Standardroute, Hin- und Rückweg und die häufigsten Fehler.</span></a></li><li><a href="ospf.html"><strong>OSPF</strong><span>Link-State-Routing: Nachbarn per Hello, Datenbank aller Verbindungen, kürzeste Wege nach Dijkstra – für IPv4 (OSPFv2) und IPv6 (OSPFv3).</span></a></li><li><a href="rip.html"><strong>RIP und RIPng</strong><span>Distanzvektor-Routing: Router erzählen ihren Nachbarn, welche Netze sie in wie vielen Hops erreichen – einfach, aber mit Grenzen.</span></a></li><li><a href="bgp.html"><strong>BGP</strong><span>Das Routing zwischen Providern und Organisationen: autonome Systeme, Nachbarn über TCP 179, angekündigte Netze und der AS-Pfad.</span></a></li><li><a href="vrf.html"><strong>VRF</strong><span>Mehrere getrennte Routing-Tabellen auf einem Router: zwei Kunden mit denselben Adressen über dasselbe Gerät, ohne dass sie sich sehen.</span></a></li><li><a href="vxlan.html"><strong>VXLAN</strong><span>VLANs über ein geroutetes Netz verlängern: Ethernet-Rahmen in UDP 4789, VNI statt VLAN-Nummer, VTEPs auf Layer-3-Switches.</span></a></li><li><a href="paketfilter.html"><strong>Firewall-Regeln (Paketfilter)</strong><span>Regeln von oben nach unten, Standardregel, zustandsbehaftet oder zustandslos – wie ein Router oder eine Firewall entscheidet, was durch darf.</span></a></li><li><a href="acl.html"><strong>Zugriffslisten (ACL)</strong><span>Benannte Listen mit permit und deny am Switch-Port oder VLAN-Interface: zustandslos, erste passende Regel gilt, am Ende implizit verweigert.</span></a></li><li><a href="ipsec-vpn.html"><strong>IPsec-VPN</strong><span>Zwei Standorte sicher über das Internet verbinden: IKEv2 handelt den Tunnel aus, ESP verpackt die Pakete.</span></a></li><li><a href="ppp-hdlc.html"><strong>Serielle Leitungen: HDLC, PPP und PPPoE</strong><span>Punkt-zu-Punkt-Verbindungen zwischen Routern ohne ARP, die Kapselung HDLC oder PPP mit LCP und IPCP, und PPPoE bei DSL.</span></a></li><li><a href="zugangstechniken.html"><strong>Zugangstechniken: DOCSIS, GPON, DSL und LTE</strong><span>Wie ein Anschluss zum Provider aufgebaut wird – über Koax, Glasfaser, Telefonleitung oder Mobilfunk – und was das Modem dabei aushandelt.</span></a></li></ul>
+      </section>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

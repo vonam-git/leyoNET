@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DNS – leyoNET Wiki</title>
+  <meta name="description" content="Namen in Adressen übersetzen: Zonen, Einträge (A, AAAA, CNAME, MX, PTR …), Weiterleitung, Cache und nslookup.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/dns.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
+  <link rel="stylesheet" href="wiki.css?v=1.4.0">
+  <script src="../js/site.js?v=1.4.0" defer></script>
+  <script src="suche.js?v=1.4.0" defer></script>
+  <script src="wiki.js?v=1.4.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../index.html" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group">
+        <summary>Crashkurs für Lehrpersonen</summary>
+        <ul><li><a href="crashkurs.html">Crashkurs: in 30 Minuten startklar</a></li><li><a href="erstes-netz.html">Das erste Netz in 10 Minuten</a></li><li><a href="simulation-verstehen.html">Simulation und Paketliste verstehen</a></li><li><a href="profile.html">Funktionsprofile wählen</a></li><li><a href="dokumentieren.html">Netze dokumentieren</a></li><li><a href="uebungen-einsetzen.html">Übungen und Arbeitsblätter im Unterricht</a></li><li><a href="aufgaben-erstellen.html">Eigene Aufgaben erstellen</a></li><li><a href="pruefungen.html">Prüfungen durchführen</a></li><li><a href="webversion.html">Webversion: Sessions, Klassen und Ansehen</a></li><li><a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a></li><li><a href="faq.html">Häufige Fragen</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Grundlagen</summary>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+      </details>
+      <details class="wiki-group">
+        <summary>Geräte</summary>
+        <ul><li><a href="pc-notebook.html">PC und Notebook</a></li><li><a href="server.html">Server</a></li><li><a href="client-gruppe.html">Client-Gruppe</a></li><li><a href="switch.html">Switch</a></li><li><a href="layer3-switch.html">Layer-3-Switch</a></li><li><a href="router.html">Router</a></li><li><a href="firewall.html">Firewall</a></li><li><a href="access-point.html">Access Point</a></li><li><a href="modem.html">Modem</a></li><li><a href="internet-box.html">Internet-Box (CPE)</a></li><li><a href="provider.html">Internet (Provider)</a></li></ul>
+      </details>
+      <details class="wiki-group" open>
+        <summary>Protokolle</summary>
+        <ul><li><a href="arp.html">ARP</a></li><li><a href="vlan.html">VLAN und Trunks</a></li><li><a href="stp.html">Spanning Tree (STP)</a></li><li><a href="lacp.html">Port-Channel und LACP</a></li><li><a href="wlan.html">WLAN</a></li><li><a href="ipv4.html">IPv4</a></li><li><a href="icmp.html">ICMP, Ping und Traceroute</a></li><li><a href="ipv6.html">IPv6</a></li><li><a href="dhcp.html">DHCP</a></li><li><a href="dhcpv6.html">DHCPv6</a></li><li><a href="dns.html" aria-current="page">DNS</a></li><li><a href="tcp.html">TCP</a></li><li><a href="udp.html">UDP</a></li><li><a href="http.html">HTTP</a></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a></li><li><a href="ssh.html">SSH</a></li><li><a href="nat.html">NAT und PAT</a></li><li><a href="ds-lite.html">DS-Lite</a></li><li><a href="statisches-routing.html">Statisches Routing</a></li><li><a href="ospf.html">OSPF</a></li><li><a href="rip.html">RIP und RIPng</a></li><li><a href="bgp.html">BGP</a></li><li><a href="vrf.html">VRF</a></li><li><a href="vxlan.html">VXLAN</a></li><li><a href="paketfilter.html">Firewall-Regeln (Paketfilter)</a></li><li><a href="acl.html">Zugriffslisten (ACL)</a></li><li><a href="ipsec-vpn.html">IPsec-VPN</a></li><li><a href="ppp-hdlc.html">Serielle Leitungen: HDLC, PPP und PPPoE</a></li><li><a href="zugangstechniken.html">Zugangstechniken: DOCSIS, GPON, DSL und LTE</a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#protokolle">Protokolle</a></p>
+      <h1>DNS</h1>
+      <p class="lead">Namen in Adressen übersetzen: Zonen, Einträge (A, AAAA, CNAME, MX, PTR …), Weiterleitung, Cache und nslookup.</p>
+      <dl class="facts"><div><dt>Schicht</dt><dd>7 (Anwendung, über UDP 53)</dd></div><div><dt>Norm</dt><dd>RFC 1034, RFC 1035, RFC 3596 …</dd></div><div><dt>Beispiel</dt><dd><a href="#beispiel">Demo ansehen</a></dd></div></dl>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#wozu">Wozu</a></li><li><a href="#eintraege">Einträge</a></li><li><a href="#ablauf-einer-abfrage">Ablauf einer Abfrage</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="wozu">Wozu</h2>
+<p>Menschen merken sich <code>www.schule.example</code>, Geräte brauchen <code>192.168.0.3</code>. Das <strong>Domain Name System</strong> übersetzt Namen in Adressen. Jeder Rechner hat dafür einen DNS-Server eingetragen (fest oder per DHCP) und fragt ihn, bevor er eine Verbindung aufbaut.</p>
+<h2 id="eintraege">Einträge</h2>
+<div class="table-wrap"><table><thead><tr><th>Typ</th><th>ordnet zu</th><th>Beispiel</th></tr></thead><tbody><tr><td>A</td><td>Name → IPv4-Adresse</td><td><code>web.schule.example A 192.168.0.3</code></td></tr><tr><td>AAAA</td><td>Name → IPv6-Adresse</td><td><code>web AAAA 2001:db8::3</code></td></tr><tr><td>CNAME</td><td>Alias → anderer Name</td><td><code>www CNAME web</code></td></tr><tr><td>MX</td><td>Domain → Mailserver (mit Vorrang)</td><td><code>schule.example MX 10 mail</code></td></tr><tr><td>NS</td><td>Domain → zuständiger Nameserver</td><td></td></tr><tr><td>PTR</td><td>Adresse → Name (Rückwärtsauflösung)</td><td></td></tr><tr><td>TXT</td><td>freier Text</td><td></td></tr></tbody></table></div>
+<p>Jeder Eintrag hat eine <strong>TTL</strong>: So lange darf ein Client die Antwort im Cache behalten.</p>
+<h2 id="ablauf-einer-abfrage">Ablauf einer Abfrage</h2>
+<ol><li>Der Browser will <code>www.schule.example</code> und fragt den DNS-Server (UDP, Port 53).</li><li>Der Server findet <code>www</code> als CNAME auf <code>web</code> und dazu den A-Eintrag.</li><li>Er antwortet <strong>autorisierend</strong> mit der Kette; der Client merkt sich das Ergebnis.</li><li>Kennt der Server die Zone nicht, <strong>leitet er weiter</strong> an einen anderen DNS-Server (z.B. den des Providers) und antwortet «nicht autorisierend».</li></ol>
+<p>Beispielnamen enden auf <code>.example</code>, einer Domain, die nach RFC 2606 nie vergeben wird.</p>
+<h2 id="in-leyonet">In leyoNET</h2>
+<p>Ein Server wird unter Erweitert → Dienste zum DNS-Server und bekommt eine Zone.</p>
+<pre class="code"><code>C:\&gt; nslookup www.schule.example
+C:\&gt; nslookup -type=MX schule.example
+C:\&gt; nslookup 192.168.0.3
+C:\&gt; ipconfig /displaydns
+C:\&gt; ipconfig /flushdns</code></pre>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>
+<p class="muted">Derselbe Text wie in der Hilfe der App (Taste F1).</p>
+<div class="help-block"><h3>DNS</h3>
+<p>DNS übersetzt Namen in Adressen und umgekehrt. Der Client fragt seinen DNS-Server per UDP Port 53 und merkt sich die Antwort für die Dauer der TTL (<code>ipconfig /displaydns</code>, <code>ipconfig /flushdns</code>).</p>
+<ul><li><strong>A</strong> und <strong>AAAA</strong>: Name → IPv4- bzw. IPv6-Adresse</li><li><strong>CNAME</strong>: Alias auf einen anderen Namen (der Server folgt der Kette)</li><li><strong>MX</strong>: Mailserver einer Domain, der kleinste Vorrang gewinnt</li><li><strong>TXT</strong>: Text, z.B. eine SPF-Regel</li><li><strong>NS</strong>: Nameserver der Domain</li><li><strong>PTR</strong>: Adresse → Name (Rückwärtsauflösung unter in-addr.arpa bzw. ip6.arpa)</li></ul>
+<p>Namen aus der eigenen Zone beantwortet der Server <strong>autorisierend</strong>. Mit einer <strong>Weiterleitung</strong> fragt er für alle anderen Namen einen weiteren Server (z.B. den des Providers) und antwortet «nicht autorisierend». Testen mit <code>nslookup -type=MX schule.example</code>, <code>nslookup 192.168.0.3</code> (PTR) oder <code>nslookup name server</code> (bestimmten Server fragen).</p></div></section>
+<section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
+<ul class="cards"><li class="card"><strong>DNS mit Weiterleitung</strong><p>Schul-DNS mit Zone schule.example (A, CNAME, MX, TXT, NS, PTR), der unbekannte Namen an den DNS des Providers weiterleitet.</p><p class="muted">PC 1 löst einen Alias über zwei CNAME auf, fragt den Mailserver (MX) ab und öffnet eine Seite beim Provider: Der Schul-DNS leitet die Frage weiter und antwortet «nicht autorisierend».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=dns">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/dns.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Webseite über DNS aufrufen</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_web-dns.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>UE02 Netzwerkdienste: Webserver, DNS und feste Zuweisungen</strong> <span class="muted">· 19 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M07B_M117_UE02_Netzwerkdienste.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Protokollanalyse – Auftrag 3: ARP, DNS und HTTP</strong> <span class="muted">· 7 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M129_Protokollanalyse.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
+<section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
+<div class="table-wrap"><table><thead><tr><th>Protokoll</th><th>Schicht</th><th>Vereinfachung in der Simulation</th></tr></thead><tbody><tr><td>DNS</td><td>7</td><td>Einträge A, AAAA, CNAME (auch Ketten), MX mit Vorrang, TXT, NS, PTR (in-addr.arpa, ip6.arpa); autorisierende Antworten aus der Zone, Weiterleitung an einen anderen DNS-Server mit Cache («nicht autorisierend»), NXDOMAIN, NODATA und SERVFAIL; Client-Cache nach TTL; <code>nslookup -type=…</code>. Keine Zonenübertragung, kein DNSSEC, keine eigene Rekursion über die Root-Server</td></tr></tbody></table></div></section>
+<section aria-labelledby="normen"><h2 id="normen">Normen</h2>
+<ul class="norms"><li><a href="https://www.rfc-editor.org/rfc/rfc1034">RFC 1034</a> – Domain Names – Concepts and Facilities</li><li><a href="https://www.rfc-editor.org/rfc/rfc1035">RFC 1035</a> – Domain Names – Implementation and Specification</li><li><a href="https://www.rfc-editor.org/rfc/rfc3596">RFC 3596</a> – DNS Extensions to Support IP Version 6</li><li><a href="https://www.rfc-editor.org/rfc/rfc2606">RFC 2606</a> – Reserved Top Level DNS Names</li></ul></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="http.html">HTTP</a> <span class="muted">Wie der Browser eine Webseite holt: URL, DNS, TCP-Verbindung, GET-Anfrage, Statuscode und Antwort – Byte für Byte.</span></li><li><a href="e-mail.html">E-Mail: SMTP, POP3 und IMAP</a> <span class="muted">Wie eine Mail vom Absender über Mailserver und MX-Einträge ins Postfach kommt und wie man sie abholt.</span></li><li><a href="server.html">Server</a> <span class="muted">Das Gerät für Dienste: DHCP, DNS, Webserver und Mailserver, auch als Rack-Server im Rechenzentrum.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="dhcpv6.html"><span class="muted">Zurück</span>DHCPv6</a>
+        <a class="next" href="tcp.html"><span class="muted">Weiter</span>TCP</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/protokolle/dns.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>
