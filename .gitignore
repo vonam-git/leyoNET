@@ -15,3 +15,4 @@ docs/arbeitsblaetter/*_mL.pdf
 website/httpdocs/impressum.html
 website/httpdocs/datenschutz.html
 sicherheit-bericht.md
+__pycache__/

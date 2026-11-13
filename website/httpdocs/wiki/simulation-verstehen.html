@@ -7,11 +7,11 @@
   <meta name="description" content="Was in der Simulation passiert, wie man Pakete findet, Schicht für Schicht auspackt und als Mitschnitt für Wireshark speichert.">
   <link rel="canonical" href="https://leyonet.ch/wiki/simulation-verstehen.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -104,7 +104,7 @@
 <div class="help-block"><h3>pcap-Export</h3>
 <p><strong>Datei → Mitschnitt exportieren</strong> speichert alle Rahmen als pcapng-Datei. Wireshark öffnet sie wie einen echten Mitschnitt; jede Leitung erscheint als eigene Schnittstelle mit passendem Linktyp (Ethernet, PPP, WLAN …).</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>ARP und Ping im LAN</strong><p>Drei Rechner an einem Switch, alle im Netz 192.168.1.0/24.</p><p class="muted">PC 1 fragt per ARP-Broadcast nach der MAC von PC 2, dann folgen vier ICMP-Echos. Der Switch lernt dabei seine MAC-Tabelle.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=arpPing">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/arp-ping.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure animated"><picture class="img-light"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/arpPing.webp"><img src="bilder/arpPing-anim.webp" width="960" height="454" alt="Demo «ARP und Ping im LAN» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/arpPing-dark.webp"><img src="bilder/arpPing-anim-dark.webp" width="960" height="454" alt="Demo «ARP und Ping im LAN» in leyoNET" loading="lazy" decoding="async"></picture><figcaption><span class="badge">Zeitlupe</span> So sieht es in der Simulation aus: Jeder Punkt ist ein Rahmen auf dem Kabel.</figcaption></figure><strong>ARP und Ping im LAN</strong><p>Drei Rechner an einem Switch, alle im Netz 192.168.1.0/24.</p><p class="muted">PC 1 fragt per ARP-Broadcast nach der MAC von PC 2, dann folgen vier ICMP-Echos. Der Switch lernt dabei seine MAC-Tabelle.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=arpPing">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/arp-ping.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="1 von 5 Sternen">★☆☆☆☆</span> <strong>Pakete mitschneiden</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_sniff-arp.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>Protokollanalyse – Auftrag 1: ICMP und TTL</strong> <span class="muted">· 6 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M129_Protokollanalyse.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
@@ -119,10 +119,11 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

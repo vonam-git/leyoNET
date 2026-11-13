@@ -18,6 +18,8 @@ Es gibt keine Konten und kein Tracking. leyoNET läuft auf drei Arten, überall 
 | Eine Datei: `leyonet.html` | offline, USB-Stick, Prüfungsrechner ohne Internet | im Browser des Geräts, als Datei exportierbar |
 | Installiert (Windows, macOS, Linux) | eigenes Programmfenster | wie die Datei |
 
+![Das Schaufenster: drei Rechenzentren im Verbund](rzVerbund)
+
 ## Der Plan für die ersten 30 Minuten
 
 1. **5 Minuten – ansehen:** Das [Schaufenster](https://app.leyonet.ch/?schaufenster) öffnen. Drei Rechenzentren laufen live; ein Klick auf ein Gerät zeigt rechts seine Einstellungen, die Paketliste unten (Pfeil am unteren Rand) die Pakete.

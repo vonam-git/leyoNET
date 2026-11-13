@@ -22,6 +22,8 @@ Bei OSPF (Open Shortest Path First) kennt jeder Router die ganze Landkarte seine
 
 Die **Router-ID** ist die höchste Loopback-Adresse, sonst die höchste Interface-Adresse. Die Kosten eines Anschlusses lassen sich einstellen; der Weg mit der kleinsten Summe gewinnt.
 
+![OSPF in der Simulation: Hello-Pakete und Austausch der Routen](ospf)
+
 ## Einrichten
 
 ```

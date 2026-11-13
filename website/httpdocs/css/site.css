@@ -918,7 +918,8 @@ code {
 }
 .foot ul {
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 8px 20px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1122,9 +1123,58 @@ code {
   color: #e2e8f0;
 }
 
+/* --- Kontakt (Impressum) ---------------------------------------------------------- */
+
+.contact {
+  display: grid;
+  gap: 14px;
+  max-width: 620px;
+  margin: 1rem 0 2rem;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--canvas);
+}
+.contact[hidden] {
+  display: none;
+}
+.contact label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.contact input,
+.contact select,
+.contact textarea {
+  font: inherit;
+  font-weight: 400;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--text);
+}
+.contact textarea {
+  resize: vertical;
+}
+.contact :focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.contact-note {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.contact .btn {
+  justify-self: start;
+}
+
 /* --- Hell/Dunkel-Schalter --------------------------------------------------------- */
 
 .theme-toggle {
+  flex-shrink: 0;
   display: inline-grid;
   place-items: center;
   width: 38px;
@@ -1192,6 +1242,12 @@ code {
   }
   .top-row .theme-toggle {
     margin-left: auto;
+  }
+  .top-row {
+    gap: 12px;
+  }
+  .top-row .btn-small {
+    flex-shrink: 0;
   }
   .counters {
     grid-template-columns: repeat(2, minmax(0, 1fr));

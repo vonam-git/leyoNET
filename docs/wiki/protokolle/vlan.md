@@ -25,6 +25,8 @@ Der **802.1Q-Tag** sind 4 Byte nach den MAC-Adressen: EtherType `0x8100`, Priori
 
 > Ein Switch leitet nur VLANs weiter, die er kennt. Auch ein Switch, der ein VLAN nur über Trunks weitergibt, braucht es in seiner VLAN-Datenbank.
 
+![VLANs mit Trunk und Spanning Tree in der Simulation](vlanStp)
+
 ## Routing zwischen VLANs
 
 - **Router-on-a-Stick:** Ein Router hängt mit einem Trunk am Switch und hat je VLAN ein Subinterface (`eth0.10`), das als Gateway dient.

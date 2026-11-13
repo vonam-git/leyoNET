@@ -7,11 +7,11 @@
   <meta name="description" content="Verbindet Netze miteinander: Routing-Tabelle, Standardgateway, NAT, DHCP-Relay, dynamisches Routing, VPN und Befehlszeile.">
   <link rel="canonical" href="https://leyonet.ch/wiki/router.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -110,7 +110,7 @@ Router(config)# do show ip route</code></pre>
 <ul><li><strong>Router-ID:</strong> OSPF nimmt die höchste Loopback-Adresse, sonst die höchste Interface-Adresse.</li><li>OSPF kündigt einen Loopback als Host-Route (/32) an und sendet dort keine Hellos.</li><li>Feste Verwaltungsadresse: erreichbar, solange irgendein Weg zum Gerät besteht.</li><li>Quelle von Tunneln, z.B. <a href="vxlan.html">VXLAN</a>.</li></ul>
 <p>Router, Firewall und Layer-3-Switch; im Reiter <strong>Adressen</strong> oder auf der Befehlszeile: <code>interface loopback0</code>, <code>ip address 10.255.0.1/32</code>, <code>no interface loopback0</code>.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>Statische Routen</strong><p>Zwei Router, jeder kennt das entfernte Netz über eine statische Route.</p><p class="muted">«tracert» zeigt beide Router als Zwischenstationen. Eine Route löschen und erneut versuchen: Zielnetz nicht erreichbar.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=static">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/statische-routen.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/static.webp" width="700" height="331" alt="Demo «Statische Routen» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/static-dark.webp" width="700" height="331" alt="Demo «Statische Routen» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Statische Routen</strong><p>Zwei Router, jeder kennt das entfernte Netz über eine statische Route.</p><p class="muted">«tracert» zeigt beide Router als Zwischenstationen. Eine Route löschen und erneut versuchen: Zielnetz nicht erreichbar.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=static">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/statische-routen.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>Zwei Netze mit einem Router</strong> <span class="muted">· 4 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_two-subnets.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>Zwei Router, zwei statische Routen</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_static-routes.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Loopbacks und OSPF</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_loopback-ospf.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Routing – Auftrag 1: Drei Router statisch verbinden</strong> <span class="muted">· 11 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M129_Routing.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
@@ -125,10 +125,11 @@ Router(config)# do show ip route</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

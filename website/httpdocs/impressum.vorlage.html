@@ -8,8 +8,8 @@
   <link rel="canonical" href="https://leyonet.ch/impressum.html">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#ffffff">
-  <link rel="stylesheet" href="css/site.css?v=1.4.0">
-  <script src="js/site.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="css/site.css?v=1.5.0">
+  <script src="js/site.js?v=1.5.0" defer></script>
   </head>
 <body>
   <a class="skip" href="index.html#inhalt">Zum Inhalt</a>
@@ -57,6 +57,28 @@
       </address>
       <p>E-Mail: <span><span class="platzhalter">[E-Mail-Adresse]</span></span></p>
 
+      <h2 id="kontakt">Kontakt</h2>
+      <p>Fragen zum Einsatz im Unterricht, Musterlösungen für Lehrpersonen, Fehler oder Ideen: am einfachsten per E-Mail an die Adresse oben.</p>
+      <form class="contact" data-user="[Teil vor dem @]" data-domain="[Domain nach dem @]" hidden>
+        <label>Worum geht es?
+          <select name="thema">
+            <option>Frage zu leyoNET</option>
+            <option>Musterlösungen für Lehrpersonen</option>
+            <option>Fehler gefunden</option>
+            <option>Idee oder Wunsch</option>
+            <option>Einsatz an unserer Schule</option>
+          </select>
+        </label>
+        <label>Nachricht
+          <textarea name="nachricht" rows="6" maxlength="4000" required></textarea>
+        </label>
+        <label>Name oder Schule (freiwillig)
+          <input name="absender" maxlength="120" autocomplete="off">
+        </label>
+        <p class="contact-note">Der Knopf öffnet Ihr E-Mail-Programm mit dieser Nachricht; senden Sie sie dort ab. Die Website selbst speichert und überträgt nichts.</p>
+        <button class="btn btn-ink" type="submit">E-Mail-Programm öffnen</button>
+      </form>
+
       <h2>Projekt</h2>
       <p>leyoNET ist ein nicht kommerzielles Projekt von Mark und Mika für den Informatik-Unterricht. Das Programm ist kostenlos und quelloffen unter der Lizenz <a class="link" href="https://www.gnu.org/licenses/agpl-3.0.html">GNU AGPL 3.0 oder neuer</a>. Der Quellcode liegt auf <a class="link" href="https://github.com/vonam-git/leyoNET">GitHub</a>.</p>
       <p>Der Name «leyoNET» und das Logo sind von der Lizenz ausgenommen und dürfen nicht für abgeleitete Programme verwendet werden.</p>
@@ -76,6 +98,7 @@
         <li><a href="wiki/">Wiki</a></li>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="impressum.html#kontakt">Kontakt</a></li>
         <li><a href="impressum.html">Impressum</a></li>
         <li><a href="datenschutz.html">Datenschutz</a></li>
       </ul>

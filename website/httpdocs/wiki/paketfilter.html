@@ -7,11 +7,11 @@
   <meta name="description" content="Regeln von oben nach unten, Standardregel, zustandsbehaftet oder zustandslos – wie ein Router oder eine Firewall entscheidet, was durch darf.">
   <link rel="canonical" href="https://leyonet.ch/wiki/paketfilter.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -101,7 +101,7 @@ Router# show firewall</code></pre>
 <p><strong>Router</strong> filtern weitergeleitete Pakete (nach DNAT, vor SNAT), <strong>Endgeräte</strong> eingehende Pakete (Host-Firewall). Eingestellt wird im Reiter <strong>Firewall</strong> der erweiterten Einstellungen. In der Simulation zeigen Zähler, welche Regel wie oft gegriffen hat; blockierte Pakete stehen in der Konsole. Typischer Aufbau: eine <strong>DMZ</strong> mit dem Webserver, von aussen ist nur Port 80/443 offen. Siehe auch <a href="nat.html">NAT/PAT</a>, <a href="ipsec-vpn.html">VPN (IPsec)</a> und <a href="acl.html">Zugriffslisten (ACL)</a>.</p>
 <p><strong>Eigenes Gerät:</strong> Die <a href="firewall.html">Firewall</a> aus dem Shop filtert ab Werk. <strong>Befehlszeile</strong> auf Router und Firewall: <code>firewall default deny</code>, <code>firewall rule allow tcp any 192.168.2.80 port 80 in eth0</code> (mit Zahl davor an dieser Stelle einfügen), <code>no firewall rule 2</code>, <code>no firewall stateful</code>, <code>show firewall</code>. Auf Switches gibt es stattdessen Zugriffslisten: <a href="acl.html">Zugriffslisten (ACL)</a>.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>Firewall mit DMZ</strong><p>Ein Router mit Firewall trennt LAN, DMZ und Internet. Von aussen ist nur der Webserver auf Port 80 erreichbar.</p><p class="muted">«Aussen» ruft den Webserver auf (erlaubt) und pingt dann den Büro-PC (blockiert, siehe Konsole des Routers). Filter «tcp.port == 80 or icmp».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=firewall">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/firewall.json">Projektdatei</a></p></li><li class="card"><strong>Firewall-Gerät und ACL</strong><p>Eine eigene Firewall trennt WAN, LAN und DMZ; eine Zugriffsliste am Switch-Port lässt Gäste nur auf den Webserver.</p><p class="muted">«Aussen» ruft den Webserver in der DMZ auf (erlaubt) und pingt den Büro-PC (Firewall blockiert). Dann pingt das Gast-Notebook den Büro-PC (ACL verwirft) und ruft den Webserver auf (erlaubt). Filter «tcp.port == 80 or icmp».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=firewallZones">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/firewall-zonen.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/firewall.webp" width="700" height="311" alt="Demo «Firewall mit DMZ» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/firewall-dark.webp" width="700" height="311" alt="Demo «Firewall mit DMZ» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Firewall mit DMZ</strong><p>Ein Router mit Firewall trennt LAN, DMZ und Internet. Von aussen ist nur der Webserver auf Port 80 erreichbar.</p><p class="muted">«Aussen» ruft den Webserver auf (erlaubt) und pingt dann den Büro-PC (blockiert, siehe Konsole des Routers). Filter «tcp.port == 80 or icmp».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=firewall">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/firewall.json">Projektdatei</a></p></li><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/firewallZones.webp" width="700" height="311" alt="Demo «Firewall-Gerät und ACL» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/firewallZones-dark.webp" width="700" height="311" alt="Demo «Firewall-Gerät und ACL» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Firewall-Gerät und ACL</strong><p>Eine eigene Firewall trennt WAN, LAN und DMZ; eine Zugriffsliste am Switch-Port lässt Gäste nur auf den Webserver.</p><p class="muted">«Aussen» ruft den Webserver in der DMZ auf (erlaubt) und pingt den Büro-PC (Firewall blockiert). Dann pingt das Gast-Notebook den Büro-PC (ACL verwirft) und ruft den Webserver auf (erlaubt). Filter «tcp.port == 80 or icmp».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=firewallZones">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/firewall-zonen.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Firewall: DMZ absichern</strong> <span class="muted">· 4 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_firewall-dmz.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
@@ -118,10 +118,11 @@ Router# show firewall</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

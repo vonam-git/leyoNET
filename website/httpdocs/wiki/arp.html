@@ -7,11 +7,11 @@
   <meta name="description" content="Wie ein Gerät zur IP-Adresse im eigenen Netz die MAC-Adresse findet – mit Broadcast-Anfrage, Antwort und Cache.">
   <link rel="canonical" href="https://leyonet.ch/wiki/arp.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -82,6 +82,7 @@
 <p>Ein Rahmen im lokalen Netz braucht eine Ziel-<strong>MAC-Adresse</strong>, ein Programm kennt aber nur die <strong>IP-Adresse</strong>. Das Address Resolution Protocol (ARP) verbindet beides: «Wer hat 192.168.1.11? Sag es 192.168.1.10.»</p>
 <h2 id="ablauf">Ablauf</h2>
 <ol><li>PC 1 will an 192.168.1.11 senden und schaut in seinen <strong>ARP-Cache</strong>. Leer.</li><li>Er schickt eine <strong>ARP-Anfrage</strong> als Broadcast (<code>ff:ff:ff:ff:ff:ff</code>). Der Switch verteilt sie an alle Ports.</li><li>Nur PC 2 erkennt seine Adresse und antwortet als <strong>Unicast</strong> mit seiner MAC.</li><li>PC 1 speichert die Zuordnung im Cache und sendet jetzt das eigentliche Paket.</li></ol>
+<figure class="shot-figure animated"><picture class="img-light"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/arpPing.webp"><img src="bilder/arpPing-anim.webp" width="960" height="454" alt="ARP-Anfrage als Broadcast, Antwort als Unicast, danach der Ping" loading="lazy" decoding="async"></picture><picture class="img-dark"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/arpPing-dark.webp"><img src="bilder/arpPing-anim-dark.webp" width="960" height="454" alt="ARP-Anfrage als Broadcast, Antwort als Unicast, danach der Ping" loading="lazy" decoding="async"></picture><figcaption><span class="badge">Zeitlupe</span> ARP-Anfrage als Broadcast, Antwort als Unicast, danach der Ping</figcaption></figure>
 <p>Liegt das Ziel in einem anderen Netz, fragt der PC nicht nach dem Ziel, sondern nach der MAC seines <strong>Standardgateways</strong> (<a href="routing-grundlagen.html">Wie Routing funktioniert</a>).</p>
 <div class="table-wrap"><table><thead><tr><th>Feld</th><th>Anfrage</th><th>Antwort</th></tr></thead><tbody><tr><td>Operation</td><td>1 (request)</td><td>2 (reply)</td></tr><tr><td>Absender-MAC / -IP</td><td>PC 1</td><td>PC 2</td></tr><tr><td>Ziel-MAC</td><td>00:00:00:00:00:00 (unbekannt)</td><td>PC 1</td></tr><tr><td>Ziel-IP</td><td>192.168.1.11</td><td>192.168.1.10</td></tr></tbody></table></div>
 <p>Der EtherType von ARP ist <code>0x0806</code>.</p>
@@ -113,10 +114,11 @@ C:\&gt; arp -d</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

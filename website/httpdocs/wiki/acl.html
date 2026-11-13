@@ -7,11 +7,11 @@
   <meta name="description" content="Benannte Listen mit permit und deny am Switch-Port oder VLAN-Interface: zustandslos, erste passende Regel gilt, am Ende implizit verweigert.">
   <link rel="canonical" href="https://leyonet.ch/wiki/acl.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -99,7 +99,7 @@ Switch(config-if)# ip access-group GAESTE in</code></pre>
 <ul><li><code>ip access-list extended GAESTE</code></li><li><code>permit tcp 192.168.10.0 0.0.0.255 host 192.168.10.80 eq 80</code></li><li><code>deny ip any any</code> (steht ohnehin implizit am Ende)</li><li><code>no 20</code> löscht den Eintrag mit Nummer 20</li><li>am Port: <code>interface port1</code>, <code>ip access-group GAESTE in</code></li><li><code>show access-lists</code> zeigt die Treffer in der Simulation</li></ul>
 <p>Adressen: <code>any</code>, <code>host A</code>, <code>A W</code> mit Wildcard-Maske (0.0.0.255 = /24) oder <code>A/24</code>.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>Firewall-Gerät und ACL</strong><p>Eine eigene Firewall trennt WAN, LAN und DMZ; eine Zugriffsliste am Switch-Port lässt Gäste nur auf den Webserver.</p><p class="muted">«Aussen» ruft den Webserver in der DMZ auf (erlaubt) und pingt den Büro-PC (Firewall blockiert). Dann pingt das Gast-Notebook den Büro-PC (ACL verwirft) und ruft den Webserver auf (erlaubt). Filter «tcp.port == 80 or icmp».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=firewallZones">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/firewall-zonen.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/firewallZones.webp" width="700" height="311" alt="Demo «Firewall-Gerät und ACL» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/firewallZones-dark.webp" width="700" height="311" alt="Demo «Firewall-Gerät und ACL» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Firewall-Gerät und ACL</strong><p>Eine eigene Firewall trennt WAN, LAN und DMZ; eine Zugriffsliste am Switch-Port lässt Gäste nur auf den Webserver.</p><p class="muted">«Aussen» ruft den Webserver in der DMZ auf (erlaubt) und pingt den Büro-PC (Firewall blockiert). Dann pingt das Gast-Notebook den Büro-PC (ACL verwirft) und ruft den Webserver auf (erlaubt). Filter «tcp.port == 80 or icmp».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=firewallZones">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/firewall-zonen.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Gast-Port mit Zugriffsliste</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_acl-guest.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>UE07b Layer-3-Switch mit ACL</strong> <span class="muted">· 5 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M145_UE07b_Layer_3_Switch_mit_ACL.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
@@ -114,10 +114,11 @@ Switch(config-if)# ip access-group GAESTE in</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

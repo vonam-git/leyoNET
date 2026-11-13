@@ -7,11 +7,11 @@
   <meta name="description" content="Ein Switch, mehrere getrennte Netze: Access-Ports, Trunks mit 802.1Q-Tag, natives VLAN und Routing zwischen VLANs.">
   <link rel="canonical" href="https://leyonet.ch/wiki/vlan.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -84,6 +84,7 @@
 <div class="table-wrap"><table><thead><tr><th>Port-Art</th><th>wofür</th><th>Rahmen</th></tr></thead><tbody><tr><td><strong>Access</strong></td><td>Endgerät, gehört zu genau einem VLAN</td><td>ohne Tag</td></tr><tr><td><strong>Trunk</strong></td><td>Verbindung zwischen Switches oder zum Router, trägt mehrere VLANs</td><td>mit 802.1Q-Tag (VLAN-Nummer)</td></tr></tbody></table></div>
 <p>Der <strong>802.1Q-Tag</strong> sind 4 Byte nach den MAC-Adressen: EtherType <code>0x8100</code>, Priorität und die 12-Bit-<strong>VLAN-ID</strong> (1 bis 4094). Das <strong>native VLAN</strong> geht auf dem Trunk ohne Tag; beide Enden müssen dasselbe native VLAN haben. Mit «erlaubte VLANs» lässt ein Trunk nur bestimmte VLANs durch.</p>
 <aside class="callout"><p>Ein Switch leitet nur VLANs weiter, die er kennt. Auch ein Switch, der ein VLAN nur über Trunks weitergibt, braucht es in seiner VLAN-Datenbank.</p></aside>
+<figure class="shot-figure animated"><picture class="img-light"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/vlanStp.webp"><img src="bilder/vlanStp-anim.webp" width="960" height="439" alt="VLANs mit Trunk und Spanning Tree in der Simulation" loading="lazy" decoding="async"></picture><picture class="img-dark"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/vlanStp-dark.webp"><img src="bilder/vlanStp-anim-dark.webp" width="960" height="439" alt="VLANs mit Trunk und Spanning Tree in der Simulation" loading="lazy" decoding="async"></picture><figcaption><span class="badge">Zeitlupe</span> VLANs mit Trunk und Spanning Tree in der Simulation</figcaption></figure>
 <h2 id="routing-zwischen-vlans">Routing zwischen VLANs</h2>
 <ul><li><strong>Router-on-a-Stick:</strong> Ein Router hängt mit einem Trunk am Switch und hat je VLAN ein Subinterface (<code>eth0.10</code>), das als Gateway dient.</li><li><strong>Layer-3-Switch:</strong> Der Switch routet selbst über VLAN-Interfaces (SVIs), siehe <a href="layer3-switch.html">Layer-3-Switch</a>.</li></ul>
 <h2 id="befehlszeile">Befehlszeile</h2>
@@ -108,7 +109,7 @@ Switch# show vlan brief</code></pre>
 <div class="help-block"><h3>Router-on-a-Stick</h3>
 <p>Ein Router mit einem einzigen Kabel zum Switch routet zwischen VLANs: Der Switch-Port ist ein Trunk, am Router gibt es pro VLAN ein <strong>Subinterface</strong> (z.B. eth0.10) mit eigener IP als Gateway.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>VLAN und Spanning Tree</strong><p>Drei Switches im Ring, zwei VLANs über Trunks.</p><p class="muted">STP blockiert einen Port (orange), danach erreicht die Verwaltung ihren zweiten Rechner über den Trunk mit 802.1Q-Tag.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vlanStp">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vlan-stp.json">Projektdatei</a></p></li><li class="card"><strong>Router-on-a-Stick</strong><p>Zwei VLANs, ein Router mit Subinterfaces am Trunk.</p><p class="muted">Das Paket geht getaggt zum Router (eth0.10) und kommt im anderen VLAN wieder heraus (eth0.20).</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=routerOnAStick">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/router-on-a-stick.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
+<ul class="cards"><li class="card"><strong>VLAN und Spanning Tree</strong><p>Drei Switches im Ring, zwei VLANs über Trunks.</p><p class="muted">STP blockiert einen Port (orange), danach erreicht die Verwaltung ihren zweiten Rechner über den Trunk mit 802.1Q-Tag.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vlanStp">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vlan-stp.json">Projektdatei</a></p></li><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/routerOnAStick.webp" width="700" height="311" alt="Demo «Router-on-a-Stick» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/routerOnAStick-dark.webp" width="700" height="311" alt="Demo «Router-on-a-Stick» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Router-on-a-Stick</strong><p>Zwei VLANs, ein Router mit Subinterfaces am Trunk.</p><p class="muted">Das Paket geht getaggt zum Router (eth0.10) und kommt im anderen VLAN wieder heraus (eth0.20).</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=routerOnAStick">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/router-on-a-stick.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Netze mit VLANs trennen</strong> <span class="muted">· 4 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_vlans.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>VLANs dokumentieren</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_vlan-colors.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Router-on-a-Stick</strong> <span class="muted">· 4 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_router-on-a-stick.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>UE03 Portbasiertes VLAN: Zwei Abteilungen an einem Switch</strong> <span class="muted">· 6 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M145_UE03_Portbasiertes_VLAN.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>UE04 Trunk VLAN: VLANs über zwei Stockwerke</strong> <span class="muted">· 6 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M145_UE04_Trunk_VLAN.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Zusatz 2: Management-VLAN und natives VLAN</strong> <span class="muted">· 4 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M145_Zusatzuebungen.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
@@ -127,10 +128,11 @@ Switch# show vlan brief</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

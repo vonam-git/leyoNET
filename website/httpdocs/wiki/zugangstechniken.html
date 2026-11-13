@@ -7,11 +7,11 @@
   <meta name="description" content="Wie ein Anschluss zum Provider aufgebaut wird – über Koax, Glasfaser, Telefonleitung oder Mobilfunk – und was das Modem dabei aushandelt.">
   <link rel="canonical" href="https://leyonet.ch/wiki/zugangstechniken.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -92,7 +92,7 @@
 <ul><li><strong>Kabel (DOCSIS):</strong> Kanalsuche, Ranging, Konfiguration per TFTP, Registrierung</li><li><strong>Glasfaser (GPON):</strong> Seriennummer, ONU-ID per PLOAM, Konfiguration per OMCI</li><li><strong>Mobilfunk (LTE):</strong> RRC, Anmeldung mit SIM, Datenträger mit IP</li><li><strong>ADSL/VDSL:</strong> Training (G.hs), dann PPPoE und PPP mit Benutzer und Passwort</li></ul>
 <p>Erst danach fliessen IP-Pakete.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>Internet-Box (CPE) am Kabelnetz</strong><p>Zwei Rechner an einer Internet-Box mit Kabelmodem, NAT und DHCP.</p><p class="muted">Zuerst baut die Box die DOCSIS-Leitung auf, die Rechner holen sich per DHCP eine Adresse, dann lädt das Notebook eine Webseite aus dem Internet.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=cpe">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/cpe-heimnetz.json">Projektdatei</a></p></li><li class="card"><strong>Rechenzentren-Verbund</strong><p>Drei Rechenzentren in drei Bauarten: Zürich dreistufig (Core, Distribution, Access), Bern mit zusammengelegtem Core und Distribution, Basel als Collapsed Core. Alle Geräte sind in Racks eingebaut, die Ports tragen die Farbe ihres VLANs. Angeschlossen sind die Standorte über Glasfaser, Kabelmodem und VDSL, verbunden mit IPsec-Tunneln.</p><p class="muted">Ein Server in Zürich pingt das NAS in Bern durch den VPN-Tunnel, das Monitoring ruft die Webseite in Basel über ihren DNS-Namen ab, Bern fragt den DNS-Server in Zürich, und Basel pingt das Monitoring in Zürich.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=rzVerbund">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/rz-verbund.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/cpe.webp" width="700" height="298" alt="Demo «Internet-Box (CPE) am Kabelnetz» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/cpe-dark.webp" width="700" height="298" alt="Demo «Internet-Box (CPE) am Kabelnetz» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Internet-Box (CPE) am Kabelnetz</strong><p>Zwei Rechner an einer Internet-Box mit Kabelmodem, NAT und DHCP.</p><p class="muted">Zuerst baut die Box die DOCSIS-Leitung auf, die Rechner holen sich per DHCP eine Adresse, dann lädt das Notebook eine Webseite aus dem Internet.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=cpe">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/cpe-heimnetz.json">Projektdatei</a></p></li><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/rzVerbund.webp" width="700" height="311" alt="Demo «Rechenzentren-Verbund» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/rzVerbund-dark.webp" width="700" height="311" alt="Demo «Rechenzentren-Verbund» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Rechenzentren-Verbund</strong><p>Drei Rechenzentren in drei Bauarten: Zürich dreistufig (Core, Distribution, Access), Bern mit zusammengelegtem Core und Distribution, Basel als Collapsed Core. Alle Geräte sind in Racks eingebaut, die Ports tragen die Farbe ihres VLANs. Angeschlossen sind die Standorte über Glasfaser, Kabelmodem und VDSL, verbunden mit IPsec-Tunneln.</p><p class="muted">Ein Server in Zürich pingt das NAS in Bern durch den VPN-Tunnel, das Monitoring ruft die Webseite in Basel über ihren DNS-Namen ab, Bern fragt den DNS-Server in Zürich, und Basel pingt das Monitoring in Zürich.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=rzVerbund">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/rz-verbund.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>VDSL-Anschluss</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_modem-vdsl.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>Glasfaseranschluss</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_fiber-ont.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>Internet-Box anschliessen</strong> <span class="muted">· 2 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_cpe-home.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
@@ -111,10 +111,11 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

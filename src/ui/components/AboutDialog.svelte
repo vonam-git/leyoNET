@@ -33,6 +33,7 @@
   const SOURCE = 'https://github.com/vonam-git/leyoNET';
   const WEBSITE = 'https://leyonet.ch';
   const LICENSE_URL = 'https://www.gnu.org/licenses/agpl-3.0.html';
+  const SUPPORT = 'https://www.patreon.com/cw/vonam';
 
   $effect(() => {
     dialog.showModal();
@@ -58,6 +59,12 @@
       <Logo variant="mark" height={44} label="ly" />
       <p>{t('about.story4')}</p>
     </div>
+  </section>
+
+  <section class="support" aria-labelledby="support-title">
+    <h3 id="support-title">{t('about.supportTitle')}</h3>
+    <p class="small">{t('about.supportText')}</p>
+    <p><a class="support-link" href={SUPPORT} target="_blank" rel="noopener noreferrer">♥ {t('about.supportLink')}</a></p>
   </section>
 
   <h3>{t('about.ownLicense')}</h3>
@@ -110,6 +117,18 @@
   }
   .title {
     color: var(--text);
+  }
+  .support {
+    margin: 14px 0 4px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .support h3 {
+    margin-top: 0;
+  }
+  .support-link {
+    font-weight: 600;
   }
   .story p {
     margin: 6px 0;

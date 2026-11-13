@@ -25,6 +25,8 @@ Hundert Geräte von Hand zu konfigurieren ist mühsam und fehleranfällig. Ein *
 
 Nach der halben Lease-Dauer erneuert der Client. Mit `ipconfig /release` gibt er die Adresse zurück, mit `/renew` holt er eine neue. Ohne Antwort wiederholt er das Discover und meldet nach drei Versuchen «kein Server».
 
+![DHCP in der Simulation: Discover, Offer, Request, Acknowledge](dhcp)
+
 ## Feste Zuweisungen und Relay
 
 - **Reservierung:** Ein Gerät mit einer bestimmten MAC-Adresse bekommt immer dieselbe Adresse, z.B. ein Drucker.

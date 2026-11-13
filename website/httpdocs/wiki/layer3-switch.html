@@ -7,11 +7,11 @@
   <meta name="description" content="Ein Switch, der auch routet: VLAN-Interfaces (SVIs) als Gateways, Routing zwischen VLANs, DHCP-Relay, OSPF und VXLAN.">
   <link rel="canonical" href="https://leyonet.ch/wiki/layer3-switch.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -94,7 +94,7 @@ Switch(config-if)# ip helper-address 10.99.0.10</code></pre>
 <div class="help-block"><h3>Layer-3-Switch</h3>
 <p>Ein Switch, der zusätzlich routet: Pro VLAN eine virtuelle Schnittstelle (SVI) mit IP-Adresse dient als Gateway. So reden VLANs ohne externen Router miteinander. Mit IPv6 erhält jede SVI zusätzlich eine IPv6-Adresse und kündigt ihr Präfix im VLAN an (<a href="ipv6.html">IPv6</a>).</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>Layer-3-Switch und DHCP-Relay</strong><p>Ein Core-Switch routet zwischen drei VLANs, der DHCP-Server steht zentral.</p><p class="muted">Die SVIs leiten DHCP als Relay weiter; danach pingt Notebook 1 den Server über die VLAN-Grenze.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=l3switch">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/layer3-switch.json">Projektdatei</a></p></li><li class="card"><strong>IPv6 auf dem Layer-3-Switch</strong><p>Der Core-Switch hat je VLAN eine IPv6-Adresse (SVI) und routet zwischen den VLANs. Stock 1 bezieht Adressen per SLAAC, Stock 2 per DHCPv6.</p><p class="muted">Die SVIs schicken Router Advertisements über die Trunks in ihr VLAN. Notebook 2 pingt Notebook 1 über die VLAN-Grenze, dann öffnet Notebook 1 das Intranet per Name (AAAA).</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=l3switchIpv6">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/layer3-switch-ipv6.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/l3switch.webp" width="700" height="311" alt="Demo «Layer-3-Switch und DHCP-Relay» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/l3switch-dark.webp" width="700" height="311" alt="Demo «Layer-3-Switch und DHCP-Relay» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Layer-3-Switch und DHCP-Relay</strong><p>Ein Core-Switch routet zwischen drei VLANs, der DHCP-Server steht zentral.</p><p class="muted">Die SVIs leiten DHCP als Relay weiter; danach pingt Notebook 1 den Server über die VLAN-Grenze.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=l3switch">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/layer3-switch.json">Projektdatei</a></p></li><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/l3switchIpv6.webp" width="700" height="311" alt="Demo «IPv6 auf dem Layer-3-Switch» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/l3switchIpv6-dark.webp" width="700" height="311" alt="Demo «IPv6 auf dem Layer-3-Switch» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>IPv6 auf dem Layer-3-Switch</strong><p>Der Core-Switch hat je VLAN eine IPv6-Adresse (SVI) und routet zwischen den VLANs. Stock 1 bezieht Adressen per SLAAC, Stock 2 per DHCPv6.</p><p class="muted">Die SVIs schicken Router Advertisements über die Trunks in ihr VLAN. Notebook 2 pingt Notebook 1 über die VLAN-Grenze, dann öffnet Notebook 1 das Intranet per Name (AAAA).</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=l3switchIpv6">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/layer3-switch-ipv6.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>UE07 Layer-3-Switch: Routing mit SVIs</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M145_UE07_Layer_3_Switch.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>UE08 DHCP auf dem Layer-3-Switch</strong> <span class="muted">· 5 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M145_UE08_DHCP.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>UE09 DHCP extern: Zentraler Server mit Relay</strong> <span class="muted">· 6 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M145_UE09_DHCP_extern.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Campus mit Layer-3-Switch und Glasfaser</strong> <span class="muted">· 7 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_l3-campus.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
@@ -109,10 +109,11 @@ Switch(config-if)# ip helper-address 10.99.0.10</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

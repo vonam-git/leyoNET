@@ -20,6 +20,8 @@ Ein Rahmen im lokalen Netz braucht eine Ziel-**MAC-Adresse**, ein Programm kennt
 3. Nur PC 2 erkennt seine Adresse und antwortet als **Unicast** mit seiner MAC.
 4. PC 1 speichert die Zuordnung im Cache und sendet jetzt das eigentliche Paket.
 
+![ARP-Anfrage als Broadcast, Antwort als Unicast, danach der Ping](arpPing)
+
 Liegt das Ziel in einem anderen Netz, fragt der PC nicht nach dem Ziel, sondern nach der MAC seines **Standardgateways** ([[routing-grundlagen]]).
 
 | Feld | Anfrage | Antwort |

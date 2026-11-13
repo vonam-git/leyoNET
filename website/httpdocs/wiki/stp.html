@@ -7,11 +7,11 @@
   <meta name="description" content="Redundante Kabel ohne Broadcast-Sturm: Root-Bridge, Port-Rollen, blockierte Ports und was ohne STP passiert.">
   <link rel="canonical" href="https://leyonet.ch/wiki/stp.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -80,6 +80,7 @@
       <article class="prose">
 <h2 id="das-problem-schleifen">Das Problem: Schleifen</h2>
 <p>Zwei Kabel zwischen Switches erhöhen die Ausfallsicherheit, bilden aber eine <strong>Schleife</strong>. Ein Broadcast wird endlos im Kreis geschickt und vervielfacht sich: ein <strong>Broadcast-Sturm</strong>. Nach Sekunden ist das Netz voll, die MAC-Tabellen springen hin und her.</p>
+<figure class="shot-figure animated"><picture class="img-light"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/storm.webp"><img src="bilder/storm-anim.webp" width="960" height="454" alt="Broadcast-Sturm ohne Spanning Tree: Rahmen kreisen ohne Ende" loading="lazy" decoding="async"></picture><picture class="img-dark"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/storm-dark.webp"><img src="bilder/storm-anim-dark.webp" width="960" height="454" alt="Broadcast-Sturm ohne Spanning Tree: Rahmen kreisen ohne Ende" loading="lazy" decoding="async"></picture><figcaption><span class="badge">Zeitlupe</span> Broadcast-Sturm ohne Spanning Tree: Rahmen kreisen ohne Ende</figcaption></figure>
 <h2 id="die-loesung-ein-baum">Die Lösung: ein Baum</h2>
 <p>Das Spanning Tree Protocol macht aus dem vermaschten Netz einen Baum ohne Schleifen:</p>
 <ol><li>Die Switches tauschen <strong>BPDUs</strong> aus und wählen eine <strong>Root-Bridge</strong>: den Switch mit der kleinsten Bridge-ID (Priorität, dann MAC-Adresse).</li><li>Jeder andere Switch bestimmt seinen <strong>Root-Port</strong>: den Weg mit den geringsten Kosten zur Root.</li><li>Auf jeder Leitung gibt es einen <strong>Designated Port</strong>; alle übrigen Ports werden <strong>blockiert</strong>.</li></ol>
@@ -94,7 +95,7 @@
 <p>Redundante Kabel zwischen Switches bilden Schleifen. Ohne STP kreisen Broadcasts darin endlos: ein <strong>Broadcast-Sturm</strong>, der das Netz lahmlegt. Der Simulator zeigt dann eine Warnung und die betroffenen Geräte.</p>
 <p>Mit STP wählen die Switches eine Root Bridge und blockieren einzelne Ports, bis ein Weg ausfällt. Einschalten im Switch unter «Spanning Tree».</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>VLAN und Spanning Tree</strong><p>Drei Switches im Ring, zwei VLANs über Trunks.</p><p class="muted">STP blockiert einen Port (orange), danach erreicht die Verwaltung ihren zweiten Rechner über den Trunk mit 802.1Q-Tag.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vlanStp">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vlan-stp.json">Projektdatei</a></p></li><li class="card"><strong>Broadcast-Sturm</strong><p>Drei Switches im Ring, aber ohne Spanning Tree.</p><p class="muted">Schon die erste ARP-Anfrage kreist endlos und vervielfacht sich. Danach STP einschalten und vergleichen.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=storm">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/broadcast-sturm.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure animated"><picture class="img-light"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/vlanStp.webp"><img src="bilder/vlanStp-anim.webp" width="960" height="439" alt="Demo «VLAN und Spanning Tree» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/vlanStp-dark.webp"><img src="bilder/vlanStp-anim-dark.webp" width="960" height="439" alt="Demo «VLAN und Spanning Tree» in leyoNET" loading="lazy" decoding="async"></picture><figcaption><span class="badge">Zeitlupe</span> So sieht es in der Simulation aus: Jeder Punkt ist ein Rahmen auf dem Kabel.</figcaption></figure><strong>VLAN und Spanning Tree</strong><p>Drei Switches im Ring, zwei VLANs über Trunks.</p><p class="muted">STP blockiert einen Port (orange), danach erreicht die Verwaltung ihren zweiten Rechner über den Trunk mit 802.1Q-Tag.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vlanStp">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vlan-stp.json">Projektdatei</a></p></li><li class="card"><strong>Broadcast-Sturm</strong><p>Drei Switches im Ring, aber ohne Spanning Tree.</p><p class="muted">Schon die erste ARP-Anfrage kreist endlos und vervielfacht sich. Danach STP einschalten und vergleichen.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=storm">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/broadcast-sturm.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Schleife ohne Sturm</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_stp-loop.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>UE11 Netzwerkdesign: Collapsed Core</strong> <span class="muted">· 5 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M145_UE11_Collapsed_Core.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
@@ -113,10 +114,11 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

@@ -7,11 +7,11 @@
   <meta name="description" content="Router und Switches aus der Ferne verwalten: Benutzer, Passwort und Verwaltungsnetz, statt mit dem Konsolenkabel daneben zu stehen.">
   <link rel="canonical" href="https://leyonet.ch/wiki/ssh.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -97,7 +97,7 @@ Router(config-line)# login local</code></pre>
 <div class="help-block"><h3>SSH</h3>
 <p>Mit SSH (TCP 22) meldet man sich von einem PC aus an einem Router oder Switch an und konfiguriert ihn aus der Ferne. Nach dem Schlüsselaustausch ist alles verschlüsselt; im Mitschnitt sind nur noch unlesbare Bytes zu sehen.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>Router-on-a-Stick</strong><p>Zwei VLANs, ein Router mit Subinterfaces am Trunk.</p><p class="muted">Das Paket geht getaggt zum Router (eth0.10) und kommt im anderen VLAN wieder heraus (eth0.20).</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=routerOnAStick">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/router-on-a-stick.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/routerOnAStick.webp" width="700" height="311" alt="Demo «Router-on-a-Stick» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/routerOnAStick-dark.webp" width="700" height="311" alt="Demo «Router-on-a-Stick» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Router-on-a-Stick</strong><p>Zwei VLANs, ein Router mit Subinterfaces am Trunk.</p><p class="muted">Das Paket geht getaggt zum Router (eth0.10) und kommt im anderen VLAN wieder heraus (eth0.20).</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=routerOnAStick">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/router-on-a-stick.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="3 von 5 Sternen">★★★☆☆</span> <strong>Routing – Auftrag 3: Verwaltungsnetz und SSH</strong> <span class="muted">· 6 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M129_Routing.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
@@ -116,10 +116,11 @@ Router(config-line)# login local</code></pre>
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>

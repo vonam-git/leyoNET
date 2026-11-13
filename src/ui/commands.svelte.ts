@@ -14,6 +14,9 @@ import { ui, type Theme } from './state/ui.svelte';
 import { EXAM_BLOCKED_COMMANDS, examMode } from './state/exam.svelte';
 import { verbund } from './state/verbund.svelte';
 
+/** Freiwillige Unterstützung (nur ein Link, nichts wird eingebunden). */
+export const SUPPORT_URL = 'https://www.patreon.com/cw/vonam';
+
 /**
  * Alle Befehle an einer Stelle: Menüleiste, Befehlssuche (Strg+K) und
  * Tastenkürzel verwenden dieselben Einträge.
@@ -153,6 +156,7 @@ const COMMANDS: Command[] = [
   { id: 'help.privacy', label: () => t('privacy.open'), run: () => dialogs.show('privacy') },
   { id: 'help.feedback', label: () => t('feedback.open'), run: () => dialogs.show('feedback'), visible: () => ui.online },
   { id: 'help.about', label: () => t('toolbar.about'), run: () => dialogs.show('about') },
+  { id: 'help.support', label: () => t('about.supportMenu'), run: () => void window.open(SUPPORT_URL, '_blank', 'noopener,noreferrer') },
 ];
 
 // Während einer Prüfung ausgeblendet (Katalog, Editor, Generator, Auswertung …).
@@ -340,6 +344,7 @@ export const MENUS: Menu[] = [
       { separator: true },
       { command: 'help.privacy' },
       { command: 'help.feedback' },
+      { command: 'help.support' },
       { command: 'help.about' },
     ],
   },

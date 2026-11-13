@@ -7,11 +7,11 @@
   <meta name="description" content="Standardgateway, Routing-Tabelle, längstes Präfix und administrative Distanz – und wann man statisch, automatisch oder dynamisch routet.">
   <link rel="canonical" href="https://leyonet.ch/wiki/routing-grundlagen.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.4.0">
-  <link rel="stylesheet" href="wiki.css?v=1.4.0">
-  <script src="../js/site.js?v=1.4.0" defer></script>
-  <script src="suche.js?v=1.4.0" defer></script>
-  <script src="wiki.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
+  <link rel="stylesheet" href="wiki.css?v=1.5.0">
+  <script src="../js/site.js?v=1.5.0" defer></script>
+  <script src="suche.js?v=1.5.0" defer></script>
+  <script src="wiki.js?v=1.5.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -80,6 +80,7 @@
       <article class="prose">
 <h2 id="im-eigenen-netz-oder-nicht">Im eigenen Netz oder nicht?</h2>
 <p>Bevor ein Gerät sendet, vergleicht es die Zieladresse mit seinem eigenen Netz (Adresse und Maske). Liegt das Ziel im selben Netz, fragt es per <a href="arp.html">ARP</a> direkt nach der MAC des Ziels. Liegt es woanders, schickt es das Paket an sein <strong>Standardgateway</strong>, den Router im eigenen Netz.</p>
+<figure class="shot-figure animated"><picture class="img-light"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/gateway.webp"><img src="bilder/gateway-anim.webp" width="960" height="454" alt="Ein Ping ins andere Netz geht über das Standardgateway" loading="lazy" decoding="async"></picture><picture class="img-dark"><source media="(prefers-reduced-motion: reduce)" srcset="bilder/gateway-dark.webp"><img src="bilder/gateway-anim-dark.webp" width="960" height="454" alt="Ein Ping ins andere Netz geht über das Standardgateway" loading="lazy" decoding="async"></picture><figcaption><span class="badge">Zeitlupe</span> Ein Ping ins andere Netz geht über das Standardgateway</figcaption></figure>
 <h2 id="die-routing-tabelle">Die Routing-Tabelle</h2>
 <p>Ein Router entscheidet für jedes Paket anhand seiner <strong>Routing-Tabelle</strong>: Zu jedem Zielnetz steht, über welchen Nachbarn (Next Hop) oder Anschluss es weitergeht.</p>
 <div class="table-wrap"><table><thead><tr><th>Ziel</th><th>über</th><th>Herkunft</th></tr></thead><tbody><tr><td>192.168.1.0/24</td><td>eth0</td><td>direkt verbunden</td></tr><tr><td>192.168.2.0/24</td><td>10.0.0.2</td><td>statisch</td></tr><tr><td>0.0.0.0/0</td><td>203.0.113.1</td><td>Standardroute</td></tr></tbody></table></div>
@@ -96,7 +97,7 @@
 <p><strong>Ohne Häkchen</strong> wählt man: - <strong>Statisch:</strong> Jede Route von Hand eintragen. - <strong>Dynamisch:</strong> Die Router tauschen ihre Netze per OSPF, RIP oder BGP aus; statische Routen gelten zusätzlich.</p>
 <p>Eingetragene Routen und Protokolle bleiben gespeichert, wenn man umschaltet. Sie ruhen nur, solange eine andere Art gewählt ist.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>Standardgateway</strong><p>Zwei Subnetze, verbunden über einen Router.</p><p class="muted">PC 1 erkennt, dass das Ziel in einem anderen Netz liegt, und schickt das Paket an seinen Router. Die TTL sinkt um eins.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=gateway">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/zwei-subnetze.json">Projektdatei</a></p></li><li class="card"><strong>Automatisches Routing</strong><p>Drei Router, drei Netze und keine einzige eingetragene Route: Das automatische Routing findet die Wege selbst.</p><p class="muted">«tracert» von PC A zu PC C zeigt alle Router auf dem Weg. Häkchen bei einem Router wegnehmen: Das Ziel ist nicht mehr erreichbar.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=autoRouting">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/automatisches-routing.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<ul class="cards"><li class="card"><strong>Standardgateway</strong><p>Zwei Subnetze, verbunden über einen Router.</p><p class="muted">PC 1 erkennt, dass das Ziel in einem anderen Netz liegt, und schickt das Paket an seinen Router. Die TTL sinkt um eins.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=gateway">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/zwei-subnetze.json">Projektdatei</a></p></li><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="bilder/autoRouting.webp" width="700" height="331" alt="Demo «Automatisches Routing» in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="bilder/autoRouting-dark.webp" width="700" height="331" alt="Demo «Automatisches Routing» in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Automatisches Routing</strong><p>Drei Router, drei Netze und keine einzige eingetragene Route: Das automatische Routing findet die Wege selbst.</p><p class="muted">«tracert» von PC A zu PC C zeigt alle Router auf dem Weg. Häkchen bei einem Router wegnehmen: Das Ziel ist nicht mehr erreichbar.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=autoRouting">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/automatisches-routing.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
 <section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
 <ul class="exercises"><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>Zwei Netze mit einem Router</strong> <span class="muted">· 4 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_two-subnets.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="1 von 5 Sternen">★☆☆☆☆</span> <strong>Drei Router, automatisch geroutet</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_auto-routing.pdf">Arbeitsblatt</a></li><li><span class="stars" aria-label="2 von 5 Sternen">★★☆☆☆</span> <strong>UE04 Router02 – Auftrag 1: Ein Router verbindet Sursee und Zürich</strong> <span class="muted">· 6 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M06D_M117_UE04_Router02.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
@@ -111,10 +112,11 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.4.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
         <li><a href="../impressum.html">Impressum</a></li>
         <li><a href="../datenschutz.html">Datenschutz</a></li>
       </ul>
