@@ -3,7 +3,7 @@ import { addDevice, setBgp, setOspf } from '../model/topology';
 import { Simulation } from '../sim/simulation';
 import { NetBuilder, unwrap } from '../sim/testing';
 import { dissect } from './encode';
-import { internetChecksum } from './part';
+import { crc32, fcs16, internetChecksum } from './part';
 import { toPcapng } from './pcap';
 
 /** Netz mit möglichst vielen Protokollen: DHCP, DNS, HTTP, ARP, ICMP, OSPF, BGP, STP, 802.1Q. */
@@ -112,6 +112,48 @@ group('Kodierung nach Norm', () => {
     const d = dissect(first.frame, 'coax');
     expect(d.layers.map((l) => l.protocol)).toEqual(['DOCSIS 3.1 PHY', 'DOCSIS', 'DOCSIS MAC-Management MDD']);
     expect(d.linkType).toBe(143);
+  });
+});
+
+group('Rahmenprüfsumme (FCS)', () => {
+  it('CRC-32 und FCS-16 liefern die Prüfwerte der Normen für «123456789»', () => {
+    const check = Array.from('123456789', (c) => c.charCodeAt(0));
+    expect(crc32(check)).toBe(0xcbf43926);
+    expect(fcs16(check)).toBe(0x906e);
+  });
+
+  it('jeder Ethernet-Rahmen ist mindestens 64 Byte lang und endet mit der richtigen FCS', () => {
+    const { sim } = busy();
+    let short = 0;
+    for (const entry of sim.getPacketLog()) {
+      const d = dissect(entry.frame);
+      const eth = d.layers.find((l) => l.osi === 2 && l.protocol.startsWith('Ethernet'));
+      if (!eth) continue;
+      const frame = d.bytes.slice(eth.start, eth.start + eth.length);
+      expect(frame.length).toBeGreaterThanOrEqual(64);
+      const fcs = eth.fields.at(-1)!;
+      expect(fcs.key).toBe('eth.fcs');
+      expect(fcs.start + fcs.length).toBe(eth.start + eth.length);
+      // Prüfung beim Empfänger: CRC über Rahmen samt FCS ergibt den festen Rest 0x2144DF1C.
+      expect(crc32(frame)).toBe(0x2144df1c);
+      if (eth.fields.some((f) => f.key === 'eth.padding')) short++;
+    }
+    expect(short).toBeGreaterThan(0); // ARP-Rahmen werden aufgefüllt
+  });
+
+  it('pcapng meldet die FCS für Ethernet (if_fcslen = 4)', () => {
+    const { net, sim } = busy();
+    const bytes = toPcapng(net.topology, sim.getPacketLog());
+    const idbs: number[][] = [];
+    for (let i = 0; i < bytes.length; ) {
+      const type = bytes[i]! | (bytes[i + 1]! << 8) | (bytes[i + 2]! << 16) | (bytes[i + 3]! << 24);
+      const length = bytes[i + 4]! | (bytes[i + 5]! << 8) | (bytes[i + 6]! << 16) | (bytes[i + 7]! << 24);
+      if (type === 1) idbs.push(Array.from(bytes.slice(i + 8, i + length - 4)));
+      i += length;
+    }
+    const ethernet = idbs.find((b) => b[0] === 1 && b[1] === 0)!;
+    // Linktyp, reserviert, Snaplen, dann Option 13 (if_fcslen) mit Länge 1 und Wert 4.
+    expect(ethernet.slice(8, 13)).toEqual([13, 0, 1, 0, 4]);
   });
 });
 

@@ -8,7 +8,7 @@ import { render } from './markdown';
 setLocale('de');
 const root = process.cwd();
 const out = join(root, 'website/httpdocs/wiki');
-const GENERATED = /\.html$|^suche\.js$/;
+const GENERATED = /\.html$|^suche\.js$|^(farben|aufbau)\.css$/;
 const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string };
 
 describe('Wiki', () => {

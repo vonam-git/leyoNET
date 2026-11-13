@@ -12,7 +12,7 @@ Wer zum ersten Mal ein Netz baut, braucht keine BGP-Einstellungen. leyoNET blend
 | Profil | Stufe | Neu dazu (Auswahl) |
 |---|---|---|
 | 1 Einstieg | 1. Lehrjahr | PC, Notebook, Switch, Router, Server, automatisches Routing, DHCP, Paketliste |
-| 2 Grundlagen | 1.–2. Lehrjahr | WLAN, Internet, Internet-Box, Glasfaser, DNS, Web, statische Routen, Kosten |
+| 2 Grundlagen | 1.–2. Lehrjahr | WLAN, Internet, Internet-Box, Glasfaser, DNS, Web, statische Routen, Kosten, Aufbau der Rahmen |
 | 3 Fortgeschritten | 2.–3. Lehrjahr | VLANs, STP, NAT, Firewall, Modems, E-Mail, Befehlszeile, Racks |
 | 4 Profi | 3.–4. Lehrjahr, Modul 145 | Layer-3-Switch, ACL, Port-Channel, IPv6, VPN, OSPF, RIP, serielle Leitungen, Hex-Ansicht |
 | 5 Studium | Fachhochschule | BGP, VRF, VXLAN |

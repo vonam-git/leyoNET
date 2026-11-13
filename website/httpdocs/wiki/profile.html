@@ -7,11 +7,13 @@
   <meta name="description" content="Fünf Profile vom ersten Lehrjahr bis zum Studium, eigene Auswahl und eine Funktionsdatei für die ganze Klasse.">
   <link rel="canonical" href="https://leyonet.ch/wiki/profile.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
-  <link rel="stylesheet" href="wiki.css?v=1.5.0">
-  <script src="../js/site.js?v=1.5.0" defer></script>
-  <script src="suche.js?v=1.5.0" defer></script>
-  <script src="wiki.js?v=1.5.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.1">
+  <link rel="stylesheet" href="farben.css?v=1.5.1">
+  <link rel="stylesheet" href="aufbau.css?v=1.5.1">
+  <link rel="stylesheet" href="wiki.css?v=1.5.1">
+  <script src="../js/site.js?v=1.5.1" defer></script>
+  <script src="suche.js?v=1.5.1" defer></script>
+  <script src="wiki.js?v=1.5.1" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -60,7 +62,7 @@
       </details>
       <details class="wiki-group">
         <summary>Grundlagen</summary>
-        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="rahmen-und-pakete.html">Aufbau von Rahmen und Paketen</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
       </details>
       <details class="wiki-group">
         <summary>Geräte</summary>
@@ -80,7 +82,7 @@
       <article class="prose">
 <h2 id="warum-profile">Warum Profile</h2>
 <p>Wer zum ersten Mal ein Netz baut, braucht keine BGP-Einstellungen. leyoNET blendet darum jede Funktion aus, die das gewählte Profil nicht braucht: im Shop, in Menüs, Formularen und in der Hilfe. Daten im Projekt bleiben erhalten.</p>
-<div class="table-wrap"><table><thead><tr><th>Profil</th><th>Stufe</th><th>Neu dazu (Auswahl)</th></tr></thead><tbody><tr><td>1 Einstieg</td><td>1. Lehrjahr</td><td>PC, Notebook, Switch, Router, Server, automatisches Routing, DHCP, Paketliste</td></tr><tr><td>2 Grundlagen</td><td>1.–2. Lehrjahr</td><td>WLAN, Internet, Internet-Box, Glasfaser, DNS, Web, statische Routen, Kosten</td></tr><tr><td>3 Fortgeschritten</td><td>2.–3. Lehrjahr</td><td>VLANs, STP, NAT, Firewall, Modems, E-Mail, Befehlszeile, Racks</td></tr><tr><td>4 Profi</td><td>3.–4. Lehrjahr, Modul 145</td><td>Layer-3-Switch, ACL, Port-Channel, IPv6, VPN, OSPF, RIP, serielle Leitungen, Hex-Ansicht</td></tr><tr><td>5 Studium</td><td>Fachhochschule</td><td>BGP, VRF, VXLAN</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Profil</th><th>Stufe</th><th>Neu dazu (Auswahl)</th></tr></thead><tbody><tr><td>1 Einstieg</td><td>1. Lehrjahr</td><td>PC, Notebook, Switch, Router, Server, automatisches Routing, DHCP, Paketliste</td></tr><tr><td>2 Grundlagen</td><td>1.–2. Lehrjahr</td><td>WLAN, Internet, Internet-Box, Glasfaser, DNS, Web, statische Routen, Kosten, Aufbau der Rahmen</td></tr><tr><td>3 Fortgeschritten</td><td>2.–3. Lehrjahr</td><td>VLANs, STP, NAT, Firewall, Modems, E-Mail, Befehlszeile, Racks</td></tr><tr><td>4 Profi</td><td>3.–4. Lehrjahr, Modul 145</td><td>Layer-3-Switch, ACL, Port-Channel, IPv6, VPN, OSPF, RIP, serielle Leitungen, Hex-Ansicht</td></tr><tr><td>5 Studium</td><td>Fachhochschule</td><td>BGP, VRF, VXLAN</td></tr></tbody></table></div>
 <p>Die vollständige Zuordnung steht in der Dokumentation <a href="https://github.com/vonam-git/leyoNET/blob/main/docs/funktionsprofile.md">Funktionsprofile</a>.</p>
 <h2 id="profil-einstellen-und-verteilen">Profil einstellen und verteilen</h2>
 <ul><li>Der <strong>Profil-Chip</strong> in der Werkzeugleiste (oder Werkzeuge → Funktionsumfang) wählt das Profil. Einzelne Funktionen lassen sich dazu- oder wegschalten («Eigene Auswahl»).</li><li><strong>Datei speichern</strong> legt die Auswahl als kleine Datei ab. Die Lernenden laden sie mit Werkzeuge → Funktionsauswahl laden. Mit «sperren» können sie sie nicht mehr ändern.</li><li>In der <strong>Webversion</strong> setzt die Admin-Konsole Grenzen für alle (höchstes Profil, erlaubte Funktionen).</li><li>Öffnet jemand ein Projekt oder eine Übung, die mehr braucht, schaltet leyoNET die nötigen Funktionen ein und meldet es.</li></ul>
@@ -102,7 +104,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.1 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>

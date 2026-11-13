@@ -17,6 +17,7 @@ Hilfe, Doku, README, Website und Wiki sollen zum Programm passen. Ein Teil wird 
 | Jede zitierte Norm steht in [normen.json](normen.json) | `scripts/normen.mjs` |
 | Jede Demo und jede Musterlösung funktioniert in der Simulation | `src/ui/demos.test.ts`, `src/ui/catalog.test.ts` |
 | Schaufenster-Datei entspricht dem Bauplan, alle Standorte erreichen sich | `src/ui/showcase.test.ts` |
+| Aufbau der Rahmen nach Norm (`formats.ts`) stimmt mit der Kodierung, jedes Feld hat Name und Bedeutung auf Deutsch und Englisch | `src/ui/aufbau.test.ts` |
 | Website: Versionsangabe bei CSS/JS, Bilder hell und dunkel, nur erlaubte Links | `src/ui/website.test.ts` |
 
 Schlägt eine Prüfung fehl, nennt sie Datei und Stelle.

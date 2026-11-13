@@ -1,7 +1,7 @@
 import type { PacketLogEntry } from '../sim/simulation';
 import type { Topology } from '../model/types';
 import { cableAt, getCable, getDevice } from '../model/topology';
-import { dissect } from './encode';
+import { LINKTYPE, dissect } from './encode';
 import { utf8 } from './part';
 
 /**
@@ -30,8 +30,10 @@ export function toPcapng(topology: Topology, log: readonly PacketLogEntry[]): Ui
     if (id === undefined) {
       id = interfaces.size;
       interfaces.set(linkType, id);
-      // Interface Description Block mit Zeitauflösung Mikrosekunden (Standard).
-      block(0x00000001, [...le16(linkType), ...le16(0), ...le32(0), ...option(0, [])]);
+      // Interface Description Block mit Zeitauflösung Mikrosekunden (Standard). Ethernet- und
+      // WLAN-Rahmen enthalten die 4 Byte FCS: Option if_fcslen sagt das Wireshark.
+      const fcs = linkType === LINKTYPE.ethernet || linkType === LINKTYPE.ieee80211 ? option(13, [4]) : [];
+      block(0x00000001, [...le16(linkType), ...le16(0), ...le32(0), ...fcs, ...option(0, [])]);
     }
     return id;
   };

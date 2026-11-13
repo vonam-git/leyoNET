@@ -51,7 +51,7 @@ describe('Mehrere Kabel und Port-Channel (LACP)', () => {
     const lacp = sim.getPacketLog().find((e) => e.frame.payload.kind === 'lacp')!;
     const w = dissect(lacp.frame);
     // 14 Bytes Ethernet + 110 Bytes LACPDU, EtherType 0x8809 (Slow Protocols).
-    expect(w.bytes.length).toBe(124);
+    expect(w.bytes.length).toBe(128); // 14 Kopf + 110 LACPDU + 4 FCS (IEEE 802.1AX)
     expect([w.bytes[12], w.bytes[13], w.bytes[14]]).toEqual([0x88, 0x09, 0x01]);
   });
 

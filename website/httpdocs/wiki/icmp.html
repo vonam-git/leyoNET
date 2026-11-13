@@ -7,11 +7,13 @@
   <meta name="description" content="Echo Request und Reply, «Ziel nicht erreichbar» und «TTL abgelaufen»: wie Ping und Traceroute funktionieren.">
   <link rel="canonical" href="https://leyonet.ch/wiki/icmp.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
-  <link rel="stylesheet" href="wiki.css?v=1.5.0">
-  <script src="../js/site.js?v=1.5.0" defer></script>
-  <script src="suche.js?v=1.5.0" defer></script>
-  <script src="wiki.js?v=1.5.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.1">
+  <link rel="stylesheet" href="farben.css?v=1.5.1">
+  <link rel="stylesheet" href="aufbau.css?v=1.5.1">
+  <link rel="stylesheet" href="wiki.css?v=1.5.1">
+  <script src="../js/site.js?v=1.5.1" defer></script>
+  <script src="suche.js?v=1.5.1" defer></script>
+  <script src="wiki.js?v=1.5.1" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -60,7 +62,7 @@
       </details>
       <details class="wiki-group">
         <summary>Grundlagen</summary>
-        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="rahmen-und-pakete.html">Aufbau von Rahmen und Paketen</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
       </details>
       <details class="wiki-group">
         <summary>Geräte</summary>
@@ -76,11 +78,14 @@
       <h1>ICMP, Ping und Traceroute</h1>
       <p class="lead">Echo Request und Reply, «Ziel nicht erreichbar» und «TTL abgelaufen»: wie Ping und Traceroute funktionieren.</p>
       <dl class="facts"><div><dt>Schicht</dt><dd>3 (Vermittlung)</dd></div><div><dt>Norm</dt><dd>RFC 792, RFC 4443</dd></div><div><dt>Beispiel</dt><dd><a href="#beispiel">2 Demos</a></dd></div></dl>
-      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#meldungen">Meldungen</a></li><li><a href="#ping">Ping</a></li><li><a href="#traceroute">Traceroute</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#meldungen">Meldungen</a></li><li><a href="#der-icmp-kopf">Der ICMP-Kopf</a></li><li><a href="#ping">Ping</a></li><li><a href="#traceroute">Traceroute</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
       <article class="prose">
 <h2 id="meldungen">Meldungen</h2>
 <p>ICMP (Internet Control Message Protocol) transportiert Kontroll- und Fehlermeldungen in IP-Paketen (Protokoll 1). Die wichtigsten:</p>
 <div class="table-wrap"><table><thead><tr><th>Typ</th><th>Name</th><th>wann</th></tr></thead><tbody><tr><td>8 / 0</td><td>Echo Request / Reply</td><td><code>ping</code></td></tr><tr><td>3</td><td>Destination Unreachable</td><td>kein Weg zum Netz, Host nicht erreichbar, Port geschlossen</td></tr><tr><td>11</td><td>Time Exceeded</td><td>TTL ist unterwegs auf 0 gefallen</td></tr></tbody></table></div>
+<h2 id="der-icmp-kopf">Der ICMP-Kopf</h2>
+<p>ICMP steckt direkt im IP-Paket (Protokoll 1). Die ersten 4 Byte sind bei allen Meldungen gleich; was danach kommt, hängt vom Typ ab. Beim Ping sind es Kennung und Sequenznummer.</p>
+<figure class="lx-figure"><figure class="lx-format lx-o3"><div class="lx-format-head"><span class="lx-tag proto-icmp">ICMP</span><span class="lx-muted">Nachricht · RFC 792</span></div><div class="lx-scroll"><div class="lx-bits lx-o3"><span class="lx-ruler lx-r1 lx-c1 lx-s4">0</span><span class="lx-ruler lx-r1 lx-c5 lx-s4">4</span><span class="lx-ruler lx-r1 lx-c9 lx-s4">8</span><span class="lx-ruler lx-r1 lx-c13 lx-s4">12</span><span class="lx-ruler lx-r1 lx-c17 lx-s4">16</span><span class="lx-ruler lx-r1 lx-c21 lx-s4">20</span><span class="lx-ruler lx-r1 lx-c25 lx-s4">24</span><span class="lx-ruler lx-r1 lx-c29 lx-s4">28</span><div class="lx-bit lx-r2 lx-c1 lx-s8" title="8 Echo Request, 0 Echo Reply, 3 Ziel nicht erreichbar, 11 Zeit überschritten." data-start="38" data-len="1"><span class="lx-f-name">Typ</span><span class="lx-f-size">8 Bit</span><span class="lx-f-value">8</span></div><div class="lx-bit lx-r2 lx-c9 lx-s8" title="Genauerer Grund, z.B. bei Typ 3: 0 Netz, 1 Host, 3 Port nicht erreichbar." data-start="39" data-len="1"><span class="lx-f-name">Code</span><span class="lx-f-size">8 Bit</span><span class="lx-f-value">0</span></div><div class="lx-bit lx-r2 lx-c17 lx-s16" title="Prüfsumme über die ganze ICMP-Nachricht (RFC 1071)." data-start="40" data-len="2"><span class="lx-f-name">Prüfsumme</span><span class="lx-f-size">16 Bit</span><span class="lx-f-value">0x4d5a</span></div><div class="lx-bit lx-r3 lx-c1 lx-s16" title="Bei Echo: Kennung des Ping-Programms, die Antwort trägt dieselbe. Andere Typen nutzen diese 4 Byte anders." data-start="42" data-len="2"><span class="lx-f-name">Kennung</span><span class="lx-f-size">16 Bit</span><span class="lx-f-value">0x0001</span></div><div class="lx-bit lx-r3 lx-c17 lx-s16" title="Bei Echo: zählt die Pings 1, 2, 3 …" data-start="44" data-len="2"><span class="lx-f-name">Sequenznummer</span><span class="lx-f-size">16 Bit</span><span class="lx-f-value">1</span></div><div class="lx-bit payload lx-r4 lx-c1 lx-s32" title="Beliebige Daten, die die Antwort zurückbringt (Windows: 32 Byte). Bei Fehlermeldungen der Anfang des auslösenden Pakets." data-start="46" data-len="32"><span class="lx-f-name">Daten</span><span class="lx-f-size">variabel</span><span class="lx-f-value">32 Byte</span></div></div></div><figcaption class="lx-muted">Jede Zeile hat 32 Bit (4 Byte), Bit 0 links, so zeichnen die RFCs ihre Köpfe. Gestrichelt: variabel oder optional. Zeigen auf ein Feld erklärt es.</figcaption></figure><div class="table-wrap"><table class="lx-fields"><thead><tr><th>Feld</th><th>Länge</th><th>Wert im Beispiel</th><th>Bedeutung</th></tr></thead><tbody><tr><td>Typ</td><td class="lx-nowrap">8 Bit</td><td class="lx-mono">8</td><td>8 Echo Request, 0 Echo Reply, 3 Ziel nicht erreichbar, 11 Zeit überschritten.</td></tr><tr><td>Code</td><td class="lx-nowrap">8 Bit</td><td class="lx-mono">0</td><td>Genauerer Grund, z.B. bei Typ 3: 0 Netz, 1 Host, 3 Port nicht erreichbar.</td></tr><tr><td>Prüfsumme</td><td class="lx-nowrap">16 Bit (2 Byte)</td><td class="lx-mono">0x4d5a</td><td>Prüfsumme über die ganze ICMP-Nachricht (RFC 1071).</td></tr><tr><td>Kennung</td><td class="lx-nowrap">16 Bit (2 Byte)</td><td class="lx-mono">0x0001</td><td>Bei Echo: Kennung des Ping-Programms, die Antwort trägt dieselbe. Andere Typen nutzen diese 4 Byte anders.</td></tr><tr><td>Sequenznummer</td><td class="lx-nowrap">16 Bit (2 Byte)</td><td class="lx-mono">1</td><td>Bei Echo: zählt die Pings 1, 2, 3 …</td></tr><tr><td>Daten</td><td class="lx-nowrap">variabel</td><td class="lx-mono">32 Byte</td><td>Beliebige Daten, die die Antwort zurückbringt (Windows: 32 Byte). Bei Fehlermeldungen der Anfang des auslösenden Pakets.</td></tr></tbody></table></div><figcaption>Werte: Echter Rahmen aus der Demo <a href="https://app.leyonet.ch/?schaufenster=routerOnAStick">«Router-on-a-Stick»</a> (Nr. 7, 82 Byte), so zeigt ihn auch die Paketliste in leyoNET.</figcaption></figure>
 <h2 id="ping">Ping</h2>
 <p><code>ping 192.168.2.10</code> schickt vier Echo Requests. Jede Antwort zeigt die Zeit und die TTL des Antwortpakets; aus der TTL lässt sich abschätzen, wie viele Router dazwischen liegen. «Zeitüberschreitung» heisst: keine Antwort, aber auch keine Fehlermeldung, oft ein fehlender Rückweg.</p>
 <h2 id="traceroute">Traceroute</h2>
@@ -110,7 +115,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.1 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>

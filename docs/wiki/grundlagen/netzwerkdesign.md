@@ -1,7 +1,7 @@
 ---
 titel: Netzwerkdesign: Core, Distribution, Access
 kurz: Warum grosse Netze in Schichten gebaut werden, wann ein Collapsed Core genügt und wie ein Rechenzentrum mit Leaf-Spine aussieht.
-reihenfolge: 5
+reihenfolge: 6
 demos: [rzVerbund, datacenter]
 uebungen: [m145-ue10, m145-ue11, datacenter, l3-campus]
 verwandt: [layer3-switch, vlan, stp, dokumentieren]

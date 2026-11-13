@@ -75,7 +75,8 @@ describe('Arbeitsblatt M129 Protokollanalyse: Zahlen', () => {
     sim.runUntil(sim.now + 6000);
     const query = sim.getPacketLog().slice(m).find((e) => protocolOf(e.frame) === 'DNS' && e.from.device === byName(t, 'PC W11'))!;
     const d = dissect(query.frame);
-    expect(d.bytes.length).toBe(77);
+    expect(d.bytes.length).toBe(81); // 14 Ethernet + 20 IPv4 + 8 UDP + 35 DNS + 4 FCS
+    expect(d.layers.find((l) => l.protocol === 'Ethernet II')?.fields.at(-1)?.key).toBe('eth.fcs');
     expect(d.layers.find((l) => l.protocol === 'DNS')?.length).toBe(35);
     expect(sim.getDeviceState(byName(t, 'PC W11')).browser).toMatchObject({ status: 'done', response: { status: 200 } });
   });

@@ -7,7 +7,7 @@ demos: [dns]
 uebungen: [m129-lab-a2]
 normen: [RFC 768]
 protokolle: [UDP]
-verwandt: [tcp, dns, dhcp]
+verwandt: [tcp, dns, dhcp, rahmen-und-pakete]
 ---
 ## Wie UDP funktioniert
 
@@ -20,6 +20,12 @@ UDP setzt vor die Nutzdaten nur einen kleinen Kopf mit vier Feldern: Absender-Po
 | Reihenfolge | garantiert | nicht garantiert |
 | Kopf | mindestens 20 Byte | 8 Byte |
 | Einsatz | Web, Mail, SSH | DNS, DHCP, RIP, VXLAN, Sprache und Video |
+
+## Der UDP-Kopf
+
+Nur 8 Byte: Quellport, Zielport, Länge und Prüfsumme.
+
+{{format udp}}
 
 ## Wann UDP passt
 

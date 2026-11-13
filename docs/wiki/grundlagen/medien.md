@@ -1,7 +1,7 @@
 ---
 titel: Kabel, Glasfaser und Funk
 kurz: Twisted Pair, Glasfaser mit SFP-Modulen, Koax, Telefonleitung, Funk und seriell – welches Medium wofür und woran man es in leyoNET erkennt.
-reihenfolge: 6
+reihenfolge: 7
 schicht: 1 (Bitübertragung)
 hilfe: [cables, sfp]
 uebungen: [fiber-ont, l3-campus, port-shutdown]

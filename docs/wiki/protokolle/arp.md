@@ -33,6 +33,10 @@ Liegt das Ziel in einem anderen Netz, fragt der PC nicht nach dem Ziel, sondern 
 
 Der EtherType von ARP ist `0x0806`.
 
+Der ganze Aufbau nach RFC 826, mit den Werten einer ARP-Anfrage aus der Simulation. Die Nachricht ist nur 28 Byte lang, darum füllt Ethernet sie auf 46 Byte auf.
+
+{{format arp}}
+
 ## Sonderformen
 
 - **Gratuitous ARP:** Ein Gerät kündigt seine eigene Adresse an, z.B. nach dem Start oder beim WLAN-Roaming. Antwortet jemand, ist die Adresse doppelt vergeben.

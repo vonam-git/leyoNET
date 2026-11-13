@@ -6,7 +6,7 @@ schicht: 2 (Sicherung)
 hilfe: [stp]
 demos: [vlanStp, storm]
 uebungen: [stp-loop, m145-ue11]
-normen: [IEEE 802.1D]
+normen: [IEEE 802.1D, IEEE 802.3, IEEE 802.2]
 protokolle: [STP]
 verwandt: [switch, vlan, lacp]
 ---
@@ -33,6 +33,12 @@ Fällt ein Kabel aus, rechnen die Switches neu, und ein blockierter Port überni
 | Alternate (blockiert) | leitet nicht weiter, hört nur BPDUs |
 
 Mit `spanning-tree priority 4096` macht man einen bestimmten Switch (meist im Core) zur Root.
+
+## Die BPDU im Rahmen
+
+BPDUs laufen nicht in Ethernet II, sondern in einem IEEE-802.3-Rahmen mit Länge und LLC-Kopf (DSAP und SSAP 0x42) an die Multicast-Adresse 01:80:c2:00:00:00.
+
+{{format ieee8023}}
 
 ## In leyoNET
 

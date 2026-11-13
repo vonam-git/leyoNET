@@ -7,7 +7,7 @@ demos: [web]
 uebungen: [m129-lab-a3, web-dns]
 normen: [RFC 9293]
 protokolle: [TCP]
-verwandt: [udp, http, osi-modell]
+verwandt: [udp, http, osi-modell, rahmen-und-pakete]
 ---
 ## Ports
 
@@ -20,6 +20,12 @@ IP bringt ein Paket zum richtigen Gerät, **Ports** zum richtigen Programm. Ein 
 | 1 | SYN | Client: «Ich möchte verbinden, meine Startnummer ist x» |
 | 2 | SYN, ACK | Server: «Einverstanden, meine ist y, ich erwarte x+1» |
 | 3 | ACK | Client: «Ich erwarte y+1» – die Verbindung steht |
+
+## Der TCP-Kopf
+
+Ohne Optionen 20 Byte. Im ersten Segment (SYN) steht meist die Option MSS, dann ist der Kopf 24 Byte lang. Werte aus der HTTP-Anfrage der Demo «Webserver».
+
+{{format tcp}}
 
 ## Zuverlässigkeit
 

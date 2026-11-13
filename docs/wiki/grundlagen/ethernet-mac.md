@@ -1,25 +1,22 @@
 ---
 titel: Ethernet und MAC-Adressen
 kurz: Wie Rahmen im lokalen Netz adressiert werden, wie ein Switch lernt, wohin er sie schicken muss, und was passiert, wenn eine MAC doppelt vorkommt.
-reihenfolge: 2
+reihenfolge: 3
 schicht: 2 (Sicherung)
 hilfe: [switching]
 demos: [duplicateMac]
 uebungen: [switch-lan, sniff-arp]
 normen: [IEEE 802.3]
 protokolle: [Ethernet II, 802.1Q]
-verwandt: [switch, arp, vlan]
+verwandt: [rahmen-und-pakete, switch, arp, vlan]
 ---
 ## Der Ethernet-Rahmen
 
-Ethernet transportiert Daten im lokalen Netz in **Rahmen**. Jeder Rahmen beginnt mit der Ziel- und der Absender-MAC-Adresse, gefolgt vom **EtherType**, der sagt, was drin steckt.
+Ethernet transportiert Daten im lokalen Netz in **Rahmen**. Jeder Rahmen beginnt mit der Ziel- und der Absender-MAC-Adresse, gefolgt vom **EtherType**, der sagt, was drin steckt. Am Ende steht die Prüfsumme **FCS** (CRC-32): Der Empfänger rechnet sie nach und verwirft den Rahmen, wenn sie nicht stimmt. Vor dem Rahmen sendet die Netzwerkkarte Präambel und SFD (Schicht 1), damit der Empfänger den Takt findet.
 
-| Feld | Länge | Beispiel |
-|---|---|---|
-| Ziel-MAC | 6 Byte | `ff:ff:ff:ff:ff:ff` (Broadcast) |
-| Absender-MAC | 6 Byte | `02:00:00:00:01:00` |
-| EtherType | 2 Byte | `0x0800` IPv4, `0x0806` ARP, `0x86dd` IPv6, `0x8100` VLAN-Tag |
-| Nutzdaten | 46–1500 Byte | IP-Paket, ARP … |
+{{format ethernet2}}
+
+Ein Rahmen ist mindestens 64 und höchstens 1518 Byte lang. Kürzere Pakete füllt der Sender auf. Mehr zu VLAN-Tag, LLC und WLAN-Rahmen: [[rahmen-und-pakete]].
 
 Eine **MAC-Adresse** hat 48 Bit, geschrieben als sechs Hexadezimal-Paare. Die ersten drei Byte nennen beim echten Gerät den Hersteller. leyoNET vergibt «lokal administrierte» Adressen (`02:…`), abgeleitet aus der Gerätenummer, damit jedes Projekt reproduzierbar bleibt.
 

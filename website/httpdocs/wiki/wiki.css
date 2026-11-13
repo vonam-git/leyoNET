@@ -462,3 +462,47 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
+/* --- Rahmen und Pakete (Darstellung aus aufbau.css, wie in der App) -------------------- */
+
+.lx-figure {
+  margin: 1.2em 0 1.8em;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--canvas);
+  font-size: 0.95rem;
+}
+.lx-figure > figcaption {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.lx-figure .lx-format {
+  margin: 0 0 12px;
+}
+.lx-figure .table-wrap {
+  margin: 0;
+}
+.lx-figure table {
+  font-size: 0.88rem;
+  background: var(--paper);
+}
+.lx-figure .lx-osi-body summary,
+.lx-figure .lx-osi-body dl,
+.lx-figure .lx-hex {
+  font-size: 0.86rem;
+}
+.lx-packet-hint {
+  margin: 10px 0 6px;
+  font-size: 0.85rem;
+}
+.prose .lx-overview {
+  padding: 0;
+}
+.prose .lx-overview li {
+  margin: 0;
+}
+.lx-figure .lx-osi-body pre {
+  background: var(--paper);
+}

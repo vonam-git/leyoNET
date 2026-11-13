@@ -24,14 +24,9 @@ Eine IPv4-Adresse hat 32 Bit, geschrieben als vier Zahlen von 0 bis 255: `192.16
 
 ## Der IPv4-Kopf
 
-| Feld | Bedeutung |
-|---|---|
-| Version, Länge | 4, Kopflänge (meist 20 Byte) |
-| Gesamtlänge | Kopf und Nutzdaten in Byte |
-| TTL | höchstens so viele Router; jeder zieht 1 ab |
-| Protokoll | was drin steckt: 1 ICMP, 6 TCP, 17 UDP, 50 ESP, 89 OSPF |
-| Prüfsumme | über den Kopf, jeder Router rechnet neu (wegen der TTL) |
-| Absender, Ziel | IP-Adressen; bleiben auf dem ganzen Weg gleich (ausser bei NAT) |
+Ohne Optionen ist der Kopf 20 Byte lang, fünf Zeilen zu 32 Bit. Die Werte stammen aus einem echten Paket der Simulation.
+
+{{format ipv4}}
 
 Auf dem Weg durch mehrere Netze wechselt der Ethernet-Kopf an jedem Router, der IP-Kopf bleibt; nur TTL und Prüfsumme ändern sich.
 

@@ -7,11 +7,13 @@
   <meta name="description" content="Der schnelle, verbindungslose Transport für DNS, DHCP und RIP: ohne Handshake, ohne Bestätigung, nur Ports und Prüfsumme.">
   <link rel="canonical" href="https://leyonet.ch/wiki/udp.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.5.0">
-  <link rel="stylesheet" href="wiki.css?v=1.5.0">
-  <script src="../js/site.js?v=1.5.0" defer></script>
-  <script src="suche.js?v=1.5.0" defer></script>
-  <script src="wiki.js?v=1.5.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.5.1">
+  <link rel="stylesheet" href="farben.css?v=1.5.1">
+  <link rel="stylesheet" href="aufbau.css?v=1.5.1">
+  <link rel="stylesheet" href="wiki.css?v=1.5.1">
+  <script src="../js/site.js?v=1.5.1" defer></script>
+  <script src="suche.js?v=1.5.1" defer></script>
+  <script src="wiki.js?v=1.5.1" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -60,7 +62,7 @@
       </details>
       <details class="wiki-group">
         <summary>Grundlagen</summary>
-        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
+        <ul><li><a href="osi-modell.html">OSI-Modell und Kapselung</a></li><li><a href="rahmen-und-pakete.html">Aufbau von Rahmen und Paketen</a></li><li><a href="ethernet-mac.html">Ethernet und MAC-Adressen</a></li><li><a href="subnetting.html">Subnetting und VLSM</a></li><li><a href="routing-grundlagen.html">Wie Routing funktioniert</a></li><li><a href="netzwerkdesign.html">Netzwerkdesign: Core, Distribution, Access</a></li><li><a href="medien.html">Kabel, Glasfaser und Funk</a></li></ul>
       </details>
       <details class="wiki-group">
         <summary>Geräte</summary>
@@ -76,11 +78,14 @@
       <h1>UDP</h1>
       <p class="lead">Der schnelle, verbindungslose Transport für DNS, DHCP und RIP: ohne Handshake, ohne Bestätigung, nur Ports und Prüfsumme.</p>
       <dl class="facts"><div><dt>Schicht</dt><dd>4 (Transport)</dd></div><div><dt>Norm</dt><dd>RFC 768</dd></div><div><dt>Beispiel</dt><dd><a href="#beispiel">Demo ansehen</a></dd></div></dl>
-      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#wie-udp-funktioniert">Wie UDP funktioniert</a></li><li><a href="#wann-udp-passt">Wann UDP passt</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#wie-udp-funktioniert">Wie UDP funktioniert</a></li><li><a href="#der-udp-kopf">Der UDP-Kopf</a></li><li><a href="#wann-udp-passt">Wann UDP passt</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
       <article class="prose">
 <h2 id="wie-udp-funktioniert">Wie UDP funktioniert</h2>
 <p>UDP setzt vor die Nutzdaten nur einen kleinen Kopf mit vier Feldern: Absender-Port, Ziel-Port, Länge und Prüfsumme. Es gibt keine Verbindung, keine Bestätigung und keine Wiederholung. Geht ein Datagramm verloren, merkt es nur das Programm.</p>
 <div class="table-wrap"><table><thead><tr><th></th><th>TCP</th><th>UDP</th></tr></thead><tbody><tr><td>Verbindung</td><td>Handshake, Abbau</td><td>keine</td></tr><tr><td>Zuverlässig</td><td>Bestätigung, Wiederholung</td><td>nein</td></tr><tr><td>Reihenfolge</td><td>garantiert</td><td>nicht garantiert</td></tr><tr><td>Kopf</td><td>mindestens 20 Byte</td><td>8 Byte</td></tr><tr><td>Einsatz</td><td>Web, Mail, SSH</td><td>DNS, DHCP, RIP, VXLAN, Sprache und Video</td></tr></tbody></table></div>
+<h2 id="der-udp-kopf">Der UDP-Kopf</h2>
+<p>Nur 8 Byte: Quellport, Zielport, Länge und Prüfsumme.</p>
+<figure class="lx-figure"><figure class="lx-format lx-o4"><div class="lx-format-head"><span class="lx-tag proto-udp">UDP</span><span class="lx-muted">Datagramm · RFC 768</span></div><div class="lx-scroll"><div class="lx-bits lx-o4"><span class="lx-ruler lx-r1 lx-c1 lx-s4">0</span><span class="lx-ruler lx-r1 lx-c5 lx-s4">4</span><span class="lx-ruler lx-r1 lx-c9 lx-s4">8</span><span class="lx-ruler lx-r1 lx-c13 lx-s4">12</span><span class="lx-ruler lx-r1 lx-c17 lx-s4">16</span><span class="lx-ruler lx-r1 lx-c21 lx-s4">20</span><span class="lx-ruler lx-r1 lx-c25 lx-s4">24</span><span class="lx-ruler lx-r1 lx-c29 lx-s4">28</span><div class="lx-bit lx-r2 lx-c1 lx-s16" title="Port des sendenden Programms (darf 0 sein, wenn keine Antwort erwartet wird)." data-start="54" data-len="2"><span class="lx-f-name">Quellport</span><span class="lx-f-size">16 Bit</span><span class="lx-f-value">521</span></div><div class="lx-bit lx-r2 lx-c17 lx-s16" title="Port des Dienstes: 53 DNS, 67/68 DHCP, 520 RIP, 521 RIPng, 4789 VXLAN." data-start="56" data-len="2"><span class="lx-f-name">Zielport</span><span class="lx-f-size">16 Bit</span><span class="lx-f-value">521</span></div><div class="lx-bit lx-r3 lx-c1 lx-s16" title="Kopf und Daten in Byte, mindestens 8." data-start="58" data-len="2"><span class="lx-f-name">Länge</span><span class="lx-f-size">16 Bit</span><span class="lx-f-value">32</span></div><div class="lx-bit lx-r3 lx-c17 lx-s16" title="Prüfsumme mit Pseudokopf; bei IPv4 darf sie 0 sein (keine), bei IPv6 ist sie Pflicht." data-start="60" data-len="2"><span class="lx-f-name">Prüfsumme</span><span class="lx-f-size">16 Bit</span><span class="lx-f-value">0xfafd</span></div><div class="lx-bit payload lx-r4 lx-c1 lx-s32" title="Die Nachricht der Anwendung, z.B. eine DNS-Anfrage." data-start="62" data-len="24"><span class="lx-f-name">Daten</span><span class="lx-f-size">variabel</span><span class="lx-f-value">24 Byte</span></div></div></div><figcaption class="lx-muted">Jede Zeile hat 32 Bit (4 Byte), Bit 0 links, so zeichnen die RFCs ihre Köpfe. Gestrichelt: variabel oder optional. Zeigen auf ein Feld erklärt es.</figcaption></figure><div class="table-wrap"><table class="lx-fields"><thead><tr><th>Feld</th><th>Länge</th><th>Wert im Beispiel</th><th>Bedeutung</th></tr></thead><tbody><tr><td>Quellport</td><td class="lx-nowrap">16 Bit (2 Byte)</td><td class="lx-mono">521</td><td>Port des sendenden Programms (darf 0 sein, wenn keine Antwort erwartet wird).</td></tr><tr><td>Zielport</td><td class="lx-nowrap">16 Bit (2 Byte)</td><td class="lx-mono">521</td><td>Port des Dienstes: 53 DNS, 67/68 DHCP, 520 RIP, 521 RIPng, 4789 VXLAN.</td></tr><tr><td>Länge</td><td class="lx-nowrap">16 Bit (2 Byte)</td><td class="lx-mono">32</td><td>Kopf und Daten in Byte, mindestens 8.</td></tr><tr><td>Prüfsumme</td><td class="lx-nowrap">16 Bit (2 Byte)</td><td class="lx-mono">0xfafd</td><td>Prüfsumme mit Pseudokopf; bei IPv4 darf sie 0 sein (keine), bei IPv6 ist sie Pflicht.</td></tr><tr><td>Daten</td><td class="lx-nowrap">variabel</td><td class="lx-mono">24 Byte</td><td>Die Nachricht der Anwendung, z.B. eine DNS-Anfrage.</td></tr></tbody></table></div><figcaption>Werte: Echter Rahmen aus der Demo <a href="https://app.leyonet.ch/?schaufenster=ripng">«RIPng für IPv6»</a> (Nr. 1, 90 Byte), so zeigt ihn auch die Paketliste in leyoNET.</figcaption></figure>
 <h2 id="wann-udp-passt">Wann UDP passt</h2>
 <p>Für eine kurze Frage mit kurzer Antwort wäre ein Handshake teurer als die Nachricht selbst: DNS fragt einfach noch einmal, wenn keine Antwort kommt. DHCP funktioniert sogar, bevor das Gerät eine Adresse hat. Bei Sprache und Video ist ein verspätetes Paket ohnehin wertlos.</p>
 <div class="table-wrap"><table><thead><tr><th>Port</th><th>Dienst</th></tr></thead><tbody><tr><td>53</td><td>DNS</td></tr><tr><td>67 / 68</td><td>DHCP (Server / Client)</td></tr><tr><td>520</td><td>RIP</td></tr><tr><td>4789</td><td>VXLAN</td></tr></tbody></table></div>
@@ -93,7 +98,7 @@
 <section aria-labelledby="normen"><h2 id="normen">Normen</h2>
 <ul class="norms"><li><a href="https://www.rfc-editor.org/rfc/rfc768">RFC 768</a> – User Datagram Protocol</li></ul></section>
 <section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
-<ul class="related"><li><a href="tcp.html">TCP</a> <span class="muted">Zuverlässige Verbindungen zwischen Programmen: Ports, Drei-Wege-Handshake, Sequenz- und Bestätigungsnummern, Wiederholung und Abbau.</span></li><li><a href="dns.html">DNS</a> <span class="muted">Namen in Adressen übersetzen: Zonen, Einträge (A, AAAA, CNAME, MX, PTR …), Weiterleitung, Cache und nslookup.</span></li><li><a href="dhcp.html">DHCP</a> <span class="muted">Adressen automatisch verteilen: Discover, Offer, Request, Ack, Lease-Dauer, feste Zuweisungen und DHCP-Relay über Router.</span></li></ul></section>
+<ul class="related"><li><a href="tcp.html">TCP</a> <span class="muted">Zuverlässige Verbindungen zwischen Programmen: Ports, Drei-Wege-Handshake, Sequenz- und Bestätigungsnummern, Wiederholung und Abbau.</span></li><li><a href="dns.html">DNS</a> <span class="muted">Namen in Adressen übersetzen: Zonen, Einträge (A, AAAA, CNAME, MX, PTR …), Weiterleitung, Cache und nslookup.</span></li><li><a href="dhcp.html">DHCP</a> <span class="muted">Adressen automatisch verteilen: Discover, Offer, Request, Ack, Lease-Dauer, feste Zuweisungen und DHCP-Relay über Router.</span></li><li><a href="rahmen-und-pakete.html">Aufbau von Rahmen und Paketen</a> <span class="muted">Wie Ethernet-Rahmen, IPv4- und IPv6-Pakete, TCP-Segmente und UDP-Datagramme ineinanderstecken, Feld für Feld nach Norm, mit echten Bytes aus leyoNET.</span></li></ul></section>
       </article>
       <nav class="pager" aria-label="Blättern">
         <a class="prev" href="tcp.html"><span class="muted">Zurück</span>TCP</a>
@@ -104,7 +109,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.5.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.5.1 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>

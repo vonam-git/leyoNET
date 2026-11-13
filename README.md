@@ -40,6 +40,9 @@ Geräte aus dem Shop ziehen, verkabeln, konfigurieren – und dann zusehen, wie 
     <td><img src="docs/bilder/katalog.webp" alt="Aufgaben-Katalog mit Sternen und Themen" /><br /><strong>Über 70 Übungen, die sich selbst prüfen</strong><br />Von ★ bis ★★★★★, mit Arbeitsblatt (PDF) und Reihen für die Module 117, 129 und 145.</td>
     <td><img src="docs/bilder/entwurf.webp" alt="Entwurf mit Layer-3-Switch und farbigen VLAN-Bereichen" /><br /><strong>Sauber dokumentiert</strong><br />Bereiche mit Netz und VLAN, Notizen, Stockwerke, Snapshots und Richtpreise in CHF.</td>
   </tr>
+  <tr>
+    <td colspan="2"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/bilder/aufbau-dark.webp" /><img src="docs/bilder/aufbau.webp" alt="Verschachtelung eines Rahmens: HTTP-Daten in TCP, in IPv4, in Ethernet mit FCS, auf der Leitung mit Präambel und Pause" /></picture><br /><strong>Rahmen und Pakete nach Norm</strong><br />Jeder Kopf als Bild wie in RFC und IEEE-Norm, mit den Werten des angeklickten Rahmens, dazu die Verschachtelung bis zur FCS. Gleich im <a href="https://leyonet.ch/wiki/rahmen-und-pakete.html">Wiki</a>.</td>
+  </tr>
 </table>
 
 ## Für den Unterricht
