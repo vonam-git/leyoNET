@@ -26,4 +26,14 @@ In the data centre a lot of traffic flows between servers (“east-west”). **L
 
 The [data centre network](https://app.leyonet.ch/?schaufenster) shows all three designs side by side: Zurich in three tiers, Bern with core and distribution in one rack, Basel as a collapsed core. The sites connect to the provider via modems and are linked with [[ipsec-vpn|IPsec]].
 
+## Redundancy
+
+A network without backup fails with the first cable. That is why everything is doubled in the showcase:
+
+- **Double links:** core and distribution are connected with two fibres, bundled into a port channel with [[lacp]]. Both carry traffic; if one fails, everything runs over the other.
+- **Two ways up:** every access switch is connected to both distribution switches. That creates a loop, so [[stp]] runs: the core is the root bridge, one uplink of every access switch is blocked and takes over if the other fails.
+- **Collapsed core in Basel:** two copper cables in a port channel between core and access.
+
+In the simulation `show spanning-tree` on the access switch shows the blocked backup uplink, `show etherchannel summary` on the core the bundled links. Delete a cable or shut down a port and watch the network keep running.
+
 ![Three data centres with racks, core and access switches](rzVerbund)
