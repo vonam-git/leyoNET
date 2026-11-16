@@ -8,6 +8,7 @@
   import { simStore } from '../state/sim.svelte';
   import DhcpServerView from './DhcpServerView.svelte';
   import MailApp from './MailApp.svelte';
+  import PhoneApp from './PhoneApp.svelte';
   import ServiceLog from './ServiceLog.svelte';
   import Terminal from './Terminal.svelte';
 
@@ -15,16 +16,23 @@
   let { win, index }: { win: DesktopWindow; index: number } = $props();
   const device = $derived(getDevice(editor.topology, win.deviceId));
   const active = $derived(desktops.active === win.deviceId);
+  // IP-Telefon: Telefon, Befehlszeile, Netzwerk; Kamera: nur Befehlszeile und Netzwerk.
+  const special = $derived(device?.type === 'ipphone' ? ['phone', 'terminal', 'network'] : device?.type === 'camera' ? ['terminal', 'network'] : null);
   const apps = $derived([
-    'terminal',
-    'browser',
-    'mail',
-    'network',
+    ...(special ?? ['terminal', 'browser', 'mail', 'network']),
     ...(device?.dhcpServer ? ['dhcpServer'] : []),
     ...(device?.dnsServer ? ['dnsServer'] : []),
     ...(device?.webServer ? ['webServer'] : []),
     ...(device?.mailServer ? ['mailServer'] : []),
+    ...(device?.sipServer ? ['pbx'] : []),
   ]);
+  const pbxSummary = $derived(
+    ((simStore.tick, simStore.sim?.getDeviceState(win.deviceId).sipRegistrations) || []).map((r) => t(r.nat ? 'pbx.lineNat' : 'pbx.line', { number: r.number, address: r.address })),
+  );
+  // Gewählte Anwendung gibt es auf diesem Gerät nicht (z.B. Browser beim Telefon): die erste nehmen.
+  $effect(() => {
+    if (!apps.includes(win.app)) win.app = apps[0]!;
+  });
   const mailboxSummary = $derived(
     ((simStore.tick, simStore.sim?.getDeviceState(win.deviceId).mailboxes) || []).map((m) =>
       t('mailServer.boxSummary', { address: `${m.user}@${device?.mailServer?.domain ?? ''}`, count: m.count }),
@@ -95,7 +103,9 @@
       {/each}
     </div>
     <div class="content" role="tabpanel">
-      {#if win.app === 'network'}
+      {#if win.app === 'phone'}
+        <PhoneApp {device} />
+      {:else if win.app === 'network'}
         <div class="padded"><AddressView {device} /></div>
       {:else if win.app === 'browser'}
         <Browser {device} />
@@ -107,6 +117,8 @@
         <MailApp {device} />
       {:else if win.app === 'mailServer'}
         <ServiceLog {device} prefix={['smtp.', 'pop3.', 'imap.']} summary={mailboxSummary.length ? mailboxSummary : [t('mailServer.noMailboxes')]} />
+      {:else if win.app === 'pbx'}
+        <ServiceLog {device} prefix="sip." summary={pbxSummary.length ? pbxSummary : [t('voip.noRegistrations')]} />
       {:else if win.app === 'webServer'}
         <ServiceLog {device} prefix="http." summary={(device.webServer?.files ?? []).map((f) => f.path)} />
       {:else}

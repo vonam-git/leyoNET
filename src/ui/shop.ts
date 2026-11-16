@@ -118,7 +118,6 @@ export const SHOP: readonly ShopItem[] = [
   device('pc', 'endpoints', 'pc'),
   device('ipphone', 'endpoints', 'ipphone'),
   device('camera', 'endpoints', 'camera'),
-  device('cameraPtz', 'endpoints', 'camera', { options: { variant: 'ptz' } }),
   device('group10', 'endpoints', 'clientgroup', { options: { groupSize: 10 } }),
   device('group25', 'endpoints', 'clientgroup', { options: { groupSize: 25 } }),
   device('group50', 'endpoints', 'clientgroup', { options: { groupSize: 50 } }),

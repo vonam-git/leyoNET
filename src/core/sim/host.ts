@@ -52,7 +52,7 @@ export interface HostState {
   /** IP-Telefon: Anmeldung und Gespräch. */
   voip?: VoipState;
   /** Telefonanlage: angemeldete Rufnummern. */
-  sipRegistrations?: { number: string; address: string }[];
+  sipRegistrations?: { number: string; address: string; nat?: boolean }[];
 }
 
 type Command = 'ping' | 'tracert';
@@ -198,13 +198,13 @@ export class HostNode extends IpNode {
     }
     if (msg.kind === 'sip') {
       const device = this.ctx.device();
-      if (device?.sipServer && !msg.status && msg.method === 'REGISTER') return this.pbx.onSip(packet, msg);
-      // Anfragen an die Anlage (Ziel ist eine Rufnummer bei dieser Adresse) und Antworten, die über sie laufen.
-      if (device?.sipServer && (msg.status !== undefined ? msg.via[0] === packet.dst : msg.uri.endsWith(`@${packet.dst}`))) return this.pbx.onSip(packet, msg);
+      // Anfragen an die Anlage (REGISTER, Rufnummer bei dieser Adresse) und Nachrichten laufender Gespräche.
+      if (device?.sipServer && this.pbx.handles(packet, msg)) return this.pbx.onSip(packet, datagram, msg);
       if (device?.type === 'ipphone') this.phone.onSip(packet, msg);
       return;
     }
     if (msg.kind === 'rtp') {
+      if (this.ctx.device()?.sipServer && datagram.dstPort >= 20000) return this.pbx.onRtp(packet, datagram, msg);
       if (this.ctx.device()?.type === 'ipphone') this.phone.onRtp(msg);
       return;
     }

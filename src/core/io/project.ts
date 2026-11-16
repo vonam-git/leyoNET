@@ -590,7 +590,7 @@ function readDevice(v: unknown, path: string): Device {
   }
   if (o.voip !== undefined) {
     const v = obj(o.voip, `${path}.voip`);
-    const number = text(v.number, `${path}.voip.number`, 8);
+    const number = text(v.number, `${path}.voip.number`, 15);
     if (device.type !== 'ipphone' || !PHONE_NUMBER.test(number)) throw new Invalid(`${path}.voip`);
     const server = v.server === undefined ? undefined : text(v.server, `${path}.voip.server`, 15);
     if (server !== undefined && parseIp(server) === null) throw new Invalid(`${path}.voip.server`);

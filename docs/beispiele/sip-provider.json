@@ -1,0 +1,317 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "internet",
+        "name": "Internet",
+        "position": {
+          "x": 520,
+          "y": 160
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "ip": "203.0.113.1",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:01:01",
+            "ip": "203.0.113.5",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:01:02",
+            "ip": "198.51.100.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:01:03"
+          }
+        ]
+      },
+      {
+        "id": "d2",
+        "type": "server",
+        "name": "SIP-Provider",
+        "position": {
+          "x": 520,
+          "y": 0
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "198.51.100.50",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "198.51.100.1",
+        "sipServer": true
+      },
+      {
+        "id": "d3",
+        "type": "cpe",
+        "name": "Internet-Box Muster",
+        "position": {
+          "x": 220,
+          "y": 300
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "nat": true,
+            "ip": "203.0.113.2",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:03:01",
+            "ip": "192.168.1.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:03:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:03:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:03:04"
+          }
+        ],
+        "dhcpServer": {
+          "start": "192.168.1.100",
+          "end": "192.168.1.199",
+          "gateway": "192.168.1.1",
+          "dns": "192.168.1.1",
+          "leaseTime": 3600
+        },
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "203.0.113.1"
+          }
+        ]
+      },
+      {
+        "id": "d4",
+        "type": "ipphone",
+        "name": "Telefon Muster",
+        "position": {
+          "x": 120,
+          "y": 460
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00"
+          }
+        ],
+        "dhcp": true,
+        "power": "local",
+        "voip": {
+          "number": "0441234510",
+          "server": "198.51.100.50"
+        }
+      },
+      {
+        "id": "d5",
+        "type": "notebook",
+        "name": "Notebook Muster",
+        "position": {
+          "x": 320,
+          "y": 460
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00"
+          }
+        ],
+        "dhcp": true
+      },
+      {
+        "id": "d8",
+        "type": "cpe",
+        "name": "Internet-Box Beispiel",
+        "position": {
+          "x": 820,
+          "y": 300
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:08:00",
+            "nat": true,
+            "ip": "203.0.113.6",
+            "mask": "255.255.255.252"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:08:01",
+            "ip": "192.168.1.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:08:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:08:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:08:04"
+          }
+        ],
+        "dhcpServer": {
+          "start": "192.168.1.100",
+          "end": "192.168.1.199",
+          "gateway": "192.168.1.1",
+          "dns": "192.168.1.1",
+          "leaseTime": 3600
+        },
+        "routes": [
+          {
+            "network": "0.0.0.0",
+            "mask": "0.0.0.0",
+            "gateway": "203.0.113.5"
+          }
+        ]
+      },
+      {
+        "id": "d9",
+        "type": "ipphone",
+        "name": "Telefon Beispiel",
+        "position": {
+          "x": 720,
+          "y": 460
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:09:00"
+          }
+        ],
+        "dhcp": true,
+        "power": "local",
+        "voip": {
+          "number": "0311234520",
+          "server": "198.51.100.50"
+        }
+      },
+      {
+        "id": "d10",
+        "type": "notebook",
+        "name": "Notebook Beispiel",
+        "position": {
+          "x": 920,
+          "y": 460
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:0A:00"
+          }
+        ],
+        "dhcp": true
+      }
+    ],
+    "cables": [
+      {
+        "id": "c6",
+        "a": {
+          "device": "d4",
+          "iface": 0
+        },
+        "b": {
+          "device": "d3",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c7",
+        "a": {
+          "device": "d5",
+          "iface": 0
+        },
+        "b": {
+          "device": "d3",
+          "iface": 2
+        }
+      },
+      {
+        "id": "c11",
+        "a": {
+          "device": "d9",
+          "iface": 0
+        },
+        "b": {
+          "device": "d8",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c12",
+        "a": {
+          "device": "d10",
+          "iface": 0
+        },
+        "b": {
+          "device": "d8",
+          "iface": 2
+        }
+      },
+      {
+        "id": "c13",
+        "a": {
+          "device": "d3",
+          "iface": 0
+        },
+        "b": {
+          "device": "d1",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c14",
+        "a": {
+          "device": "d8",
+          "iface": 0
+        },
+        "b": {
+          "device": "d1",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c15",
+        "a": {
+          "device": "d2",
+          "iface": 0
+        },
+        "b": {
+          "device": "d1",
+          "iface": 2
+        }
+      }
+    ],
+    "nextId": 16
+  },
+  "configuration": {}
+}

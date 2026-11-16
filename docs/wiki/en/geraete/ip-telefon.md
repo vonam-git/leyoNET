@@ -17,3 +17,5 @@ A desk phone rarely has its own power supply. It takes its power via [[poe]] fro
 | Address | static or via DHCP, as on a PC |
 | Powered by | PoE (default) or power supply |
 | Class | 0–8; default 2 (7 W) |
+
+In the simulation a double click opens the phone with display and keypad. It has no e-mail, browser, firewall or services, just like a real desk phone. How calls work, including via a SIP provider behind NAT, is explained in [[telefonie]].

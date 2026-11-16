@@ -13,6 +13,7 @@ import { tour } from './state/tour.svelte';
 import { ui, type Theme } from './state/ui.svelte';
 import { EXAM_BLOCKED_COMMANDS, examMode } from './state/exam.svelte';
 import { verbund } from './state/verbund.svelte';
+import { adminToken, adminVerified } from './state/admin.svelte';
 
 /** Freiwillige Unterstützung (nur ein Link, nichts wird eingebunden). */
 export const SUPPORT_URL = 'https://patreon.com/leyonet';
@@ -142,7 +143,21 @@ const COMMANDS: Command[] = [
   { id: 'tool.verbund', label: () => t('verbund.openMap'), run: () => dialogs.show('verbundMap'), visible: () => verbund.active, icon: 'globe' },
   { id: 'tool.taskEditor', label: () => t('menu.tool.taskEditor'), run: () => dialogs.show('taskEditor'), visible: () => ui.has('tool.taskEditor'), enabled: design },
   { id: 'tool.exam', label: () => t('menu.tool.exam'), run: () => dialogs.show('exam'), visible: () => ui.has('tool.taskEditor'), enabled: design },
-  { id: 'tool.examAi', label: () => t('menu.tool.examAi'), run: () => dialogs.show('examAi'), visible: () => ui.has('tool.taskEditor'), enabled: design },
+  // Aufgaben mit KI: nur in der Webversion nach der Admin-Anmeldung (der Server prüft das Token).
+  {
+    id: 'tool.examAi',
+    label: () => t('menu.tool.examAi'),
+    run: () =>
+      void adminVerified().then((ok) => {
+        if (ok) dialogs.show('examAi');
+        else {
+          editor.notify(t('examAi.needAdmin'), 'error');
+          dialogs.show('admin');
+        }
+      }),
+    visible: () => ui.online && ui.has('tool.taskEditor') && !!adminToken.value,
+    enabled: design,
+  },
   { id: 'tool.examExport', label: () => t('menu.tool.examExport'), run: () => dialogs.show('examExport'), visible: () => ui.has('tool.taskEditor'), enabled: () => design() && !!editor.tasks?.goals.length },
   { id: 'tool.review', label: () => t('menu.tool.review'), run: () => dialogs.show('review'), visible: () => ui.has('tool.taskEditor') },
   { id: 'tool.features', label: () => t('menu.tool.features'), run: () => dialogs.show('features'), icon: 'layers' },

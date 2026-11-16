@@ -23,3 +23,5 @@ Ein Tischtelefon hat selten ein eigenes Netzteil. Es bezieht den Strom per [[poe
 | Adresse | fest oder per DHCP, wie bei einem PC |
 | Strom über | PoE (Standard) oder Netzteil |
 | Klasse | 0–8; Standard 2 (7 W) |
+
+In der Simulation öffnet ein Doppelklick das Telefon mit Anzeige und Wähltastatur. E-Mail, Browser, Firewall und Dienste hat es nicht, wie ein echtes Tischtelefon. Wie Anrufe laufen, auch über einen SIP-Provider hinter NAT, erklärt [[telefonie]].

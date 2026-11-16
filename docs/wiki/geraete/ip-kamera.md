@@ -19,4 +19,4 @@ Eine IP-Kamera schickt ihr Videobild über das Datennetz an einen Rekorder oder 
 | Dome-Kamera, fest | 3 | 15,4 W | 13 W | Typ 1 (802.3af) |
 | schwenkbar mit Heizung | 4 | 30 W | 25,5 W | Typ 2 (PoE+, 802.3at) |
 
-Eine schwenkbare Kamera an einem Switch mit Typ 1 bleibt ohne Strom, weil Klasse 4 mehr verlangt, als der Port liefern darf. Wie der Switch die Leistung verteilt, erklärt [[poe]].
+Im Shop gibt es eine Kamera (Klasse 3). Für ein Modell mit Schwenkkopf oder Heizung stellst du unter **PoE** die Klasse 4 ein. Eine Kamera mit Klasse 4 an einem Switch mit Typ 1 bleibt ohne Strom, weil Klasse 4 mehr verlangt, als der Port liefern darf. Wie der Switch die Leistung verteilt, erklärt [[poe]].

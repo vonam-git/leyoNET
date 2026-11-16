@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addStaticRoute, configureHost, setPoe, setPortRate, setQos, setSipServer, setVoip } from '../model/topology';
+import { addStaticRoute, configureHost, setInterfaceAddress, setPoe, setPortRate, setPowerSource, setQos, setSipServer, setVoip } from '../model/topology';
 import { dissect } from '../wire/encode';
 import { Simulation } from './simulation';
 import { NetBuilder } from './testing';
@@ -112,3 +112,49 @@ describe('QoS bei einem Engpass', () => {
   });
 });
 
+
+describe('SIP-Provider im Internet, Telefone hinter NAT', () => {
+  /** Zwei Heimnetze mit Internet-Box (beide 192.168.1.0/24), dazwischen der Provider mit SIP-Server. */
+  function homes() {
+    const net = new NetBuilder();
+    const isp = net.router('Internet', ['203.0.113.1/30', '203.0.113.5/30', '198.51.100.1/24'], 'internet');
+    const sip = net.host('SIP-Provider', '198.51.100.50', '24', '198.51.100.1');
+    net.apply((t) => setSipServer(t, sip, true));
+    const phones: string[] = [];
+    for (const [n, wan, gw] of [['1', '203.0.113.2', '203.0.113.1'], ['2', '203.0.113.6', '203.0.113.5']] as const) {
+      const cpe = net.add('cpe', `Box ${n}`);
+      net.apply((t) => setInterfaceAddress(t, cpe, 0, wan, '255.255.255.252'));
+      net.apply((t) => addStaticRoute(t, cpe, { network: '0.0.0.0', mask: '0.0.0.0', gateway: gw }));
+      const phone = net.add('ipphone', `Telefon ${n}`);
+      net.apply((t) => configureHost(t, phone, { ip: '', mask: '', dhcp: true }));
+      net.apply((t) => setPowerSource(t, phone, 'local'));
+      net.apply((t) => setVoip(t, phone, { number: `04412345${n}0`, server: '198.51.100.50' }));
+      net.link(cpe, isp);
+      net.link(phone, cpe);
+      phones.push(phone);
+    }
+    net.link(sip, isp);
+    return { net, sip, phones };
+  }
+
+  it('meldet beide Telefone über NAT an, verbindet und leitet die Sprache über den Provider', () => {
+    const { net, sip, phones } = homes();
+    const sim = new Simulation(net.topology);
+    sim.runUntil(8000);
+    const regs = sim.getDeviceState(sip).sipRegistrations!;
+    expect(regs).toHaveLength(2);
+    // Gesehen wird die öffentliche Adresse der Internet-Box mit übersetztem Port.
+    expect(regs.every((r) => r.nat && /^203\.0\.113\.[26]:\d+$/.test(r.address))).toBe(true);
+    sim.call(phones[0]!, '0441234520', 3);
+    sim.runUntil(sim.now + 6000);
+    const a = sim.getDeviceState(phones[0]!).voip!.call!;
+    const b = sim.getDeviceState(phones[1]!).voip!.call!;
+    expect(a.phase).toBe('ended');
+    expect(a.stats.received).toBeGreaterThan(80);
+    expect(b.stats.received).toBeGreaterThan(80);
+    expect(a.stats.quality).toBe('good');
+    // Die Sprache läuft über den Provider (Media-Relay), nie an eine private Adresse ins Internet.
+    const rtpToPrivate = sim.getPacketLog().some((e) => e.frame.payload.kind === 'ipv4' && e.frame.payload.payload.kind === 'udp' && e.frame.payload.payload.payload.kind === 'rtp' && e.from.device === sip && e.frame.payload.dst.startsWith('192.168.'));
+    expect(rtpToPrivate).toBe(false);
+  });
+});

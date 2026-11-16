@@ -5,6 +5,7 @@
   import { buildAiPrompt } from '../examAi';
   import { errorText } from '../labels';
   import { downloadText } from '../persist/files';
+  import { adminToken } from '../state/admin.svelte';
   import { editor } from '../state/editor.svelte';
   import Modal from './Modal.svelte';
 
@@ -15,6 +16,11 @@
    * Text verwendet (siehe docs/sicherheit.md).
    */
   let { onclose }: { onclose: () => void } = $props();
+
+  // Nur nach der Admin-Anmeldung (Webversion); meldet sich der Admin ab, schliesst das Fenster.
+  $effect(() => {
+    if (!adminToken.value) onclose();
+  });
 
   let wish = $state('');
   let answer = $state('');

@@ -14,7 +14,7 @@ verwandt: [uebungen-einsetzen, pruefungen]
 
 Schneller geht es mit einer **Musterlösung**: das fertige Netz bauen und im Aufgabeneditor «Ziele aus diesem Netz vorschlagen». leyoNET erzeugt Ziele für Geräte, Adressen, Gateways, DHCP, DNS, Bereiche und Verbindungen. Unpassendes streichen, den Rest gewichten.
 
-Mit einer **KI**: Werkzeuge → Aufgaben mit KI erzeugt eine Anleitung mit allen Regeln, dem Schema der Prüfbausteine und der offenen Aufgabe als Beispiel. Die Antwort der KI (JSON im Format «leyonet-ki-aufgabe») wieder einfügen; leyoNET baut daraus Startnetz und Aufgabe und lehnt Fehlerhaftes mit genauer Stelle ab. Prüfen Sie jede KI-Aufgabe, indem Sie sie einmal selbst lösen.
+Mit einer **KI** (nur in der Webversion nach der Anmeldung mit dem Admin-Passwort): Werkzeuge → Aufgaben mit KI erzeugt eine Anleitung mit allen Regeln, dem Schema der Prüfbausteine und der offenen Aufgabe als Beispiel. Die Antwort der KI (JSON im Format «leyonet-ki-aufgabe») wieder einfügen; leyoNET baut daraus Startnetz und Aufgabe und lehnt Fehlerhaftes mit genauer Stelle ab. Prüfen Sie jede KI-Aufgabe, indem Sie sie einmal selbst lösen.
 
 ## Prüfbausteine (Auswahl)
 

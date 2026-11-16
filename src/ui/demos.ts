@@ -338,6 +338,23 @@ export const DEMOS: readonly Demo[] = [
     ],
   },
   {
+    id: 'sipProvider',
+    file: 'sip-provider.json',
+    topic: 'access',
+    layers: [3, 4, 7],
+    actions: [{ at: 8000, device: 'Telefon Muster', command: 'call 0311234520 8' }],
+    check: { kind: 'call', device: 'Telefon Muster' },
+    until: 22_000,
+    tour: [
+      { sim: false, highlight: 'SIP-Provider' },
+      { highlight: 'Telefon Muster', window: { device: 'Telefon Muster', tab: 'voip' } },
+      { sim: true, pause: false, highlight: 'Internet-Box Muster' },
+      { highlight: 'SIP-Provider' },
+      { action: { at: 0, device: 'Telefon Muster', command: 'call 0311234520 8' }, highlight: 'Telefon Beispiel' },
+      { highlight: 'SIP-Provider' },
+    ],
+  },
+  {
     id: 'poe',
     file: 'poe-buero.json',
     topic: 'switching',
@@ -454,6 +471,8 @@ export function demoProject(demo: Demo): string | undefined {
 }
 
 /** Desktop-Anwendung, die eine Aktion zeigt. */
-export function demoApp(action: DemoAction): 'terminal' | 'browser' | 'mail' {
+export function demoApp(action: DemoAction): 'terminal' | 'browser' | 'mail' | 'phone' {
+  // Anruf: das Telefon selbst zeigen (Anzeige mit Gesprächsqualität).
+  if ('command' in action && /^call\s/i.test(action.command)) return 'phone';
   return 'browse' in action ? 'browser' : 'mail' in action || 'fetchMail' in action ? 'mail' : 'terminal';
 }

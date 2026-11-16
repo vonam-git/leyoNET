@@ -23,7 +23,8 @@ describe('Website leyonet.ch', () => {
     expect(block).toMatch(/encodeURIComponent\(subject\)/);
     expect(block).toMatch(/encodeURIComponent\(body\)/);
     expect(block).toMatch(/\/\^\[\\w\.\+-\]\+\$\/\.test\(user\)/);
-    expect(read('impressum.vorlage.html')).toMatch(/data-user="\[/);
+    // Ziel ist die Projektadresse info@leyonet.ch (keine Personendaten).
+    expect(read('impressum.vorlage.html')).toContain('data-user="info" data-domain="leyonet.ch"');
   });
 
   it.each(pages)('%s lädt nichts von fremden Servern', (page) => {

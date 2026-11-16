@@ -90,7 +90,7 @@
     if (d.type === 'ipphone' || (canHostServices(d.type) && (ui.has('service.voip') || d.sipServer))) list.push('voip');
     if ((canSupplyPoe(d.type) && (ui.has('net.poe') || d.poe)) || (canBePowered(d.type) && (ui.has('net.poe') || needsPoe(d)))) list.push('poe');
     if (d.type === 'accesspoint' || (role === 'endpoint' && canUseWifi(d) && ui.has('medium.wireless'))) list.push('wlan');
-    if (role === 'endpoint' && ui.has('service.mail') && d.type !== 'clientgroup') list.push('mail');
+    if (role === 'endpoint' && ui.has('service.mail') && d.type !== 'clientgroup' && d.type !== 'ipphone' && d.type !== 'camera') list.push('mail');
     if (canHostServices(d.type)) list.push('services');
     if (d.type === 'modem' || d.type === 'cpe') list.push('modem');
     return list;

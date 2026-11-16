@@ -36,7 +36,7 @@ export interface SeatStatus {
 const KEY = 'netzwerk-simulator.exam';
 
 /** Gesperrte Dialoge und Befehle während einer Prüfung. */
-export const EXAM_BLOCKED_DIALOGS = new Set(['examJoin', 'catalog', 'demos', 'taskEditor', 'exam', 'examExport', 'review', 'features', 'admin', 'session']);
+export const EXAM_BLOCKED_DIALOGS = new Set(['examJoin', 'catalog', 'demos', 'taskEditor', 'exam', 'examExport', 'examAi', 'review', 'features', 'admin', 'session']);
 export const EXAM_BLOCKED_COMMANDS = new Set([
   'file.new',
   'help.support',
@@ -47,6 +47,7 @@ export const EXAM_BLOCKED_COMMANDS = new Set([
   'tool.taskEditor',
   'tool.exam',
   'tool.examExport',
+  'tool.examAi',
   'tool.review',
   'tool.features',
   'tool.loadFeatures',

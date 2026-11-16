@@ -32,6 +32,8 @@ Die Lernenden sehen also nur, *was* zu tun ist und wie viele Punkte ein Teil gib
 
 ## Aufgaben und Prüfungen mit KI
 
+Nur in der **Webversion nach der Admin-Anmeldung** (Admin-Passwort oder Zugangsschlüssel einer Schule bzw. Lehrperson): Der Menüpunkt erscheint erst danach, und vor dem Öffnen prüft der Server das Token. In der lokalen Datei und der Desktop-App gibt es das Werkzeug nicht, damit Lernende über die Anleitung nicht an die Prüfbausteine (also die Lösung) kommen.
+
 **Werkzeuge → Aufgaben mit KI …** erzeugt eine Anleitung (Prompt, Markdown) für eine KI nach Wahl:
 
 - Regeln: genau ein JSON-Objekt, nur Adressen aus RFC 1918/5737, Domains auf `.example`, eindeutige Gerätenamen, Startnetz ohne Lösung, Punkte und `section` für Prüfungen.

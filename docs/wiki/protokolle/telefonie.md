@@ -4,9 +4,9 @@ kurz: Wie ein IP-Telefon ein Gespräch aufbaut (SIP, SDP), die Sprache überträ
 reihenfolge: 27.5
 schicht: 7 (Anwendung, über UDP)
 hilfe: [voip]
-demos: [voipQos]
+demos: [voipQos, sipProvider]
 uebungen: [voip-qos]
-normen: [RFC 3261, RFC 8866, RFC 3550, RFC 3551, ITU-T G.711, ITU-T G.114]
+normen: [RFC 3261, RFC 3581, RFC 8866, RFC 3550, RFC 3551, ITU-T G.711, ITU-T G.114, ITU-T E.164]
 protokolle: [SIP, SDP, RTP]
 verwandt: [qos, ip-telefon, udp, poe]
 ---
@@ -63,9 +63,19 @@ Mit allen Köpfen (RTP 12, UDP 8, IP 20, Ethernet 18 Bytes) braucht ein Gespräc
 
 Steht eine Leitung im Stau, leidet die Sprache zuerst: Sie wartet hinter grossen Datenpaketen. Abhilfe schafft [[qos]].
 
+## SIP-Provider und NAT
+
+Zu Hause steht keine Telefonanlage: Das Telefon meldet sich direkt beim **SIP-Provider** im Internet an, mit seiner Festnetznummer (bis 15 Ziffern nach ITU-T E.164). Seit der Umstellung auf All IP telefonieren in der Schweiz alle Festnetzanschlüsse so. Dazwischen steht die Internet-Box mit NAT, und das macht zwei Probleme:
+
+- **Signalisierung:** Das Telefon schreibt seine private Adresse (192.168.1.100) in die SIP-Nachricht. Der Provider antwortet deshalb an die Adresse und den Port, von denen das REGISTER wirklich kam (`received` und `rport`, RFC 3581). Über diesen Eintrag in der NAT-Tabelle erreicht er das Telefon auch für einen ankommenden Anruf.
+- **Sprache:** Im SDP steht ebenfalls die private Adresse. Der Provider ersetzt sie durch seine eigene und leitet die RTP-Pakete weiter (**Media-Relay**, wie ein Session Border Controller). Ziel ist jeweils die Adresse, von der die Gegenseite sendet (symmetrisches RTP).
+
+So kommen Gespräche zwischen zwei Heimnetzen zustande, auch wenn beide dieselben privaten Adressen haben.
+
 ## In leyoNET
 
-- Telefon: Einstellungen → Telefonie: Rufnummer und Adresse der Anlage. Befehlszeile: `call 202`, `call 192.168.1.22`, `hangup`.
+- Telefon: Einstellungen → Telefonie: Rufnummer und Adresse der Anlage bzw. des SIP-Providers. In der Simulation öffnet ein Doppelklick das **Telefon** mit Wähltastatur: Nummer eingeben, Anrufen, Auflegen. Auf der Befehlszeile: `call 202`, `call 192.168.1.22`, `hangup`.
+- SIP-Provider: ein Server mit öffentlicher Adresse und eingeschalteter Telefonanlage; hinter NAT leitet er die Sprache selbst weiter.
 - Server: Einstellungen → Telefonie → «Telefonanlage einschalten»; dort stehen in der Simulation die angemeldeten Nummern.
 - Paketliste: Filter `sip` oder `rtp`; die Bytes zeigen den SIP-Text und den RTP-Kopf.
 - Prüfbaustein «Telefongespräch», auf Wunsch unter Last.

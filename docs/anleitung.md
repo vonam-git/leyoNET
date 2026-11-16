@@ -72,6 +72,8 @@ Antworten aus der eigenen Zone sind «autorisierend», weitergeleitete «nicht a
 
 Ein Server wird unter **Erweitert → Telefonie** zur Telefonanlage. IP-Telefone tragen dort ihre Rufnummer und die Adresse der Anlage ein; sie brauchen Strom per PoE (Switch mit PoE, Reiter **PoE**).
 
+- Doppelklick auf das Telefon öffnet es mit Wähltastatur: Nummer eingeben, Anrufen, Auflegen. Telefone und Kameras haben keinen Browser, keine E-Mail und keine Firewall.
+- **SIP-Provider**: ein Server mit öffentlicher Adresse im Internet und eingeschalteter Telefonanlage. Telefone hinter einer Internet-Box melden sich mit ihrer Festnetznummer dort an; NAT löst der Provider (Antwort an die gesehene Adresse, Sprache über ihn). Siehe Demo «Telefonieren über einen SIP-Provider».
 - `call 202` ruft die Nummer 202 über die Anlage an, `call 192.168.1.22` direkt eine Adresse; `hangup` legt auf. Nach dem Gespräch stehen Verlust, Laufzeit, Jitter und Qualität im Reiter Telefonie.
 - `iperf -c 192.168.2.10 -u -b 4M -t 20` auf einem PC erzeugt Last (UDP, 4 Mbit/s, 20 s).
 - **Erweitert → QoS** (Router, Switch, Layer-3-Switch, Firewall): Bandbreite je Port (z.B. `2M` für eine WAN-Leitung) und «QoS einschalten» (Sprache mit DSCP EF zuerst). Siehe Demo «Telefonie mit QoS über eine WAN-Leitung».
