@@ -14,11 +14,11 @@ Im Klassen-Verbund (nur Webversion) baut jede Person oder Gruppe ihren eigenen *
 
 ## Adressplan
 
-Jeder Platz *n* bekommt ein eigenes Transfernetz aus 203.0.113.0/24 (RFC 5737):
+Jeder Platz *n* bekommt ein eigenes Transitnetz aus 203.0.113.0/24 (RFC 5737):
 
 | | Adresse |
 |---|---|
-| Transfernetz | 203.0.113.(4·n)/30 |
+| Transitnetz | 203.0.113.(4·n)/30 |
 | Provider (Gateway) | 203.0.113.(4·n+1) |
 | Standort (WAN) | 203.0.113.(4·n+2) |
 | Zentrale | 198.51.100.10 |
@@ -57,6 +57,8 @@ Im Aufgabenkatalog erscheinen Verbund-Übungen nur in einer Klasse mit freigegeb
 
 - **Standort an die Zentrale anschliessen** (★★): Anschluss markieren, Adressen eintragen, NAT; PC erreicht die Zentrale.
 - **Eigenen Webserver im Verbund veröffentlichen** (★★★): Portweiterleitung, damit die Zentrale die Webseite des Standorts abruft.
+
+Jede Verbund-Übung zeigt im Aufgabenfenster den Kasten **«Dein Platz im Klassen-Verbund»**: Platznummer und Gruppe, Transitnetz, WAN-Adresse, Provider und Zentrale für genau diesen Platz, dazu das Ziel in einem Satz. Wer noch keiner Klasse beigetreten ist oder wessen Lehrperson noch keine Infrastruktur geladen hat, liest dort, was fehlt. Der Auftrag selbst ist gegliedert in «Worum es geht», «Dein Auftrag» und «Fertig bist du, wenn».
 
 Die Musterlösungen im Arbeitsblatt zeigen die Adressen von Platz 1.
 

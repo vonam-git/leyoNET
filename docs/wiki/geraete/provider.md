@@ -13,7 +13,7 @@ Das Gerät «Internet» ersetzt alles, was hinter dem Anschluss liegt: den Provi
 
 ## Anschlüsse und Adressen
 
-Jeder Anschluss des Providers führt zu einem Kunden, meist mit einem kleinen **Transfernetz** (/30): eine Adresse für den Provider, eine für den Kunden. Öffentliche Beispieladressen stammen aus den Dokumentationsnetzen nach RFC 5737 (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24).
+Jeder Anschluss des Providers führt zu einem Kunden, meist mit einem kleinen **Transitnetz** (/30): eine Adresse für den Provider, eine für den Kunden. Öffentliche Beispieladressen stammen aus den Dokumentationsnetzen nach RFC 5737 (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24).
 
 ## Besondere Funktionen
 

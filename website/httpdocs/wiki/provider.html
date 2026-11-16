@@ -91,7 +91,7 @@
 <h2 id="wozu">Wozu</h2>
 <p>Das Gerät «Internet» ersetzt alles, was hinter dem Anschluss liegt: den Provider mit seinen Routern und das restliche Internet. Es routet zwischen seinen Anschlüssen wie ein Router und verhält sich wie ein echter Provider: <strong>Private Adressen</strong> (RFC 1918) leitet es nicht weiter. Wer ins Internet will, braucht darum <a href="nat.html">NAT und PAT</a>.</p>
 <h2 id="anschluesse-und-adressen">Anschlüsse und Adressen</h2>
-<p>Jeder Anschluss des Providers führt zu einem Kunden, meist mit einem kleinen <strong>Transfernetz</strong> (/30): eine Adresse für den Provider, eine für den Kunden. Öffentliche Beispieladressen stammen aus den Dokumentationsnetzen nach RFC 5737 (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24).</p>
+<p>Jeder Anschluss des Providers führt zu einem Kunden, meist mit einem kleinen <strong>Transitnetz</strong> (/30): eine Adresse für den Provider, eine für den Kunden. Öffentliche Beispieladressen stammen aus den Dokumentationsnetzen nach RFC 5737 (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24).</p>
 <h2 id="besondere-funktionen">Besondere Funktionen</h2>
 <ul><li><strong>CGNAT:</strong> Der Provider gibt Kunden Adressen aus 100.64.0.0/10 und übersetzt selbst noch einmal, weil öffentliche IPv4-Adressen knapp sind (<a href="nat.html">NAT und PAT</a>).</li><li><strong>AFTR für DS-Lite:</strong> Er nimmt IPv4 im IPv6-Tunnel entgegen und übersetzt es (<a href="ds-lite.html">DS-Lite</a>).</li><li><strong>Provider für den Klassen-Verbund:</strong> In der Infrastruktur der Lehrperson ist ein Internet-Gerät der Anschlusspunkt aller Standorte (<a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a>).</li></ul>
 <section aria-labelledby="in-leyonet"><h2 id="in-leyonet">So geht es in leyoNET</h2>

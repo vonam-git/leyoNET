@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { downloadProject } from '../actions';
   import { usedFeatures } from '../features';
   import { t } from '../../i18n';
   import { CATALOG, type CatalogEntry } from '../catalog';
@@ -54,10 +55,28 @@
     if (confirm(t('catalog.resetConfirm'))) progress.reset();
   }
 
+  /** Gewählte Aufgabe, solange gefragt wird, ob der jetzige Aufbau vorher gespeichert werden soll. */
+  let pending = $state<CatalogEntry | null>(null);
+
+  /** Jede Aufgabe beginnt in einem leeren Projekt; ein vorhandener Aufbau wird erst nach Rückfrage entfernt. */
   function start(entry: CatalogEntry) {
+    if (editor.topology.devices.length > 0) pending = entry;
+    else open(entry);
+  }
+
+  function confirmStart(save: boolean) {
+    const entry = pending;
+    if (!entry) return;
+    if (save) downloadProject();
+    pending = null;
+    open(entry);
+  }
+
+  function open(entry: CatalogEntry) {
     const { topology, tasks } = entry.build();
     editor.setMode('design');
-    editor.replace(topology, { undoable: true, tasks, snapshots: [] });
+    // Nicht rückgängig: Der alte Aufbau soll nicht versehentlich in die Aufgabe zurückkommen.
+    editor.replace(topology, { undoable: false, tasks, snapshots: [] });
     ui.ensure([...(entry.features ?? []), ...usedFeatures(topology)]);
     editor.notify(t('catalog.started', { title: tasks.title }));
     onclose();
@@ -66,6 +85,17 @@
 
 <Modal title={t('catalog.title')} {onclose} width={760}>
   <p class="muted">{t('catalog.intro')}</p>
+  {#if pending}
+    <div class="replace" role="alertdialog" aria-labelledby="catalog-replace-title">
+      <strong id="catalog-replace-title">{t('catalog.replace.title', { title: pending.build().tasks.title })}</strong>
+      <p>{t('catalog.replace.text', { devices: editor.topology.devices.length })}</p>
+      <div class="replace-actions">
+        <button class="primary" onclick={() => confirmStart(true)}>{t('catalog.replace.save')}</button>
+        <button onclick={() => confirmStart(false)}>{t('catalog.replace.discard')}</button>
+        <button onclick={() => (pending = null)}>{t('catalog.replace.cancel')}</button>
+      </div>
+    </div>
+  {/if}
   {#if SERIES.length}
     <!-- svelte-ignore a11y_interactive_supports_focus -->
     <div class="tabs" role="tablist" aria-label={t('catalog.series.label')} onkeydown={keyNav}>
@@ -127,6 +157,24 @@
 </Modal>
 
 <style>
+  .replace {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    margin: 8px 0;
+    padding: 10px 12px;
+    border: 2px solid var(--routing);
+    border-radius: 8px;
+    background: var(--routing-soft);
+  }
+  .replace p {
+    margin: 4px 0 8px;
+  }
+  .replace-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
   .filters {
     display: flex;
     gap: 10px;

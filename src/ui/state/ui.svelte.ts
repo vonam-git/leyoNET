@@ -137,6 +137,11 @@ class Ui {
   floor = $state<number | 'all'>('all');
   /** IP-Adressen mit «privat/öffentlich» an den Geräten zeigen. */
   showAddresses = $state(read(KEYS.addresses) !== '0');
+  /**
+   * Anschluss, dessen Adresse gerade bearbeitet wird (Feld im Formular hat den Fokus oder die Maus
+   * steht darauf): Die Zeichenfläche hebt Kabelende und Beschriftung hervor, damit klar ist, welcher gemeint ist.
+   */
+  focusPort = $state<{ device: string; iface: number } | null>(null);
   /** Schnittstellennamen (z.B. Fa0/1) an den Kabelenden zeigen. */
   showPortLabels = $state(read(KEYS.portLabels) !== '0');
   /** Seitenbereiche ein- oder ausgefahren (Shop links, Eigenschaften rechts, Paketliste unten). */

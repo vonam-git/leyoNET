@@ -305,7 +305,7 @@ export function solveUe09(topology: Topology): Topology {
 
 // --- UE10 Three-Tier (Core, Distribution, Access) ----------------------------------------------
 
-/** Transfernetze /30: Core 1 – Core 2, Core 1 – Distribution 1, Core 2 – Distribution 2. */
+/** Transitnetze /30: Core 1 – Core 2, Core 1 – Distribution 1, Core 2 – Distribution 2. */
 export const TIER = {
   core: { net: '10.255.0.0/30', a: '10.255.0.1', b: '10.255.0.2' },
   d1: { net: '10.255.1.0/30', core: '10.255.1.1', dist: '10.255.1.2', vlan: 901 },
@@ -337,7 +337,7 @@ function ue10Start(): Topology {
     s.apply((t, n) => unwrap(connect(t, n(a.pc), n(a.sw), 'tp', { b: 0 })).topology);
   }
   let t = s.topology;
-  // Core: Transfernetze und Servernetz; Access: VLAN, Access-Port und Trunk zur Distribution.
+  // Core: Transitnetze und Servernetz; Access: VLAN, Access-Port und Trunk zur Distribution.
   t = unwrap(setInterfaceAddress(t, id(t, 'Core 1'), 0, TIER.core.a, '30'));
   t = unwrap(setInterfaceAddress(t, id(t, 'Core 2'), 0, TIER.core.b, '30'));
   t = unwrap(setInterfaceAddress(t, id(t, 'Core 1'), 1, TIER.d1.core, '30'));

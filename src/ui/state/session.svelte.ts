@@ -18,7 +18,8 @@ export const PING_MS = 20_000;
 export const WATCH_MS = 5_000;
 
 export interface ServerConfig {
-  policy: { modes: { design: boolean; action: boolean; doc: boolean }; pro: boolean; sessionHours: number };
+  /** Wie `publicConfig()` in server/app.cjs. */
+  policy: { modes: { design: boolean; simulation: boolean }; maxLevel: number; defaultLevel: number; disabled: string[]; sessionHours: number };
   feedbackEnabled: boolean;
   feedbackDays: number;
   admin: boolean;

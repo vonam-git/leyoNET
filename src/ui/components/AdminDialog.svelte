@@ -108,6 +108,9 @@
   let feedback = $state<Feedback[]>([]);
   let draft = $state<Settings | null>(null);
   let label = $state('');
+  /** Gültigkeit einer neuen Klasse in Tagen; Vorgabe aus den Einstellungen des Hauptadmins. */
+  let classDays = $state(14);
+  let classDaysSet = false;
   let openClass = $state<ClassInfo | null>(null);
   let classSessions = $state<ClassSession[]>([]);
   let reviews = $state<Record<string, SubmissionReview>>({});
@@ -146,6 +149,10 @@
 
   async function refresh() {
     overview = await call<Overview>('GET', 'overview');
+    if (!classDaysSet) {
+      classDays = Math.min(180, Math.max(1, Math.round(overview.settings.classHours / 24)));
+      classDaysSet = true;
+    }
     draft = $state.snapshot(overview.settings);
     if (overview.me.role === 'super') {
       feedback = await call<Feedback[]>('GET', 'feedback');
@@ -190,10 +197,23 @@
 
   async function createClass(event: SubmitEvent) {
     event.preventDefault();
-    const created = await call<ClassInfo>('POST', 'classes', { label });
+    const days = Math.round(Number(classDays));
+    const created = await call<ClassInfo>('POST', 'classes', { label, ...(days >= 1 && days <= 180 ? { days } : {}) });
     label = '';
     await refresh();
     message = { kind: 'ok', text: t('admin.classCreated', { label: created.label, code: created.code }) };
+  }
+
+  /** Klassencode verlängern. */
+  async function extendClass(c: ClassInfo, days: number) {
+    try {
+      const next = await call<ClassInfo>('PATCH', `classes/${c.code}`, { extendDays: days });
+      if (overview) overview.classes = overview.classes.map((x) => (x.code === c.code ? next : x));
+      if (openClass?.code === c.code) openClass = next;
+      message = { kind: 'ok', text: t('admin.extended', { label: next.label, until: when(next.expires) }) };
+    } catch {
+      message = { kind: 'error', text: t('admin.loadFailed') };
+    }
   }
 
   async function showClass(c: ClassInfo) {
@@ -425,6 +445,7 @@
     {:else if tab === 'classes'}
       <form class="row" onsubmit={createClass}>
         <input bind:value={label} maxlength="40" placeholder={t('admin.classLabelPlaceholder')} aria-label={t('admin.classLabel')} required />
+        <label class="days" title={t('admin.classDaysHint')}><span>{t('admin.classDays')}</span><input type="number" min="1" max="180" step="1" bind:value={classDays} /></label>
         <button type="submit">{t('admin.createClass')}</button>
       </form>
       <p class="muted">{t('admin.classHint')}</p>
@@ -444,6 +465,9 @@
                 <td>{when(c.expires)}</td>
                 <td class="actions">
                   <button onclick={() => showClass(c)}>{t('admin.show')}</button>
+                  {#each [7, 30] as days (days)}
+                    <button onclick={() => extendClass(c, days)} title={t('admin.extendHint', { days })}>{t('admin.extend', { days })}</button>
+                  {/each}
                   {#if c.verbund.enabled}<button onclick={() => (dashboard = c)}>📺 {t('admin.verbund.dashboard')}</button>{/if}
                   <button class="danger" onclick={() => closeClass(c)}>{t('admin.closeClass')}</button>
                 </td>
@@ -702,6 +726,15 @@
     align-items: center;
     flex-wrap: wrap;
     margin: 8px 0;
+  }
+  .row .days {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .row .days input {
+    flex: none;
+    width: 5rem;
   }
   .row input {
     flex: 1;

@@ -26,6 +26,20 @@ Ein Router entscheidet für jedes Paket anhand seiner **Routing-Tabelle**: Zu je
 
 Passen mehrere Einträge, gewinnt das **längste Präfix** (das genaueste Netz). Bei Gleichstand entscheidet die **administrative Distanz**: direkt 0, statisch 1, eBGP 20, OSPF 110, RIP 120. Jeder Router senkt die **TTL** um eins; erreicht sie null, verwirft er das Paket und meldet «TTL abgelaufen» (so funktioniert `tracert`).
 
+## Netze zwischen Routern: das Transitnetz
+
+Das kleine Netz, das zwei Router miteinander verbindet, heisst in leyoNET **Transitnetz**. Es enthält keine Endgeräte, nur die beiden Router-Anschlüsse; darum genügt ein /30 mit zwei nutzbaren Adressen. Der Begriff folgt RFC 2328: Ein *transit network* trägt Verkehr, der weder in diesem Netz entsteht noch dort endet. Das Gegenstück ist das *stub network*, ein Netz mit Endgeräten und nur einem Ausgang.
+
+Im Alltag und in Lehrmitteln begegnen dir für dasselbe andere Wörter:
+
+| Bezeichnung | Bedeutung | In leyoNET |
+|---|---|---|
+| **Transitnetz** (transit network) | IP-Netz zwischen Routern, ohne Endgeräte | einheitlich verwendet |
+| Transfernetz | dasselbe; im deutschen Sprachraum verbreitet, steht aber in keiner Norm | nicht mehr verwendet |
+| Transportnetz | bei Netzbetreibern das Übertragungsnetz, das Signale der Kunden trägt; kein IP-Netz zwischen zwei Routern | nicht verwendet |
+| Standleitung (leased line) | die fest geschaltete **Leitung** eines Anbieters zwischen zwei Standorten, also Schicht 1 und 2; das IP-Netz darauf ist ein Transitnetz | nur für die Leitung, siehe [[ppp-hdlc]] |
+| Punkt-zu-Punkt-Netz | Netz mit genau zwei Teilnehmern (RFC 2328); jedes /30 zwischen zwei Routern ist eines | als Erklärung |
+
 ## Drei Wege zur Tabelle
 
 - **Automatisch** (nur in leyoNET, für Einsteiger): ein Häkchen beim Router, und er kennt alle Netze im Plan.

@@ -57,6 +57,8 @@ Die ausführliche Liste aller Funktionen. Kurzfassung mit Bildern: [README](../R
 - **IP-Rechner** (Taste I): Netz, Broadcast, Hostbereich, Binärdarstellung, Subnetting gleichmässig oder nach Bedarf (VLSM), Werte direkt übernehmen.
 - Konfigurationen werden nur auf Lesbarkeit geprüft. Fachliche Fehler (Gateway ausserhalb des Netzes, Netzadresse als Geräteadresse) sind erlaubt und werden als Warnung erklärt, damit Lehrpersonen Fehlersuche-Aufgaben bauen können.
 
+- **Netzdokumentation exportieren** (Datei-Menü): Adressplan (je Anschluss Gerät, IP-Adresse, Maske, Netz, Gateway, DNS-Server, MAC-Adresse, VLAN) und Verbindungen als CSV für Excel oder LibreOffice; **Konfiguration als Text**: die Konfiguration aller Router, Switches und Firewalls in einer Datei, wie «show running-config».
+
 ## Aufgaben
 
 Der **Aufgaben-Katalog** im Simulator enthält über 70 Übungen von ★ bis ★★★★★, jede mit automatischer Prüfung und Arbeitsblatt (PDF), dazu ganze Reihen für die Module 117, 129 und 145 und Verbund-Übungen für den [Klassen-Verbund](verbund.md). Aufgabendateien enthalten Lernziele, die der Simulator auf Knopfdruck prüft (z.B. «PC 1 erreicht PC 2 per Ping»). Lehrpersonen erstellen sie im Simulator in einem Formular (oder als JSON) und werten mit «Abgaben auswerten …» die Dateien einer ganzen Klasse auf einmal aus. Alle Prüfbausteine: [aufgaben.md](aufgaben.md). Hinweise: [lehrpersonen.md](lehrpersonen.md).

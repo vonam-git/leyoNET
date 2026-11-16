@@ -24,6 +24,10 @@
   const LABEL_DISTANCE = 76;
 
   const selected = $derived(editor.selection?.kind === 'cable' && editor.selection.id === cable.id);
+  /** Dieses Kabelende gehört zum Anschluss, der im Formular gerade bearbeitet wird. */
+  const focusEnd = $derived(
+    ui.focusPort?.device === a.id && ui.focusPort.iface === cable.a.iface ? 'a' : ui.focusPort?.device === b.id && ui.focusPort.iface === cable.b.iface ? 'b' : null,
+  );
 
   /** Port-Beschriftung mit VLAN bzw. Trunk, damit die Aufteilung auf der Zeichenfläche sichtbar ist. */
   function portLabel(device: Device, index: number, short = false): string {
@@ -178,7 +182,7 @@
     {/each}
   {:else}
   <line class="hit" x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} />
-  <line class="wire" class:damaged={!!cable.loss} class:blocked x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} />
+  <line class="wire" class:damaged={!!cable.loss} class:blocked class:focus={!!focusEnd} x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} />
   {#if medium === 'coax'}
     <line class="core" x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} />
   {/if}
@@ -201,6 +205,9 @@
   {#if geometry.leds}
     {#each ledEnds as { end, device, p } (end)}
       {@const tag = endColor(device, cable[end].iface)}
+      {#if focusEnd === end}
+        <circle class="focus-ring" cx={p.x} cy={p.y} r="11" />
+      {/if}
       <circle
         class="led"
         class:up={status.up}
@@ -220,8 +227,8 @@
     <text class="blocked-label" x={(pa.x + pb.x) / 2} y={(pa.y + pb.y) / 2 + 14}>{t('switch.blockedCable')}</text>
   {/if}
   {#if geometry.labels && ui.showPortLabels}
-    <text class="port" x={geometry.labels.a.x} y={geometry.labels.a.y} style:fill={endColor(a, cable.a.iface)}>{shortA}</text>
-    <text class="port" x={geometry.labels.b.x} y={geometry.labels.b.y} style:fill={endColor(b, cable.b.iface)}>{shortB}</text>
+    <text class="port" class:focus={focusEnd === 'a'} x={geometry.labels.a.x} y={geometry.labels.a.y} style:fill={focusEnd === 'a' ? undefined : endColor(a, cable.a.iface)}>{shortA}</text>
+    <text class="port" class:focus={focusEnd === 'b'} x={geometry.labels.b.x} y={geometry.labels.b.y} style:fill={focusEnd === 'b' ? undefined : endColor(b, cable.b.iface)}>{shortB}</text>
   {/if}
   {#if cable.loss}
     <text class="loss" x={(pa.x + pb.x) / 2} y={(pa.y + pb.y) / 2 - 8}>⚡ {cable.loss} %</text>
@@ -385,6 +392,33 @@
   }
   .led.up {
     fill: var(--led-up, #16a34a);
+  }
+  /* Anschluss, der im Formular gerade bearbeitet wird: Kabel, Ring am Kabelende und Beschriftung in der Farbe der Router. */
+  .wire.focus {
+    stroke: var(--routing);
+    stroke-width: 4;
+  }
+  .focus-ring {
+    fill: none;
+    stroke: var(--routing);
+    stroke-width: 3;
+    pointer-events: none;
+    animation: focus-pulse 1s ease-in-out infinite;
+  }
+  .port.focus {
+    fill: var(--routing);
+    font-weight: 700;
+    font-size: 13px;
+  }
+  @keyframes focus-pulse {
+    50% {
+      opacity: 0.25;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .focus-ring {
+      animation: none;
+    }
   }
   .cable:hover .wire {
     stroke-width: 3.5;

@@ -22,7 +22,7 @@ Rechner (du)  ──git push──►  GitHub: develop  ──Plesk Git (Pull)�
      mkdir -p server/tmp && touch server/tmp/restart.txt
      ```
 3. **Node.js aktivieren** (bei der Subdomain auf **Node.js**):
-   - Node.js-Version: **18 oder neuer** (empfohlen: die neueste LTS)
+   - Node.js-Version: **22 oder neuer** (die neueste LTS; ältere Versionen erhalten keine Sicherheitsupdates mehr)
    - Anwendungsmodus: `production`
    - Anwendungsstamm: **`/httpdocs/server`** (dort liegt eine eigene `package.json` ohne Abhängigkeiten; im Hauptordner würde Plesk ab Version 18.0.81 wegen Vite eine «statische» App erkennen und den Node-Server nicht starten)
    - Dokumentstamm: `/httpdocs/server/public` (absichtlich leer, so ist der Quellcode nicht direkt erreichbar)
@@ -32,7 +32,7 @@ Rechner (du)  ──git push──►  GitHub: develop  ──Plesk Git (Pull)�
      | Name | Wert | Zweck |
      |---|---|---|
      | `ADMIN_PASSWORD` | ein langes, zufälliges Passwort | öffnet die Admin-Konsole; ohne diese Variable ist sie gesperrt |
-     | `DATA_DIR` | optional, z.B. `/var/www/vhosts/deine-domain.ch/simulator-data` | Ablage der Sessions; Standard ist `httpdocs/data` (ausserhalb des Dokumentstamms) |
+     | `DATA_DIR` | optional, z.B. `/var/www/vhosts/deine-domain.ch/simulator-data` | Ablage der Sessions, Klassen und Prüfungen. **Empfohlen: ein Ordner ausserhalb von `httpdocs`**, damit die Daten auch bei falsch gesetztem Dokumentstamm nie abrufbar sind (die `.htaccess` im Datenordner wirkt nur mit Apache, nicht wenn nginx Dateien direkt ausliefert). Standard ist `httpdocs/data`; der Server meldet das beim Start als Hinweis. Umziehen: App stoppen, Ordner verschieben, `DATA_DIR` setzen, App starten |
      | `MAX_SESSIONS` | optional, Standard `5000` | höchstens so viele Sessions gleichzeitig (Schutz vor Überlastung) |
      | `LEYONET_CHANNEL` | nur für die Testumgebung: `beta` | zeigt oben «Testversion» und hält Suchmaschinen fern (`noindex`, `robots.txt`) |
      | `MAX_STORAGE_MB` | optional, Standard `1024` | höchstens so viel Platz für Sessions und Rückmeldungen; Prüfungen sind ausgenommen |
@@ -48,6 +48,8 @@ Danach unter der Adresse der Subdomain den Simulator öffnen. Oben rechts ersche
 - **Klassen**: Klassen-Sessions eröffnen (nur eine Bezeichnung wie «INF22a», keine Namen), den Klassencode verteilen, die Arbeiten der Klasse öffnen und die Klasse schliessen. Bei jeder Klasse: **Klassen-Verbund** freigeben, Infrastruktur setzen, **Dashboard** für den Beamer öffnen und Aufgaben für die Klasse ein- und ausblenden (siehe [verbund.md](verbund.md)).
 - **Zugänge** (Hauptadmin und Schulen): eigene Zugänge für Schulen und Lehrpersonen mit einer Bezeichnung ohne Personenbezug. Der Schlüssel erscheint nur einmal; gespeichert ist nur eine Prüfsumme. Jeder Zugang sieht nur seine Klassen und Prüfungen, eine Schule auch die ihrer Lehrpersonen. Einstellungen, Aufgaben (global), Rückmeldungen und Systemprüfung bleiben beim Hauptadmin. Gespeichert unter `DATA_DIR/tenants`.
 - **Aufgaben** (Hauptadmin): Übungen, ganze Reihen (Module) und die Verbund-Aufgaben für die ganze Instanz ein- und ausblenden.
+- **Klassen**: Beim Eröffnen wählt man, wie viele Tage der Klassencode gilt (Vorgabe aus den Einstellungen, höchstens 180). In der Liste verlängern «+7 Tage» und «+30 Tage» den Code, höchstens bis 180 Tage ab heute.
+- **Schneller Zugang**: In der Werkzeugleiste steht «Admin» (Tastenkürzel Alt+A). Die Schaltfläche öffnet nur das Anmeldefenster; Passwort und Token liegen nie im Browser-Speicher, die Anmeldung endet mit dem Tab, und in einer Prüfung ist die Schaltfläche ausgeblendet.
 - **Prüfungen**: Prüfungsdatei und Schlüssel hochladen, Platzkarten mit Platz-Codes drucken, starten, Nachteilsausgleich je Platz, beenden, automatisch auswerten, Abgaben herunterladen (siehe [pruefungen.md](pruefungen.md#prüfung-in-der-webversion-server)). Gespeichert wird unter `DATA_DIR/exams`, gelöscht nach 60 Tagen. Der Schlüssel ist mit dem Admin-Passwort verschlüsselt: **Admin-Passwort nicht während laufender Prüfungen ändern.**
 - **Rückmeldungen** (Hauptadmin): Probleme und Ideen der Lernenden, mit Status *neu / in Arbeit / erledigt*.
 - **Einstellungen**:

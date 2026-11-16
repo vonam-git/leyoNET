@@ -14,6 +14,7 @@ A network nobody understands cannot be operated. In leyoNET, documentation is pa
 - **Ports:** every interface has a colour and a description (“Uplink core”), like the labels in a real rack.
 - **Floors:** devices and areas lie on floors; Wi-Fi signals get weaker across floors.
 - **Snapshots:** named intermediate states, automatically before every start of the simulation.
+- **Export:** File → “Export network documentation (CSV)” gives the address plan and the links as a table, “Export configuration as text” the configuration of all routers, switches and firewalls.
 - **Costs:** reference prices for all devices and cables, total in CHF; exercises can require a budget.
 
 ## A good example

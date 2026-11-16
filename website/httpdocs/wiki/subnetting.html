@@ -90,7 +90,7 @@
       <article class="prose">
 <h2 id="netzanteil-und-hostanteil">Netzanteil und Hostanteil</h2>
 <p>Eine IPv4-Adresse hat 32 Bit. Die <strong>Maske</strong> sagt, wie viele Bit vorne das Netz bezeichnen; der Rest nummeriert die Geräte im Netz. <code>/24</code> (255.255.255.0) heisst 24 Bit Netz, 8 Bit Host.</p>
-<div class="table-wrap"><table><thead><tr><th>Präfix</th><th>Maske</th><th>Adressen</th><th>nutzbar</th></tr></thead><tbody><tr><td>/24</td><td>255.255.255.0</td><td>256</td><td>254</td></tr><tr><td>/25</td><td>255.255.255.128</td><td>128</td><td>126</td></tr><tr><td>/26</td><td>255.255.255.192</td><td>64</td><td>62</td></tr><tr><td>/27</td><td>255.255.255.224</td><td>32</td><td>30</td></tr><tr><td>/30</td><td>255.255.255.252</td><td>4</td><td>2 (Transfernetz zwischen Routern)</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Präfix</th><th>Maske</th><th>Adressen</th><th>nutzbar</th></tr></thead><tbody><tr><td>/24</td><td>255.255.255.0</td><td>256</td><td>254</td></tr><tr><td>/25</td><td>255.255.255.128</td><td>128</td><td>126</td></tr><tr><td>/26</td><td>255.255.255.192</td><td>64</td><td>62</td></tr><tr><td>/27</td><td>255.255.255.224</td><td>32</td><td>30</td></tr><tr><td>/30</td><td>255.255.255.252</td><td>4</td><td>2 (Transitnetz zwischen Routern)</td></tr></tbody></table></div>
 <p>Die erste Adresse ist die <strong>Netzadresse</strong>, die letzte der <strong>Broadcast</strong>; dazwischen liegen die Geräteadressen.</p>
 <h2 id="beispiel">Beispiel</h2>
 <p>Das Netz <code>192.168.10.0/24</code> soll in vier gleich grosse Netze geteilt werden. Vier Netze brauchen 2 Bit mehr: <code>/26</code>. Jedes Netz hat 64 Adressen:</p>

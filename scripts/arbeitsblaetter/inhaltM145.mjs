@@ -459,7 +459,7 @@ export const M145_SHEETS = [
           ],
           widths: [2.3, 1.5, 1.9],
         },
-        { list: ['Distribution 1 (VLAN 10, 20, 901) und Distribution 2 (VLAN 30, 40, 902): VLANs anlegen, Ports zu den Access-Switches als Trunk, Port 1 als Access-Port im Transfer-VLAN.', 'SVIs: Gateways der Etagen und Transfernetz zum Core.', 'OSPF auf Core 1, Core 2, Distribution 1 und 2: «router ospf 1», «network 0.0.0.0 255.255.255.255 area 0».', 'Kontrolle: «show ip ospf neighbor», «show ip route».'] },
+        { list: ['Distribution 1 (VLAN 10, 20, 901) und Distribution 2 (VLAN 30, 40, 902): VLANs anlegen, Ports zu den Access-Switches als Trunk, Port 1 als Access-Port im Transfer-VLAN.', 'SVIs: Gateways der Etagen und Transitnetz zum Core.', 'OSPF auf Core 1, Core 2, Distribution 1 und 2: «router ospf 1», «network 0.0.0.0 255.255.255.255 area 0».', 'Kontrolle: «show ip ospf neighbor», «show ip route».'] },
         { h: 'Fragen' },
         {
           fields: [

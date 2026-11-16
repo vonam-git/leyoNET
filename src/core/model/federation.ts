@@ -5,7 +5,7 @@
  * (Gerät mit `verbund`) hängt an einem eigenen Anschluss des Providers.
  *
  * Adressplan je Platz n (1–62), aus dem Dokumentationsnetz 203.0.113.0/24 (RFC 5737):
- *   Transfernetz 203.0.113.(4n)/30, Provider .(4n+1), Standort .(4n+2).
+ *   Transitnetz 203.0.113.(4n)/30, Provider .(4n+1), Standort .(4n+2).
  * Die Zentrale der Infrastruktur liegt üblicherweise in 198.51.100.0/24.
  *
  * Kennungen: Der eigene Standort behält seine Kennungen (die Oberfläche zeigt ihn an), alle
@@ -27,7 +27,7 @@ export interface VerbundAddresses {
   mask: string;
 }
 
-/** Adressen des Transfernetzes für Platz n. */
+/** Adressen des Transitnetzes für Platz n. */
 export function verbundAddresses(seat: number): VerbundAddresses {
   const base = 4 * seat;
   return { network: `${VERBUND_NET}.${base}`, provider: `${VERBUND_NET}.${base + 1}`, site: `${VERBUND_NET}.${base + 2}`, mask: '255.255.255.252' };
@@ -159,7 +159,7 @@ export function federate(infra: Topology, sites: readonly VerbundSite[]): Federa
     result.push({ seat: site.seat, name, devices: part.devices.map((d) => d.id), uplink: uplink?.id ?? null, ...(uplink && !providerDevice ? { problem: 'noProvider' as const } : {}) });
   });
 
-  // Provider: je verbundenem Standort ein Anschluss im Transfernetz des Platzes.
+  // Provider: je verbundenem Standort ein Anschluss im Transitnetz des Platzes.
   if (providerDevice) {
     const used = new Set(cables.flatMap((c) => [c.a, c.b]).filter((e) => e.device === providerDevice.id).map((e) => e.iface));
     let cableSeq = 9_900_000;

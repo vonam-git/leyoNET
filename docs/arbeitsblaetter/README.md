@@ -5,8 +5,8 @@ Ausfüllbare PDFs zu **allen** Übungen im Aufgaben-Katalog (Werkzeuge » Aufgab
 | Arbeitsblatt | Übungen im Katalog | Sterne |
 |---|---|---|
 | [M06C_M117_UE03_Router01](M06C_M117_UE03_Router01.pdf) | UE03 Router01, Aufträge 1–4: ein Netz mit zwei Switches, zwei Netze an denselben Switches, Maske /25, Maske /26 | ★ ★ ★★ ★★ |
-| [M06D_M117_UE04_Router02](M06D_M117_UE04_Router02.pdf) | UE04 Router02, Aufträge 1–2: ein Router zwischen zwei Standorten, zwei Router mit Transfernetz | ★★ ★★★ |
-| [M06E_M117_UE05_Router03](M06E_M117_UE05_Router03.pdf) | UE05 Router03: drei Standorte mit Standleitungen | ★★★★ |
+| [M06D_M117_UE04_Router02](M06D_M117_UE04_Router02.pdf) | UE04 Router02, Aufträge 1–2: ein Router zwischen zwei Standorten, zwei Router mit Transitnetz | ★★ ★★★ |
+| [M06E_M117_UE05_Router03](M06E_M117_UE05_Router03.pdf) | UE05 Router03: drei Standorte mit Transitnetzen | ★★★★ |
 | [M07A_M117_UE01_Netzwerkdienste](M07A_M117_UE01_Netzwerkdienste.pdf) | UE01 Netzwerkdienste: Firmennetz Watch SA mit DHCP | ★★★ |
 | [M07B_M117_UE02_Netzwerkdienste](M07B_M117_UE02_Netzwerkdienste.pdf) | UE02 Netzwerkdienste: Webserver, DNS und feste Zuweisungen | ★★★★ |
 | [M07C_M117_UE03_Netzwerkdienste](M07C_M117_UE03_Netzwerkdienste.pdf) | UE03 Netzwerkdienste: Firmennetz Holzer AG (Prüfungsvorbereitung, 75 Punkte mit Note) | ★★★★★ |

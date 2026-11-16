@@ -650,3 +650,45 @@ test('Aufgaben mit KI nur in der Webversion nach Admin-Anmeldung, offline nicht 
   await expect(tools.getByRole('menuitem', { name: /^Als Prüfung speichern/ })).toBeVisible();
   await expect(tools.getByRole('menuitem', { name: /Aufgaben mit KI/ })).toHaveCount(0);
 });
+
+test('Aufgabe öffnet in leerem Projekt: Rückfrage bei vorhandenem Aufbau, Abbrechen behält ihn', async ({ page }) => {
+  await openProject(page, example('automatisches-routing'));
+  await expect(page.locator('.device').filter({ hasText: 'Router 1' })).toHaveCount(1);
+  await page.getByRole('button', { name: /Aufgaben-Katalog/ }).click();
+  const catalog = page.getByRole('dialog');
+  await catalog.getByRole('tab', { name: /M117/ }).click();
+  const entry = catalog.locator('li').filter({ hasText: 'Auftrag 1: Ein Netz mit zwei Switches' });
+  await entry.getByRole('button', { name: 'Starten' }).click();
+  const ask = catalog.getByRole('alertdialog');
+  await expect(ask).toContainText('öffnet in einem leeren Projekt');
+  // Abbrechen: nichts geändert.
+  await ask.getByRole('button', { name: 'Abbrechen' }).click();
+  await expect(ask).toHaveCount(0);
+  await expect(page.locator('.device').filter({ hasText: 'Router 1' })).toHaveCount(1);
+  // Speichern und öffnen: Datei wird heruntergeladen, der alte Aufbau ist weg.
+  await entry.getByRole('button', { name: 'Starten' }).click();
+  const download = page.waitForEvent('download');
+  await ask.getByRole('button', { name: 'Speichern und öffnen' }).click();
+  expect((await download).suggestedFilename()).toMatch(/\.json$/);
+  await expect(page.locator('.tasks')).toContainText('PC01 erreicht PC06');
+  await expect(page.locator('.device').filter({ hasText: 'Router 1' })).toHaveCount(0);
+});
+
+test('Router: Der Anschluss, dessen Adresse man bearbeitet, ist auf der Zeichenfläche hervorgehoben', async ({ page }) => {
+  await openProject(page, example('automatisches-routing'));
+  await page.locator('.device').filter({ hasText: 'Router 1' }).first().click();
+  await expect(page.locator('.focus-ring')).toHaveCount(0);
+  await page.locator('.inspector form.iface').first().getByRole('textbox').first().focus();
+  await expect(page.locator('.focus-ring')).toHaveCount(1);
+  await expect(page.locator('.inspector form.iface.focused')).toHaveCount(1);
+  await page.locator('.inspector form.iface').nth(1).getByRole('textbox').first().focus();
+  await expect(page.locator('.inspector form.iface.focused')).toHaveCount(1);
+  await expect(page.locator('.inspector form.iface').nth(1)).toHaveClass(/focused/);
+});
+
+test('MAC-Tabelle heisst auch SAT', async ({ page }) => {
+  await openProject(page, example('arp-ping'));
+  await page.locator('.device').filter({ hasText: /Switch/ }).first().click();
+  await page.getByRole('radio', { name: 'Simulation' }).click();
+  await expect(page.locator('body')).toContainText('MAC-Tabelle (SAT)');
+});

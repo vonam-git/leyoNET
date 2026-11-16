@@ -1,7 +1,10 @@
 <script lang="ts">
-  import { pointsOf, scoreOf, swissGrade, type TaskSet } from '../../core';
+  import { pointsOf, scoreOf, siteName, swissGrade, verbundAddresses, type TaskSet } from '../../core';
   import { t } from '../../i18n';
   import { editor } from '../state/editor.svelte';
+  import { session } from '../state/session.svelte';
+  import { verbund } from '../state/verbund.svelte';
+  import { VERBUND_HUB_IP } from '../verbundTemplate';
   import { taskView } from '../state/taskView.svelte';
   import RichText from './RichText.svelte';
   import Stars from './Stars.svelte';
@@ -21,6 +24,9 @@
   const resultOf = (id: string) => results?.find((r) => r.id === id);
   /** Prüfungsdatei: Punkte je Teil statt Prüfbausteinen. */
   const raster = $derived(tasks.exam?.raster ?? null);
+  /** Verbund-Aufgabe: Platz, Adressen und Ziel dieses Platzes zeigen (sonst weiss niemand, was «sein» Auftrag ist). */
+  const isVerbundTask = $derived(tasks.goals.some((g) => g.check.type === 'verbundSite'));
+  const place = $derived(isVerbundTask && verbund.active && session.site ? { seat: session.site.seat, name: siteName(session.site.seat, session.site.label), ...verbundAddresses(session.site.seat) } : null);
   const rasterTotal = $derived(raster?.reduce((s, r) => s + r.points, 0) ?? 0);
 </script>
 
@@ -39,6 +45,26 @@
   {:else if withPoints}<p class="muted">{t('tasks.maxPoints', { max: maxPoints })}{tasks.grading ? ` · ${t('tasks.gradeFormula')}` : ''}</p>{/if}
   {#if tasks.description}
     <div class="description"><RichText text={tasks.description} /></div>
+  {/if}
+  {#if isVerbundTask}
+    <section class="place" aria-label={t('verbund.place.title')}>
+      <h4>🌐 {t('verbund.place.title')}</h4>
+      {#if place}
+        <table>
+          <tbody>
+            <tr><th>{t('verbund.place.seat')}</th><td>{place.seat}{place.name !== `Platz ${place.seat}` ? ` · ${place.name}` : ''}</td></tr>
+            <tr><th>{t('verbund.place.transit')}</th><td><code>{place.network}/30</code></td></tr>
+            <tr><th>{t('verbund.place.wan')}</th><td><code>{place.site}/30</code></td></tr>
+            <tr><th>{t('verbund.place.gateway')}</th><td><code>{place.provider}</code></td></tr>
+            <tr><th>{t('verbund.place.hub')}</th><td><code>{VERBUND_HUB_IP}</code></td></tr>
+          </tbody>
+        </table>
+        <p>{t('verbund.place.goal')}</p>
+        {#if !verbund.infra}<p class="warn">{t('verbund.place.noInfra')}</p>{/if}
+      {:else}
+        <p class="warn">{t('verbund.place.notJoined')}</p>
+      {/if}
+    </section>
   {/if}
   <ol class="goals">
     {#each tasks.goals as goal (goal.id)}
@@ -127,6 +153,32 @@
   h3 {
     margin: 8px 0 4px;
     font-size: 0.85rem;
+  }
+  .place {
+    margin: 8px 0;
+    padding: 8px 10px;
+    border: 1px solid var(--distribution);
+    border-radius: 8px;
+    background: var(--distribution-soft);
+    font-size: 0.85rem;
+  }
+  .place h4 {
+    margin: 0 0 4px;
+    font-size: 0.9rem;
+  }
+  .place table {
+    border-collapse: collapse;
+  }
+  .place th {
+    text-align: left;
+    font-weight: 600;
+    padding: 1px 10px 1px 0;
+  }
+  .place p {
+    margin: 6px 0 0;
+  }
+  .place .warn {
+    font-weight: 600;
   }
   .description {
     margin: 0 0 8px;

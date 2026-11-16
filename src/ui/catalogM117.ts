@@ -143,7 +143,7 @@ export const UE05_SITES: readonly Ue05Site[] = [
   { name: 'Luzern', network: '10.125.113.0/28', prefix: '28', router: '10.125.113.1', hosts: ['10.125.113.13', '10.125.113.12', '10.125.113.11'], color: 'blue' },
   { name: 'Zürich', network: '172.20.13.0/24', prefix: '24', router: '172.20.13.1', hosts: ['172.20.13.57', '172.20.13.58', '172.20.13.59'], color: 'orange' },
 ];
-/** Standleitungen (statt 1.0.0.0/30 …): erster Router .1, zweiter .2. */
+/** Transitnetze (statt 1.0.0.0/30 …): erster Router .1, zweiter .2. */
 export const UE05_LINKS: readonly [number, number, string][] = [
   [0, 1, '172.31.0.0'],
   [0, 2, '172.31.0.4'],
@@ -201,7 +201,7 @@ const WATCH: readonly WatchSite[] = [
   { name: 'Basel', short: 'BS', third: 20, x: 0, y: -330 },
   { name: 'Locarno', short: 'LO', third: 30, x: 460, y: 160 },
 ];
-/** Standleitungen: Bern–Basel 172.16.50.0/30, Bern–Locarno 172.16.51.0/30, Basel–Locarno 172.16.52.0/30. */
+/** Transitnetze: Bern–Basel 172.16.50.0/30, Bern–Locarno 172.16.51.0/30, Basel–Locarno 172.16.52.0/30. */
 const WATCH_LINKS: readonly [number, number, number, number, string][] = [
   [0, 1, 1, 1, '172.16.50'],
   [0, 2, 2, 2, '172.16.51'],
