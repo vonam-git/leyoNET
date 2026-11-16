@@ -1,6 +1,7 @@
 ---
 titel: Switch
 kurz: Verbindet Geräte im selben Netz, lernt MAC-Adressen, trennt Netze mit VLANs und verhindert Schleifen mit Spanning Tree.
+symbol: switch
 reihenfolge: 4
 schicht: 2 (Sicherung)
 hilfe: [device.switch]

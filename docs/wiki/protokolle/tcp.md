@@ -23,7 +23,7 @@ IP bringt ein Paket zum richtigen Gerät, **Ports** zum richtigen Programm. Ein 
 
 ## Der TCP-Kopf
 
-Ohne Optionen 20 Byte. Im ersten Segment (SYN) steht meist die Option MSS, dann ist der Kopf 24 Byte lang. Werte aus der HTTP-Anfrage der Demo «Webserver».
+Ohne Optionen 20 Byte. Im ersten Segment (SYN) steht meist die Option MSS, dann ist der Kopf 24 Byte lang. Werte aus der HTTP-Anfrage der Demo «DNS, TCP und HTTP».
 
 {{format tcp}}
 

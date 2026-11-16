@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Server – leyoNET Wiki</title>
+  <meta name="description" content="The device for services: DHCP, DNS, web server and mail server, also as a rack server in the data centre.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/en/server.html">
+  <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/server.html">
+  <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/server.html">
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../css/site.css?v=1.5.1">
+  <link rel="stylesheet" href="../farben.css?v=1.5.1">
+  <link rel="stylesheet" href="../aufbau.css?v=1.5.1">
+  <link rel="stylesheet" href="../wiki.css?v=1.5.1">
+  <script src="../../js/site.js?v=1.5.1" defer></script>
+  <script src="suche.js?v=1.5.1" defer></script>
+  <script src="../wiki.js?v=1.5.1" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Skip to content</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../../en/" aria-label="leyoNET home">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Main navigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crash course</a></li>
+          <li><a href="index.html#module">Modules</a></li>
+          <li><a href="index.html#grundlagen">Basics</a></li>
+          <li><a href="index.html#geraete">Devices</a></li>
+          <li><a href="index.html#protokolle">Protocols</a></li>
+        </ul>
+      </nav>
+      <a class="lang-switch" href="../server.html" hreflang="de" lang="de" title="Deutsche Fassung">DE</a>
+      <button class="theme-toggle" type="button" aria-label="Dark theme" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Start in the browser</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki contents">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Search the wiki</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Search, e.g. “OSPF” or “trunk”" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group wiki-group-lehrpersonen">
+        <summary><span>Crash course for teachers</span><span class="nav-count">11</span></summary>
+        <ul><li><a href="crashkurs.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Crash course: ready in 30 minutes</span></a></li><li><a href="erstes-netz.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">The first network in 10 minutes</span></a></li><li><a href="simulation-verstehen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Understanding the simulation and the packet list</span></a></li><li><a href="profile.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Choosing feature profiles</span></a></li><li><a href="dokumentieren.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Documenting networks</span></a></li><li><a href="uebungen-einsetzen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Exercises and worksheets in class</span></a></li><li><a href="aufgaben-erstellen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Creating your own tasks</span></a></li><li><a href="pruefungen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Running exams</span></a></li><li><a href="webversion.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Web version: sessions, classes and watching</span></a></li><li><a href="klassen-verbund.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Class network in the classroom</span></a></li><li><a href="faq.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Frequently asked questions</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-module">
+        <summary><span>Swiss ICT modules</span><span class="nav-count">3</span></summary>
+        <ul><li><a href="m117.html"><span class="nav-tag">M117</span><span class="nav-title">Module 117: IT and network infrastructure</span></a></li><li><a href="m129.html"><span class="nav-tag">M129</span><span class="nav-title">Module 129: Putting LAN components into operation</span></a></li><li><a href="m145.html"><span class="nav-tag">M145</span><span class="nav-title">Module 145: Operating and extending a network</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-grundlagen">
+        <summary><span>Basics</span><span class="nav-count">13</span></summary>
+        <ul><li><a href="osi-modell.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">OSI model and encapsulation</span></a></li><li><a href="tcp-ip-modell.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">TCP/IP model</span></a></li><li><a href="rahmen-und-pakete.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Structure of frames and packets</span></a></li><li><a href="ethernet-mac.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Ethernet and MAC addresses</span></a></li><li><a href="zahlensysteme.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Number systems and addresses</span></a></li><li><a href="subnetting.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Subnetting and VLSM</span></a></li><li><a href="adressbereiche.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Special address ranges</span></a></li><li><a href="routing-grundlagen.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">How routing works</span></a></li><li><a href="ports-dienste.html"><span class="nav-dot lx-o4" aria-hidden="true">4</span><span class="nav-title">Ports and services</span></a></li><li><a href="netzwerkdesign.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Network design: core, distribution, access</span></a></li><li><a href="medien.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Cables, fibre and radio</span></a></li><li><a href="verkabelung.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Structured cabling</span></a></li><li><a href="datenrate.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Data rate, throughput and delay</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-geraete" open>
+        <summary><span>Devices</span><span class="nav-count">11</span></summary>
+        <ul><li><a href="pc-notebook.html"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-24" y="-18" width="30" height="22" rx="2"/><path class="line" d="M-9 4 V10 M-15 11 H-3"/><rect x="11" y="-18" width="13" height="30" rx="2"/><path class="line" d="M14 -12 H21 M14 -7 H21"/></svg></span><span class="nav-title">PC and notebook</span></a></li><li><a href="server.html" aria-current="page"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-13" y="-20" width="26" height="40" rx="3"/><path class="line" d="M-8 -13 H8 M-8 -7 H8 M-8 -1 H8"/><circle class="fill" cx="0" cy="12" r="2.2"/></svg></span><span class="nav-title">Server</span></a></li><li><a href="client-gruppe.html"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-8" y="-20" width="26" height="18" rx="2"/><rect x="-16" y="-12" width="26" height="18" rx="2"/><rect x="-24" y="-4" width="26" height="18" rx="2"/><path class="line" d="M-11 14 V19 M-17 19 H-5"/></svg></span><span class="nav-title">Client group</span></a></li><li><a href="switch.html"><span class="nav-icon"><svg class="dev-icon role-distribution" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-25" y="-12" width="50" height="24" rx="4"/><path class="line" d="M-14 -5 H14 M9 -8 L14 -5 L9 -2 M14 5 H-14 M-9 2 L-14 5 L-9 8"/></svg></span><span class="nav-title">Switch</span></a></li><li><a href="layer3-switch.html"><span class="nav-icon"><svg class="dev-icon role-distribution" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-25" y="-12" width="50" height="24" rx="4"/><path class="line" d="M-14 -5 H6 M1 -8 L6 -5 L1 -2 M6 5 H-14 M-9 2 L-14 5 L-9 8"/><circle cx="16" cy="0" r="6"/><path class="line" d="M13 0 H19 M16 -3 V3"/></svg></span><span class="nav-title">Layer 3 switch</span></a></li><li><a href="router.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><circle cx="0" cy="0" r="20"/><path class="line" d="M-5 -5 L-12 -12 M-12 -7 V-12 H-7 M5 5 L12 12 M12 7 V12 H7 M5 -5 L12 -12 M7 -12 H12 V-7 M-5 5 L-12 12 M-7 12 H-12 V7"/></svg></span><span class="nav-title">Router</span></a></li><li><a href="firewall.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-21" y="-16" width="42" height="32" rx="3"/><path class="line" d="M-21 -5.3 H21 M-21 5.3 H21 M-7 -16 V-5.3 M7 -16 V-5.3 M-14 -5.3 V5.3 M0 -5.3 V5.3 M14 -5.3 V5.3 M-7 5.3 V16 M7 5.3 V16"/></svg></span><span class="nav-title">Firewall</span></a></li><li><a href="access-point.html"><span class="nav-icon"><svg class="dev-icon role-distribution" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-20" y="2" width="40" height="13" rx="4"/><path class="line" d="M-11 -7 Q0 -17 11 -7 M-6.5 -3 Q0 -9 6.5 -3"/><circle class="fill" cx="0" cy="1" r="2"/><path class="line" d="M-12 9 H-10 M-6 9 H-4"/></svg></span><span class="nav-title">Access point</span></a></li><li><a href="modem.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-23" y="-6" width="46" height="18" rx="4"/><path class="line" d="M-9 -12 Q0 -20 9 -12 M-5 -10 Q0 -14 5 -10"/><path class="line" d="M-14 3 H-12 M-7 3 H-5 M0 3 H2"/></svg></span><span class="nav-title">Modem</span></a></li><li><a href="internet-box.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><path d="M-22 13 V-3 L0 -17 L22 -3 V13 Z"/><path class="line" d="M0 -17 V-23 M-4 -21 Q0 -25 4 -21"/><path class="line" d="M-14 7 H-10 M-5 7 H-1 M4 7 H8 M13 7 H17"/><circle class="fill" cx="0" cy="-3" r="2.4"/></svg></span><span class="nav-title">Home router (CPE)</span></a></li><li><a href="provider.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><path d="M-16 12 H16 A10 10 0 0 0 15 -7 A13 13 0 0 0 -9 -11 A11 11 0 0 0 -16 12 Z"/><path class="line" d="M-9 3 H9 M0 -6 V12 M-6 -3 Q0 3 -6 9 M6 -3 Q0 3 6 9"/></svg></span><span class="nav-title">Internet (provider)</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-protokolle">
+        <summary><span>Protocols</span><span class="nav-count">29</span></summary>
+        <ul><li><a href="arp.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">ARP</span></a></li><li><a href="vlan.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">VLANs and trunks</span></a></li><li><a href="stp.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Spanning tree (STP)</span></a></li><li><a href="lacp.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Port channel and LACP</span></a></li><li><a href="wlan.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Wi-Fi</span></a></li><li><a href="ipv4.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">IPv4</span></a></li><li><a href="icmp.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">ICMP, ping and traceroute</span></a></li><li><a href="ipv6.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">IPv6</span></a></li><li><a href="dhcp.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">DHCP</span></a></li><li><a href="dhcpv6.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">DHCPv6</span></a></li><li><a href="dns.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">DNS</span></a></li><li><a href="tcp.html"><span class="nav-dot lx-o4" aria-hidden="true">4</span><span class="nav-title">TCP</span></a></li><li><a href="udp.html"><span class="nav-dot lx-o4" aria-hidden="true">4</span><span class="nav-title">UDP</span></a></li><li><a href="http.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">HTTP</span></a></li><li><a href="e-mail.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">E-mail: SMTP, POP3 and IMAP</span></a></li><li><a href="ssh.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">SSH</span></a></li><li><a href="nat.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">NAT and PAT</span></a></li><li><a href="ds-lite.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">DS-Lite</span></a></li><li><a href="statisches-routing.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Static routing</span></a></li><li><a href="ospf.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">OSPF</span></a></li><li><a href="rip.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">RIP and RIPng</span></a></li><li><a href="bgp.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">BGP</span></a></li><li><a href="vrf.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">VRF</span></a></li><li><a href="vxlan.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">VXLAN</span></a></li><li><a href="paketfilter.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Firewall rules (packet filter)</span></a></li><li><a href="acl.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Access control lists (ACL)</span></a></li><li><a href="ipsec-vpn.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">IPsec VPN</span></a></li><li><a href="ppp-hdlc.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Serial lines: HDLC, PPP and PPPoE</span></a></li><li><a href="zugangstechniken.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Access technologies: DOCSIS, GPON, DSL and LTE</span></a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#geraete">Devices</a></p>
+      <div class="page-head with-icon"><span class="page-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="72" height="62" aria-hidden="true" focusable="false"><rect x="-13" y="-20" width="26" height="40" rx="3"/><path class="line" d="M-8 -13 H8 M-8 -7 H8 M-8 -1 H8"/><circle class="fill" cx="0" cy="12" r="2.2"/></svg></span><div><h1>Server</h1>
+      <p class="lead">The device for services: DHCP, DNS, web server and mail server, also as a rack server in the data centre.</p></div></div>
+      <dl class="facts"><div><dt>Layer</dt><dd>7 (Dienste)</dd></div><div><dt>See an example</dt><dd><a href="#beispiel">2 demos</a></dd></div></dl>
+      <nav class="toc" aria-label="On this page"><strong>On this page</strong><ol><li><a href="#what-for">What for</a></li><li><a href="#variants">Variants</a></li><li><a href="#static-addresses">Static addresses</a></li><li><a href="#in-leyonet">How to do it in leyoNET</a></li><li><a href="#beispiel">See an example</a></li><li><a href="#ueben">Practise</a></li><li><a href="#weiter">Read on</a></li></ol></nav>
+      <article class="prose">
+<h2 id="what-for">What for</h2>
+<p>A server provides <strong>services</strong> to other devices. In leyoNET every server can take on one or more of them; they are switched on under Advanced → Services:</p>
+<div class="table-wrap"><table><thead><tr><th>Service</th><th>what it does</th><th>Page</th></tr></thead><tbody><tr><td>DHCP</td><td>hands out addresses, gateway and DNS server</td><td><a href="dhcp.html">DHCP</a></td></tr><tr><td>DNS</td><td>translates names into addresses (zone with A, AAAA, MX …)</td><td><a href="dns.html">DNS</a></td></tr><tr><td>Web</td><td>delivers its own HTML pages and images</td><td><a href="http.html">HTTP</a></td></tr><tr><td>Mail</td><td>mailboxes, sending and fetching</td><td><a href="e-mail.html">E-mail: SMTP, POP3 and IMAP</a></td></tr></tbody></table></div>
+<h2 id="variants">Variants</h2>
+<p>The shop offers the server as a tower and as a <strong>rack server</strong>. Rack servers can be mounted in a rack and appear as a rack unit in the rack view. Technically both are the same.</p>
+<h2 id="static-addresses">Static addresses</h2>
+<p>Servers usually have a <strong>static address</strong> so clients find them reliably (DNS records, gateway settings). The DHCP range must not contain this address, otherwise a client gets the same address: leyoNET marks duplicate addresses with a red exclamation mark.</p>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">How to do it in leyoNET</h2>
+<p class="muted">The same text as in the app’s help (F1 key).</p>
+<div class="help-block"><h3>Server</h3>
+<p>A server provides services: <a href="dhcp.html">DHCP</a>, <a href="dns.html">DNS</a>, <a href="http.html">Web server and browser</a> and <a href="e-mail.html">E-mail</a>. The shop offers it empty or preconfigured. The web server serves your own pages (index.html) plus a small image. The rack variant fits into a <a href="dokumentieren.html">Racks</a>.</p></div>
+<div class="help-block"><h3>Private and public addresses</h3>
+<ul><li><strong>Private</strong> (10/8, 172.16/12, 192.168/16): local only, to the Internet via <a href="nat.html">NAT/PAT</a></li><li><strong>CGNAT</strong> (100.64/10): assigned by the provider, who translates again (<a href="nat.html">Carrier-grade NAT</a>)</li><li><strong>Public:</strong> globally unique</li></ul>
+<p>Press <strong>A</strong> to show all addresses in colour. A «Public network» area marks networks with public addresses, e.g. a DMZ.</p></div></section>
+<section aria-labelledby="beispiel"><h2 id="beispiel">See an example</h2>
+<ul class="cards"><li class="card"><figure class="shot-figure animated"><picture class="img-light"><source media="(prefers-reduced-motion: reduce)" srcset="../bilder/web.webp"><img src="../bilder/web-anim.webp" width="960" height="454" alt="Demo “DNS, TCP and HTTP” in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><source media="(prefers-reduced-motion: reduce)" srcset="../bilder/web-dark.webp"><img src="../bilder/web-anim-dark.webp" width="960" height="454" alt="Demo “DNS, TCP and HTTP” in leyoNET" loading="lazy" decoding="async"></picture><figcaption><span class="badge">Slow motion</span> This is how it looks in the simulation: every dot is a frame on the cable.</figcaption></figure><strong>DNS, TCP and HTTP</strong><p>A notebook fetches a web page through a router.</p><p class="muted">DNS query for www.schule.example, TCP handshake (SYN, SYN-ACK, ACK) and the HTTP request in the browser.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=web">Watch live</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/web.json">Project file</a></p></li><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="../bilder/mail.webp" width="700" height="311" alt="Demo “Email: SMTP, POP3, IMAP” in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="../bilder/mail-dark.webp" width="700" height="311" alt="Demo “Email: SMTP, POP3, IMAP” in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Email: SMTP, POP3, IMAP</strong><p>Anna and Ben share a mail server.</p><p class="muted">Anna sends via SMTP, Ben fetches the message via IMAP.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=mail">Watch live</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/mail.json">Project file</a></p></li></ul><p class="muted">“Watch live” opens the network in leyoNET, the simulation runs in a loop. In the app you find it under File → Demo networks, with a step-by-step tour.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Practise</h2>
+<ul class="exercises"><li><span class="stars" aria-label="3 of 5 stars">★★★☆☆</span> <strong>Open a web page via DNS</strong> <span class="muted">· 3 goals</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_web-dns.pdf">Worksheet</a> (German)</li><li><span class="stars" aria-label="4 of 5 stars">★★★★☆</span> <strong>UE02 network services: web server, DNS and fixed assignments</strong> <span class="muted">· 19 goals</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M07B_M117_UE02_Netzwerkdienste.pdf">Worksheet</a> (German)</li><li><span class="stars" aria-label="2 of 5 stars">★★☆☆☆</span> <strong>A whole classroom</strong> <span class="muted">· 2 goals</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_server-group.pdf">Worksheet</a> (German)</li></ul><p class="muted">In leyoNET under Tools → Exercise catalogue. Every exercise checks itself.</p></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Read on</h2>
+<ul class="related"><li><a href="dhcp.html">DHCP</a> <span class="muted">Handing out addresses automatically: discover, offer, request, ack, lease time, fixed assignments and DHCP relay across routers.</span></li><li><a href="dns.html">DNS</a> <span class="muted">Translating names into addresses: zones, records (A, AAAA, CNAME, MX, PTR …), forwarding, cache and nslookup.</span></li><li><a href="http.html">HTTP</a> <span class="muted">How the browser fetches a web page: URL, DNS, TCP connection, GET request, status code and response – byte by byte.</span></li><li><a href="e-mail.html">E-mail: SMTP, POP3 and IMAP</a> <span class="muted">How a mail travels from the sender via mail servers and MX records into the mailbox, and how it is fetched.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Page through">
+        <a class="prev" href="pc-notebook.html"><span class="muted">Previous</span>PC and notebook</a>
+        <a class="next" href="client-gruppe.html"><span class="muted">Next</span>Client group</a>
+      </nav>
+      <p class="edit muted">Found a mistake or have an idea? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/en/geraete/server.md">Source of this page</a> on GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET wiki · as of version 1.5.1 · texts under the same licence as leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../../impressum.html#kontakt">Contact</a></li>
+        <li><a href="../../impressum.html" hreflang="de">Legal notice</a></li>
+        <li><a href="../../datenschutz.html" hreflang="de">Privacy</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
 Sitemap: https://leyonet.ch/sitemap.xml
+Sitemap: https://leyonet.ch/wiki/sitemap.xml

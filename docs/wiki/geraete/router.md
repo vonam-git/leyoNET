@@ -1,6 +1,7 @@
 ---
 titel: Router
 kurz: Verbindet Netze miteinander: Routing-Tabelle, Standardgateway, NAT, DHCP-Relay, dynamisches Routing, VPN und Befehlszeile.
+symbol: router
 reihenfolge: 6
 schicht: 3 (Vermittlung)
 hilfe: [device.router, cli, loopback]

@@ -79,28 +79,76 @@
   display: block;
   color: var(--muted);
 }
+/* Gruppen der Seitenleiste: Karten mit Zähler, Einträge durch feine Linien getrennt,
+   vorne das Symbol des Geräts bzw. die Farbe der OSI-Schicht. */
 .wiki-group {
-  border-top: 1px solid var(--line);
-  padding: 8px 0;
+  margin: 0 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  overflow: hidden;
 }
 .wiki-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   cursor: pointer;
-  font: 700 0.95rem/1.3 var(--mono);
+  padding: 9px 12px;
+  font: 700 0.92rem/1.3 var(--mono);
   color: var(--ink);
-  padding: 4px 0;
+  background: var(--canvas);
+  list-style: none;
+}
+.wiki-group summary::-webkit-details-marker {
+  display: none;
+}
+.wiki-group summary > span:first-child {
+  flex: 1;
+}
+.wiki-group summary::after {
+  content: '';
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin: 0 2px 0 4px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+.wiki-group[open] summary::after {
+  transform: rotate(45deg);
+}
+.wiki-group[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+.nav-count {
+  min-width: 1.8em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font: 600 0.75rem/1.4 var(--sans);
+  text-align: center;
 }
 .wiki-group ul {
   list-style: none;
-  margin: 6px 0 4px;
+  margin: 0;
   padding: 0;
 }
+.wiki-group li + li {
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
 .wiki-group a {
-  display: block;
-  padding: 3px 8px;
-  margin-left: -8px;
-  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
   color: var(--text);
   text-decoration: none;
+  line-height: 1.3;
 }
 .wiki-group a:hover {
   background: var(--canvas);
@@ -108,6 +156,125 @@
 .wiki-group a[aria-current='page'] {
   background: var(--ink);
   color: var(--on-ink);
+}
+.wiki-group a[aria-current='page'] .nav-dot {
+  border-color: var(--on-ink);
+}
+.nav-title {
+  min-width: 0;
+}
+.nav-icon {
+  flex: 0 0 26px;
+  display: inline-grid;
+  place-items: center;
+}
+.nav-dot {
+  flex: 0 0 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--osi, var(--graphite)) 22%, var(--paper));
+  color: var(--ink);
+  font: 700 0.72rem/1 var(--mono);
+}
+.nav-dot:empty::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--graphite);
+}
+.nav-tag {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font: 700 0.68rem/1.2 var(--mono);
+}
+.wiki-group a[aria-current='page'] .nav-tag {
+  background: var(--on-ink);
+  color: var(--ink);
+}
+
+/* Symbole der Geräte: dieselben Zeichnungen wie in der App (src/ui/deviceIcons.ts). */
+.dev-icon rect,
+.dev-icon circle,
+.dev-icon path:not(.line) {
+  fill: var(--role-soft);
+  stroke: var(--role);
+  stroke-width: 2;
+}
+.dev-icon circle.fill {
+  fill: var(--role);
+}
+.dev-icon .line {
+  fill: none;
+  stroke: var(--role);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.wiki-group a[aria-current='page'] .dev-icon {
+  --role-soft: transparent;
+  --role: var(--on-ink);
+}
+.page-head.with-icon {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+.page-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  margin-top: 4px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--canvas);
+}
+.device-grid {
+  list-style: none;
+  padding: 0;
+  margin: 1em 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.device-grid a {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+}
+.device-grid a:hover {
+  border-color: var(--ink);
+}
+.device-grid span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.area-list a > .dev-icon {
+  flex: 0 0 auto;
+}
+@media (max-width: 520px) {
+  .page-icon {
+    width: 64px;
+    height: 64px;
+  }
+  .page-icon .dev-icon {
+    width: 48px;
+    height: 41px;
+  }
 }
 
 /* --- Inhalt ---------------------------------------------------------------------- */
@@ -359,8 +526,9 @@
   gap: 10px;
 }
 .area-list a {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   height: 100%;
   padding: 12px 14px;
   border: 1px solid var(--line);
@@ -373,7 +541,11 @@
   border-color: var(--ink);
   transform: translateY(-1px);
 }
-.area-list span {
+.area-list a > span {
+  display: grid;
+  gap: 4px;
+}
+.area-list a > span > span {
   color: var(--muted);
   font-size: 0.88rem;
   line-height: 1.45;
@@ -390,9 +562,6 @@
   .wiki-nav {
     position: static;
     max-height: none;
-  }
-  .wiki-group:not([open]) + .wiki-group {
-    border-top: 1px solid var(--line);
   }
 }
 @media (max-width: 520px) {

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Besondere Adressbereiche – leyoNET Wiki</title>
+  <meta name="description" content="Private Netze, Loopback, Link-Local, CGNAT und Dokumentationsadressen: welche IPv4- und IPv6-Bereiche reserviert sind und wofür, nach RFC 6890.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/adressbereiche.html">
+  <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/adressbereiche.html">
+  <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/adressbereiche.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/site.css?v=1.5.1">
+  <link rel="stylesheet" href="farben.css?v=1.5.1">
+  <link rel="stylesheet" href="aufbau.css?v=1.5.1">
+  <link rel="stylesheet" href="wiki.css?v=1.5.1">
+  <script src="../js/site.js?v=1.5.1" defer></script>
+  <script src="suche.js?v=1.5.1" defer></script>
+  <script src="wiki.js?v=1.5.1" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Zum Inhalt</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../" aria-label="leyoNET Startseite">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crashkurs</a></li>
+          <li><a href="index.html#module">Module</a></li>
+          <li><a href="index.html#grundlagen">Grundlagen</a></li>
+          <li><a href="index.html#geraete">Geräte</a></li>
+          <li><a href="index.html#protokolle">Protokolle</a></li>
+        </ul>
+      </nav>
+      <a class="lang-switch" href="en/adressbereiche.html" hreflang="en" lang="en" title="English version">EN</a>
+      <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Im Browser starten</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki-Inhalt">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Im Wiki suchen</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Suchen, z.B. «OSPF» oder «Trunk»" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group wiki-group-lehrpersonen">
+        <summary><span>Crashkurs für Lehrpersonen</span><span class="nav-count">11</span></summary>
+        <ul><li><a href="crashkurs.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Crashkurs: in 30 Minuten startklar</span></a></li><li><a href="erstes-netz.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Das erste Netz in 10 Minuten</span></a></li><li><a href="simulation-verstehen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Simulation und Paketliste verstehen</span></a></li><li><a href="profile.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Funktionsprofile wählen</span></a></li><li><a href="dokumentieren.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Netze dokumentieren</span></a></li><li><a href="uebungen-einsetzen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Übungen und Arbeitsblätter im Unterricht</span></a></li><li><a href="aufgaben-erstellen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Eigene Aufgaben erstellen</span></a></li><li><a href="pruefungen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Prüfungen durchführen</span></a></li><li><a href="webversion.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Webversion: Sessions, Klassen und Ansehen</span></a></li><li><a href="klassen-verbund.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Klassen-Verbund im Unterricht</span></a></li><li><a href="faq.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Häufige Fragen</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-module">
+        <summary><span>ICT-Module</span><span class="nav-count">3</span></summary>
+        <ul><li><a href="m117.html"><span class="nav-tag">M117</span><span class="nav-title">Modul 117: Informatik- und Netzinfrastruktur</span></a></li><li><a href="m129.html"><span class="nav-tag">M129</span><span class="nav-title">Modul 129: LAN-Komponenten in Betrieb nehmen</span></a></li><li><a href="m145.html"><span class="nav-tag">M145</span><span class="nav-title">Modul 145: Netzwerk betreiben und erweitern</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-grundlagen" open>
+        <summary><span>Grundlagen</span><span class="nav-count">13</span></summary>
+        <ul><li><a href="osi-modell.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">OSI-Modell und Kapselung</span></a></li><li><a href="tcp-ip-modell.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">TCP/IP-Modell</span></a></li><li><a href="rahmen-und-pakete.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Aufbau von Rahmen und Paketen</span></a></li><li><a href="ethernet-mac.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Ethernet und MAC-Adressen</span></a></li><li><a href="zahlensysteme.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Zahlensysteme und Adressen</span></a></li><li><a href="subnetting.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Subnetting und VLSM</span></a></li><li><a href="adressbereiche.html" aria-current="page"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Besondere Adressbereiche</span></a></li><li><a href="routing-grundlagen.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Wie Routing funktioniert</span></a></li><li><a href="ports-dienste.html"><span class="nav-dot lx-o4" aria-hidden="true">4</span><span class="nav-title">Ports und Dienste</span></a></li><li><a href="netzwerkdesign.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Netzwerkdesign: Core, Distribution, Access</span></a></li><li><a href="medien.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Kabel, Glasfaser und Funk</span></a></li><li><a href="verkabelung.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Strukturierte Verkabelung</span></a></li><li><a href="datenrate.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Datenrate, Durchsatz und Verzögerung</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-geraete">
+        <summary><span>Geräte</span><span class="nav-count">11</span></summary>
+        <ul><li><a href="pc-notebook.html"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-24" y="-18" width="30" height="22" rx="2"/><path class="line" d="M-9 4 V10 M-15 11 H-3"/><rect x="11" y="-18" width="13" height="30" rx="2"/><path class="line" d="M14 -12 H21 M14 -7 H21"/></svg></span><span class="nav-title">PC und Notebook</span></a></li><li><a href="server.html"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-13" y="-20" width="26" height="40" rx="3"/><path class="line" d="M-8 -13 H8 M-8 -7 H8 M-8 -1 H8"/><circle class="fill" cx="0" cy="12" r="2.2"/></svg></span><span class="nav-title">Server</span></a></li><li><a href="client-gruppe.html"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-8" y="-20" width="26" height="18" rx="2"/><rect x="-16" y="-12" width="26" height="18" rx="2"/><rect x="-24" y="-4" width="26" height="18" rx="2"/><path class="line" d="M-11 14 V19 M-17 19 H-5"/></svg></span><span class="nav-title">Client-Gruppe</span></a></li><li><a href="switch.html"><span class="nav-icon"><svg class="dev-icon role-distribution" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-25" y="-12" width="50" height="24" rx="4"/><path class="line" d="M-14 -5 H14 M9 -8 L14 -5 L9 -2 M14 5 H-14 M-9 2 L-14 5 L-9 8"/></svg></span><span class="nav-title">Switch</span></a></li><li><a href="layer3-switch.html"><span class="nav-icon"><svg class="dev-icon role-distribution" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-25" y="-12" width="50" height="24" rx="4"/><path class="line" d="M-14 -5 H6 M1 -8 L6 -5 L1 -2 M6 5 H-14 M-9 2 L-14 5 L-9 8"/><circle cx="16" cy="0" r="6"/><path class="line" d="M13 0 H19 M16 -3 V3"/></svg></span><span class="nav-title">Layer-3-Switch</span></a></li><li><a href="router.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><circle cx="0" cy="0" r="20"/><path class="line" d="M-5 -5 L-12 -12 M-12 -7 V-12 H-7 M5 5 L12 12 M12 7 V12 H7 M5 -5 L12 -12 M7 -12 H12 V-7 M-5 5 L-12 12 M-7 12 H-12 V7"/></svg></span><span class="nav-title">Router</span></a></li><li><a href="firewall.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-21" y="-16" width="42" height="32" rx="3"/><path class="line" d="M-21 -5.3 H21 M-21 5.3 H21 M-7 -16 V-5.3 M7 -16 V-5.3 M-14 -5.3 V5.3 M0 -5.3 V5.3 M14 -5.3 V5.3 M-7 5.3 V16 M7 5.3 V16"/></svg></span><span class="nav-title">Firewall</span></a></li><li><a href="access-point.html"><span class="nav-icon"><svg class="dev-icon role-distribution" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-20" y="2" width="40" height="13" rx="4"/><path class="line" d="M-11 -7 Q0 -17 11 -7 M-6.5 -3 Q0 -9 6.5 -3"/><circle class="fill" cx="0" cy="1" r="2"/><path class="line" d="M-12 9 H-10 M-6 9 H-4"/></svg></span><span class="nav-title">Access Point</span></a></li><li><a href="modem.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-23" y="-6" width="46" height="18" rx="4"/><path class="line" d="M-9 -12 Q0 -20 9 -12 M-5 -10 Q0 -14 5 -10"/><path class="line" d="M-14 3 H-12 M-7 3 H-5 M0 3 H2"/></svg></span><span class="nav-title">Modem</span></a></li><li><a href="internet-box.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><path d="M-22 13 V-3 L0 -17 L22 -3 V13 Z"/><path class="line" d="M0 -17 V-23 M-4 -21 Q0 -25 4 -21"/><path class="line" d="M-14 7 H-10 M-5 7 H-1 M4 7 H8 M13 7 H17"/><circle class="fill" cx="0" cy="-3" r="2.4"/></svg></span><span class="nav-title">Internet-Box (CPE)</span></a></li><li><a href="provider.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><path d="M-16 12 H16 A10 10 0 0 0 15 -7 A13 13 0 0 0 -9 -11 A11 11 0 0 0 -16 12 Z"/><path class="line" d="M-9 3 H9 M0 -6 V12 M-6 -3 Q0 3 -6 9 M6 -3 Q0 3 6 9"/></svg></span><span class="nav-title">Internet (Provider)</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-protokolle">
+        <summary><span>Protokolle</span><span class="nav-count">29</span></summary>
+        <ul><li><a href="arp.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">ARP</span></a></li><li><a href="vlan.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">VLAN und Trunks</span></a></li><li><a href="stp.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Spanning Tree (STP)</span></a></li><li><a href="lacp.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Port-Channel und LACP</span></a></li><li><a href="wlan.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">WLAN</span></a></li><li><a href="ipv4.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">IPv4</span></a></li><li><a href="icmp.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">ICMP, Ping und Traceroute</span></a></li><li><a href="ipv6.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">IPv6</span></a></li><li><a href="dhcp.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">DHCP</span></a></li><li><a href="dhcpv6.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">DHCPv6</span></a></li><li><a href="dns.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">DNS</span></a></li><li><a href="tcp.html"><span class="nav-dot lx-o4" aria-hidden="true">4</span><span class="nav-title">TCP</span></a></li><li><a href="udp.html"><span class="nav-dot lx-o4" aria-hidden="true">4</span><span class="nav-title">UDP</span></a></li><li><a href="http.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">HTTP</span></a></li><li><a href="e-mail.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">E-Mail: SMTP, POP3 und IMAP</span></a></li><li><a href="ssh.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">SSH</span></a></li><li><a href="nat.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">NAT und PAT</span></a></li><li><a href="ds-lite.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">DS-Lite</span></a></li><li><a href="statisches-routing.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Statisches Routing</span></a></li><li><a href="ospf.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">OSPF</span></a></li><li><a href="rip.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">RIP und RIPng</span></a></li><li><a href="bgp.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">BGP</span></a></li><li><a href="vrf.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">VRF</span></a></li><li><a href="vxlan.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">VXLAN</span></a></li><li><a href="paketfilter.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Firewall-Regeln (Paketfilter)</span></a></li><li><a href="acl.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Zugriffslisten (ACL)</span></a></li><li><a href="ipsec-vpn.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">IPsec-VPN</span></a></li><li><a href="ppp-hdlc.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Serielle Leitungen: HDLC, PPP und PPPoE</span></a></li><li><a href="zugangstechniken.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Zugangstechniken: DOCSIS, GPON, DSL und LTE</span></a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#grundlagen">Grundlagen</a></p>
+      <div class="page-head"><div><h1>Besondere Adressbereiche</h1>
+      <p class="lead">Private Netze, Loopback, Link-Local, CGNAT und Dokumentationsadressen: welche IPv4- und IPv6-Bereiche reserviert sind und wofür, nach RFC 6890.</p></div></div>
+      <dl class="facts"><div><dt>Schicht</dt><dd>3 (Vermittlung)</dd></div><div><dt>Norm</dt><dd>RFC 6890, RFC 1918, RFC 1122 …</dd></div></dl>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#warum-es-reservierte-bereiche-gibt">Warum es reservierte Bereiche gibt</a></li><li><a href="#ipv4">IPv4</a></li><li><a href="#ipv6">IPv6</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#ueben">Üben</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <article class="prose">
+<h2 id="warum-es-reservierte-bereiche-gibt">Warum es reservierte Bereiche gibt</h2>
+<p>Nicht jede IP-Adresse darf im Internet stehen. Die IANA führt Register für Bereiche mit besonderer Bedeutung; RFC 6890 fasst sie zusammen. Wer ein Netz plant, nimmt für das LAN immer einen privaten Bereich und kennt die Bereiche, die nie geroutet werden.</p>
+<h2 id="ipv4">IPv4</h2>
+<div class="table-wrap"><table><thead><tr><th>Bereich</th><th>Zweck</th><th>Norm</th></tr></thead><tbody><tr><td>10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16</td><td>private Netze, nur intern, ins Internet über NAT</td><td>RFC 1918</td></tr><tr><td>127.0.0.0/8</td><td>Loopback: das eigene Gerät (<code>127.0.0.1</code>)</td><td>RFC 1122</td></tr><tr><td>169.254.0.0/16</td><td>Link-Local: selbst vergeben, wenn kein DHCP antwortet</td><td>RFC 3927</td></tr><tr><td>100.64.0.0/10</td><td>Shared Address Space für Carrier-Grade-NAT beim Provider</td><td>RFC 6598</td></tr><tr><td>192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24</td><td>nur für Dokumentation und Beispiele</td><td>RFC 5737</td></tr><tr><td>0.0.0.0/8</td><td>«dieses Netz», z.B. Absender bei DHCP Discover</td><td>RFC 1122</td></tr><tr><td>255.255.255.255</td><td>Broadcast an alle im lokalen Netz</td><td>RFC 919, RFC 1122</td></tr></tbody></table></div>
+<p>Dazu kommt in jedem Subnetz die <strong>Netzadresse</strong> (alle Host-Bits 0) und die <strong>Broadcast-Adresse</strong> (alle Host-Bits 1); beide sind keine Host-Adressen.</p>
+<h2 id="ipv6">IPv6</h2>
+<div class="table-wrap"><table><thead><tr><th>Bereich</th><th>Zweck</th><th>Norm</th></tr></thead><tbody><tr><td>::1/128</td><td>Loopback</td><td>RFC 4291</td></tr><tr><td>fe80::/10</td><td>Link-Local, auf jeder Schnittstelle automatisch</td><td>RFC 4291</td></tr><tr><td>fc00::/7 (praktisch fd00::/8)</td><td>Unique Local Addresses, privat</td><td>RFC 4193</td></tr><tr><td>ff00::/8</td><td>Multicast, z.B. ff02::1 alle Knoten im Link</td><td>RFC 4291</td></tr><tr><td>2001:db8::/32</td><td>nur für Dokumentation</td><td>RFC 3849</td></tr><tr><td>2000::/3</td><td>Global Unicast, im Internet routbar</td><td>RFC 4291</td></tr></tbody></table></div>
+<h2 id="in-leyonet">In leyoNET</h2>
+<p>Alle Beispielnetze in leyoNET verwenden private Adressen (RFC 1918) und für das «Internet» Dokumentationsadressen (RFC 5737, RFC 3849), Namen nur unter <code>.example</code>. Ein PC ohne DHCP-Antwort meldet nach drei Versuchen «kein Server». Der IP-Rechner (Werkzeuge) zeigt bei jeder Adresse, zu welchem dieser Bereiche sie gehört.</p>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Routing – Auftrag 2: Ins Internet mit NAT</strong> <span class="muted">· 5 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M129_Routing.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
+<section aria-labelledby="normen"><h2 id="normen">Normen</h2>
+<ul class="norms"><li><a href="https://www.rfc-editor.org/rfc/rfc6890">RFC 6890</a> – Special-Purpose IP Address Registries</li><li><a href="https://www.rfc-editor.org/rfc/rfc1918">RFC 1918</a> – Address Allocation for Private Internets</li><li><a href="https://www.rfc-editor.org/rfc/rfc1122">RFC 1122</a> – Requirements for Internet Hosts – Communication Layers</li><li><a href="https://www.rfc-editor.org/rfc/rfc3927">RFC 3927</a> – Dynamic Configuration of IPv4 Link-Local Addresses</li><li><a href="https://www.rfc-editor.org/rfc/rfc6598">RFC 6598</a> – IANA-Reserved IPv4 Prefix for Shared Address Space</li><li><a href="https://www.rfc-editor.org/rfc/rfc5737">RFC 5737</a> – IPv4 Address Blocks Reserved for Documentation</li><li><a href="https://www.rfc-editor.org/rfc/rfc4291">RFC 4291</a> – IP Version 6 Addressing Architecture</li><li><a href="https://www.rfc-editor.org/rfc/rfc4193">RFC 4193</a> – Unique Local IPv6 Unicast Addresses</li><li><a href="https://www.rfc-editor.org/rfc/rfc3849">RFC 3849</a> – IPv6 Address Prefix Reserved for Documentation</li></ul></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Weiterlesen</h2>
+<ul class="related"><li><a href="subnetting.html">Subnetting und VLSM</a> <span class="muted">Ein Netz in kleinere aufteilen, Masken und Präfixe lesen, Hostbereich und Broadcast berechnen – gleichmässig oder nach Bedarf.</span></li><li><a href="nat.html">NAT und PAT</a> <span class="muted">Private Netze ins Internet bringen: Port-Übersetzung (PAT), Portweiterleitung, statisches SNAT und DNAT, 1:1-NAT und CGNAT beim Provider.</span></li><li><a href="ipv4.html">IPv4</a> <span class="muted">Adressen, Masken und der IPv4-Kopf: wie ein Paket sein Ziel über viele Netze hinweg findet, mit TTL, Prüfsumme und privaten Adressen.</span></li><li><a href="ipv6.html">IPv6</a> <span class="muted">128-Bit-Adressen, Präfixe, Link-Local, Neighbor Discovery statt ARP und automatische Adressen mit SLAAC.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Blättern">
+        <a class="prev" href="subnetting.html"><span class="muted">Zurück</span>Subnetting und VLSM</a>
+        <a class="next" href="routing-grundlagen.html"><span class="muted">Weiter</span>Wie Routing funktioniert</a>
+      </nav>
+      <p class="edit muted">Fehler gefunden oder eine Idee? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/grundlagen/adressbereiche.md">Quelltext dieser Seite</a> auf GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET Wiki · Stand Version 1.5.1 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Kontakt</a></li>
+        <li><a href="../impressum.html">Impressum</a></li>
+        <li><a href="../datenschutz.html">Datenschutz</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

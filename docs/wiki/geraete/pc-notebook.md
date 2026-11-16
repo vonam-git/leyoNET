@@ -1,6 +1,7 @@
 ---
 titel: PC und Notebook
 kurz: Endgeräte mit Desktop: Befehlszeile, Webbrowser, E-Mail und Netzwerkeinstellungen – fest oder per DHCP.
+symbol: pc
 reihenfolge: 1
 schicht: 1 bis 7 (Endgerät)
 hilfe: [device.pc, device.notebook]

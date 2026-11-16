@@ -1,6 +1,7 @@
 ---
 titel: Server
 kurz: Das Gerät für Dienste: DHCP, DNS, Webserver und Mailserver, auch als Rack-Server im Rechenzentrum.
+symbol: server
 reihenfolge: 2
 schicht: 7 (Dienste)
 hilfe: [device.server, scopes]

@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const data = window.LEYONET_WIKI || [];
+  const EN = document.documentElement.lang.startsWith('en');
   const form = document.querySelector('.wiki-search');
   if (!form) return;
   const input = form.querySelector('input');
@@ -23,7 +24,7 @@
       .slice(0, 8);
     if (!hits.length) {
       const li = document.createElement('li');
-      li.textContent = 'Nichts gefunden.';
+      li.textContent = EN ? 'Nothing found.' : 'Nichts gefunden.';
       li.className = 'muted';
       list.append(li);
     }
@@ -88,6 +89,8 @@
 /* Rahmen und Pakete: Bytes markieren und Schritt für Schritt einpacken (wie in der App). */
 (() => {
   'use strict';
+  const EN = document.documentElement.lang.startsWith('en');
+  const L = (de, en) => (EN ? en : de);
   // Zeigen oder Fokus auf ein Feld: seine Bytes in der Hex-Ansicht derselben Abbildung markieren.
   for (const figure of document.querySelectorAll('.lx-packet')) {
     let active = null;
@@ -124,15 +127,15 @@
     const all = document.createElement('button');
     all.type = 'button';
     all.className = 'btn btn-small';
-    all.textContent = 'Alles zeigen';
+    all.textContent = L('Alles zeigen', 'Show all');
     const status = document.createElement('span');
     status.className = 'lx-muted';
     status.setAttribute('aria-live', 'polite');
     const update = () => {
       for (const c of cells) c.classList.toggle('later', rowOf(c) > shown);
-      next.textContent = shown >= rows ? 'Von vorn einpacken' : 'Nächste Hülle einpacken';
+      next.textContent = shown >= rows ? L('Von vorn einpacken', 'Wrap again from the start') : L('Nächste Hülle einpacken', 'Wrap the next layer');
       const label = cells.find((c) => rowOf(c) === shown && c.classList.contains('lx-encap-label'));
-      status.textContent = shown >= rows ? '' : `Schicht ${label ? label.textContent.replace(/^(\d)/, '$1 · ') : ''}`;
+      status.textContent = shown >= rows ? '' : `${L('Schicht', 'Layer')} ${label ? label.textContent.replace(/^(\d)/, '$1 · ') : ''}`;
       all.hidden = shown >= rows;
     };
     next.addEventListener('click', () => {

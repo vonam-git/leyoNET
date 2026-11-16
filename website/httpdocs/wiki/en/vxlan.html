@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VXLAN – leyoNET Wiki</title>
+  <meta name="description" content="Extending VLANs across a routed network: Ethernet frames in UDP 4789, VNI instead of VLAN number, VTEPs on layer 3 switches.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/en/vxlan.html">
+  <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/vxlan.html">
+  <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/vxlan.html">
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../css/site.css?v=1.5.1">
+  <link rel="stylesheet" href="../farben.css?v=1.5.1">
+  <link rel="stylesheet" href="../aufbau.css?v=1.5.1">
+  <link rel="stylesheet" href="../wiki.css?v=1.5.1">
+  <script src="../../js/site.js?v=1.5.1" defer></script>
+  <script src="suche.js?v=1.5.1" defer></script>
+  <script src="../wiki.js?v=1.5.1" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Skip to content</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../../en/" aria-label="leyoNET home">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Main navigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crash course</a></li>
+          <li><a href="index.html#module">Modules</a></li>
+          <li><a href="index.html#grundlagen">Basics</a></li>
+          <li><a href="index.html#geraete">Devices</a></li>
+          <li><a href="index.html#protokolle">Protocols</a></li>
+        </ul>
+      </nav>
+      <a class="lang-switch" href="../vxlan.html" hreflang="de" lang="de" title="Deutsche Fassung">DE</a>
+      <button class="theme-toggle" type="button" aria-label="Dark theme" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Start in the browser</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki contents">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Search the wiki</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Search, e.g. “OSPF” or “trunk”" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group wiki-group-lehrpersonen">
+        <summary><span>Crash course for teachers</span><span class="nav-count">11</span></summary>
+        <ul><li><a href="crashkurs.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Crash course: ready in 30 minutes</span></a></li><li><a href="erstes-netz.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">The first network in 10 minutes</span></a></li><li><a href="simulation-verstehen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Understanding the simulation and the packet list</span></a></li><li><a href="profile.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Choosing feature profiles</span></a></li><li><a href="dokumentieren.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Documenting networks</span></a></li><li><a href="uebungen-einsetzen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Exercises and worksheets in class</span></a></li><li><a href="aufgaben-erstellen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Creating your own tasks</span></a></li><li><a href="pruefungen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Running exams</span></a></li><li><a href="webversion.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Web version: sessions, classes and watching</span></a></li><li><a href="klassen-verbund.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Class network in the classroom</span></a></li><li><a href="faq.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Frequently asked questions</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-module">
+        <summary><span>Swiss ICT modules</span><span class="nav-count">3</span></summary>
+        <ul><li><a href="m117.html"><span class="nav-tag">M117</span><span class="nav-title">Module 117: IT and network infrastructure</span></a></li><li><a href="m129.html"><span class="nav-tag">M129</span><span class="nav-title">Module 129: Putting LAN components into operation</span></a></li><li><a href="m145.html"><span class="nav-tag">M145</span><span class="nav-title">Module 145: Operating and extending a network</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-grundlagen">
+        <summary><span>Basics</span><span class="nav-count">13</span></summary>
+        <ul><li><a href="osi-modell.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">OSI model and encapsulation</span></a></li><li><a href="tcp-ip-modell.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">TCP/IP model</span></a></li><li><a href="rahmen-und-pakete.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Structure of frames and packets</span></a></li><li><a href="ethernet-mac.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Ethernet and MAC addresses</span></a></li><li><a href="zahlensysteme.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Number systems and addresses</span></a></li><li><a href="subnetting.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Subnetting and VLSM</span></a></li><li><a href="adressbereiche.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Special address ranges</span></a></li><li><a href="routing-grundlagen.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">How routing works</span></a></li><li><a href="ports-dienste.html"><span class="nav-dot lx-o4" aria-hidden="true">4</span><span class="nav-title">Ports and services</span></a></li><li><a href="netzwerkdesign.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Network design: core, distribution, access</span></a></li><li><a href="medien.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Cables, fibre and radio</span></a></li><li><a href="verkabelung.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Structured cabling</span></a></li><li><a href="datenrate.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Data rate, throughput and delay</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-geraete">
+        <summary><span>Devices</span><span class="nav-count">11</span></summary>
+        <ul><li><a href="pc-notebook.html"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-24" y="-18" width="30" height="22" rx="2"/><path class="line" d="M-9 4 V10 M-15 11 H-3"/><rect x="11" y="-18" width="13" height="30" rx="2"/><path class="line" d="M14 -12 H21 M14 -7 H21"/></svg></span><span class="nav-title">PC and notebook</span></a></li><li><a href="server.html"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-13" y="-20" width="26" height="40" rx="3"/><path class="line" d="M-8 -13 H8 M-8 -7 H8 M-8 -1 H8"/><circle class="fill" cx="0" cy="12" r="2.2"/></svg></span><span class="nav-title">Server</span></a></li><li><a href="client-gruppe.html"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-8" y="-20" width="26" height="18" rx="2"/><rect x="-16" y="-12" width="26" height="18" rx="2"/><rect x="-24" y="-4" width="26" height="18" rx="2"/><path class="line" d="M-11 14 V19 M-17 19 H-5"/></svg></span><span class="nav-title">Client group</span></a></li><li><a href="switch.html"><span class="nav-icon"><svg class="dev-icon role-distribution" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-25" y="-12" width="50" height="24" rx="4"/><path class="line" d="M-14 -5 H14 M9 -8 L14 -5 L9 -2 M14 5 H-14 M-9 2 L-14 5 L-9 8"/></svg></span><span class="nav-title">Switch</span></a></li><li><a href="layer3-switch.html"><span class="nav-icon"><svg class="dev-icon role-distribution" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-25" y="-12" width="50" height="24" rx="4"/><path class="line" d="M-14 -5 H6 M1 -8 L6 -5 L1 -2 M6 5 H-14 M-9 2 L-14 5 L-9 8"/><circle cx="16" cy="0" r="6"/><path class="line" d="M13 0 H19 M16 -3 V3"/></svg></span><span class="nav-title">Layer 3 switch</span></a></li><li><a href="router.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><circle cx="0" cy="0" r="20"/><path class="line" d="M-5 -5 L-12 -12 M-12 -7 V-12 H-7 M5 5 L12 12 M12 7 V12 H7 M5 -5 L12 -12 M7 -12 H12 V-7 M-5 5 L-12 12 M-7 12 H-12 V7"/></svg></span><span class="nav-title">Router</span></a></li><li><a href="firewall.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-21" y="-16" width="42" height="32" rx="3"/><path class="line" d="M-21 -5.3 H21 M-21 5.3 H21 M-7 -16 V-5.3 M7 -16 V-5.3 M-14 -5.3 V5.3 M0 -5.3 V5.3 M14 -5.3 V5.3 M-7 5.3 V16 M7 5.3 V16"/></svg></span><span class="nav-title">Firewall</span></a></li><li><a href="access-point.html"><span class="nav-icon"><svg class="dev-icon role-distribution" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-20" y="2" width="40" height="13" rx="4"/><path class="line" d="M-11 -7 Q0 -17 11 -7 M-6.5 -3 Q0 -9 6.5 -3"/><circle class="fill" cx="0" cy="1" r="2"/><path class="line" d="M-12 9 H-10 M-6 9 H-4"/></svg></span><span class="nav-title">Access point</span></a></li><li><a href="modem.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-23" y="-6" width="46" height="18" rx="4"/><path class="line" d="M-9 -12 Q0 -20 9 -12 M-5 -10 Q0 -14 5 -10"/><path class="line" d="M-14 3 H-12 M-7 3 H-5 M0 3 H2"/></svg></span><span class="nav-title">Modem</span></a></li><li><a href="internet-box.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><path d="M-22 13 V-3 L0 -17 L22 -3 V13 Z"/><path class="line" d="M0 -17 V-23 M-4 -21 Q0 -25 4 -21"/><path class="line" d="M-14 7 H-10 M-5 7 H-1 M4 7 H8 M13 7 H17"/><circle class="fill" cx="0" cy="-3" r="2.4"/></svg></span><span class="nav-title">Home router (CPE)</span></a></li><li><a href="provider.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><path d="M-16 12 H16 A10 10 0 0 0 15 -7 A13 13 0 0 0 -9 -11 A11 11 0 0 0 -16 12 Z"/><path class="line" d="M-9 3 H9 M0 -6 V12 M-6 -3 Q0 3 -6 9 M6 -3 Q0 3 6 9"/></svg></span><span class="nav-title">Internet (provider)</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-protokolle" open>
+        <summary><span>Protocols</span><span class="nav-count">29</span></summary>
+        <ul><li><a href="arp.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">ARP</span></a></li><li><a href="vlan.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">VLANs and trunks</span></a></li><li><a href="stp.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Spanning tree (STP)</span></a></li><li><a href="lacp.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Port channel and LACP</span></a></li><li><a href="wlan.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Wi-Fi</span></a></li><li><a href="ipv4.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">IPv4</span></a></li><li><a href="icmp.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">ICMP, ping and traceroute</span></a></li><li><a href="ipv6.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">IPv6</span></a></li><li><a href="dhcp.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">DHCP</span></a></li><li><a href="dhcpv6.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">DHCPv6</span></a></li><li><a href="dns.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">DNS</span></a></li><li><a href="tcp.html"><span class="nav-dot lx-o4" aria-hidden="true">4</span><span class="nav-title">TCP</span></a></li><li><a href="udp.html"><span class="nav-dot lx-o4" aria-hidden="true">4</span><span class="nav-title">UDP</span></a></li><li><a href="http.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">HTTP</span></a></li><li><a href="e-mail.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">E-mail: SMTP, POP3 and IMAP</span></a></li><li><a href="ssh.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">SSH</span></a></li><li><a href="nat.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">NAT and PAT</span></a></li><li><a href="ds-lite.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">DS-Lite</span></a></li><li><a href="statisches-routing.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Static routing</span></a></li><li><a href="ospf.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">OSPF</span></a></li><li><a href="rip.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">RIP and RIPng</span></a></li><li><a href="bgp.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">BGP</span></a></li><li><a href="vrf.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">VRF</span></a></li><li><a href="vxlan.html" aria-current="page"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">VXLAN</span></a></li><li><a href="paketfilter.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Firewall rules (packet filter)</span></a></li><li><a href="acl.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Access control lists (ACL)</span></a></li><li><a href="ipsec-vpn.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">IPsec VPN</span></a></li><li><a href="ppp-hdlc.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Serial lines: HDLC, PPP and PPPoE</span></a></li><li><a href="zugangstechniken.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Access technologies: DOCSIS, GPON, DSL and LTE</span></a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#protokolle">Protocols</a></p>
+      <div class="page-head"><div><h1>VXLAN</h1>
+      <p class="lead">Extending VLANs across a routed network: Ethernet frames in UDP 4789, VNI instead of VLAN number, VTEPs on layer 3 switches.</p></div></div>
+      <dl class="facts"><div><dt>Layer</dt><dd>2 über 3 (UDP 4789)</dd></div><div><dt>Standard</dt><dd>RFC 7348</dd></div><div><dt>See an example</dt><dd><a href="#beispiel">2 demos</a></dd></div></dl>
+      <nav class="toc" aria-label="On this page"><strong>On this page</strong><ol><li><a href="#the-problem">The problem</a></li><li><a href="#the-solution">The solution</a></li><li><a href="#setting-up">Setting up</a></li><li><a href="#in-leyonet">How to do it in leyoNET</a></li><li><a href="#beispiel">See an example</a></li><li><a href="#ueben">Practise</a></li><li><a href="#vereinfachungen">What leyoNET simplifies</a></li><li><a href="#normen">Standards</a></li><li><a href="#weiter">Read on</a></li></ol></nav>
+      <article class="prose">
+<h2 id="the-problem">The problem</h2>
+<p>In the data centre the switches route between each other (no loops, no spanning tree). Servers that need to be in the same network are connected to different switches, though. How does a VLAN cross a routed network?</p>
+<h2 id="the-solution">The solution</h2>
+<p><strong>VXLAN</strong> wraps the whole Ethernet frame in a UDP packet (port 4789) and sends it via IP to the switch on the other side. There it is unwrapped and put into the VLAN.</p>
+<pre class="code lang-text"><code>[ Ethernet | IP loopback→loopback | UDP 4789 | VXLAN VNI 10010 | Ethernet | IP | ICMP ]
+  outside (underlay)                           inside (the original frame)</code></pre>
+<div class="table-wrap"><table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td><strong>VTEP</strong></td><td>VXLAN tunnel endpoint, usually a layer 3 switch (leaf)</td></tr><tr><td><strong>VNI</strong></td><td>24-bit identifier of the segment (instead of the 12-bit VLAN ID, so up to 16 million)</td></tr><tr><td><strong>Underlay</strong></td><td>the routed network between the VTEPs, often with OSPF or BGP</td></tr><tr><td><strong>Overlay</strong></td><td>the layer 2 network created on top</td></tr></tbody></table></div>
+<h2 id="setting-up">Setting up</h2>
+<pre class="code"><code>Switch(config)# vlan 10
+Switch(config-vlan)# vn-segment 10010
+Switch(config)# interface nve1
+Switch(config-if)# source-interface loopback0
+Switch(config-if)# member vni 10010 peer-ip 10.255.0.2
+Switch# show nve peers</code></pre>
+<p>In leyoNET the other VTEPs are in a fixed list; the control protocol EVPN is not modelled.</p>
+<section aria-labelledby="in-leyonet"><h2 id="in-leyonet">How to do it in leyoNET</h2>
+<p class="muted">The same text as in the app’s help (F1 key).</p>
+<div class="help-block"><h3>VXLAN</h3>
+<p><strong>VXLAN</strong> (RFC 7348) extends a VLAN across a routed network. A <strong>VTEP</strong> (here a layer-3 switch) wraps every frame of the VLAN including its MAC addresses in a UDP packet (port 4789) with the <strong>VNI</strong>, a 24-bit number for the segment, and sends it by IP to the other VTEPs.</p>
+<ul><li>Link VLAN and VNI: in the VLAN <code>vn-segment 10010</code>.</li><li>Tunnel source: usually a <a href="router.html">Loopback interfaces</a> (<code>interface nve1</code>, <code>source-interface loopback0</code>), reachable in the underlay via OSPF or statically.</li><li>Enter the other VTEPs as a fixed list (ingress replication): <code>member vni 10010 peer-ip 10.255.0.2</code>. Broadcasts and unknown destinations go to all, learned MAC addresses only to their VTEP («flood and learn»).</li><li>Frames from VTEPs not in the list are dropped.</li></ul>
+<p>In the form: tab <strong>Switching</strong>, section VXLAN. Display: <code>show nve vni</code>, <code>show nve peers</code>, <code>show mac address-table</code> (entries «nve1»). <strong>EVPN</strong> (BGP distributes the MAC addresses) is not modelled.</p></div></section>
+<section aria-labelledby="beispiel"><h2 id="beispiel">See an example</h2>
+<ul class="cards"><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="../bilder/vxlan.webp" width="700" height="298" alt="Demo “VXLAN between two sites” in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="../bilder/vxlan-dark.webp" width="700" height="298" alt="Demo “VXLAN between two sites” in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>VXLAN between two sites</strong><p>Two layer-3 switches extend VLAN 10 via VXLAN across a routed network (OSPF). The PCs in Zürich and Bern are in the same subnet.</p><p class="muted">First the switches learn the loopbacks (10.255.0.1 and .2) via OSPF. Then the Zürich PC pings the Bern PC: ARP and ping run wrapped in UDP 4789 across the spine. Filter «vxlan».</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vxlan">Watch live</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vxlan.json">Project file</a></p></li><li class="card"><figure class="shot-figure"><picture class="img-light"><img src="../bilder/datacenter.webp" width="700" height="298" alt="Demo “Data centre: leaf-spine with BGP and VXLAN” in leyoNET" loading="lazy" decoding="async"></picture><picture class="img-dark"><img src="../bilder/datacenter-dark.webp" width="700" height="298" alt="Demo “Data centre: leaf-spine with BGP and VXLAN” in leyoNET" loading="lazy" decoding="async"></picture></figure><strong>Data centre: leaf-spine with BGP and VXLAN</strong><p>A data centre like those of large providers: two spines, three leafs, every leaf connected to both spines. The underlay routes with eBGP (one AS per leaf), the overlay extends VLAN 10 (web) and VLAN 20 (database) over all leafs with VXLAN.</p><p class="muted">First the switches set up their BGP sessions and learn the loopbacks. Then Web 1 pings Web 2 and DB 1 pings DB 2 – both within the same subnet, but across two routed hops. Filter “vxlan” or “bgp”.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=datacenter">Watch live</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/rechenzentrum.json">Project file</a></p></li></ul><p class="muted">“Watch live” opens the network in leyoNET, the simulation runs in a loop. In the app you find it under File → Demo networks, with a step-by-step tour.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Practise</h2>
+<ul class="exercises"><li><span class="stars" aria-label="5 of 5 stars">★★★★★</span> <strong>Data centre: leaf-spine with BGP and VXLAN</strong> <span class="muted">· 5 goals</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_datacenter.pdf">Worksheet</a> (German)</li></ul><p class="muted">In leyoNET under Tools → Exercise catalogue. Every exercise checks itself.</p></section>
+<section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">What leyoNET simplifies</h2>
+<div class="table-wrap"><table><thead><tr><th>Protocol</th><th>Layer</th><th>Simplification in the simulation</th></tr></thead><tbody><tr><td>VXLAN</td><td>2–4</td><td>Inner Ethernet frame in UDP 4789 with VNI; VTEPs from a fixed list (ingress replication), MAC learning in the data path; no EVPN, no multicast groups</td></tr></tbody></table></div></section>
+<section aria-labelledby="normen"><h2 id="normen">Standards</h2>
+<ul class="norms"><li><a href="https://www.rfc-editor.org/rfc/rfc7348">RFC 7348</a> – Virtual eXtensible Local Area Network (VXLAN): A Framework for Overlaying Virtualized Layer 2 Networks over Layer 3 Networks</li></ul></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Read on</h2>
+<ul class="related"><li><a href="vlan.html">VLANs and trunks</a> <span class="muted">One switch, several separate networks: access ports, trunks with 802.1Q tag, native VLAN and routing between VLANs.</span></li><li><a href="netzwerkdesign.html">Network design: core, distribution, access</a> <span class="muted">Why large networks are built in layers, when a collapsed core is enough and what a data centre with leaf-spine looks like.</span></li><li><a href="bgp.html">BGP</a> <span class="muted">Routing between providers and organisations: autonomous systems, neighbours over TCP 179, announced networks and the AS path.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Page through">
+        <a class="prev" href="vrf.html"><span class="muted">Previous</span>VRF</a>
+        <a class="next" href="paketfilter.html"><span class="muted">Next</span>Firewall rules (packet filter)</a>
+      </nav>
+      <p class="edit muted">Found a mistake or have an idea? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/en/protokolle/vxlan.md">Source of this page</a> on GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET wiki · as of version 1.5.1 · texts under the same licence as leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../../impressum.html#kontakt">Contact</a></li>
+        <li><a href="../../impressum.html" hreflang="de">Legal notice</a></li>
+        <li><a href="../../datenschutz.html" hreflang="de">Privacy</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

@@ -18,6 +18,10 @@
       "titel": "An Ethernet Address Resolution Protocol",
       "verwendung": "ARP"
     },
+    "919": {
+      "titel": "Broadcasting Internet Datagrams",
+      "verwendung": "Broadcast 255.255.255.255 (Grundlagen im Wiki)"
+    },
     "1034": {
       "titel": "Domain Names – Concepts and Facilities",
       "verwendung": "DNS: Zonen, CNAME-Regeln, Auflösung, Weiterleitung"
@@ -33,6 +37,10 @@
     "1071": {
       "titel": "Computing the Internet Checksum",
       "verwendung": "Prüfsummen in IP, ICMP, UDP, TCP"
+    },
+    "1122": {
+      "titel": "Requirements for Internet Hosts – Communication Layers",
+      "verwendung": "TCP/IP-Modell mit vier Schichten, Loopback 127.0.0.0/8 (Grundlagen im Wiki)"
     },
     "1123": {
       "titel": "Requirements for Internet Hosts – Application and Support",
@@ -118,6 +126,10 @@
       "titel": "IPv6 Address Prefix Reserved for Documentation",
       "verwendung": "Beispieladressen 2001:db8::/32"
     },
+    "3927": {
+      "titel": "Dynamic Configuration of IPv4 Link-Local Addresses",
+      "verwendung": "169.254.0.0/16 ohne DHCP (Grundlagen im Wiki)"
+    },
     "3986": {
       "titel": "Uniform Resource Identifier (URI): Generic Syntax",
       "verwendung": "URLs im Browser, IPv6-Adressen in eckigen Klammern"
@@ -149,6 +161,10 @@
     "4443": {
       "titel": "Internet Control Message Protocol (ICMPv6) for the Internet Protocol Version 6 (IPv6) Specification",
       "verwendung": "ICMPv6: Echo, Destination Unreachable, Time Exceeded"
+    },
+    "4632": {
+      "titel": "Classless Inter-domain Routing (CIDR): The Internet Address Assignment and Aggregation Plan",
+      "verwendung": "Präfixschreibweise /24, Zusammenfassen von Netzen"
     },
     "4861": {
       "titel": "Neighbor Discovery for IP version 6 (IPv6)",
@@ -182,6 +198,10 @@
       "titel": "Dual-Stack Lite Broadband Deployments Following IPv4 Exhaustion",
       "verwendung": "DS-Lite: B4 (Internet-Box), AFTR mit CGNAT beim Provider"
     },
+    "6335": {
+      "titel": "Internet Assigned Numbers Authority (IANA) Procedures for the Management of the Service Name and Transport Protocol Port Number Registry",
+      "verwendung": "Port-Bereiche: System, User, dynamisch (Grundlagen im Wiki)"
+    },
     "6598": {
       "titel": "IANA-Reserved IPv4 Prefix for Shared Address Space",
       "verwendung": "CGNAT 100.64.0.0/10"
@@ -193,6 +213,10 @@
     "6793": {
       "titel": "BGP Support for Four-Octet Autonomous System (AS) Number Space",
       "verwendung": "4-Byte-AS-Nummern"
+    },
+    "6890": {
+      "titel": "Special-Purpose IP Address Registries",
+      "verwendung": "Besondere IPv4- und IPv6-Adressbereiche (Grundlagen im Wiki)"
     },
     "7296": {
       "titel": "Internet Key Exchange Protocol Version 2 (IKEv2)",
@@ -242,14 +266,16 @@
       "verwendung": "Ethernet, 1000BASE-T, 1000BASE-SX/LX",
       "aktuell": "IEEE 802.3-2022",
       "bemerkung": "802.3ab und 802.3z sind Ergänzungen, die in der Gesamtausgabe enthalten sind. Die Bezeichnungen 1000BASE-T/-SX/-LX gelten unverändert.",
-      "geprueft": "2026-10-30"
+      "geprueft": "2026-10-30",
+      "titel": "IEEE Standard for Ethernet"
     },
     {
       "id": "IEEE 802.1Q",
       "organisation": "IEEE",
       "verwendung": "VLAN-Tags, Trunks, Bridging",
       "aktuell": "IEEE 802.1Q-2022",
-      "geprueft": "2026-10-30"
+      "geprueft": "2026-10-30",
+      "titel": "Bridges and Bridged Networks"
     },
     {
       "id": "IEEE 802.2",
@@ -257,7 +283,8 @@
       "verwendung": "LLC-Kopf (DSAP, SSAP, Control) in IEEE-802.3-Rahmen, z.B. bei Spanning Tree",
       "aktuell": "ISO/IEC 8802-2:1998 (IEEE 802.2-1998)",
       "bemerkung": "IEEE hat 802.2 2010 zurückgezogen und verweist auf ISO/IEC 8802-2, das stabilisiert ist (gültig, ohne Überarbeitung). Das LLC-Format gilt unverändert.",
-      "geprueft": "2026-11-13"
+      "geprueft": "2026-11-13",
+      "titel": "Logical Link Control (ISO/IEC 8802-2)"
     },
     {
       "id": "IEEE 802.1D",
@@ -265,7 +292,8 @@
       "verwendung": "Spanning Tree (BPDU Protokollversion 0)",
       "aktuell": "IEEE 802.1D-2004",
       "bemerkung": "Bridging und Spanning Tree sind seit 802.1Q-2014 auch in 802.1Q beschrieben. Das BPDU-Format von STP (Version 0) ist unverändert.",
-      "geprueft": "2026-10-30"
+      "geprueft": "2026-10-30",
+      "titel": "Media Access Control (MAC) Bridges"
     },
     {
       "id": "IEEE 802.1AX",
@@ -276,14 +304,16 @@
       "verwendung": "Link Aggregation, LACP (Port-Channel)",
       "aktuell": "IEEE 802.1AX-2020",
       "bemerkung": "LACP stand früher als Klausel 43 in IEEE 802.3ad; seit 2008 eigene Norm 802.1AX. LACPDU-Format (Version 1) unverändert.",
-      "geprueft": "2026-11-06"
+      "geprueft": "2026-11-06",
+      "titel": "Link Aggregation"
     },
     {
       "id": "IEEE 802.1X",
       "organisation": "IEEE",
       "verwendung": "EAPOL (EtherType 0x888e) beim WLAN-Handshake",
       "aktuell": "IEEE 802.1X-2020",
-      "geprueft": "2026-10-30"
+      "geprueft": "2026-10-30",
+      "titel": "Port-Based Network Access Control"
     },
     {
       "id": "IEEE 802.11",
@@ -295,7 +325,8 @@
       "verwendung": "WLAN-Management, WPA2-Handshake, Wi-Fi 5",
       "aktuell": "IEEE 802.11-2024",
       "bemerkung": "802.11i (Sicherheit) und 802.11ac (Wi-Fi 5) sind in der Gesamtausgabe enthalten. Neuere Generationen (Wi-Fi 6/7) simuliert leyoNET nicht.",
-      "geprueft": "2026-10-30"
+      "geprueft": "2026-10-30",
+      "titel": "Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications"
     },
     {
       "id": "ITU-T G.984",
@@ -303,28 +334,32 @@
       "verwendung": "GPON (PLOAM, OMCI, GEM)",
       "aktuell": "ITU-T G.984-Reihe",
       "bemerkung": "Neuere Glasfasernetze nutzen auch XGS-PON (G.9807.1); GPON ist weiterhin gültig und verbreitet.",
-      "geprueft": "2026-10-30"
+      "geprueft": "2026-10-30",
+      "titel": "Gigabit-capable passive optical networks (GPON)"
     },
     {
       "id": "ITU-T G.992.5",
       "organisation": "ITU-T",
       "verwendung": "ADSL2+",
       "aktuell": "ITU-T G.992.5",
-      "geprueft": "2026-10-30"
+      "geprueft": "2026-10-30",
+      "titel": "Asymmetric digital subscriber line 2 transceivers – Extended bandwidth ADSL2 (ADSL2plus)"
     },
     {
       "id": "ITU-T G.993.2",
       "organisation": "ITU-T",
       "verwendung": "VDSL2, Profil 17a, Vectoring",
       "aktuell": "ITU-T G.993.2",
-      "geprueft": "2026-10-30"
+      "geprueft": "2026-10-30",
+      "titel": "Very high speed digital subscriber line transceivers 2 (VDSL2)"
     },
     {
       "id": "ITU-T G.994.1",
       "organisation": "ITU-T",
       "verwendung": "DSL-Handshake (G.hs)",
       "aktuell": "ITU-T G.994.1",
-      "geprueft": "2026-10-30"
+      "geprueft": "2026-10-30",
+      "titel": "Handshake procedures for digital subscriber line transceivers"
     },
     {
       "id": "DOCSIS 3.1",
@@ -332,7 +367,26 @@
       "verwendung": "Kabelmodem (Ranging, Registrierung)",
       "aktuell": "DOCSIS 3.1",
       "bemerkung": "DOCSIS 4.0 ist veröffentlicht; 3.1 ist in Kabelnetzen weiterhin Standard.",
-      "geprueft": "2026-10-30"
+      "geprueft": "2026-10-30",
+      "titel": "Data-Over-Cable Service Interface Specifications DOCSIS 3.1"
+    },
+    {
+      "id": "ISO/IEC 7498-1",
+      "organisation": "ISO/IEC",
+      "titel": "Open Systems Interconnection – Basic Reference Model: The Basic Model",
+      "verwendung": "OSI-Referenzmodell mit sieben Schichten (Grundlagen im Wiki)",
+      "aktuell": "ISO/IEC 7498-1:1994",
+      "bemerkung": "Gleich lautend ITU-T X.200; seither unverändert bestätigt.",
+      "geprueft": "2026-11-16"
+    },
+    {
+      "id": "ISO/IEC 11801-1",
+      "organisation": "ISO/IEC",
+      "titel": "Generic cabling for customer premises – Part 1: General requirements",
+      "verwendung": "Strukturierte Verkabelung: Kategorien, Klassen, Linklänge (Grundlagen im Wiki)",
+      "aktuell": "ISO/IEC 11801-1:2017 mit Amd 1:2025",
+      "bemerkung": "In Europa als EN 50173-1 übernommen.",
+      "geprueft": "2026-11-16"
     }
   ]
 }

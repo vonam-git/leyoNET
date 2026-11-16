@@ -1,6 +1,7 @@
 ---
 titel: Modem
 kurz: Setzt die Zugangsleitung um: Kabel (DOCSIS), Glasfaser (GPON), VDSL, ADSL oder Mobilfunk – geroutet wird dahinter.
+symbol: modem
 reihenfolge: 9
 schicht: 1 und 2
 hilfe: [device.modem]

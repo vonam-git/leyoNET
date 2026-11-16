@@ -6,7 +6,10 @@ import { describe, expect, it } from 'vitest';
 const root = join(__dirname, '..', '..');
 const site = join(root, 'website', 'httpdocs');
 // Ohne die echten Seiten mit Kontaktdaten (nur lokal bzw. auf dem Server, in .gitignore).
-const pages = readdirSync(site).filter((f) => f.endsWith('.html') && f !== 'impressum.html' && f !== 'datenschutz.html');
+const pages = [
+  ...readdirSync(site).filter((f) => f.endsWith('.html') && f !== 'impressum.html' && f !== 'datenschutz.html'),
+  ...readdirSync(join(site, 'en')).filter((f) => f.endsWith('.html')).map((f) => `en/${f}`),
+];
 const read = (f: string) => readFileSync(join(site, f), 'utf8');
 const workflow = readFileSync(join(root, '.github', 'workflows', 'desktop.yml'), 'utf8');
 const external = /^(https?:)?\/\//;
@@ -48,6 +51,41 @@ describe('Website leyonet.ch', () => {
     const html = read(page);
     for (const [, ref] of html.matchAll(/(?:href|src)="(\/?(?:css|js)\/[^"]+)"/g)) expect(ref, ref).toMatch(new RegExp(`\\?v=${version.replace(/\./g, '\\.')}$`));
     expect(html).toContain('site.css?v=');
+  });
+
+  it('englische Startseite: gleicher Aufbau wie die deutsche, gegenseitig verlinkt (hreflang)', () => {
+    const de = read('index.html');
+    const en = read('en/index.html');
+    const list = (html: string, re: RegExp) => [...html.matchAll(re)].map((m) => m[1]);
+    for (const re of [/\sid="([\w-]+)"/g, /data-img="([\w-]+)"/g, /data-count="(\d+)"/g, /<span data-version>([^<]+)</g, /href="https:\/\/github\.com\/vonam-git\/leyoNET\/releases\/latest\/download\/([^"]+)"/g, /<section[^>]*class="([^"]+)"/g])
+      expect(list(en, re), String(re)).toEqual(list(de, re));
+    expect(en).toMatch(/<html lang="en">/);
+    for (const html of [de, en]) {
+      expect(html).toContain('<link rel="alternate" hreflang="de" href="https://leyonet.ch/">');
+      expect(html).toContain('<link rel="alternate" hreflang="en" href="https://leyonet.ch/en/">');
+    }
+    expect(en).toContain('<link rel="canonical" href="https://leyonet.ch/en/">');
+    expect(de).toContain('class="lang-switch" href="en/"');
+    expect(en).toContain('class="lang-switch" href="../"');
+    // Keine deutschen Reste im sichtbaren Text der englischen Seite.
+    const visible = en.replace(/<!--[\s\S]*?-->/g, '').replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ');
+    expect(visible).not.toMatch(/[äöüÄÖÜ]|\b(und|der|die|das|nicht|mit|für)\b/);
+  });
+
+  it('Auffindbarkeit: Titel, Beschreibung und strukturierte Daten nennen Netzwerksimulator und die Module', () => {
+    const de = read('index.html');
+    expect(/<title>([^<]+)<\/title>/.exec(de)?.[1]).toMatch(/Netzwerksimulator.*M117.*M129.*M145/);
+    expect(/<meta name="description" content="([^"]+)"/.exec(de)?.[1]).toMatch(/Netzwerksimulator.*117, 129 und 145/);
+    const ld = JSON.parse(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(de)![1]!) as { '@type': string; softwareVersion?: string }[];
+    expect(ld.map((x) => x['@type'])).toEqual(['SoftwareApplication', 'WebSite']);
+    const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string };
+    expect(ld[0]!.softwareVersion).toBe(version);
+    for (const m of ['m117', 'm129', 'm145']) expect(de).toContain(`href="wiki/${m}.html"`);
+    const robots = read('robots.txt');
+    expect(robots).toContain('Sitemap: https://leyonet.ch/sitemap.xml');
+    expect(robots).toContain('Sitemap: https://leyonet.ch/wiki/sitemap.xml');
+    const map = read('sitemap.xml');
+    for (const loc of ['https://leyonet.ch/', 'https://leyonet.ch/en/']) expect(map).toContain(`<loc>${loc}</loc>`);
   });
 
   it('Bildschirmfotos der Ansichten gibt es hell und dunkel', () => {

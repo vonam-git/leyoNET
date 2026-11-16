@@ -1,73 +1,17 @@
 <script lang="ts">
   import type { DeviceType } from '../../core';
+  import { iconShapes } from '../deviceIcons';
 
-  // Eigene, schlichte Symbole (keine Grafiken aus dem Vorbild, siehe Konzept 7.6).
+  // Eigene, schlichte Symbole (keine Grafiken aus dem Vorbild, siehe Konzept 7.6). Die Formen
+  // stehen in deviceIcons.ts, damit das Wiki dieselben Symbole zeigt.
   let { type, variant }: { type: DeviceType; variant?: string } = $props();
+  const shapes = $derived(iconShapes(type, variant));
 </script>
 
 <g class="icon" aria-hidden="true">
-  {#if type === 'notebook'}
-    <rect x="-17" y="-18" width="34" height="23" rx="2" />
-    <path d="M-24 8 H24 L20 15 H-20 Z" />
-  {:else if type === 'pc'}
-    <rect x="-24" y="-18" width="30" height="22" rx="2" />
-    <path class="line" d="M-9 4 V10 M-15 11 H-3" />
-    <rect x="11" y="-18" width="13" height="30" rx="2" />
-    <path class="line" d="M14 -12 H21 M14 -7 H21" />
-  {:else if type === 'server'}
-    {#if variant === 'rack'}
-      <rect x="-24" y="-13" width="48" height="11" rx="2" />
-      <rect x="-24" y="1" width="48" height="11" rx="2" />
-      <path class="line" d="M-18 -7.5 H-6 M-18 6.5 H-6" />
-      <circle class="fill" cx="17" cy="-7.5" r="1.8" />
-      <circle class="fill" cx="17" cy="6.5" r="1.8" />
-    {:else}
-      <rect x="-13" y="-20" width="26" height="40" rx="3" />
-      <path class="line" d="M-8 -13 H8 M-8 -7 H8 M-8 -1 H8" />
-      <circle class="fill" cx="0" cy="12" r="2.2" />
-    {/if}
-  {:else if type === 'clientgroup'}
-    <rect x="-8" y="-20" width="26" height="18" rx="2" />
-    <rect x="-16" y="-12" width="26" height="18" rx="2" />
-    <rect x="-24" y="-4" width="26" height="18" rx="2" />
-    <path class="line" d="M-11 14 V19 M-17 19 H-5" />
-  {:else if type === 'switch'}
-    <rect x="-25" y="-12" width="50" height="24" rx="4" />
-    <path class="line" d="M-14 -5 H14 M9 -8 L14 -5 L9 -2 M14 5 H-14 M-9 2 L-14 5 L-9 8" />
-  {:else if type === 'l3switch'}
-    <rect x="-25" y="-12" width="50" height="24" rx="4" />
-    <path class="line" d="M-14 -5 H6 M1 -8 L6 -5 L1 -2 M6 5 H-14 M-9 2 L-14 5 L-9 8" />
-    <circle cx="16" cy="0" r="6" />
-    <path class="line" d="M13 0 H19 M16 -3 V3" />
-  {:else if type === 'accesspoint'}
-    <rect x="-20" y="2" width="40" height="13" rx="4" />
-    <path class="line" d="M-11 -7 Q0 -17 11 -7 M-6.5 -3 Q0 -9 6.5 -3" />
-    <circle class="fill" cx="0" cy="1" r="2" />
-    <path class="line" d="M-12 9 H-10 M-6 9 H-4" />
-  {:else if type === 'router'}
-    <circle r="20" />
-    <path
-      class="line"
-      d="M-5 -5 L-12 -12 M-12 -7 V-12 H-7 M5 5 L12 12 M12 7 V12 H7 M5 -5 L12 -12 M7 -12 H12 V-7 M-5 5 L-12 12 M-7 12 H-12 V7"
-    />
-  {:else if type === 'firewall'}
-    <!-- Firewall: Mauer aus versetzten Ziegeln, eigene Zeichnung. -->
-    <rect x="-21" y="-16" width="42" height="32" rx="3" />
-    <path class="line" d="M-21 -5.3 H21 M-21 5.3 H21 M-7 -16 V-5.3 M7 -16 V-5.3 M-14 -5.3 V5.3 M0 -5.3 V5.3 M14 -5.3 V5.3 M-7 5.3 V16 M7 5.3 V16" />
-  {:else if type === 'cpe'}
-    <!-- Internet-Box: Gehäuse in Hausform (Heimanschluss), Zugang oben, vier LAN-Buchsen unten. -->
-    <path d="M-22 13 V-3 L0 -17 L22 -3 V13 Z" />
-    <path class="line" d="M0 -17 V-23 M-4 -21 Q0 -25 4 -21" />
-    <path class="line" d="M-14 7 H-10 M-5 7 H-1 M4 7 H8 M13 7 H17" />
-    <circle class="fill" cx="0" cy="-3" r="2.4" />
-  {:else if type === 'internet'}
-    <path d="M-16 12 H16 A10 10 0 0 0 15 -7 A13 13 0 0 0 -9 -11 A11 11 0 0 0 -16 12 Z" />
-    <path class="line" d="M-9 3 H9 M0 -6 V12 M-6 -3 Q0 3 -6 9 M6 -3 Q0 3 6 9" />
-  {:else}
-    <rect x="-23" y="-6" width="46" height="18" rx="4" />
-    <path class="line" d="M-9 -12 Q0 -20 9 -12 M-5 -10 Q0 -14 5 -10" />
-    <path class="line" d="M-14 3 H-12 M-7 3 H-5 M0 3 H2" />
-  {/if}
+  {#each shapes as shape, i (i)}
+    <svelte:element this={shape.tag} xmlns="http://www.w3.org/2000/svg" class={shape.cls} {...shape.attrs} />
+  {/each}
 </g>
 
 <style>
