@@ -97,7 +97,7 @@ leyoNET ist eine eigenständige Neuentwicklung ohne fremden Code, fremde Grafike
 
 ## Unterstützen
 
-leyoNET ist und bleibt kostenlos. Wer die Weiterentwicklung unterstützen möchte, kann das freiwillig über [Patreon](https://www.patreon.com/cw/vonam) tun.
+leyoNET ist und bleibt kostenlos. Wer die Weiterentwicklung unterstützen möchte, kann das freiwillig über [Patreon](https://patreon.com/leyonet) tun.
 
 ## Lizenz
 

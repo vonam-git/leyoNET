@@ -33,7 +33,7 @@
   const SOURCE = 'https://github.com/vonam-git/leyoNET';
   const WEBSITE = 'https://leyonet.ch';
   const LICENSE_URL = 'https://www.gnu.org/licenses/agpl-3.0.html';
-  const SUPPORT = 'https://www.patreon.com/cw/vonam';
+  const SUPPORT = 'https://patreon.com/leyonet';
 
   $effect(() => {
     dialog.showModal();

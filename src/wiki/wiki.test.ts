@@ -38,7 +38,7 @@ describe('Wiki', () => {
   });
 
   it('Seiten laden nur eigene Dateien und verlinken nur auf erlaubte Ziele', () => {
-    const allowed = /^(https:\/\/((app|beta)\.)?leyonet\.ch|https:\/\/github\.com\/vonam-git\/leyoNET|https:\/\/www\.rfc-editor\.org\/rfc\/rfc\d+$|https:\/\/www\.patreon\.com\/cw\/vonam$|mailto:)/;
+    const allowed = /^(https:\/\/((app|beta)\.)?leyonet\.ch|https:\/\/github\.com\/vonam-git\/leyoNET|https:\/\/www\.rfc-editor\.org\/rfc\/rfc\d+$|https:\/\/patreon\.com\/leyonet$|mailto:)/;
     for (const [f, text] of build.files) {
       if (!f.endsWith('.html')) continue;
       for (const [, src] of text.matchAll(/<(?:script|link(?! rel="(?:canonical|alternate)")|img)[^>]+(?:src|href)="([^"]+)"/g)) expect(src!, `${f}: ${src}`).not.toMatch(/^(https?:)?\/\//);
