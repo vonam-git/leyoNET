@@ -10,6 +10,11 @@ updates:
     groups:
       werkzeuge:
         patterns: ['*']
+    # Grosse Versionssprünge (z.B. TypeScript 7, Vitest 5) bewusst von Hand: Sie brechen oft
+    # Abhängigkeiten (svelte-check verlangt TypeScript 5 oder 6) und brauchen Anpassungen am Code.
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     open-pull-requests-limit: 3
   - package-ecosystem: cargo
     directory: /src-tauri
@@ -19,6 +24,9 @@ updates:
     groups:
       rust:
         patterns: ['*']
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     open-pull-requests-limit: 3
   - package-ecosystem: github-actions
     directory: /
