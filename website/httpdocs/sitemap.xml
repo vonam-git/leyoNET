@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://leyonet.ch/</loc></url>
-  <url><loc>https://leyonet.ch/impressum.html</loc></url>
-  <url><loc>https://leyonet.ch/datenschutz.html</loc></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://leyonet.ch/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leyonet.ch/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leyonet.ch/en/"/>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://leyonet.ch/en/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leyonet.ch/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leyonet.ch/en/"/>
+    <priority>0.9</priority>
+  </url>
+  <url><loc>https://leyonet.ch/impressum.html</loc><priority>0.2</priority></url>
+  <url><loc>https://leyonet.ch/datenschutz.html</loc><priority>0.2</priority></url>
 </urlset>

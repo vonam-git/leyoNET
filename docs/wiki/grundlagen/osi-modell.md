@@ -10,7 +10,7 @@ verwandt: [rahmen-und-pakete, ethernet-mac, ipv4, tcp]
 ---
 ## Die sieben Schichten
 
-Das OSI-Modell teilt die Kommunikation in Schichten. Jede Schicht löst eine Aufgabe und nutzt dafür die Schicht darunter. Im Unterricht arbeitet man meist mit fünf: Die Schichten 5 und 6 gehen im Alltag in der Anwendung auf (wie im TCP/IP-Modell).
+Das OSI-Modell teilt die Kommunikation in Schichten. Jede Schicht löst eine Aufgabe und nutzt dafür die Schicht darunter. Im Unterricht arbeitet man meist mit fünf: Die Schichten 5 und 6 gehen im Alltag in der Anwendung auf (wie im [[tcp-ip-modell|TCP/IP-Modell]]).
 
 Jede Schicht hat in leyoNET eine feste Farbe, in der Paketliste, im Einzelschritt und hier im Wiki. Die Tags zeigen die Protokolle, die leyoNET auf dieser Schicht simuliert, in denselben Farben wie in der Paketliste.
 

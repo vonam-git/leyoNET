@@ -6,6 +6,9 @@ import {
   Simulation,
   addDevice,
   addDnsRecord,
+  setPoe,
+  setPowerSource,
+  setQos,
   addStaticNat,
   addVpnTunnel,
   setFirewall,
@@ -252,6 +255,17 @@ export const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
   'web-dns': (t) => {
     t = unwrap(addDnsRecord(t, byName(t, 'DNS-Server'), { name: 'www.schule.example', type: 'A', value: '10.1.1.80', ttl: 60 }));
     return unwrap(configureHost(t, byName(t, 'Notebook'), { ip: '10.1.1.10', mask: '24', dns: '10.1.1.53' }));
+  },
+  'voip-qos': (t) => {
+    for (const r of ['Router Zürich', 'Router Bern']) t = unwrap(setQos(t, byName(t, r), {}));
+    return t;
+  },
+  poe: (t) => {
+    const sw = byName(t, 'Switch');
+    for (const n of ['Telefon 1', 'Telefon 2', 'Kamera', 'Access Point']) t = unwrap(connect(t, sw, byName(t, n))).topology;
+    t = unwrap(setPowerSource(t, byName(t, 'Access Point'), 'poe'));
+    // 2 × 7 W + 2 × 30 W = 74 W; PoE+ (Typ 2) wegen Klasse 4.
+    return unwrap(setPoe(t, sw, { standard: 'at', budget: 120 }));
   },
   wlan: (t) => {
     t = unwrap(setWlan(t, byName(t, 'Access Point'), { ssid: 'Klasse', password: 'geheim123', band: '5', channel: 36 }));

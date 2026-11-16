@@ -30,6 +30,26 @@ describe('Schaufenster Rechenzentren-Verbund', () => {
     expect(sim.getDeviceState(id('Monitoring ZH')).browser?.response?.body ?? '').toContain('Basel');
     expect(getDevice(topology, id('Core ZH'))?.rack).toBeTruthy();
   });
+
+  it('redundant: Port-Channels gebündelt, Spanning Tree blockiert die Reserve-Uplinks, kein Sturm', () => {
+    const sim = new Simulation(topology);
+    const id = (name: string) => topology.devices.find((d) => d.name === name)!.id;
+    sim.runUntil(12_000);
+    expect(sim.stormingDevices()).toEqual([]);
+    for (const core of ['Core ZH', 'Core BE', 'Core BS']) {
+      const channels = sim.getDeviceState(id(core)).channels ?? [];
+      expect(channels.length, core).toBeGreaterThan(0);
+      for (const c of channels) expect(c.ports.every((p) => p.status === 'bundled'), core).toBe(true);
+      // Der Core ist Root-Bridge seines Rechenzentrums.
+      const stp = sim.getDeviceState(id(core)).stp!;
+      expect(stp.rootId, core).toBe(stp.bridgeId);
+    }
+    // Jeder Access-Switch in Zürich und Bern hat zwei Uplinks, einer ist blockiert.
+    for (const access of ['Access A ZH', 'Access B ZH', 'Access A BE', 'Access B BE']) {
+      const ports = sim.getDeviceState(id(access)).stp!.ports;
+      expect(ports.filter((p) => p.state === 'blocking').length, access).toBe(1);
+    }
+  });
 });
 
 describe('Schaufenster: Adresse', async () => {

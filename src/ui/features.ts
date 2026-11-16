@@ -31,6 +31,8 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('device.router', 'devices', 1),
   f('device.firewall', 'devices', 3),
   f('device.server', 'devices', 1),
+  f('device.ipphone', 'devices', 3),
+  f('device.camera', 'devices', 3),
   f('device.accesspoint', 'devices', 2),
   f('device.internet', 'devices', 2),
   f('device.clientgroup', 'devices', 3),
@@ -47,12 +49,15 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('service.dns', 'services', 2),
   f('service.web', 'services', 2),
   f('service.mail', 'services', 3),
+  f('service.voip', 'services', 3),
   // Netzwerk
   f('net.portShutdown', 'network', 2),
   f('net.macEdit', 'network', 3),
   f('net.cableDamage', 'network', 3),
   f('net.vlan', 'network', 3),
   f('net.stp', 'network', 3),
+  f('net.poe', 'network', 3),
+  f('net.qos', 'network', 4),
   f('net.wlanMesh', 'network', 3),
   f('net.dhcpRelay', 'network', 3),
   f('net.nat', 'network', 3),
@@ -133,6 +138,9 @@ export function usedFeatures(t: Topology): string[] {
     if (d.webServer) used.add('service.web');
     if (d.mailServer || d.mailAccount) used.add('service.mail');
     if (d.stp) used.add('net.stp');
+    if (d.poe || d.power === 'poe') used.add('net.poe');
+    if (d.qos || d.interfaces.some((i) => i.rate)) used.add('net.qos');
+    if (d.voip || d.sipServer) used.add('service.voip');
     if (d.verbund || d.verbundProvider) used.add('net.verbund');
     if (d.subinterfaces?.length) used.add('net.subinterfaces');
     if (d.portForwards?.length) used.add('net.nat');

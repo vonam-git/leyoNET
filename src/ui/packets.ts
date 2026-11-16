@@ -144,6 +144,12 @@ export function infoOf(frame: EthernetFrame): string {
   if (msg.kind === 'ripng') {
     return access + t(msg.command === 'request' ? 'packets.rip.request' : 'packets.rip.response', { routes: msg.entries.map((e) => `${e.prefix}/${e.length} (${e.metric})`).join(', ') });
   }
+  if (msg.kind === 'sip') {
+    const what = msg.method ? `${msg.method} ${msg.uri}` : `${msg.status} ${t(`packets.sip.${msg.status}`)} (${msg.cseqMethod})`;
+    return `${access}${what}${msg.sdp ? ' · SDP' : ''}`;
+  }
+  if (msg.kind === 'rtp') return access + t('packets.rtp', { seq: msg.seq, ssrc: `0x${(msg.ssrc >>> 0).toString(16).padStart(8, '0')}` });
+  if (msg.kind === 'data') return access + t('packets.iperf', { seq: msg.seq, bytes: msg.bytes });
   if (msg.kind === 'dhcpv6') return access + t(`packets.dhcp6.${msg.type}`, { address: msg.address ?? '', xid: hex(msg.xid) });
   return access + t(`packets.dhcp.${msg.op}`, { ip: msg.yourIp ?? msg.requestedIp ?? '', xid: hex(msg.xid) });
 }

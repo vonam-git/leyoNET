@@ -4,13 +4,15 @@
  * Leerzeile = neuer Absatz, «- » = Aufzählung, **fett**, [[thema]] = Verweis.
  */
 export const HELP_GROUPS: { id: string; topics: string[] }[] = [
-  { id: 'start', topics: ['overview', 'modes', 'shop', 'selection', 'simulation', 'advanced', 'demos', 'shortcuts', 'features', 'tasks', 'webExam', 'verbund', 'costs'] },
+  { id: 'start', topics: ['overview', 'modes', 'shop', 'selection', 'simulation', 'advanced', 'demos', 'shortcuts', 'features', 'tasks', 'examAi', 'webExam', 'verbund', 'costs'] },
   {
     id: 'devices',
     topics: [
       'device.notebook',
       'device.pc',
       'device.server',
+      'device.ipphone',
+      'device.camera',
       'device.clientgroup',
       'device.switch',
       'device.l3switch',
@@ -22,13 +24,13 @@ export const HELP_GROUPS: { id: string; topics: string[] }[] = [
       'device.internet',
     ],
   },
-  { id: 'links', topics: ['cables', 'sfp', 'serial', 'wlan', 'roaming', 'access'] },
+  { id: 'links', topics: ['cables', 'poe', 'sfp', 'serial', 'wlan', 'roaming', 'access'] },
   { id: 'addressing', topics: ['ip', 'duplicates', 'subnetting', 'ipv6', 'ipcalc', 'scopes', 'dhcp', 'dns'] },
-  { id: 'switching', topics: ['switching', 'vlan', 'trunk', 'stp', 'lag', 'vxlan', 'routerOnAStick'] },
+  { id: 'switching', topics: ['switching', 'vlan', 'trunk', 'stp', 'lag', 'qos', 'vxlan', 'routerOnAStick'] },
   { id: 'routing', topics: ['routing', 'autoRouting', 'ospf', 'rip', 'bgp', 'ospf6', 'ripng', 'vrf', 'loopback'] },
   { id: 'nat', topics: ['nat', 'staticNat', 'portForward', 'cgnat', 'dsLite'] },
   { id: 'security', topics: ['firewall', 'acl', 'vpn'] },
-  { id: 'services', topics: ['web', 'mail', 'cli', 'ssh'] },
+  { id: 'services', topics: ['web', 'mail', 'voip', 'cli', 'ssh'] },
   { id: 'analysis', topics: ['sniffer', 'osi', 'osiStep', 'filter', 'pcap'] },
   { id: 'documentation', topics: ['areas', 'racks', 'floors', 'snapshots'] },
 ];

@@ -3,32 +3,55 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>leyoNET – Netzwerk-Simulator für den Informatik-Unterricht</title>
-  <meta name="description" content="leyoNET ist ein kostenloser Netzwerk-Simulator für den Informatik-Unterricht: Netze bauen, Pakete Schicht für Schicht verfolgen, Übungen automatisch prüfen. Im Browser, offline oder als App – ohne Konto und ohne Tracking.">
+  <title>leyoNET – Netzwerksimulator für den Informatik-Unterricht (M117, M129, M145)</title>
+  <meta name="description" content="leyoNET ist ein kostenloser Netzwerksimulator für den Informatik-Unterricht und die ICT-Module 117, 129 und 145: Netze bauen, Pakete Schicht für Schicht verfolgen, Übungen automatisch prüfen. Im Browser, offline oder als App – ohne Konto und ohne Tracking.">
   <link rel="canonical" href="https://leyonet.ch/">
+  <link rel="alternate" hreflang="de" href="https://leyonet.ch/">
+  <link rel="alternate" hreflang="en" href="https://leyonet.ch/en/">
+  <link rel="alternate" hreflang="x-default" href="https://leyonet.ch/">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#ffffff">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://leyonet.ch/">
-  <meta property="og:title" content="leyoNET – Netzwerke bauen, simulieren und verstehen">
-  <meta property="og:description" content="Kostenloser Netzwerk-Simulator für den Informatik-Unterricht. Im Browser, offline oder als App – ohne Konto und ohne Tracking.">
+  <meta property="og:title" content="leyoNET – Netzwerksimulator: Netzwerke bauen, simulieren und verstehen">
+  <meta property="og:description" content="Kostenloser Netzwerksimulator für den Informatik-Unterricht und die Module 117, 129 und 145. Im Browser, offline oder als App – ohne Konto und ohne Tracking.">
   <meta property="og:image" content="https://leyonet.ch/img/og.png">
   <meta property="og:locale" content="de_CH">
+  <meta property="og:locale:alternate" content="en_GB">
+  <meta property="og:site_name" content="leyoNET">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="css/site.css?v=1.5.1">
-  <script src="js/site.js?v=1.5.1" defer></script>
+  <link rel="stylesheet" href="css/site.css?v=1.6.0">
+  <script src="js/site.js?v=1.6.0" defer></script>
   <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "leyoNET",
-    "applicationCategory": "EducationalApplication",
-    "operatingSystem": "Windows, macOS, Linux, Webbrowser",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CHF" },
-    "license": "https://www.gnu.org/licenses/agpl-3.0.html",
-    "url": "https://leyonet.ch/",
-    "inLanguage": ["de", "en"]
-  }
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "leyoNET",
+      "alternateName": ["leyonet", "leyoNET Netzwerksimulator", "leyoNET network simulator"],
+      "description": "Kostenloser Netzwerksimulator für den Informatik-Unterricht: Netze bauen, Pakete Schicht für Schicht nach Norm verfolgen, Übungen für die ICT-Module 117, 129 und 145 automatisch prüfen.",
+      "applicationCategory": "EducationalApplication",
+      "applicationSubCategory": "Netzwerksimulator",
+      "operatingSystem": "Windows, macOS, Linux, Webbrowser",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CHF" },
+      "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+      "url": "https://leyonet.ch/",
+      "downloadUrl": "https://github.com/vonam-git/leyoNET/releases/latest",
+      "softwareVersion": "1.6.0",
+      "inLanguage": ["de", "en"],
+      "isAccessibleForFree": true,
+      "keywords": "Netzwerksimulator, Netzwerk-Simulator, network simulator, Modul 117, Modul 129, Modul 145, M117, M129, M145, Informatik EFZ, Subnetting, VLAN, OSI-Modell, Wireshark",
+      "audience": { "@type": "EducationalAudience", "educationalRole": ["teacher", "student"] }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "leyoNET",
+      "alternateName": "leyoNET Netzwerksimulator",
+      "url": "https://leyonet.ch/",
+      "inLanguage": "de-CH"
+    }
+  ]
   </script>
 </head>
 <body>
@@ -57,9 +80,11 @@
           <li><a href="#verbund">Verbund</a></li>
           <li><a href="#technik">Technik</a></li>
           <li><a href="#download">Download</a></li>
+          <li><a href="#module">Module</a></li>
           <li><a href="wiki/">Wiki</a></li>
         </ul>
       </nav>
+      <a class="lang-switch" href="en/" hreflang="en" lang="en" title="English version">EN</a>
       <button class="theme-toggle" type="button" aria-label="Dunkles Design" aria-pressed="false" hidden>
         <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
         <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
@@ -74,7 +99,7 @@
       <div class="wrap hero-grid">
         <div class="hero-text">
           <h1>Netzwerke bauen, simulieren und verstehen.</h1>
-          <p class="lead">leyoNET ist ein Netzwerk-Simulator für den Informatik-Unterricht. Geräte verkabeln, Adressen vergeben, und dann zusehen, wie jedes Paket über die Leitung geht – vom ersten ARP bis zur Antwort.</p>
+          <p class="lead">leyoNET ist ein kostenloser Netzwerksimulator für den Informatik-Unterricht. Geräte verkabeln, Adressen vergeben, und dann zusehen, wie jedes Paket über die Leitung geht – vom ersten ARP bis zur Antwort.</p>
           <div class="cta">
             <a class="btn btn-ink" href="https://app.leyonet.ch/">Im Browser starten</a>
             <a class="btn btn-line" href="https://app.leyonet.ch/?schaufenster">Live-Schaufenster</a>
@@ -176,7 +201,7 @@
         <h2 id="numbers-title" class="visually-hidden">leyoNET in Zahlen</h2>
         <dl class="counters">
           <div><dt>Übungen mit automatischer Prüfung</dt><dd data-count="70" data-suffix="+">70+</dd></div>
-          <div><dt>fertige Demo-Netze, viele Schritt für Schritt</dt><dd data-count="37">37</dd></div>
+          <div><dt>fertige Demo-Netze, viele Schritt für Schritt</dt><dd data-count="39">39</dd></div>
           <div><dt>Gerätetypen vom Notebook bis zum Provider</dt><dd data-count="12">12</dd></div>
           <div><dt>zitierte Normen: RFC, IEEE 802, ITU-T</dt><dd data-count="64">64</dd></div>
           <div><dt>automatische Tests vor jeder Version</dt><dd data-count="680" data-suffix="+">680+</dd></div>
@@ -214,6 +239,31 @@
             <p>Jeder Platz bekommt einen eigenen Code und auf Wunsch eine eigene Variante. Gespeichert wird alle 20 Sekunden, abgegeben automatisch, wenn die Zeit um ist.</p>
             <p>Nachteilsausgleich gibt es je Platz mit einem Klick. Die Auswertung rechnet Punkte und Note nach Schweizer Skala, mit Teilpunkten, Folgefehlern und Platz für die Nachkorrektur.</p>
           </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ICT-Module: Reihen mit Übungen und Arbeitsblättern -->
+    <section id="module" class="modules" aria-labelledby="module-title">
+      <div class="wrap">
+        <h2 id="module-title">Für die ICT-Module 117, 129 und 145</h2>
+        <p class="section-lead">Der Netzwerksimulator für die Berufsbildung Informatik EFZ: Zu jedem Modul gibt es eine Reihe aufeinander aufbauender Übungen mit Arbeitsblatt (PDF) und automatischer Prüfung.</p>
+        <div class="module-grid">
+          <a class="module-card" href="wiki/m117.html">
+            <span class="module-nr">M117</span>
+            <strong>Informatik- und Netzinfrastruktur für ein kleines Unternehmen realisieren</strong>
+            <span>IP-Adressen, Switch und Router, DHCP, DNS, Webserver, erste Fehlersuche mit Ping.</span>
+          </a>
+          <a class="module-card" href="wiki/m129.html">
+            <span class="module-nr">M129</span>
+            <strong>LAN-Komponenten in Betrieb nehmen</strong>
+            <span>Subnetting, statisches Routing, Protokollanalyse mit der Paketliste wie in Wireshark.</span>
+          </a>
+          <a class="module-card" href="wiki/m145.html">
+            <span class="module-nr">M145</span>
+            <strong>Netzwerk betreiben und erweitern</strong>
+            <span>VLANs, Trunks, Inter-VLAN-Routing, DHCP-Relay, Spanning Tree und Netzwerkdesign.</span>
+          </a>
         </div>
       </div>
     </section>
@@ -366,7 +416,7 @@ Content-Security-Policy:
     <section id="download" class="download">
       <div class="wrap">
         <h2>Loslegen</h2>
-        <p class="section-lead">Überall dasselbe Programm. Version <span data-version>1.5.1</span>.</p>
+        <p class="section-lead">Überall dasselbe Programm. Version <span data-version>1.6.0</span>.</p>
         <ul class="dl-list">
           <li class="dl-main">
             <div><h3>Im Browser</h3><p>Sofort starten, Arbeitsstand unter einem Code speichern, Klassen und Prüfungen über den Server.</p></div>

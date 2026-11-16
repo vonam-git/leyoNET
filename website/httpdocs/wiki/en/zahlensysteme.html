@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Number systems and addresses – leyoNET Wiki</title>
+  <meta name="description" content="Converting and reading binary, decimal and hexadecimal, and how MAC addresses, IPv4 and IPv6 addresses are written according to the standards.">
+  <link rel="canonical" href="https://leyonet.ch/wiki/en/zahlensysteme.html">
+  <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/zahlensysteme.html">
+  <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/zahlensysteme.html">
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../css/site.css?v=1.6.0">
+  <link rel="stylesheet" href="../farben.css?v=1.6.0">
+  <link rel="stylesheet" href="../aufbau.css?v=1.6.0">
+  <link rel="stylesheet" href="../wiki.css?v=1.6.0">
+  <script src="../../js/site.js?v=1.6.0" defer></script>
+  <script src="suche.js?v=1.6.0" defer></script>
+  <script src="../wiki.js?v=1.6.0" defer></script>
+</head>
+<body class="wiki">
+  <a class="skip" href="#inhalt">Skip to content</a>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="../../en/" aria-label="leyoNET home">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <a class="wiki-badge" href="index.html">Wiki</a>
+      <nav aria-label="Main navigation">
+        <ul>
+          <li><a href="index.html#lehrpersonen">Crash course</a></li>
+          <li><a href="index.html#module">Modules</a></li>
+          <li><a href="index.html#grundlagen">Basics</a></li>
+          <li><a href="index.html#geraete">Devices</a></li>
+          <li><a href="index.html#protokolle">Protocols</a></li>
+        </ul>
+      </nav>
+      <a class="lang-switch" href="../zahlensysteme.html" hreflang="de" lang="de" title="Deutsche Fassung">DE</a>
+      <button class="theme-toggle" type="button" aria-label="Dark theme" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Start in the browser</a>
+    </div>
+  </header>
+  <div class="wrap wiki-layout">
+    <nav class="wiki-nav" aria-label="Wiki contents">
+      <form class="wiki-search" role="search" action="index.html">
+        <label class="visually-hidden" for="wiki-q">Search the wiki</label>
+        <input id="wiki-q" name="q" type="search" placeholder="Search, e.g. “OSPF” or “trunk”" autocomplete="off">
+        <ol class="wiki-hits" hidden></ol>
+      </form>
+      <details class="wiki-group wiki-group-lehrpersonen">
+        <summary><span>Crash course for teachers</span><span class="nav-count">11</span></summary>
+        <ul><li><a href="crashkurs.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Crash course: ready in 30 minutes</span></a></li><li><a href="erstes-netz.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">The first network in 10 minutes</span></a></li><li><a href="simulation-verstehen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Understanding the simulation and the packet list</span></a></li><li><a href="profile.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Choosing feature profiles</span></a></li><li><a href="dokumentieren.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Documenting networks</span></a></li><li><a href="uebungen-einsetzen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Exercises and worksheets in class</span></a></li><li><a href="aufgaben-erstellen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Creating your own tasks</span></a></li><li><a href="pruefungen.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Running exams</span></a></li><li><a href="webversion.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Web version: sessions, classes and watching</span></a></li><li><a href="klassen-verbund.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Class network in the classroom</span></a></li><li><a href="faq.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Frequently asked questions</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-module">
+        <summary><span>Swiss ICT modules</span><span class="nav-count">3</span></summary>
+        <ul><li><a href="m117.html"><span class="nav-tag">M117</span><span class="nav-title">Module 117: IT and network infrastructure</span></a></li><li><a href="m129.html"><span class="nav-tag">M129</span><span class="nav-title">Module 129: Putting LAN components into operation</span></a></li><li><a href="m145.html"><span class="nav-tag">M145</span><span class="nav-title">Module 145: Operating and extending a network</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-grundlagen" open>
+        <summary><span>Basics</span><span class="nav-count">14</span></summary>
+        <ul><li><a href="osi-modell.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">OSI model and encapsulation</span></a></li><li><a href="tcp-ip-modell.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">TCP/IP model</span></a></li><li><a href="rahmen-und-pakete.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Structure of frames and packets</span></a></li><li><a href="ethernet-mac.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Ethernet and MAC addresses</span></a></li><li><a href="zahlensysteme.html" aria-current="page"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Number systems and addresses</span></a></li><li><a href="subnetting.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Subnetting and VLSM</span></a></li><li><a href="adressbereiche.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Special address ranges</span></a></li><li><a href="routing-grundlagen.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">How routing works</span></a></li><li><a href="ports-dienste.html"><span class="nav-dot lx-o4" aria-hidden="true">4</span><span class="nav-title">Ports and services</span></a></li><li><a href="netzwerkdesign.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">Network design: core, distribution, access</span></a></li><li><a href="medien.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Cables, fibre and radio</span></a></li><li><a href="verkabelung.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Structured cabling</span></a></li><li><a href="poe.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Power over Ethernet</span></a></li><li><a href="datenrate.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Data rate, throughput and delay</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-geraete">
+        <summary><span>Devices</span><span class="nav-count">13</span></summary>
+        <ul><li><a href="pc-notebook.html"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-24" y="-18" width="30" height="22" rx="2"/><path class="line" d="M-9 4 V10 M-15 11 H-3"/><rect x="11" y="-18" width="13" height="30" rx="2"/><path class="line" d="M14 -12 H21 M14 -7 H21"/></svg></span><span class="nav-title">PC and notebook</span></a></li><li><a href="server.html"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-13" y="-20" width="26" height="40" rx="3"/><path class="line" d="M-8 -13 H8 M-8 -7 H8 M-8 -1 H8"/><circle class="fill" cx="0" cy="12" r="2.2"/></svg></span><span class="nav-title">Server</span></a></li><li><a href="ip-telefon.html"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><path d="M-24 -13 Q-24 -18 -19 -18 H-14 Q-9 -18 -9 -13 V11 Q-9 16 -14 16 H-19 Q-24 16 -24 11 Z"/><rect x="-4" y="-15" width="28" height="31" rx="3"/><rect x="1" y="-11" width="18" height="7" rx="1"/><circle class="fill" cx="4" cy="3" r="1.5"/><circle class="fill" cx="10" cy="3" r="1.5"/><circle class="fill" cx="16" cy="3" r="1.5"/><circle class="fill" cx="4" cy="9" r="1.5"/><circle class="fill" cx="10" cy="9" r="1.5"/><circle class="fill" cx="16" cy="9" r="1.5"/></svg></span><span class="nav-title">IP phone</span></a></li><li><a href="ip-kamera.html"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-20" y="-14" width="34" height="17" rx="4"/><circle cx="14" cy="-5.5" r="6"/><circle class="fill" cx="14" cy="-5.5" r="2.4"/><path class="line" d="M-6 3 V11 M-16 15 H4 M-6 11 L-12 15 M-6 11 L0 15"/><path class="line" d="M-15 -8 H-5"/></svg></span><span class="nav-title">IP camera</span></a></li><li><a href="client-gruppe.html"><span class="nav-icon"><svg class="dev-icon role-endpoint" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-8" y="-20" width="26" height="18" rx="2"/><rect x="-16" y="-12" width="26" height="18" rx="2"/><rect x="-24" y="-4" width="26" height="18" rx="2"/><path class="line" d="M-11 14 V19 M-17 19 H-5"/></svg></span><span class="nav-title">Client group</span></a></li><li><a href="switch.html"><span class="nav-icon"><svg class="dev-icon role-distribution" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-25" y="-12" width="50" height="24" rx="4"/><path class="line" d="M-14 -5 H14 M9 -8 L14 -5 L9 -2 M14 5 H-14 M-9 2 L-14 5 L-9 8"/></svg></span><span class="nav-title">Switch</span></a></li><li><a href="layer3-switch.html"><span class="nav-icon"><svg class="dev-icon role-distribution" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-25" y="-12" width="50" height="24" rx="4"/><path class="line" d="M-14 -5 H6 M1 -8 L6 -5 L1 -2 M6 5 H-14 M-9 2 L-14 5 L-9 8"/><circle cx="16" cy="0" r="6"/><path class="line" d="M13 0 H19 M16 -3 V3"/></svg></span><span class="nav-title">Layer 3 switch</span></a></li><li><a href="router.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><circle cx="0" cy="0" r="20"/><path class="line" d="M-5 -5 L-12 -12 M-12 -7 V-12 H-7 M5 5 L12 12 M12 7 V12 H7 M5 -5 L12 -12 M7 -12 H12 V-7 M-5 5 L-12 12 M-7 12 H-12 V7"/></svg></span><span class="nav-title">Router</span></a></li><li><a href="firewall.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-21" y="-16" width="42" height="32" rx="3"/><path class="line" d="M-21 -5.3 H21 M-21 5.3 H21 M-7 -16 V-5.3 M7 -16 V-5.3 M-14 -5.3 V5.3 M0 -5.3 V5.3 M14 -5.3 V5.3 M-7 5.3 V16 M7 5.3 V16"/></svg></span><span class="nav-title">Firewall</span></a></li><li><a href="access-point.html"><span class="nav-icon"><svg class="dev-icon role-distribution" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-20" y="2" width="40" height="13" rx="4"/><path class="line" d="M-11 -7 Q0 -17 11 -7 M-6.5 -3 Q0 -9 6.5 -3"/><circle class="fill" cx="0" cy="1" r="2"/><path class="line" d="M-12 9 H-10 M-6 9 H-4"/></svg></span><span class="nav-title">Access point</span></a></li><li><a href="modem.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><rect x="-23" y="-6" width="46" height="18" rx="4"/><path class="line" d="M-9 -12 Q0 -20 9 -12 M-5 -10 Q0 -14 5 -10"/><path class="line" d="M-14 3 H-12 M-7 3 H-5 M0 3 H2"/></svg></span><span class="nav-title">Modem</span></a></li><li><a href="internet-box.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><path d="M-22 13 V-3 L0 -17 L22 -3 V13 Z"/><path class="line" d="M0 -17 V-23 M-4 -21 Q0 -25 4 -21"/><path class="line" d="M-14 7 H-10 M-5 7 H-1 M4 7 H8 M13 7 H17"/><circle class="fill" cx="0" cy="-3" r="2.4"/></svg></span><span class="nav-title">Home router (CPE)</span></a></li><li><a href="provider.html"><span class="nav-icon"><svg class="dev-icon role-routing" viewBox="-28 -24 56 48" width="22" height="19" aria-hidden="true" focusable="false"><path d="M-16 12 H16 A10 10 0 0 0 15 -7 A13 13 0 0 0 -9 -11 A11 11 0 0 0 -16 12 Z"/><path class="line" d="M-9 3 H9 M0 -6 V12 M-6 -3 Q0 3 -6 9 M6 -3 Q0 3 6 9"/></svg></span><span class="nav-title">Internet (provider)</span></a></li></ul>
+      </details>
+      <details class="wiki-group wiki-group-protokolle">
+        <summary><span>Protocols</span><span class="nav-count">31</span></summary>
+        <ul><li><a href="arp.html"><span class="nav-dot" aria-hidden="true"></span><span class="nav-title">ARP</span></a></li><li><a href="vlan.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">VLANs and trunks</span></a></li><li><a href="stp.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Spanning tree (STP)</span></a></li><li><a href="qos.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Quality of Service (DiffServ, 802.1p)</span></a></li><li><a href="lacp.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Port channel and LACP</span></a></li><li><a href="wlan.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Wi-Fi</span></a></li><li><a href="ipv4.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">IPv4</span></a></li><li><a href="icmp.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">ICMP, ping and traceroute</span></a></li><li><a href="ipv6.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">IPv6</span></a></li><li><a href="dhcp.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">DHCP</span></a></li><li><a href="dhcpv6.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">DHCPv6</span></a></li><li><a href="dns.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">DNS</span></a></li><li><a href="tcp.html"><span class="nav-dot lx-o4" aria-hidden="true">4</span><span class="nav-title">TCP</span></a></li><li><a href="udp.html"><span class="nav-dot lx-o4" aria-hidden="true">4</span><span class="nav-title">UDP</span></a></li><li><a href="http.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">HTTP</span></a></li><li><a href="e-mail.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">E-mail: SMTP, POP3 and IMAP</span></a></li><li><a href="ssh.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">SSH</span></a></li><li><a href="telefonie.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">Telephony over IP (SIP and RTP)</span></a></li><li><a href="nat.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">NAT and PAT</span></a></li><li><a href="ds-lite.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">DS-Lite</span></a></li><li><a href="statisches-routing.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Static routing</span></a></li><li><a href="ospf.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">OSPF</span></a></li><li><a href="rip.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">RIP and RIPng</span></a></li><li><a href="bgp.html"><span class="nav-dot lx-o7" aria-hidden="true">7</span><span class="nav-title">BGP</span></a></li><li><a href="vrf.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">VRF</span></a></li><li><a href="vxlan.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">VXLAN</span></a></li><li><a href="paketfilter.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Firewall rules (packet filter)</span></a></li><li><a href="acl.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">Access control lists (ACL)</span></a></li><li><a href="ipsec-vpn.html"><span class="nav-dot lx-o3" aria-hidden="true">3</span><span class="nav-title">IPsec VPN</span></a></li><li><a href="ppp-hdlc.html"><span class="nav-dot lx-o2" aria-hidden="true">2</span><span class="nav-title">Serial lines: HDLC, PPP and PPPoE</span></a></li><li><a href="zugangstechniken.html"><span class="nav-dot lx-o1" aria-hidden="true">1</span><span class="nav-title">Access technologies: DOCSIS, GPON, DSL and LTE</span></a></li></ul>
+      </details>
+    </nav>
+    <main id="inhalt" class="wiki-main">
+      <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#grundlagen">Basics</a></p>
+      <div class="page-head"><div><h1>Number systems and addresses</h1>
+      <p class="lead">Converting and reading binary, decimal and hexadecimal, and how MAC addresses, IPv4 and IPv6 addresses are written according to the standards.</p></div></div>
+      <dl class="facts"><div><dt>Layer</dt><dd>2 und 3</dd></div><div><dt>Standard</dt><dd>IEEE 802.3, RFC 791, RFC 4291 …</dd></div></dl>
+      <nav class="toc" aria-label="On this page"><strong>On this page</strong><ol><li><a href="#three-notations-for-the-same-number">Three notations for the same number</a></li><li><a href="#mac-addresses">MAC addresses</a></li><li><a href="#ipv4-addresses">IPv4 addresses</a></li><li><a href="#ipv6-addresses">IPv6 addresses</a></li><li><a href="#ueben">Practise</a></li><li><a href="#normen">Standards</a></li><li><a href="#weiter">Read on</a></li></ol></nav>
+      <article class="prose">
+<h2 id="three-notations-for-the-same-number">Three notations for the same number</h2>
+<p>Computers calculate in binary (base 2), people in decimal (base 10). Hexadecimal (base 16, digits 0–9 and A–F) is the short notation for binary numbers: <strong>one hex digit corresponds to exactly four bits</strong>, two hex digits to one byte (octet).</p>
+<div class="table-wrap"><table><thead><tr><th>Decimal</th><th>Binary</th><th>Hex</th></tr></thead><tbody><tr><td>0</td><td>0000 0000</td><td>00</td></tr><tr><td>10</td><td>0000 1010</td><td>0A</td></tr><tr><td>128</td><td>1000 0000</td><td>80</td></tr><tr><td>192</td><td>1100 0000</td><td>C0</td></tr><tr><td>255</td><td>1111 1111</td><td>FF</td></tr></tbody></table></div>
+<p>Binary to decimal: add up the place values from the right 1, 2, 4, 8, 16, 32, 64, 128 wherever there is a 1. Example: 1100 0000 = 128 + 64 = 192.</p>
+<h2 id="mac-addresses">MAC addresses</h2>
+<p>A MAC address has 48 bits (EUI-48, administered by the IEEE) and is written as six hex pairs, e.g. <code>02:00:00:00:01:00</code> or <code>02-00-00-00-01-00</code>. The first three bytes name the manufacturer (OUI). Two bits in the first byte have a meaning:</p>
+<ul><li>Bit 0 (lowest): <strong>1 = multicast</strong> or broadcast (<code>ff:ff:ff:ff:ff:ff</code>), 0 = unicast.</li><li>Bit 1: <strong>1 = locally administered</strong>. leyoNET uses such addresses (<code>02:…</code>) so they never collide with a real card.</li></ul>
+<h2 id="ipv4-addresses">IPv4 addresses</h2>
+<p>An IPv4 address has 32 bits (RFC 791). It is written as four decimal numbers from 0 to 255, separated by dots: <code>192.168.1.10</code>. Each number is one byte. The mask states how many bits from the left belong to the network, e.g. <code>/24</code> = <code>255.255.255.0</code> (see <a href="subnetting.html">Subnetting and VLSM</a>).</p>
+<h2 id="ipv6-addresses">IPv6 addresses</h2>
+<p>An IPv6 address has 128 bits (RFC 4291), written as eight blocks of four hex digits. RFC 5952 defines the uniform short form:</p>
+<ol><li>Omit leading zeros in a block: <code>0db8</code> → <code>db8</code>.</li><li>Replace the longest run of zero blocks once with <code>::</code>.</li><li>Use lower-case letters.</li></ol>
+<p>Example: <code>2001:0db8:0000:0000:0000:0000:0000:0001</code> becomes <code>2001:db8::1</code>. The first 64 bits are usually the prefix (network), the last 64 bits the interface.</p>
+<aside class="callout"><p>In leyoNET: the IP calculator (Tools) converts addresses, masks and networks, also in binary. The packet details show all addresses as the standards write them.</p></aside>
+<section aria-labelledby="ueben"><h2 id="ueben">Practise</h2>
+<ul class="exercises"><li><span class="stars" aria-label="2 of 5 stars">★★☆☆☆</span> <strong>Subnetting – Task 1: Four equal subnets</strong> <span class="muted">· 12 goals</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/M129_Subnetting.pdf">Worksheet</a> (German)</li></ul><p class="muted">In leyoNET under Tools → Exercise catalogue. Every exercise checks itself.</p></section>
+<section aria-labelledby="normen"><h2 id="normen">Standards</h2>
+<ul class="norms"><li><strong>IEEE 802.3</strong> – IEEE Standard for Ethernet <span class="muted">(current edition: IEEE 802.3-2022)</span></li><li><a href="https://www.rfc-editor.org/rfc/rfc791">RFC 791</a> – Internet Protocol</li><li><a href="https://www.rfc-editor.org/rfc/rfc4291">RFC 4291</a> – IP Version 6 Addressing Architecture</li><li><a href="https://www.rfc-editor.org/rfc/rfc5952">RFC 5952</a> – A Recommendation for IPv6 Address Text Representation</li></ul></section>
+<section aria-labelledby="weiter"><h2 id="weiter">Read on</h2>
+<ul class="related"><li><a href="subnetting.html">Subnetting and VLSM</a> <span class="muted">Split a network into smaller ones, read masks and prefixes, compute host range and broadcast – evenly or as needed.</span></li><li><a href="ethernet-mac.html">Ethernet and MAC addresses</a> <span class="muted">How frames are addressed in the local network, how a switch learns where to send them, and what happens when a MAC address appears twice.</span></li><li><a href="ipv4.html">IPv4</a> <span class="muted">Addresses, masks and the IPv4 header: how a packet finds its destination across many networks, with TTL, checksum and private addresses.</span></li><li><a href="ipv6.html">IPv6</a> <span class="muted">128-bit addresses, prefixes, link-local, neighbor discovery instead of ARP and automatic addresses with SLAAC.</span></li></ul></section>
+      </article>
+      <nav class="pager" aria-label="Page through">
+        <a class="prev" href="ethernet-mac.html"><span class="muted">Previous</span>Ethernet and MAC addresses</a>
+        <a class="next" href="subnetting.html"><span class="muted">Next</span>Subnetting and VLSM</a>
+      </nav>
+      <p class="edit muted">Found a mistake or have an idea? <a href="https://github.com/vonam-git/leyoNET/blob/develop/docs/wiki/en/grundlagen/zahlensysteme.md">Source of this page</a> on GitHub.</p>
+    </main>
+  </div>
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET wiki · as of version 1.6.0 · texts under the same licence as leyoNET (AGPL-3.0).</p>
+      <ul>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../../impressum.html#kontakt">Contact</a></li>
+        <li><a href="../../impressum.html" hreflang="de">Legal notice</a></li>
+        <li><a href="../../datenschutz.html" hreflang="de">Privacy</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

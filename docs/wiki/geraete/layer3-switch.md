@@ -1,6 +1,7 @@
 ---
 titel: Layer-3-Switch
 kurz: Ein Switch, der auch routet: VLAN-Interfaces (SVIs) als Gateways, Routing zwischen VLANs, DHCP-Relay, OSPF und VXLAN.
+symbol: l3switch
 reihenfolge: 5
 schicht: 2 und 3
 hilfe: [device.l3switch]

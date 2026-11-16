@@ -1,6 +1,7 @@
 ---
 titel: Internet (Provider)
 kurz: Steht für den Provider und den Rest des Internets: öffentliche Adressen, Routing zwischen Kunden, DNS, CGNAT und DS-Lite.
+symbol: internet
 reihenfolge: 11
 hilfe: [device.internet]
 uebungen: [internet-nat, static-nat-dmz]

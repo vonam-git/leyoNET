@@ -8,6 +8,8 @@ import { cliIfaceName } from '../cli/names';
 import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, isRouterLike, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
 import { MIN_SIGNAL, portMedium, signalBetween } from './links';
 import { macFor, normalizeMac } from './mac';
+import { MAX_RATE, MIN_RATE } from '../net/qos';
+import { MAX_POE_BUDGET, POE_STANDARDS, canBePowered, canSupplyPoe } from './poe';
 import { MAX_ACLS, MAX_VPN_TUNNELS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type VpnTunnel } from './security';
 import { formatCidr6, formatIp6, isLinkLocal6, isLoopback6, isMulticast6, isUnspecified6, networkOf6, parseCidr6, parseIp6 } from '../net/ipv6';
 import type {
@@ -33,7 +35,11 @@ import type {
   Mailbox,
   NetInterface,
   Point,
+  PoeConfig,
+  QosConfig,
+  VoipConfig,
   PortForward,
+  PowerSource,
   StaticRoute,
   SubInterface,
   ChannelMode,
@@ -120,6 +126,15 @@ export type ErrorCode =
   | 'duplicateRoute'
   | 'dhcpServerNeedsStatic'
   | 'notAServer'
+  | 'notPoeCapable'
+  | 'notQosCapable'
+  | 'invalidRate'
+  | 'notAPhone'
+  | 'invalidPhoneNumber'
+  | 'duplicatePhoneNumber'
+  | 'notPowerable'
+  | 'invalidPoeBudget'
+  | 'invalidPoeClass'
   | 'dhcpServerNeedsAddress'
   | 'dhcpRangeOutsideSubnet'
   | 'dhcpRangeOrder'
@@ -2618,4 +2633,94 @@ export function setVerbundProvider(t: Topology, id: string, on: boolean): Result
   if (device.type !== 'internet') return { ok: false, error: { code: 'verbundNotSupported' } };
   const cleared = { ...t, devices: t.devices.map((d) => (d.verbundProvider ? without(d, 'verbundProvider') : d)) };
   return ok(on ? updateDevice(cleared, id, (d) => ({ ...d, verbundProvider: true })) : cleared);
+}
+
+// --- Power over Ethernet ----------------------------------------------------------
+
+/** PoE eines Switches einschalten (Typ und Budget in Watt) oder mit null ausschalten. */
+export function setPoe(t: Topology, id: string, config: PoeConfig | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canSupplyPoe(device.type)) return fail('notPoeCapable');
+  if (config === null) return ok(updateDevice(t, id, (d) => without(d, 'poe')));
+  if (!(config.standard in POE_STANDARDS)) return fail('invalidPoeBudget', { value: String(config.standard) });
+  const budget = Math.round(config.budget * 10) / 10;
+  if (!Number.isFinite(budget) || budget <= 0 || budget > MAX_POE_BUDGET) return fail('invalidPoeBudget', { value: String(config.budget) });
+  return ok(updateDevice(t, id, (d) => ({ ...d, poe: { standard: config.standard, budget } })));
+}
+
+/** PoE an einem Port abschalten («power inline never») oder wieder erlauben. */
+export function setPortPoe(t: Topology, id: string, index: number, enabled: boolean): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canSupplyPoe(device.type)) return fail('notPoeCapable');
+  if (!device.interfaces[index]) return fail('unknownInterface');
+  return ok(updatePort(t, id, index, (i) => (enabled ? without(i, 'poeOff') : { ...i, poeOff: true })));
+}
+
+/** Stromversorgung eines gespeisten Geräts: PoE oder Netzteil. */
+export function setPowerSource(t: Topology, id: string, power: PowerSource): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canBePowered(device.type)) return fail('notPowerable');
+  return ok(updateDevice(t, id, (d) => ({ ...d, power })));
+}
+
+/** PoE-Klasse 0–8 eines gespeisten Geräts; null = Standard des Geräts. */
+export function setPoeClass(t: Topology, id: string, poeClass: number | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canBePowered(device.type)) return fail('notPowerable');
+  if (poeClass === null) return ok(updateDevice(t, id, (d) => without(d, 'poeClass')));
+  if (!Number.isInteger(poeClass) || poeClass < 0 || poeClass > 8) return fail('invalidPoeClass', { value: String(poeClass) });
+  return ok(updateDevice(t, id, (d) => ({ ...d, poeClass })));
+}
+
+// --- QoS und Telefonie ------------------------------------------------------------
+
+/** Geräte mit Prioritäts-Warteschlangen. */
+export const canQos = (type: DeviceType) => type === 'switch' || type === 'l3switch' || type === 'router' || type === 'firewall';
+
+/** QoS einschalten (mit Vertrauen in DSCP) oder mit null ausschalten. */
+export function setQos(t: Topology, id: string, config: QosConfig | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canQos(device.type)) return fail('notQosCapable');
+  if (config === null) return ok(updateDevice(t, id, (d) => without(d, 'qos')));
+  return ok(updateDevice(t, id, (d) => ({ ...d, qos: config.trust === false ? { trust: false } : {} })));
+}
+
+/** Bandbreite eines Ports in kbit/s (Engpass); null = unbegrenzt. */
+export function setPortRate(t: Topology, id: string, index: number, rate: number | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canQos(device.type)) return fail('notQosCapable');
+  if (!device.interfaces[index]) return fail('unknownInterface');
+  if (rate === null) return ok(updatePort(t, id, index, (i) => without(i, 'rate')));
+  if (!Number.isInteger(rate) || rate < MIN_RATE || rate > MAX_RATE) return fail('invalidRate', { value: String(rate) });
+  return ok(updatePort(t, id, index, (i) => ({ ...i, rate })));
+}
+
+export const PHONE_NUMBER = /^[0-9]{2,8}$/;
+
+/** IP-Telefon: Rufnummer, Telefonanlage und Markierung; null entfernt die Einstellung. */
+export function setVoip(t: Topology, id: string, config: VoipConfig | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (device.type !== 'ipphone') return fail('notAPhone');
+  if (config === null) return ok(updateDevice(t, id, (d) => without(d, 'voip')));
+  const number = config.number.trim();
+  if (!PHONE_NUMBER.test(number)) return fail('invalidPhoneNumber', { value: number });
+  if (t.devices.some((d) => d.id !== id && d.voip?.number === number)) return fail('duplicatePhoneNumber', { value: number });
+  const server = config.server?.trim() ?? '';
+  if (server && parseIp(server) === null) return { ok: false, error: { code: 'invalidIp', params: { value: server }, field: 'server' } };
+  return ok(updateDevice(t, id, (d) => ({ ...d, voip: { number, ...(server ? { server } : {}), ...(config.marking === false ? { marking: false } : {}) } })));
+}
+
+/** Server: Telefonanlage (SIP) ein- oder ausschalten. */
+export function setSipServer(t: Topology, id: string, enabled: boolean): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canHostServices(device.type)) return fail('notAServer');
+  return ok(updateDevice(t, id, (d) => (enabled ? { ...d, sipServer: true } : without(d, 'sipServer'))));
 }

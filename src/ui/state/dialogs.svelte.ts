@@ -29,6 +29,7 @@ export type DialogName =
   | 'examStart'
   | 'examEnd'
   | 'examExport'
+  | 'examAi'
   | 'examJoin'
   | 'verbundMap';
 

@@ -2,6 +2,8 @@ export type DeviceType =
   | 'notebook'
   | 'pc'
   | 'server'
+  | 'ipphone'
+  | 'camera'
   | 'clientgroup'
   | 'switch'
   | 'l3switch'
@@ -64,6 +66,29 @@ export interface Point {
   y: number;
 }
 
+/** PoE-Typ der Speisequelle (PSE): Typ 1 (802.3af), Typ 2 (802.3at), Typ 3 und 4 (802.3bt). */
+export type PoeStandard = 'af' | 'at' | 'bt3' | 'bt4';
+export interface PoeConfig {
+  standard: PoeStandard;
+  /** Leistungsbudget des ganzen Switches in Watt. */
+  budget: number;
+}
+export type PowerSource = 'poe' | 'local';
+
+export interface VoipConfig {
+  /** Rufnummer (Nebenstelle), 2–8 Ziffern. */
+  number: string;
+  /** Adresse der Telefonanlage; fehlt = nur direkte Anrufe an eine IP-Adresse. */
+  server?: string;
+  /** Sprache mit EF (46), Signalisierung mit CS5 (40) markieren (RFC 4594); false = alles Best Effort. */
+  marking?: boolean;
+}
+
+export interface QosConfig {
+  /** DSCP der ankommenden Pakete übernehmen («trust dscp»); false = auf 0 zurücksetzen. Fehlt = true. */
+  trust?: boolean;
+}
+
 export interface NetInterface {
   index: number;
   mac: string;
@@ -93,6 +118,10 @@ export interface NetInterface {
   aclIn?: string;
   /** Administrativ abgeschaltet («shutdown»): Link ist aus, nichts wird gesendet oder empfangen. */
   shutdown?: boolean;
+  /** Nur Switch mit PoE: an diesem Anschluss kein Strom liefern («power inline never»). */
+  poeOff?: boolean;
+  /** Bandbreite in kbit/s, mit der der Port sendet (Engpass, z.B. WAN-Leitung); fehlt = unbegrenzt. */
+  rate?: number;
   /** Farbmarkierung des Anschlusses (z.B. für Patchfelder und Dokumentation). */
   color?: TagColor;
   /** Beschreibung, z.B. «Uplink Stock 2» («description» in der CLI). */
@@ -239,6 +268,18 @@ export interface Device {
   stp?: boolean;
   /** Nur Switch: STP-Priorität (Standard 32768); kleiner = eher Root-Bridge. */
   stpPriority?: number;
+  /** Nur Switch, Layer-3-Switch: Power over Ethernet nach IEEE 802.3 (Typ und Leistungsbudget). */
+  poe?: PoeConfig;
+  /** IP-Telefon, Kamera, Access Point: Stromversorgung; fehlt = PoE bei Telefon und Kamera, Netzteil beim Access Point. */
+  power?: PowerSource;
+  /** Gespeistes Gerät: PoE-Klasse 0–8 (IEEE 802.3, Klausel 33 und 145); fehlt = Standard des Geräts. */
+  poeClass?: number;
+  /** IP-Telefon: Rufnummer und Telefonanlage (SIP, RFC 3261). */
+  voip?: VoipConfig;
+  /** Server: Telefonanlage (SIP-Registrar und -Proxy). */
+  sipServer?: boolean;
+  /** Switch, Layer-3-Switch, Router, Firewall: QoS mit Prioritäts-Warteschlangen (DiffServ, RFC 2474). */
+  qos?: QosConfig;
   /** Nur Router: 802.1Q-Subinterfaces (Router-on-a-Stick). */
   subinterfaces?: SubInterface[];
   /** Router, Firewall, Layer-3-Switch: Loopback-Interfaces. */

@@ -4,6 +4,13 @@
  * (wird beim Bau nach website/httpdocs/wiki/farben.css kopiert): gleiche Farbe, gleicher Tag überall.
  */
 :root {
+  /* Rollen der Geräte (Endgerät, Verteilung, Routing): Symbole in App und Wiki */
+  --endpoint: #1d5fd6;
+  --endpoint-soft: #dde8fc;
+  --distribution: #067a52;
+  --distribution-soft: #d3f2e5;
+  --routing: #b4530a;
+  --routing-soft: #fbe6cf;
   /* OSI-Schichten: Paketdetails, Einzelschritt (Auspacken), Aufbau der Rahmen */
   --osi-7: #8e44ad;
   --osi-6: #9b59b6;
@@ -36,6 +43,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    --endpoint: #6aa5ff;
+    --endpoint-soft: #1c3252;
+    --distribution: #3ccf96;
+    --distribution-soft: #123a2c;
+    --routing: #f5b041;
+    --routing-soft: #3d2c12;
     --proto-arp: #4a3c14;
     --proto-icmp: #1c3252;
     --proto-dhcp: #123a2c;
@@ -60,6 +73,12 @@
 }
 
 :root[data-theme='dark'] {
+  --endpoint: #6aa5ff;
+  --endpoint-soft: #1c3252;
+  --distribution: #3ccf96;
+  --distribution-soft: #123a2c;
+  --routing: #f5b041;
+  --routing-soft: #3d2c12;
   --proto-arp: #4a3c14;
   --proto-icmp: #1c3252;
   --proto-dhcp: #123a2c;
@@ -148,4 +167,18 @@
 .proto-802-11 {
   --proto: var(--proto-link);
   --dot: var(--dot-link);
+}
+
+/* Farbe markiert die Rolle eines Geräts (Konzept, Abschnitt 8). */
+.role-endpoint {
+  --role: var(--endpoint);
+  --role-soft: var(--endpoint-soft);
+}
+.role-distribution {
+  --role: var(--distribution);
+  --role-soft: var(--distribution-soft);
+}
+.role-routing {
+  --role: var(--routing);
+  --role-soft: var(--routing-soft);
 }

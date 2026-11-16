@@ -17,6 +17,7 @@ import { MailClient, MailServer, type MailClientState } from './mail';
 import type { NodeContext } from './simulation';
 import { SshClient } from './ssh';
 import { TcpStack, type TcpState } from './tcp';
+import { Iperf, SipPhone, SipServer, type VoipHost, type VoipState } from './voip';
 
 /** Wirksame Adresskonfiguration, wie sie "ipconfig" zeigt. */
 export interface AddressState {
@@ -48,6 +49,10 @@ export interface HostState {
   browser?: BrowserState;
   mail: MailClientState;
   mailboxes?: { user: string; count: number }[];
+  /** IP-Telefon: Anmeldung und Gespräch. */
+  voip?: VoipState;
+  /** Telefonanlage: angemeldete Rufnummern. */
+  sipRegistrations?: { number: string; address: string }[];
 }
 
 type Command = 'ping' | 'tracert';
@@ -69,6 +74,9 @@ export class HostNode extends IpNode {
   readonly mailServer: MailServer;
   readonly mail: MailClient;
   readonly ssh: SshClient;
+  readonly phone: SipPhone;
+  readonly pbx: SipServer;
+  readonly iperf: Iperf;
   #ping: IcmpApp | null = null;
   #trace: IcmpApp | null = null;
   #icmpId = 0;
@@ -85,6 +93,14 @@ export class HostNode extends IpNode {
     new HttpServer(this);
     this.mailServer = new MailServer(this);
     this.mail = new MailClient(this);
+    const voipHost: VoipHost = {
+      ctx,
+      sendIp: (dst, payload, options, onError) => this.sendIp(dst, payload, options, onError ? (e) => onError(String(e)) : undefined),
+      ownIp: () => this.effectiveDevice()?.interfaces[0]?.ip,
+    };
+    this.phone = new SipPhone(voipHost, seq);
+    this.pbx = new SipServer(voipHost);
+    this.iperf = new Iperf(voipHost);
     this.ssh = new SshClient(this.tcp, ctx, (name, done) => this.resolver.resolveAddress(name, (r) => done(r.ok ? r.ip : null)));
   }
 
@@ -180,6 +196,18 @@ export class HostNode extends IpNode {
       } else if (datagram.srcPort === DNS_PORT) this.resolver.onResponse(msg);
       return;
     }
+    if (msg.kind === 'sip') {
+      const device = this.ctx.device();
+      if (device?.sipServer && !msg.status && msg.method === 'REGISTER') return this.pbx.onSip(packet, msg);
+      // Anfragen an die Anlage (Ziel ist eine Rufnummer bei dieser Adresse) und Antworten, die über sie laufen.
+      if (device?.sipServer && (msg.status !== undefined ? msg.via[0] === packet.dst : msg.uri.endsWith(`@${packet.dst}`))) return this.pbx.onSip(packet, msg);
+      if (device?.type === 'ipphone') this.phone.onSip(packet, msg);
+      return;
+    }
+    if (msg.kind === 'rtp') {
+      if (this.ctx.device()?.type === 'ipphone') this.phone.onRtp(msg);
+      return;
+    }
     if (msg.kind !== 'dhcp') return;
     if (datagram.dstPort === DHCP_CLIENT_PORT) {
       this.dhcpClient.onMessage(msg);
@@ -210,6 +238,7 @@ export class HostNode extends IpNode {
   #start() {
     this.ensureDhcp();
     this.v6.boot();
+    if (this.ctx.device()?.type === 'ipphone') this.phone.boot();
   }
 
   /** Access Point und dessen Funkplatz, falls das Gerät per WLAN verbunden ist. */
@@ -407,6 +436,8 @@ export class HostNode extends IpNode {
       ...(browser ? { browser: { ...browser, steps: [...browser.steps] } } : {}),
       mail: { ...mail, steps: [...mail.steps], inbox: [...mail.inbox], sent: [...mail.sent] },
       ...(device?.mailServer ? { mailboxes: this.mailServer.mailboxes() } : {}),
+      ...(device?.type === 'ipphone' ? { voip: this.phone.state() } : {}),
+      ...(device?.sipServer ? { sipRegistrations: this.pbx.state() } : {}),
     };
   }
 }

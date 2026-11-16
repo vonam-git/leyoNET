@@ -1,0 +1,361 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "router",
+        "name": "Router Zürich",
+        "position": {
+          "x": 360,
+          "y": 220
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "ip": "192.168.1.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:01:01",
+            "ip": "10.0.0.1",
+            "mask": "255.255.255.252",
+            "rate": 2000
+          }
+        ],
+        "routes": [
+          {
+            "network": "192.168.2.0",
+            "mask": "255.255.255.0",
+            "gateway": "10.0.0.2"
+          }
+        ],
+        "qos": {}
+      },
+      {
+        "id": "d2",
+        "type": "router",
+        "name": "Router Bern",
+        "position": {
+          "x": 680,
+          "y": 220
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "192.168.2.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:02:01",
+            "ip": "10.0.0.2",
+            "mask": "255.255.255.252",
+            "rate": 2000
+          }
+        ],
+        "routes": [
+          {
+            "network": "192.168.1.0",
+            "mask": "255.255.255.0",
+            "gateway": "10.0.0.1"
+          }
+        ],
+        "qos": {}
+      },
+      {
+        "id": "d3",
+        "type": "switch",
+        "name": "Switch Zürich",
+        "position": {
+          "x": 200,
+          "y": 360
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:03:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:03:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:03:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:03:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:03:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:03:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:03:07"
+          }
+        ],
+        "vlanDb": [],
+        "poe": {
+          "standard": "at",
+          "budget": 120
+        }
+      },
+      {
+        "id": "d4",
+        "type": "switch",
+        "name": "Switch Bern",
+        "position": {
+          "x": 840,
+          "y": 360
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:04:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:04:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:04:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:04:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:04:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:04:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:04:07"
+          }
+        ],
+        "vlanDb": [],
+        "poe": {
+          "standard": "at",
+          "budget": 120
+        }
+      },
+      {
+        "id": "d5",
+        "type": "server",
+        "name": "Telefonanlage",
+        "position": {
+          "x": 60,
+          "y": 220
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ip": "192.168.1.5",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.1.1",
+        "sipServer": true
+      },
+      {
+        "id": "d6",
+        "type": "ipphone",
+        "name": "Telefon 201",
+        "position": {
+          "x": 120,
+          "y": 500
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:06:00",
+            "ip": "192.168.1.21",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.1.1",
+        "voip": {
+          "number": "201",
+          "server": "192.168.1.5"
+        }
+      },
+      {
+        "id": "d7",
+        "type": "pc",
+        "name": "PC Zürich",
+        "position": {
+          "x": 300,
+          "y": 500
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:07:00",
+            "ip": "192.168.1.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.1.1"
+      },
+      {
+        "id": "d8",
+        "type": "ipphone",
+        "name": "Telefon 202",
+        "position": {
+          "x": 760,
+          "y": 500
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:08:00",
+            "ip": "192.168.2.22",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.2.1",
+        "voip": {
+          "number": "202",
+          "server": "192.168.1.5"
+        }
+      },
+      {
+        "id": "d9",
+        "type": "server",
+        "name": "Server Bern",
+        "position": {
+          "x": 940,
+          "y": 500
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:09:00",
+            "ip": "192.168.2.10",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.2.1"
+      }
+    ],
+    "cables": [
+      {
+        "id": "c10",
+        "a": {
+          "device": "d3",
+          "iface": 0
+        },
+        "b": {
+          "device": "d1",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c11",
+        "a": {
+          "device": "d3",
+          "iface": 1
+        },
+        "b": {
+          "device": "d5",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c12",
+        "a": {
+          "device": "d3",
+          "iface": 2
+        },
+        "b": {
+          "device": "d6",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c13",
+        "a": {
+          "device": "d3",
+          "iface": 3
+        },
+        "b": {
+          "device": "d7",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c14",
+        "a": {
+          "device": "d4",
+          "iface": 0
+        },
+        "b": {
+          "device": "d2",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c15",
+        "a": {
+          "device": "d4",
+          "iface": 1
+        },
+        "b": {
+          "device": "d8",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c16",
+        "a": {
+          "device": "d4",
+          "iface": 2
+        },
+        "b": {
+          "device": "d9",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c17",
+        "a": {
+          "device": "d1",
+          "iface": 1
+        },
+        "b": {
+          "device": "d2",
+          "iface": 1
+        }
+      }
+    ],
+    "nextId": 18
+  },
+  "configuration": {}
+}

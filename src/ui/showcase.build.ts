@@ -27,8 +27,11 @@ import {
   setInterfaceNat,
   setPortTrunk,
   setPortVlan,
+  setPortChannel,
   setProjectTitle,
   setSfpModule,
+  setStp,
+  setStpPriority,
   setSvi,
   setVlanDef,
   setWebServerEnabled,
@@ -134,6 +137,8 @@ class Net {
     this.ids.set(name, r.id);
     // Switches: VLAN-Datenbank mit Namen wie im VLAN-Plan.
     if (type === 'switch' || type === 'l3switch') {
+      // Spanning Tree überall: Die Access-Switches hängen redundant an zwei Switches.
+      this.t = u(setStp(this.t, r.id, true));
       for (const v of VLANS) {
         this.t = u(createVlan(this.t, r.id, v.id));
         this.t = u(setVlanName(this.t, r.id, v.id, v.name));
@@ -177,10 +182,19 @@ class Net {
     this.t = u(setInterfaceDescription(this.t, this.id(b), pb, opts.descB ?? `→ ${a}`));
     return { pa, pb };
   }
-  trunk(a: string, b: string, opts: { medium?: Medium; sfp?: '10G-SR' | '10G-LR' | '1G-SX' } = {}) {
-    const { pa, pb } = this.link(a, b, { ...opts, color: TRUNK, descA: `Trunk ${b}`, descB: `Uplink ${a}` });
+  trunk(a: string, b: string, opts: { medium?: Medium; sfp?: '10G-SR' | '10G-LR' | '1G-SX'; descA?: string; descB?: string } = {}) {
+    const { pa, pb } = this.link(a, b, { ...opts, color: TRUNK, descA: opts.descA ?? `Trunk ${b}`, descB: opts.descB ?? `Uplink ${a}` });
     this.t = u(setPortTrunk(this.t, this.id(a), pa, true));
     this.t = u(setPortTrunk(this.t, this.id(b), pb, true));
+    return { pa, pb };
+  }
+  /** Zwei Trunks als Port-Channel mit LACP (beide Seiten «active»): doppelte Leitung, ein logischer Port. */
+  bundle(a: string, b: string, channel: number, opts: { medium?: Medium; sfp?: '10G-SR' | '10G-LR' | '1G-SX' } = {}) {
+    for (const k of [1, 2]) {
+      const { pa, pb } = this.trunk(a, b, { ...opts, descA: `Po${channel} ${b} (${k}/2)`, descB: `Po${channel} Uplink ${a} (${k}/2)` });
+      this.t = u(setPortChannel(this.t, this.id(a), pa, channel));
+      this.t = u(setPortChannel(this.t, this.id(b), pb, channel));
+    }
   }
   rack(title: string, color: TagColor, x: number, y: number, members: string[], note?: string) {
     const r = u(addArea(this.t, { kind: 'rack', title, color, x, y, width: 280, height: 200, ...(note ? { note } : {}) }));
@@ -205,6 +219,8 @@ function buildSite(net: Net, s: Site) {
   net.add('modem', modem, x0, place(), { modem: s.modem });
   net.add('router', edge, x0, place());
   net.add('l3switch', core, x0, place(), { ports: 8, sfpSlots: 4 });
+  // Der Core ist Root-Bridge, damit STP die redundanten Access-Uplinks sinnvoll blockiert.
+  net.t = u(setStpPriority(net.t, net.id(core), 4096));
 
   // Edge: LAN zum Core (Transit), WAN über das Modem zum Provider.
   net.t = u(setInterfaceAddress(net.t, net.id(edge), 0, `10.${n}.255.1`, '255.255.255.252'));
@@ -236,7 +252,8 @@ function buildSite(net: Net, s: Site) {
       const d = `Dist ${k} ${short}`;
       net.add('switch', d, x0, place(), { ports: 8, sfpSlots: 2 });
       distNames.push(d);
-      net.trunk(core, d, { medium: 'fiber', sfp: '10G-SR' });
+      // Core ↔ Distribution doppelt: zwei 10G-Glasfasern im Port-Channel (LACP).
+      net.bundle(core, d, k, { medium: 'fiber', sfp: '10G-SR' });
     }
   }
   const groups = s.layout === 'collapsed' ? [s.servers] : [s.servers.filter((x) => x.vlan === 10), s.servers.filter((x) => x.vlan !== 10)];
@@ -244,8 +261,14 @@ function buildSite(net: Net, s: Site) {
     const a = `Access ${String.fromCharCode(65 + k)} ${short}`;
     net.add('switch', a, x0, place(), { ports: 8, sfpSlots: 0 });
     accessNames.push(a);
-    const upstream = distNames[k] ?? core;
-    net.trunk(upstream, a);
+    if (distNames.length) {
+      // Access redundant an beide Distribution-Switches; Spanning Tree blockiert einen Uplink.
+      net.trunk(distNames[k]!, a);
+      net.trunk(distNames[1 - k]!, a, { descA: `Trunk ${a} (Reserve)`, descB: `Reserve-Uplink ${distNames[1 - k]}` });
+    } else {
+      // Collapsed Core: zwei Kupfer-Trunks im Port-Channel zum Core.
+      net.bundle(core, a, 1);
+    }
     for (const srv of group) {
       net.add('server', srv.name, x0, place(), { variant: 'rack' });
       const ip = `10.${n}.${VLANS.find((v) => v.id === srv.vlan)!.third}.${srv.host}`;
@@ -287,16 +310,16 @@ function buildSite(net: Net, s: Site) {
   // Dokumentation: Standort-Bereich und VLAN-Plan.
   const layoutText =
     s.layout === 'three-tier'
-      ? 'Dreistufig: Core → Distribution → Access'
+      ? 'Dreistufig: Core → Distribution → Access. Core–Distribution doppelt im Port-Channel (LACP), jeder Access-Switch an beiden Distribution-Switches (Spanning Tree, Core ist Root)'
       : s.layout === 'core-dist'
-        ? 'Zweistufig: Core/Distribution → Access'
-        : 'Collapsed Core: Layer-3-Core → Access';
+        ? 'Zweistufig: Core/Distribution → Access, Core–Distribution im Port-Channel, Access an beiden Distribution-Switches (Spanning Tree)'
+        : 'Collapsed Core: Layer-3-Core → Access über zwei Kabel im Port-Channel (LACP)';
   net.area(`Rechenzentrum ${s.city}`, s.color, x0, y0 - 120, width, 940, {
     network: `10.${n}.0.0/16`,
     note: `${layoutText}. Anschluss: ${s.modem === 'fiber' ? 'Glasfaser' : s.modem === 'cable' ? 'Kabel (DOCSIS)' : 'VDSL'}, WAN ${wanIp(n)}/30.`,
   });
   const plan = VLANS.map((v) => `- **VLAN ${v.id} ${v.name}:** ${v.id === 900 ? `10.${n}.255.0/30` : `10.${n}.${v.third}.0/24`}, Gateway ${v.id === 900 ? `10.${n}.255.1` : `10.${n}.${v.third}.1`}`).join('\n');
-  net.area(`VLAN-Plan ${s.city}`, 'gray', x0 + 30, y0 + 530, width - 60, 260, { kind: 'note', note: `${plan}\n\nPortfarben im Rack = VLAN, Türkis = Trunk, Rot = WAN.` });
+  net.area(`VLAN-Plan ${s.city}`, 'gray', x0 + 30, y0 + 530, width - 60, 260, { kind: 'note', note: `${plan}\n\nPortfarben im Rack = VLAN, Türkis = Trunk, Rot = WAN. Redundanz: Po = Port-Channel (LACP), «Reserve» = von Spanning Tree blockiert.` });
   return { edge, modem };
 }
 
@@ -327,7 +350,7 @@ export function buildShowcase(): Topology {
   net.area('Provider (Internet)', 'yellow', -560, -900, 920, 300, { public: true, note: 'Öffentliche Transfernetze 203.0.113.0/24 (RFC 5737), je Standort ein /30. Zwischen den Rechenzentren laufen IPsec-Tunnel (Vollvermaschung).' });
   net.area('Über dieses Netz', 'gray', -1660, -900, 1000, 300, {
     kind: 'note',
-    note: '**Schaufenster leyoNET.** Drei Rechenzentren, drei Bauarten:\n- **Zürich:** dreistufig (Core, Distribution, Access), Glasfaser\n- **Bern:** Core/Distribution zusammen, Kabelmodem\n- **Basel:** Collapsed Core, VDSL\n\nIn der Simulation: Ping, Webseiten und DNS über die VPN-Tunnel. Alle Racks mit Frontplatten: Ansicht → Rack-Ansicht (Taste R).',
+    note: '**Schaufenster leyoNET.** Drei Rechenzentren, drei Bauarten:\n- **Zürich:** dreistufig (Core, Distribution, Access), Glasfaser\n- **Bern:** Core/Distribution zusammen, Kabelmodem\n- **Basel:** Collapsed Core, VDSL\n\nRedundant: doppelte Leitungen im Port-Channel (LACP) und Access-Switches an zwei Switches mit Spanning Tree.\n\nIn der Simulation: Ping, Webseiten und DNS über die VPN-Tunnel. Alle Racks mit Frontplatten: Ansicht → Rack-Ansicht (Taste R).',
   });
   return net.t;
 }

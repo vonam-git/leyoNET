@@ -4,6 +4,9 @@ import {
   devicePrice,
   PRICES,
   setDhcpServer,
+  setPoe,
+  setPowerSource,
+  type PoeStandard,
   setDnsServerEnabled,
   setMailServerEnabled,
   setWebServerEnabled,
@@ -42,6 +45,8 @@ export interface DeviceItem extends Base {
   options?: DeviceOptions;
   /** Vorbelegung nach dem Einfügen (z.B. Dienste eines Servers). */
   prepare?: (t: Topology, id: string) => Topology;
+  /** PoE-Switch: Typ und Budget (für Vorbelegung und Preis). */
+  poe?: { standard: PoeStandard; budget: number };
 }
 
 export interface MediumItem extends Base {
@@ -89,6 +94,14 @@ const serverPreset =
     return next;
   };
 
+const poePreset =
+  (standard: PoeStandard, budget: number) =>
+  (topology: Topology, id: string): Topology =>
+    step(topology, (t) => setPoe(t, id, { standard, budget }));
+
+const poeSwitch = (id: string, type: 'switch' | 'l3switch', ports: number, standard: PoeStandard, budget: number): DeviceItem =>
+  device(id, 'switches', type, { options: { ports }, poe: { standard, budget }, prepare: poePreset(standard, budget), features: ['net.poe'] });
+
 const t_defaultPage = (name: string) => t('web.defaultPage', { name });
 
 const device = (id: string, category: ShopCategory, type: DeviceType, extra: Partial<DeviceItem> = {}): DeviceItem => ({
@@ -103,6 +116,9 @@ const device = (id: string, category: ShopCategory, type: DeviceType, extra: Par
 export const SHOP: readonly ShopItem[] = [
   device('notebook', 'endpoints', 'notebook'),
   device('pc', 'endpoints', 'pc'),
+  device('ipphone', 'endpoints', 'ipphone'),
+  device('camera', 'endpoints', 'camera'),
+  device('cameraPtz', 'endpoints', 'camera', { options: { variant: 'ptz' } }),
   device('group10', 'endpoints', 'clientgroup', { options: { groupSize: 10 } }),
   device('group25', 'endpoints', 'clientgroup', { options: { groupSize: 25 } }),
   device('group50', 'endpoints', 'clientgroup', { options: { groupSize: 50 } }),
@@ -118,8 +134,11 @@ export const SHOP: readonly ShopItem[] = [
   device('switch8', 'switches', 'switch', { options: { ports: 8 } }),
   device('switch16', 'switches', 'switch', { options: { ports: 16 } }),
   device('switch24', 'switches', 'switch', { options: { ports: 24 } }),
+  poeSwitch('switch8poe', 'switch', 8, 'at', 120),
+  poeSwitch('switch24poe', 'switch', 24, 'at', 370),
   device('l3switch24', 'switches', 'l3switch', { options: { ports: 24 } }),
   device('l3switch48', 'switches', 'l3switch', { options: { ports: 48 } }),
+  poeSwitch('l3switch48poe', 'l3switch', 48, 'bt4', 1440),
 
   device('router2', 'routers', 'router', { options: { ports: 2 } }),
   device('router4', 'routers', 'router', { options: { ports: 4 } }),
@@ -129,6 +148,7 @@ export const SHOP: readonly ShopItem[] = [
   device('firewall8', 'routers', 'firewall', { options: { ports: 8 } }),
 
   device('accesspoint', 'wireless', 'accesspoint'),
+  device('accesspointPoe', 'wireless', 'accesspoint', { prepare: (topology, id) => step(topology, (t) => setPowerSource(t, id, 'poe')), features: ['net.poe'] }),
 
   device('internet', 'internet', 'internet'),
   device('cpe', 'internet', 'cpe'),
@@ -170,6 +190,7 @@ export function priceOf(item: ShopItem): number {
     ...(o.variant ? { variant: o.variant } : {}),
     ...(o.groupSize ? { groupSize: o.groupSize } : {}),
     ...(o.modem ? { modem: { kind: o.modem } } : {}),
+    ...(item.poe ? { poe: item.poe } : {}),
   });
 }
 

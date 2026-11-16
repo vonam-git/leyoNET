@@ -1,6 +1,7 @@
 ---
 titel: Client-Gruppe
 kurz: Ein Symbol für viele gleiche Rechner, z.B. ein ganzes Schulzimmer – praktisch, um DHCP-Bereiche und Netzgrössen zu üben.
+symbol: clientgroup
 reihenfolge: 3
 hilfe: [device.clientgroup]
 uebungen: [server-group]

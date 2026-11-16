@@ -1,6 +1,7 @@
 ---
 titel: Firewall
 kurz: Ein eigenes Gerät, das ab Werk filtert: Zonen WAN, LAN, DMZ und OPT, zustandsbehaftete Regeln und Schutz der Firewall selbst.
+symbol: firewall
 reihenfolge: 7
 schicht: 3 und 4
 hilfe: [device.firewall]

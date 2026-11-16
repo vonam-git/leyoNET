@@ -21,13 +21,6 @@
   --console-bg: #18212c;
   --console-text: #e3e9f0;
   --console-prompt: #8fd18f;
-
-  --endpoint: #1d5fd6;
-  --endpoint-soft: #dde8fc;
-  --distribution: #067a52;
-  --distribution-soft: #d3f2e5;
-  --routing: #b4530a;
-  --routing-soft: #fbe6cf;
 }
 
 /* Dunkles Schema: folgt der Systemeinstellung, ausser die Person wählt «Hell» oder «Dunkel». */
@@ -53,13 +46,6 @@
     --console-bg: #0b0f14;
     --console-text: #d7dee7;
     --console-prompt: #8fd18f;
-
-    --endpoint: #6aa5ff;
-    --endpoint-soft: #1c3252;
-    --distribution: #3ccf96;
-    --distribution-soft: #123a2c;
-    --routing: #f5b041;
-    --routing-soft: #3d2c12;
   }
 }
 
@@ -85,13 +71,6 @@
   --console-bg: #0b0f14;
   --console-text: #d7dee7;
   --console-prompt: #8fd18f;
-
-  --endpoint: #6aa5ff;
-  --endpoint-soft: #1c3252;
-  --distribution: #3ccf96;
-  --distribution-soft: #123a2c;
-  --routing: #f5b041;
-  --routing-soft: #3d2c12;
 }
 
 :root[data-theme='light'] {
@@ -161,16 +140,3 @@ button[aria-pressed='true'] {
   white-space: nowrap;
 }
 
-/* Farbe markiert die Rolle eines Geräts (Konzept, Abschnitt 8). */
-.role-endpoint {
-  --role: var(--endpoint);
-  --role-soft: var(--endpoint-soft);
-}
-.role-distribution {
-  --role: var(--distribution);
-  --role-soft: var(--distribution-soft);
-}
-.role-routing {
-  --role: var(--routing);
-  --role-soft: var(--routing-soft);
-}

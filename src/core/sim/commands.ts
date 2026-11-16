@@ -2,10 +2,11 @@ import { DNS_TYPES, type DnsRecord, type DnsType } from '../model/types';
 import { reverseName } from '../net/dns';
 import { parseIp, parseMask } from '../net/ipv4';
 import { parseIp6 } from '../net/ipv6';
+import { parseDscp } from '../net/qos';
 import type { HostNode } from './host';
 
 /** Befehle der simulierten Befehlszeile, angelehnt an Windows ("ipconfig", "tracert"). */
-export const COMMANDS = ['ping', 'tracert', 'nslookup', 'ipconfig', 'arp', 'netsh', 'netstat', 'ssh', 'cls', 'help'] as const;
+export const COMMANDS = ['ping', 'tracert', 'nslookup', 'ipconfig', 'arp', 'netsh', 'netstat', 'ssh', 'call', 'hangup', 'iperf', 'cls', 'help'] as const;
 
 export function runCommand(host: HostNode, line: string) {
   const ctx = host.ctx;
@@ -57,6 +58,23 @@ export function runCommand(host: HostNode, line: string) {
       // Mit Ziel fragt die Oberfläche das Passwort ab und ruft dann Simulation.ssh() auf.
       if (!args[0] || !/@|-l/.test(args.join(' '))) ctx.print('cmd.usage.ssh');
       return;
+    case 'call':
+    case 'anrufen': {
+      if (host.ctx.device()?.type !== 'ipphone') return ctx.print('voip.notAPhone');
+      const seconds = args[1] === undefined ? undefined : Number(args[1]);
+      if (!args[0] || (seconds !== undefined && (!Number.isInteger(seconds) || seconds < 1 || seconds > 120))) return ctx.print('cmd.usage.call');
+      host.phone.call(args[0], seconds);
+      return;
+    }
+    case 'hangup':
+    case 'auflegen':
+      if (host.ctx.device()?.type !== 'ipphone') return ctx.print('voip.notAPhone');
+      host.phone.hangup();
+      return;
+    case 'iperf':
+    case 'iperf3':
+      iperf(host, args);
+      return;
     case 'cls':
     case 'clear':
       ctx.clearConsole();
@@ -69,6 +87,27 @@ export function runCommand(host: HostNode, line: string) {
     default:
       ctx.print('cmd.unknown', { cmd: command });
   }
+}
+
+/**
+ * Lastgenerator wie iperf3 im UDP-Modus: «iperf -c <Ziel> -u -b <Rate> [-t <Sekunden>] [--dscp <EF|46>]».
+ * Rate mit k oder M (z.B. 1500k, 3M); Standard 10 Sekunden.
+ */
+function iperf(host: HostNode, args: string[]) {
+  const ctx = host.ctx;
+  const value = (flag: string) => {
+    const i = args.findIndex((a) => a === flag);
+    return i >= 0 ? args[i + 1] : undefined;
+  };
+  const target = value('-c');
+  const rateText = value('-b') ?? '1M';
+  const m = /^(\d+(?:[.,]\d+)?)([kKmM]?)$/.exec(rateText);
+  const kbps = m ? Math.round(Number(m[1]!.replace(',', '.')) * (m[2]!.toLowerCase() === 'm' ? 1000 : m[2] ? 1 : 0.001)) : NaN;
+  const seconds = Number(value('-t') ?? 10);
+  const dscpText = value('--dscp') ?? value('--tos');
+  const dscp = dscpText === undefined ? 0 : parseDscp(dscpText);
+  if (!target || !Number.isFinite(kbps) || kbps < 8 || kbps > 100_000 || !Number.isInteger(seconds) || seconds < 1 || seconds > 60 || dscp === null) return ctx.print('cmd.usage.iperf');
+  host.iperf.start(target, kbps, seconds, dscp);
 }
 
 /** Fragt den DNS-Server direkt, am eigenen Cache vorbei. */

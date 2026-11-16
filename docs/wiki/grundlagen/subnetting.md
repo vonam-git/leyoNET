@@ -39,4 +39,4 @@ Bei **VLSM** (variable Masken) bekommt jedes Netz nur so viel, wie es braucht. M
 
 > In leyoNET rechnet der **IP-Rechner** (Taste I) beides vor, in Dezimal und Binär, und überträgt die Werte auf Knopfdruck. Ein **Bereich** mit Netzadresse zeigt Hostbereich und Broadcast direkt auf der Zeichenfläche.
 
-Private Adressen für eigene Netze stehen in RFC 1918: 10.0.0.0/8, 172.16.0.0/12 und 192.168.0.0/16.
+Private Adressen für eigene Netze stehen in RFC 1918: 10.0.0.0/8, 172.16.0.0/12 und 192.168.0.0/16 (mehr in [[adressbereiche]]).

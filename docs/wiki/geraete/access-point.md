@@ -1,6 +1,7 @@
 ---
 titel: Access Point
 kurz: Spannt ein WLAN auf: SSID, Band, Kanal und WPA2-Passwort, mehrere Access Points für Roaming und Mesh über Stockwerke.
+symbol: accesspoint
 reihenfolge: 8
 schicht: 1 und 2
 hilfe: [device.accesspoint]

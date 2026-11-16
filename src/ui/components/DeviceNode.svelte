@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_SPECS, addressScope, floorsOf, parseIp, parseMask, type AddressScope, type Device } from '../../core';
+  import { DEVICE_SPECS, isPowered, needsPoe, addressScope, floorsOf, parseIp, parseMask, type AddressScope, type Device } from '../../core';
   import { t } from '../../i18n';
   import { interfaceLabel, typeLabel } from '../labels';
   import { rackLabelsFit, rackSlots } from '../cableGeometry';
@@ -39,6 +39,8 @@
   });
 
   const selected = $derived(editor.isSelected('device', device.id));
+  /** Gespeistes Gerät ohne Strom (kein PoE, Budget aufgebraucht): grau mit Blitz. */
+  const unpowered = $derived(needsPoe(device) && !isPowered(editor.topology, device));
   const isSource = $derived(editor.cableSource === device.id);
   const isEndpoint = $derived(DEVICE_SPECS[device.type].role === 'endpoint');
 
@@ -118,6 +120,7 @@
   class:selected
   class:source={isSource}
   class:faded
+  class:unpowered
   transform="translate({device.position.x} {device.position.y})"
   role="button"
   tabindex="0"
@@ -162,6 +165,13 @@
       <circle r="8" />
       <text y="4">!</text>
       <title>{dupText}</title>
+    </g>
+  {/if}
+  {#if unpowered}
+    <g class="power-badge" transform="translate(30 -24)" role="img" aria-label={t('canvas.noPower')}>
+      <circle r="8" />
+      <path d="M1 -6 L-4 1 H0 L-1 6 L4 -1 H0 Z" />
+      <title>{t('canvas.noPower')}</title>
     </g>
   {/if}
   {#if floorLabel}
@@ -266,6 +276,17 @@
   .dup-mark {
     fill: var(--danger);
     font-weight: 700;
+  }
+  .unpowered :global(.icon) {
+    opacity: 0.45;
+  }
+  .power-badge circle {
+    fill: var(--warn, #d08a00);
+    stroke: var(--bg);
+    stroke-width: 2;
+  }
+  .power-badge path {
+    fill: #fff;
   }
   .dup-badge circle {
     fill: var(--danger);

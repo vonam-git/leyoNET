@@ -1,6 +1,6 @@
 <p align="center"><img src="branding/leyoNET.svg" alt="leyoNET" width="380" /></p>
 
-<p align="center"><strong>Netzwerke bauen, simulieren und verstehen.</strong><br />Ein Netzwerk-Simulator für den Informatik-Unterricht, vom ersten Lehrjahr bis zur Fachhochschule.</p>
+<p align="center"><strong>Netzwerke bauen, simulieren und verstehen.</strong><br />Ein kostenloser Netzwerksimulator für den Informatik-Unterricht, vom ersten Lehrjahr bis zur Fachhochschule, mit Übungsreihen für die ICT-Module 117, 129 und 145.<br /><em>A free network simulator for teaching computer networks (<a href="https://leyonet.ch/en/">English</a>).</em></p>
 
 <p align="center">
   <a href="https://app.leyonet.ch/"><strong>Im Browser starten</strong></a> ·

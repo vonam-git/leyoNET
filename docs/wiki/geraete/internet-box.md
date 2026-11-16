@@ -1,6 +1,7 @@
 ---
 titel: Internet-Box (CPE)
 kurz: Das Gerät vom Provider für zu Hause: Modem, Router mit NAT, DHCP-Server und kleiner Switch in einem Gehäuse.
+symbol: cpe
 reihenfolge: 10
 hilfe: [device.cpe]
 demos: [cpe]

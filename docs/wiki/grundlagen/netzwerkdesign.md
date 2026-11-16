@@ -30,4 +30,14 @@ Im Rechenzentrum fliesst viel Verkehr zwischen Servern («Ost-West»). Dafür ei
 
 Der [Rechenzentren-Verbund](https://app.leyonet.ch/?schaufenster) zeigt alle drei Bauarten nebeneinander: Zürich dreistufig, Bern mit Core und Distribution in einem Rack, Basel als Collapsed Core. Die Standorte hängen über Modems am Provider und sind mit [[ipsec-vpn|IPsec]] verbunden.
 
+## Redundanz
+
+Ein Netz ohne Reserve fällt mit dem ersten Kabel aus. Im Schaufenster ist darum alles doppelt:
+
+- **Doppelte Leitungen:** Core und Distribution sind mit zwei Glasfasern verbunden, gebündelt zu einem Port-Channel mit [[lacp]]. Beide tragen Verkehr; fällt eine aus, läuft alles über die andere.
+- **Zwei Wege nach oben:** Jeder Access-Switch hängt an beiden Distribution-Switches. Das ergibt eine Schleife, darum läuft [[stp]]: Der Core ist Root-Bridge, ein Uplink jedes Access-Switches ist blockiert und springt ein, wenn der andere ausfällt.
+- **Collapsed Core in Basel:** zwei Kupferkabel im Port-Channel zwischen Core und Access.
+
+In der Simulation zeigt `show spanning-tree` am Access-Switch den blockierten Reserve-Uplink, `show etherchannel summary` am Core die gebündelten Leitungen. Wer ein Kabel löscht oder einen Port abschaltet, sieht, wie das Netz weiterläuft.
+
 ![Drei Rechenzentren mit Racks, Core- und Access-Switches](rzVerbund)

@@ -10,6 +10,7 @@
  * Konfigurationsmodus Anzeigebefehle aus.
  */
 import { linkUpAt } from '../model/links';
+import { POE_STANDARDS, poeReport } from '../model/poe';
 import {
   addStaticRoute,
   getDevice,
@@ -21,6 +22,7 @@ import {
   setInterfaceNat,
   setInterfaceRelay,
   setInterfaceShutdown,
+  setPortPoe,
   setIpRouting,
   setPortTrunk,
   setPortVlan,
@@ -218,6 +220,8 @@ const KEYWORD_HELP: Record<string, string> = {
   'address-table': 'MAC forwarding table',
   vlan: 'VLAN information / configuration',
   'spanning-tree': 'Spanning tree information / configuration',
+  power: 'Power over Ethernet',
+  inline: 'Inline power (PoE) on ports',
   interfaces: 'Interface status',
   status: 'Port status',
   nat: 'NAT information / configuration',
@@ -565,6 +569,7 @@ const COMMANDS: Command[] = [
   { modes: EXEC, types: SWITCHES, syntax: 'show interfaces trunk', help: 'Trunk ports with allowed and native VLANs', run: ({ device, env }) => ok(showTrunks(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show interfaces status', help: 'Port status', run: ({ device, env }) => ok(showInterfacesStatus(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show spanning-tree', help: 'Spanning tree state', run: ({ device, env }) => ok(showSpanningTree(device, env)) },
+  { modes: EXEC, types: SWITCHES, syntax: 'show power inline', help: 'PoE budget and powered devices per port', run: ({ device, env }) => ok(showPowerInline(device, env)) },
 
   // --- Konfiguration (global) ------------------------------------------------
   {
@@ -913,6 +918,8 @@ const COMMANDS: Command[] = [
   { modes: ['if'], types: L3, syntax: 'ip ospf cost <num>', help: 'OSPF cost of this interface (1–65535)', run: (call) => forPorts(call, (t, p) => setOspfCost(t, call.device.id, p, Number(call.args[0]))) },
   { modes: ['if'], types: L3, syntax: 'no ip ospf cost', help: 'Default OSPF cost (10)', run: (call) => forPorts(call, (t, p) => setOspfCost(t, call.device.id, p, null)) },
   { modes: ['if'], syntax: 'shutdown', help: 'Disable the interface', run: (call) => (onlySvis(call) ? ok(['% VLAN interfaces stay up here']) : forPorts(call, (t, p) => setInterfaceShutdown(t, call.device.id, p, true))) },
+  { modes: ['if'], types: SWITCHES, syntax: 'power inline never', help: 'No PoE on this port', run: (call) => forPorts(call, (t, p) => setPortPoe(t, call.device.id, p, false)) },
+  { modes: ['if'], types: SWITCHES, syntax: 'power inline auto', help: 'PoE on this port when a powered device is detected (default)', run: (call) => forPorts(call, (t, p) => setPortPoe(t, call.device.id, p, true)) },
   { modes: ['if'], syntax: 'no shutdown', help: 'Enable the interface', run: (call) => (onlySvis(call) ? ok() : forPorts(call, (t, p) => setInterfaceShutdown(t, call.device.id, p, false))) },
   { modes: ['if'], syntax: 'description <text>', help: 'Interface description', run: (call) => forPorts(call, (t, p) => setInterfaceDescription(t, call.device.id, p, call.args[0]!)) },
   { modes: ['if'], syntax: 'no description', help: 'Remove the description', run: (call) => forPorts(call, (t, p) => setInterfaceDescription(t, call.device.id, p, '')) },
@@ -1998,6 +2005,27 @@ function showSpanningTree(device: Device, env: CliEnv): string[] {
   ];
 }
 
+function showPowerInline(device: Device, env: CliEnv): string[] {
+  const supply = poeReport(env.topology).supplies.get(device.id);
+  if (!device.poe || !supply) return ['% This switch has no PoE (enable it in the device settings, tab PoE)'];
+  const byPort = new Map(supply.ports.map((p) => [p.iface, p]));
+  const name = (id: string) => env.topology.devices.find((d) => d.id === id)?.name ?? '';
+  const rows = device.interfaces
+    .filter((i) => !i.serial && !i.sfpSlot)
+    .map((i) => {
+      const p = byPort.get(i.index);
+      const oper = i.poeOff ? 'off' : !p ? 'off' : p.reason ? 'faulty' : 'on';
+      return [cliIfaceName(device, i.index), i.poeOff ? 'off' : 'auto', oper, p?.watts ? p.watts.toFixed(1) : '0.0', p ? name(p.device) : 'n/a', p ? String(p.poeClass) : 'n/a'];
+    });
+  const r = (n: number) => n.toFixed(1);
+  return [
+    `Type ${POE_STANDARDS[device.poe.standard].type} (IEEE ${POE_STANDARDS[device.poe.standard].legacy})`,
+    `Available:${r(supply.budget)}(w)  Used:${r(supply.used)}(w)  Remaining:${r(supply.budget - supply.used)}(w)`,
+    '',
+    ...table(['Interface', 'Admin', 'Oper', 'Power(W)', 'Device', 'Class'], rows),
+  ];
+}
+
 // --- running-config ------------------------------------------------------------
 
 export function runningConfig(device: Device): string[] {
@@ -2052,6 +2080,7 @@ export function runningConfig(device: Device): string[] {
       if (p.dhcp6) lines.push(' ipv6 nd managed-config-flag');
       if (p.dns6) lines.push(` ipv6 nd ra dns server ${p.dns6}`);
     }
+    if (p.poeOff) lines.push(' power inline never');
     if (p.shutdown) lines.push(' shutdown');
     lines.push('!');
   }

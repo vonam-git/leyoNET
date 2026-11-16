@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>leyoNET – free network simulator for teaching computer networks</title>
+  <meta name="description" content="leyoNET is a free network simulator for teaching computer networks: build networks, follow every packet layer by layer, check exercises automatically. In the browser, offline or as a desktop app – no account, no tracking.">
+  <link rel="canonical" href="https://leyonet.ch/en/">
+  <link rel="alternate" hreflang="de" href="https://leyonet.ch/">
+  <link rel="alternate" hreflang="en" href="https://leyonet.ch/en/">
+  <link rel="alternate" hreflang="x-default" href="https://leyonet.ch/">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#ffffff">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://leyonet.ch/en/">
+  <meta property="og:title" content="leyoNET – network simulator: build, simulate and understand networks">
+  <meta property="og:description" content="Free network simulator for teaching computer networks. In the browser, offline or as a desktop app – no account, no tracking.">
+  <meta property="og:image" content="https://leyonet.ch/img/og.png">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:locale:alternate" content="de_CH">
+  <meta property="og:site_name" content="leyoNET">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../css/site.css?v=1.6.0">
+  <script src="../js/site.js?v=1.6.0" defer></script>
+  <script type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "leyoNET",
+      "alternateName": ["leyonet", "leyoNET Netzwerksimulator", "leyoNET network simulator"],
+      "description": "Free network simulator for teaching computer networks: build networks, follow packets layer by layer according to the standards, check exercises automatically.",
+      "applicationCategory": "EducationalApplication",
+      "applicationSubCategory": "Network simulator",
+      "operatingSystem": "Windows, macOS, Linux, Webbrowser",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CHF" },
+      "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+      "url": "https://leyonet.ch/en/",
+      "downloadUrl": "https://github.com/vonam-git/leyoNET/releases/latest",
+      "softwareVersion": "1.6.0",
+      "inLanguage": ["de", "en"],
+      "isAccessibleForFree": true,
+      "keywords": "network simulator, network simulation, computer networks teaching, packet tracer alternative, subnetting, VLAN, OSI model, Wireshark, IPv6, OSPF",
+      "audience": { "@type": "EducationalAudience", "educationalRole": ["teacher", "student"] }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "leyoNET",
+      "alternateName": "leyoNET network simulator",
+      "url": "https://leyonet.ch/en/",
+      "inLanguage": "en"
+    }
+  ]
+  </script>
+</head>
+<body>
+  <a class="skip" href="#inhalt">Skip to content</a>
+
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="./" aria-label="leyoNET home">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <nav aria-label="Main navigation">
+        <ul>
+          <li><a href="#ansicht">Screens</a></li>
+          <li><a href="#unterricht">Teaching</a></li>
+          <li><a href="#verbund">Class network</a></li>
+          <li><a href="#technik">Protocols</a></li>
+          <li><a href="#download">Download</a></li>
+          <li><a href="#module">Modules</a></li>
+          <li><a href="../wiki/en/">Wiki</a></li>
+        </ul>
+      </nav>
+      <a class="lang-switch" href="../" hreflang="de" lang="de" title="Deutsche Fassung">DE</a>
+      <button class="theme-toggle" type="button" aria-label="Dark theme" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://app.leyonet.ch/">Start in the browser</a>
+    </div>
+  </header>
+
+  <main id="inhalt">
+    <!-- Hero: a small real sequence – ping through a router, with packet list -->
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="hero-text">
+          <h1>Build, simulate and understand networks.</h1>
+          <p class="lead">leyoNET is a free network simulator for teaching computer networks. Cable up devices, assign addresses, and watch every packet travel across the wire – from the first ARP to the reply.</p>
+          <div class="cta">
+            <a class="btn btn-ink" href="https://app.leyonet.ch/">Start in the browser</a>
+            <a class="btn btn-line" href="https://app.leyonet.ch/?schaufenster">Live showcase</a>
+          </div>
+          <ul class="facts">
+            <li>Free and open source</li>
+            <li>Works offline</li>
+            <li>No account, no tracking</li>
+          </ul>
+        </div>
+
+        <figure class="sim" aria-label="Example: PC 1 pings a server in another network">
+          <div class="sim-canvas">
+            <svg viewBox="0 0 640 230" class="topo" role="img" aria-labelledby="topo-title">
+              <title id="topo-title">PC 1 and switch in network 192.168.1.0/24, router, server in network 192.168.2.0/24</title>
+              <rect class="zone zone-a" x="12" y="14" width="350" height="200" rx="10"/>
+              <text class="zone-label zone-a-label" x="26" y="38">Classroom 192.168.1.0/24</text>
+              <rect class="zone zone-b" x="452" y="14" width="176" height="200" rx="10"/>
+              <text class="zone-label zone-b-label" x="466" y="38">Server 192.168.2.0/24</text>
+
+              <line class="cable" x1="84" y1="118" x2="222" y2="118"/>
+              <line class="cable" x1="258" y1="118" x2="390" y2="118"/>
+              <line class="cable" x1="430" y1="118" x2="532" y2="118"/>
+              <g class="ports">
+                <circle cx="96" cy="118" r="4"/><circle cx="210" cy="118" r="4"/>
+                <circle cx="270" cy="118" r="4"/><circle cx="378" cy="118" r="4"/>
+                <circle cx="442" cy="118" r="4"/><circle cx="520" cy="118" r="4"/>
+              </g>
+              <text class="port" x="104" y="110">eth0</text>
+              <text class="port" x="185" y="110">P1</text>
+              <text class="port" x="278" y="110">P2</text>
+              <text class="port" x="344" y="110">eth0</text>
+              <text class="port" x="450" y="110">eth1</text>
+              <text class="port" x="490" y="110">eth0</text>
+
+              <!-- PC -->
+              <g class="dev dev-pc" transform="translate(48 96)">
+                <rect x="0" y="4" width="28" height="20" rx="2"/><path d="M8 30h12M14 24v6"/><rect x="31" y="2" width="8" height="28" rx="1.5"/>
+              </g>
+              <text class="name" x="66" y="160" text-anchor="middle">PC 1</text>
+              <text class="ip" x="66" y="176" text-anchor="middle">192.168.1.10/24</text>
+              <!-- Switch -->
+              <g class="dev dev-sw" transform="translate(222 104)">
+                <rect x="0" y="0" width="36" height="28" rx="5"/><path d="M8 10h20l-5-4M28 18H8l5 4"/>
+              </g>
+              <text class="name" x="240" y="160" text-anchor="middle">Switch 1</text>
+              <!-- Router -->
+              <g class="dev dev-r" transform="translate(410 118)">
+                <circle r="20"/><path d="M-6-6l-7-7m0 0h5m-5 0v5M6-6l7-7m0 0h-5m5 0v5M-6 6l-7 7m0 0h5m-5 0v-5M6 6l7 7m0 0h-5m5 0v-5"/>
+              </g>
+              <text class="name" x="410" y="160" text-anchor="middle">Router 1</text>
+                            <!-- Server -->
+              <g class="dev dev-srv" transform="translate(538 96)">
+                <rect x="0" y="0" width="26" height="40" rx="3"/><path d="M6 9h14M6 16h14M6 23h14"/><circle cx="13" cy="32" r="2.4"/>
+              </g>
+              <text class="name" x="551" y="160" text-anchor="middle">Server</text>
+              <text class="ip" x="551" y="176" text-anchor="middle">192.168.2.20/24</text>
+
+              <circle class="packet" r="7" cx="96" cy="118" opacity="0"/>
+            </svg>
+          </div>
+          <div class="sim-list" role="log" aria-live="off">
+            <div class="sim-head"><span>No.</span><span>From → To</span><span>Protocol</span><span>Info</span></div>
+            <ol class="rows"></ol>
+            <p class="sim-console"><span class="prompt">C:\&gt;</span> <span class="console-text">ping 192.168.2.20</span></p>
+          </div>
+          <figcaption class="visually-hidden">Animation: PC 1 asks for the router via ARP, sends an ICMP echo request through switch and router to the server and receives the reply.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Echte Ansichten aus dem Programm -->
+    <section id="ansicht" class="views">
+      <div class="wrap">
+        <h2>What it looks like</h2>
+        <p class="section-lead">Real screenshots, no mock-ups. Everything runs in a browser window, no installation needed.</p>
+        <div class="tabs" role="tablist" aria-label="Screens">
+          <button role="tab" id="tab-rz" aria-controls="panel-views" aria-selected="true" data-img="schaufenster" data-caption="Showcase: three data centres with core, distribution and access, connected via fibre, cable and VDSL, linked with IPsec. Zurich fetches the web page in Basel via DNS. Live at app.leyonet.ch/?schaufenster.">Data centre</button>
+          <button role="tab" id="tab-racks" aria-controls="panel-views" aria-selected="false" data-img="rack" data-caption="Rack view: switches and servers as rack units, ports in the colour of their VLAN, patch cables and link LEDs.">Racks</button>
+          <button role="tab" id="tab-entwurf" aria-controls="panel-views" aria-selected="false" data-img="entwurf" data-caption="Design: drag devices from the shop, cable them, document networks as coloured areas. Here a layer 3 switch with three VLANs.">Design</button>
+          <button role="tab" id="tab-simulation" aria-controls="panel-views" aria-selected="false" data-img="simulation" data-caption="Simulation: ping through a router. The packet list shows every frame, the detail view its layers decoded from real bytes.">Simulation</button>
+          <button role="tab" id="tab-geraet" aria-controls="panel-views" aria-selected="false" data-img="geraetefenster" data-caption="Device window: routing table, OSPF neighbours and ARP table of a router while OSPF hellos travel through the network.">Device window</button>
+          <button role="tab" id="tab-katalog" aria-controls="panel-views" aria-selected="false" data-img="katalog" data-caption="Exercise catalogue: over 70 exercises from one to five stars, with topics and search. Solved exercises stay marked.">Catalogue</button>
+          <button role="tab" id="tab-dashboard" aria-controls="panel-views" aria-selected="false" data-img="dashboard" data-dark="same" data-caption="Class network: the dashboard for the projector shows which sites of the class are connected, online or done – computed in the simulation.">Dashboard</button>
+        </div>
+        <figure class="shot" id="panel-views" role="tabpanel" aria-labelledby="tab-rz">
+          <div class="window">
+            <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span><em>app.leyonet.ch</em></div>
+            <img src="../img/schaufenster-1x.webp" srcset="../img/schaufenster-1x.webp 1440w, ../img/schaufenster.webp 2880w" sizes="(min-width: 1180px) 1100px, 100vw" width="1440" height="880" alt="leyoNET: data centre network with three sites, the web browser in Zurich shows the page from Basel" loading="lazy">
+          </div>
+          <figcaption>Showcase: three data centres with core, distribution and access, connected via fibre, cable and VDSL, linked with IPsec. Zurich fetches the web page in Basel via DNS. Live at app.leyonet.ch/?schaufenster.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Zahlen: was heute drin ist -->
+    <section class="numbers" aria-labelledby="numbers-title">
+      <div class="wrap">
+        <h2 id="numbers-title" class="visually-hidden">leyoNET in numbers</h2>
+        <dl class="counters">
+          <div><dt>exercises with automatic checking</dt><dd data-count="70" data-suffix="+">70+</dd></div>
+          <div><dt>ready-made demo networks, many step by step</dt><dd data-count="39">39</dd></div>
+          <div><dt>device types from notebook to provider</dt><dd data-count="12">12</dd></div>
+          <div><dt>cited standards: RFC, IEEE 802, ITU-T</dt><dd data-count="64">64</dd></div>
+          <div><dt>automated tests before every release</dt><dd data-count="680" data-suffix="+">680+</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- Teaching -->
+    <section id="unterricht" class="teach">
+      <div class="wrap">
+        <h2>Made for the classroom</h2>
+        <p class="section-lead">From the first year of vocational training to university. Teachers decide what is visible – and leyoNET does the marking.</p>
+
+        <div class="teach-grid">
+          <article class="teach-item">
+            <h3>Five profiles, one program</h3>
+            <p>Beginners only see PCs, a switch, a router and DHCP. Each profile adds more – up to BGP. Teachers share their selection as a file.</p>
+            <ol class="ladder" aria-label="Feature profiles">
+              <li><b>P1</b> Getting started <span>PCs, switch, router, server, DHCP</span></li>
+              <li><b>P2</b> Basics <span>Wi-Fi, internet, DNS, web, static routes</span></li>
+              <li><b>P3</b> Advanced <span>VLANs, trunks, STP, NAT, firewall, loopbacks, command line</span></li>
+              <li><b>P4</b> Professional <span>OSPF, RIP, IPv6 with OSPFv3, layer 3 switch, ACLs, LACP, VPN, hex view, pcap</span></li>
+              <li><b>P5</b> University <span>everything, including BGP, VRF and VXLAN</span></li>
+            </ol>
+          </article>
+
+          <article class="teach-item">
+            <h3>Exercises that check themselves</h3>
+            <p>Every exercise has learning goals such as “PC 1 reaches the web server”. One click on “Check” shows what is fulfilled and gives hints for the rest. Each exercise comes with a fillable worksheet as PDF (in German), plus whole series for the Swiss ICT modules 117, 129 and 145: <a class="link" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Arbeitsblaetter.zip">all worksheets (ZIP)</a>. Teachers receive the model solutions by e-mail on request (address in the <a class="link" href="../impressum.html">legal notice</a>).</p>
+            <p>Create your own tasks in a form – or from a finished solution: leyoNET suggests the goals with points.</p>
+          </article>
+
+          <article class="teach-item">
+            <h3>Exams without a pile of marking</h3>
+            <p>Every seat gets its own code and, if you like, its own variant. Work is saved every 20 seconds and handed in automatically when time is up.</p>
+            <p>Extra time per seat with one click. The evaluation computes points and the grade on the Swiss scale, with partial points, follow-on errors and room for manual corrections.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Swiss ICT modules -->
+    <section id="module" class="modules" aria-labelledby="module-title">
+      <div class="wrap">
+        <h2 id="module-title">Series for the Swiss ICT modules 117, 129 and 145</h2>
+        <p class="section-lead">Made for the Swiss vocational training in computer science (Informatiker/in EFZ): each module has a series of exercises that build on each other, with worksheet (PDF) and automatic checking.</p>
+        <div class="module-grid">
+          <a class="module-card" href="../wiki/en/m117.html">
+            <span class="module-nr">M117</span>
+            <strong>IT and network infrastructure for a small company</strong>
+            <span>IP addresses, switch and router, DHCP, DNS, web server, first troubleshooting with ping.</span>
+          </a>
+          <a class="module-card" href="../wiki/en/m129.html">
+            <span class="module-nr">M129</span>
+            <strong>Putting LAN components into operation</strong>
+            <span>Subnetting, static routing, protocol analysis with a packet list like in Wireshark.</span>
+          </a>
+          <a class="module-card" href="../wiki/en/m145.html">
+            <span class="module-nr">M145</span>
+            <strong>Operating and extending a network</strong>
+            <span>VLANs, trunks, inter-VLAN routing, DHCP relay, spanning tree and network design.</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Class network -->
+    <section id="verbund" class="verbund" aria-labelledby="verbund-title">
+      <div class="wrap verbund-grid">
+        <div class="verbund-text">
+          <h2 id="verbund-title">The whole class in one network</h2>
+          <p>Each group builds its own site and connects it to the teacher’s class infrastructure. leyoNET simulates the whole network: whoever addresses, routes and configures NAT correctly is online – and the head office fetches the site’s web page.</p>
+          <ul class="verbund-points">
+            <li><b>Dashboard for the projector:</b> map and tiles show live who is connected, online or done. Only what really works in the simulation turns green.</li>
+            <li><b>Messages between sites:</b> they are only sent if your own site reaches the head office.</li>
+            <li><b>Seat and group instead of names:</b> “Team Red” on seat 1 is enough.</li>
+            <li><b>Own access keys</b> for schools and teachers, without accounts and without personal data. Exercises and whole modules can be shown or hidden per class.</li>
+          </ul>
+        </div>
+        <figure class="verbund-show" aria-label="Animation: the sites of a class connect to the head office one after another">
+          <svg viewBox="0 0 800 500" class="vb-map" role="img" aria-labelledby="vb-title">
+            <title id="vb-title">Map of the class network: eight sites around the head office, the links light up as soon as a site is online</title>
+            <g class="vb-links">
+              <line class="vb-link" data-seat="1" x1="400" y1="250" x2="400" y2="65"/>
+              <line class="vb-link" data-seat="2" x1="400" y1="250" x2="619" y2="119"/>
+              <line class="vb-link" data-seat="3" x1="400" y1="250" x2="710" y2="250"/>
+              <line class="vb-link" data-seat="4" x1="400" y1="250" x2="619" y2="381"/>
+              <line class="vb-link" data-seat="5" x1="400" y1="250" x2="400" y2="435"/>
+              <line class="vb-link" data-seat="6" x1="400" y1="250" x2="181" y2="381"/>
+              <line class="vb-link" data-seat="7" x1="400" y1="250" x2="90" y2="250"/>
+              <line class="vb-link" data-seat="8" x1="400" y1="250" x2="181" y2="119"/>
+            </g>
+            <g class="vb-hub" transform="translate(400 250)">
+              <circle class="vb-ring" r="44"/><circle class="vb-ring vb-ring-2" r="44"/>
+              <circle class="vb-core" r="40"/>
+              <text class="vb-hub-name" y="5">Head office</text>
+              <text class="vb-hub-count" y="-56"><tspan class="vb-online">0</tspan> / 8 online</text>
+            </g>
+            <circle class="vb-msg" r="6" cx="400" cy="250" opacity="0"/>
+            <g class="vb-sites">
+              <g class="vb-site" data-seat="1" transform="translate(330 39)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Team Red</text><text class="vb-seat" x="131" y="19">1</text>
+                <text class="vb-state" x="13" y="42">not connected</text>
+              </g>
+              <g class="vb-site" data-seat="2" transform="translate(549 93)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Team Blue</text><text class="vb-seat" x="131" y="19">2</text>
+                <text class="vb-state" x="13" y="42">not connected</text>
+              </g>
+              <g class="vb-site" data-seat="3" transform="translate(640 224)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Seat 3</text><text class="vb-seat" x="131" y="19">3</text>
+                <text class="vb-state" x="13" y="42">not connected</text>
+              </g>
+              <g class="vb-site" data-seat="4" transform="translate(549 355)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Bern</text><text class="vb-seat" x="131" y="19">4</text>
+                <text class="vb-state" x="13" y="42">not connected</text>
+              </g>
+              <g class="vb-site" data-seat="5" transform="translate(330 409)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Team Yellow</text><text class="vb-seat" x="131" y="19">5</text>
+                <text class="vb-state" x="13" y="42">not connected</text>
+              </g>
+              <g class="vb-site" data-seat="6" transform="translate(111 355)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Basel</text><text class="vb-seat" x="131" y="19">6</text>
+                <text class="vb-state" x="13" y="42">not connected</text>
+              </g>
+              <g class="vb-site" data-seat="7" transform="translate(20 224)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Seat 7</text><text class="vb-seat" x="131" y="19">7</text>
+                <text class="vb-state" x="13" y="42">not connected</text>
+              </g>
+              <g class="vb-site" data-seat="8" transform="translate(111 93)">
+                <rect class="vb-card" width="140" height="52" rx="9"/><circle class="vb-led" cx="15" cy="18" r="5.5"/>
+                <text class="vb-name" x="27" y="23">Team Green</text><text class="vb-seat" x="131" y="19">8</text>
+                <text class="vb-state" x="13" y="42">not connected</text>
+              </g>
+            </g>
+          </svg>
+          <ol class="vb-ticker" aria-live="off"></ol>
+          <figcaption class="visually-hidden">One site after another is connected, goes online and serves its web page; messages fly via the head office to other sites.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Technik nach OSI-Schichten -->
+    <section id="technik" class="tech">
+      <div class="wrap tech-grid">
+        <div class="tech-intro">
+          <h2>What really happens in the network</h2>
+          <p>Every frame consists of real bytes, encoded according to the standards. The packet view unpacks it layer by layer, the hex view highlights every field, and after export Wireshark opens the same capture.</p>
+          <ul class="tech-points">
+            <li>Display filters like in Wireshark: <code>icmp and ip.dst == 192.168.2.20</code></li>
+            <li>Command line for routers and switches in the style of FRRouting, with Tab and <code>?</code></li>
+            <li>Slow motion and single step: packets travel across the cables as dots</li>
+            <li>Damage cables, shut down ports, troubleshoot</li>
+          </ul>
+        </div>
+        <ol class="osi" aria-label="Protocols by OSI layer">
+          <li class="l7"><span class="n">7</span><span class="name">Application</span><ul class="protos"><li>HTTP/1.1</li><li>DNS</li><li>DHCP</li><li>DHCPv6</li><li>SMTP</li><li>POP3</li><li>IMAP</li><li>SSH</li></ul></li>
+          <li class="l4"><span class="n">4</span><span class="name">Transport</span><ul class="protos"><li>TCP</li><li>Three-way handshake</li><li>Sequence numbers</li><li>Retransmission</li><li>UDP</li></ul></li>
+          <li class="l3"><span class="n">3</span><span class="name">Network</span><ul class="protos"><li>IPv4</li><li>IPv6</li><li>ICMP</li><li>NAT and PAT</li><li>CGNAT</li><li>DS-Lite</li><li>OSPF and OSPFv3</li><li>RIP and RIPng</li><li>BGP</li><li>VRF</li><li>IPsec with IKEv2</li><li>Firewall</li></ul></li>
+          <li class="l2"><span class="n">2</span><span class="name">Data link</span><ul class="protos"><li>Ethernet</li><li>ARP</li><li>Neighbor Discovery</li><li>VLAN 802.1Q</li><li>LACP</li><li>VXLAN</li><li>Spanning tree</li><li>Wi-Fi 802.11</li><li>PPP</li><li>PPPoE</li></ul></li>
+          <li class="l1"><span class="n">1</span><span class="name">Physical</span><ul class="protos"><li>Twisted pair</li><li>Fibre</li><li>Radio</li><li>Coax with DOCSIS</li><li>DSL</li><li>GPON</li><li>LTE</li><li>Serial</li></ul></li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Datenschutz und Offenheit -->
+    <section class="open">
+      <div class="wrap open-grid">
+        <div>
+          <h2>No accounts. No cookies. No tracking.</h2>
+          <p>leyoNET only stores network configurations, never names. The file loads nothing from the internet, not even a font. The single file and the desktop app transmit nothing at all; the web version only stores technical data without names and deletes it automatically. What exactly is stored is described in the <a class="link" href="../datenschutz.html">privacy policy</a> (in German).</p>
+          <p>The source code is open (AGPL-3.0). Before release, every version is checked for trackers, external resources, security headers and licences.</p>
+          <p><a class="link" href="https://github.com/vonam-git/leyoNET">Source code on GitHub</a></p>
+          <p>leyoNET stays free. If you would like to support its development, you can do so voluntarily via <a class="link" href="https://www.patreon.com/cw/vonam">Patreon</a>.</p>
+        </div>
+        <pre class="console" aria-label="Excerpt from the security policy of the file"><span class="c">&lt;!-- leyonet.html --&gt;</span>
+Content-Security-Policy:
+  default-src 'none';
+  connect-src 'none';
+  img-src data: blob:;
+  form-action 'none';
+
+<span class="ok">✓</span> no cookies
+<span class="ok">✓</span> no tracker
+<span class="ok">✓</span> no external resources</pre>
+      </div>
+    </section>
+
+    <!-- Geschichte -->
+    <section class="story" aria-labelledby="story-title">
+      <div class="wrap story-grid">
+        <svg class="mark" viewBox="0 0 64 64" role="img" aria-label="The logo: an l and a y made of network nodes">
+          <g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 13v30"/><path d="M29 25l11 14 13-14M40 39l-8 14"/></g>
+          <g fill="currentColor"><circle cx="13" cy="13" r="4"/><circle cx="13" cy="43" r="4"/><circle cx="29" cy="25" r="4"/><circle cx="53" cy="25" r="4"/><circle cx="32" cy="53" r="4"/></g>
+        </svg>
+        <div>
+          <h2 id="story-title">From the classroom</h2>
+          <p>Mark teaches networking. For years he and his classes pulled cables, sent pings and conjured up broadcast storms – mostly on purpose. At some point it was clear: a more modern tool was needed, one that simply runs in the browser and can still be installed locally.</p>
+          <p>Together with his brother Mika he built the foundation; since then, idea after idea from the classroom has been added. It is programmed with the help of artificial intelligence – the ideas, the experience and the responsibility lie with Mark and Mika.</p>
+          <p>And the name? “leyo” are the initials of Mark’s children. The logo shows an “l” and a “y” made of network nodes: “ly” for “love you”. Every good network needs strong connections.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Download -->
+    <section id="download" class="download">
+      <div class="wrap">
+        <h2>Get started</h2>
+        <p class="section-lead">The same program everywhere. Version <span data-version>1.6.0</span>.</p>
+        <ul class="dl-list">
+          <li class="dl-main">
+            <div><h3>In the browser</h3><p>Start right away, save your work under a code, classes and exams via the server.</p></div>
+            <a class="btn btn-ink" href="https://app.leyonet.ch/">Open app.leyonet.ch</a>
+          </li>
+          <li>
+            <div><h3>Single file</h3><p>One HTML file that runs everywhere: a double-click is enough. Ideal for USB sticks and exam computers without internet.</p></div>
+            <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyonet.html">leyonet.html <small>approx. 2 MB</small></a>
+          </li>
+          <li>
+            <div><h3>Windows</h3><p>Windows 10 and 11. Installer or MSI for deployment in the school network.</p></div>
+            <span class="dl-buttons">
+              <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Windows-Setup.exe">Setup (.exe) <small>approx. 4 MB</small></a>
+              <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Windows.msi">MSI <small>approx. 5 MB</small></a>
+            </span>
+          </li>
+          <li>
+            <div><h3>macOS</h3><p>For Apple Silicon and Intel (macOS 10.15 or later).</p></div>
+            <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-macOS.dmg">macOS (.dmg) <small>approx. 5 MB</small></a>
+          </li>
+          <li>
+            <div><h3>Linux</h3><p>AppImage runs without installation; packages for Debian/Ubuntu and Fedora.</p></div>
+            <span class="dl-buttons">
+              <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Linux.AppImage">AppImage <small>approx. 80 MB</small></a>
+              <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Linux.deb">.deb <small>approx. 2 MB</small></a>
+              <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET/releases/latest/download/leyoNET-Linux.rpm">.rpm <small>approx. 2 MB</small></a>
+            </span>
+          </li>
+        </ul>
+        <p class="note">The files come directly from GitHub. Checksums (SHA-256) for comparison: <a class="link" href="https://github.com/vonam-git/leyoNET/releases/latest/download/SHA256SUMS.txt">SHA256SUMS.txt</a>. All versions and changes: <a class="link" href="https://github.com/vonam-git/leyoNET/releases">GitHub Releases</a>. The installers are not signed yet. On first start Windows shows “Windows protected your PC”: <em>More info → Run anyway</em>. On the Mac, start it the first time with right-click → <em>Open</em> or under <em>System Settings → Privacy &amp; Security → Open Anyway</em>. If macOS reports the app as “damaged”, run <code>xattr -cr /Applications/leyoNET.app</code> in the Terminal.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET is developed by Mark and Mika in Switzerland.</p>
+      <ul>
+        <li><a href="../wiki/en/">Wiki</a></li>
+        <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
+        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Contact</a></li>
+        <li><a href="../impressum.html" hreflang="de">Legal notice</a></li>
+        <li><a href="../datenschutz.html" hreflang="de">Privacy</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

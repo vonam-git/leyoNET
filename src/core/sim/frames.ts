@@ -134,7 +134,48 @@ export interface VxlanMessage {
 
 export const VXLAN_PORT = 4789;
 
-export type AppMessage = DhcpMessage | DnsMessage | RipMessage | RipngMessage | Dhcpv6Message | IkeMessage | VxlanMessage;
+/** SIP (RFC 3261): Anfrage (REGISTER, INVITE, ACK, BYE) oder Antwort (Statuscode), als Text über UDP 5060. */
+export type SipMethod = 'REGISTER' | 'INVITE' | 'ACK' | 'BYE';
+export interface SipMessage {
+  kind: 'sip';
+  method?: SipMethod;
+  status?: number;
+  /** Anfrage-URI bzw. Ziel, z.B. «sip:202@192.168.10.5». */
+  uri: string;
+  from: string;
+  to: string;
+  callId: string;
+  cseq: number;
+  cseqMethod: SipMethod;
+  /** Adresse, unter der der Absender erreichbar ist. */
+  contact?: string;
+  /** Session Description (RFC 8866): Adresse und Port für die Sprache, Codec G.711 µ-law. */
+  sdp?: { ip: string; port: number };
+  /** Weg über die Telefonanlage (Via), damit Antworten zurückfinden. */
+  via: string[];
+}
+export const SIP_PORT = 5060;
+
+/** RTP (RFC 3550) mit G.711 µ-law (Payload Type 0, RFC 3551): alle 20 ms 160 Bytes Sprache. */
+export interface RtpPacket {
+  kind: 'rtp';
+  ssrc: number;
+  seq: number;
+  timestamp: number;
+  /** Nur für die Auswertung in der Simulation (nicht auf der Leitung): Sendezeit in ms. */
+  sentAt: number;
+}
+export const RTP_PAYLOAD_BYTES = 160;
+
+/** Testdaten des Lastgenerators (iperf): nur Füllbytes. */
+export interface DataBlock {
+  kind: 'data';
+  seq: number;
+  bytes: number;
+}
+export const IPERF_PORT = 5201;
+
+export type AppMessage = DhcpMessage | DnsMessage | RipMessage | RipngMessage | Dhcpv6Message | IkeMessage | VxlanMessage | SipMessage | RtpPacket | DataBlock;
 
 export interface UdpDatagram {
   kind: 'udp';
@@ -193,6 +234,8 @@ export interface Ipv4Packet {
   dst: string;
   ttl: number;
   id: number;
+  /** Differentiated Services Code Point (RFC 2474); fehlt = 0 (Best Effort). */
+  dscp?: number;
   payload: IcmpMessage | UdpDatagram | TcpSegment | OspfPacket | EspPacket;
 }
 
@@ -337,6 +380,8 @@ export interface EthernetFrame {
   dst: string;
   /** 802.1Q-Tag, nur auf Trunk-Verbindungen. */
   vlan?: number;
+  /** Priority Code Point im 802.1Q-Tag (IEEE 802.1Q); fehlt = 0. */
+  pcp?: number;
   l2?: 'hdlc' | 'ppp';
   access?: AccessTech;
   payload: ArpPacket | Ipv4Packet | Ipv6Packet | StpBpdu | LacpPdu | PppControl | LinkControl;

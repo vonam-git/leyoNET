@@ -1,3 +1,4 @@
+import { isPowered } from './poe';
 import { cableAt, getDevice } from './topology';
 import type { Cable, Device, Endpoint, Medium, ModemKind, Topology } from './types';
 
@@ -18,7 +19,8 @@ export type LinkDownReason =
   | 'sfpMismatch'
   | 'wrongPort'
   | 'encapsulationMismatch'
-  | 'wrongMedium';
+  | 'wrongMedium'
+  | 'noPower';
 
 export interface LinkStatus {
   up: boolean;
@@ -120,6 +122,8 @@ export function linkStatus(t: Topology, cable: Cable): LinkStatus {
   const ia = a.interfaces[cable.a.iface];
   const ib = b.interfaces[cable.b.iface];
   if (ia?.shutdown || ib?.shutdown) return { up: false, reason: 'shutdown' };
+  // Gespeiste Geräte ohne Strom (kein PoE, Budget aufgebraucht) sind aus.
+  if (!isPowered(t, a) || !isPowered(t, b)) return { up: false, reason: 'noPower' };
   const medium = mediumOf(cable);
   // Feste Anschlüsse (Modem-WAN, serielle Ports) verlangen ihr Medium.
   for (const [device, iface] of [[a, cable.a.iface], [b, cable.b.iface]] as const) {

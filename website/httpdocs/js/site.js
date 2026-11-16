@@ -2,6 +2,9 @@
 (() => {
   'use strict';
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Sprache der Seite (de oder en); dieselbe Datei für beide Fassungen.
+  const EN = document.documentElement.lang.startsWith('en');
+  const L = (de, en) => (EN ? en : de);
 
   /* --- Hell/Dunkel: folgt dem System, der Schalter wechselt für diese Seite ------------
      Ohne Speicherung (keine Cookies, nichts im Browser abgelegt): beim nächsten Besuch gilt wieder
@@ -15,8 +18,9 @@
     root.classList.toggle('theme-dark', dark);
     for (const b of document.querySelectorAll('.theme-toggle')) {
       b.setAttribute('aria-pressed', String(dark));
-      b.setAttribute('aria-label', dark ? 'Helles Design' : 'Dunkles Design');
-      b.title = dark ? 'Helles Design' : 'Dunkles Design';
+      const label = dark ? L('Helles Design', 'Light theme') : L('Dunkles Design', 'Dark theme');
+      b.setAttribute('aria-label', label);
+      b.title = label;
     }
     themeListeners.forEach((f) => f());
   };
@@ -52,16 +56,16 @@
   /* --- Hero: Ping über einen Router, wie in der Simulation ------------------------- */
   const X = { pc: 66, sw: 240, r: 410, srv: 551 };
   const FRAMES = [
-    { proto: 'arp', from: 'PC 1', to: 'Switch 1', info: 'Wer hat 192.168.1.1? Sag es 192.168.1.10', hops: [['pc', 'sw'], ['sw', 'r']] },
-    { proto: 'arp', from: 'Router 1', to: 'Switch 1', info: '192.168.1.1 ist bei 02:00:00:00:02:00', hops: [['r', 'sw'], ['sw', 'pc']] },
-    { proto: 'icmp', from: 'PC 1', to: 'Switch 1', info: 'Echo-Anfrage an 192.168.2.20', hops: [['pc', 'sw'], ['sw', 'r']] },
-    { proto: 'arp', from: 'Router 1', to: 'Server', info: 'Wer hat 192.168.2.20? Sag es 192.168.2.1', hops: [['r', 'srv']] },
-    { proto: 'arp', from: 'Server', to: 'Router 1', info: '192.168.2.20 ist bei 02:00:00:00:04:00', hops: [['srv', 'r']] },
-    { proto: 'icmp', from: 'Router 1', to: 'Server', info: 'Echo-Anfrage an 192.168.2.20, TTL 63', hops: [['r', 'srv']] },
-    { proto: 'icmp', from: 'Server', to: 'Router 1', info: 'Echo-Antwort an 192.168.1.10', hops: [['srv', 'r']] },
-    { proto: 'icmp', from: 'Router 1', to: 'Switch 1', info: 'Echo-Antwort an 192.168.1.10, TTL 63', hops: [['r', 'sw'], ['sw', 'pc']] },
+    { proto: 'arp', from: 'PC 1', to: 'Switch 1', info: L('Wer hat 192.168.1.1? Sag es 192.168.1.10', 'Who has 192.168.1.1? Tell 192.168.1.10'), hops: [['pc', 'sw'], ['sw', 'r']] },
+    { proto: 'arp', from: 'Router 1', to: 'Switch 1', info: L('192.168.1.1 ist bei 02:00:00:00:02:00', '192.168.1.1 is at 02:00:00:00:02:00'), hops: [['r', 'sw'], ['sw', 'pc']] },
+    { proto: 'icmp', from: 'PC 1', to: 'Switch 1', info: L('Echo-Anfrage an 192.168.2.20', 'Echo request to 192.168.2.20'), hops: [['pc', 'sw'], ['sw', 'r']] },
+    { proto: 'arp', from: 'Router 1', to: 'Server', info: L('Wer hat 192.168.2.20? Sag es 192.168.2.1', 'Who has 192.168.2.20? Tell 192.168.2.1'), hops: [['r', 'srv']] },
+    { proto: 'arp', from: 'Server', to: 'Router 1', info: L('192.168.2.20 ist bei 02:00:00:00:04:00', '192.168.2.20 is at 02:00:00:00:04:00'), hops: [['srv', 'r']] },
+    { proto: 'icmp', from: 'Router 1', to: 'Server', info: L('Echo-Anfrage an 192.168.2.20, TTL 63', 'Echo request to 192.168.2.20, TTL 63'), hops: [['r', 'srv']] },
+    { proto: 'icmp', from: 'Server', to: 'Router 1', info: L('Echo-Antwort an 192.168.1.10', 'Echo reply to 192.168.1.10'), hops: [['srv', 'r']] },
+    { proto: 'icmp', from: 'Router 1', to: 'Switch 1', info: L('Echo-Antwort an 192.168.1.10, TTL 63', 'Echo reply to 192.168.1.10, TTL 63'), hops: [['r', 'sw'], ['sw', 'pc']] },
   ];
-  const REPLY = 'Antwort von 192.168.2.20: Bytes=32 Zeit=4ms TTL=63';
+  const REPLY = L('Antwort von 192.168.2.20: Bytes=32 Zeit=4ms TTL=63', 'Reply from 192.168.2.20: bytes=32 time=4ms TTL=63');
 
   const sim = document.querySelector('.sim');
   if (sim) {
@@ -161,6 +165,8 @@
   const panel = document.getElementById('panel-views');
   if (tabs.length && panel) {
     const img = panel.querySelector('img');
+    // Pfad der Bilder wie im HTML (img/ bzw. ../img/ auf der englischen Seite).
+    const base = img.getAttribute('src').replace(/[^/]*$/, '');
     const caption = panel.querySelector('figcaption');
     let current = tabs[0];
     const select = (tab, focus) => {
@@ -172,8 +178,8 @@
       }
       // Bildschirmfotos gibt es hell und dunkel (das Dashboard ist immer dunkel).
       const name = tab.dataset.img + (isDark() && tab.dataset.dark !== 'same' ? '-dark' : '');
-      img.src = `img/${name}-1x.webp`;
-      img.srcset = `img/${name}-1x.webp 1440w, img/${name}.webp 2880w`;
+      img.src = `${base}${name}-1x.webp`;
+      img.srcset = `${base}${name}-1x.webp 1440w, ${base}${name}.webp 2880w`;
       img.alt = tab.dataset.caption;
       caption.textContent = tab.dataset.caption;
       panel.setAttribute('aria-labelledby', tab.id);
@@ -195,7 +201,9 @@
   /* --- Klassen-Verbund: Standorte gehen nacheinander online, Nachrichten fliegen ------ */
   const show = document.querySelector('.verbund-show');
   if (show) {
-    const LEVELS = { offline: 'nicht verbunden', connected: 'angeschlossen', online: 'online', services: 'Dienste erreichbar', done: 'fertig' };
+    const LEVELS = EN
+      ? { offline: 'not connected', connected: 'connected', online: 'online', services: 'services reachable', done: 'done' }
+      : { offline: 'nicht verbunden', connected: 'angeschlossen', online: 'online', services: 'Dienste erreichbar', done: 'fertig' };
     const sites = [...show.querySelectorAll('.vb-site')];
     const links = [...show.querySelectorAll('.vb-link')];
     const counter = show.querySelector('.vb-online');
@@ -247,7 +255,7 @@
         requestAnimationFrame(step);
       });
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-    const target = (to) => (to === 0 ? 'Zentrale' : to === -1 ? 'alle' : nameOf(to));
+    const target = (to) => (to === 0 ? L('Zentrale', 'Head office') : to === -1 ? L('alle', 'everyone') : nameOf(to));
 
     if (reduced) {
       // Ohne Bewegung: Endzustand zeigen.

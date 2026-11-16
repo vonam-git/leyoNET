@@ -21,6 +21,9 @@ import type { Ip6State } from './ip6';
 import type { FirewallState } from './firewall';
 import type { VpnState } from './vpn';
 import { EventQueue } from './queue';
+import { QUEUE_COUNT, QUEUE_LIMIT, pcpOfDscp, queueOf } from '../net/qos';
+import { frameBytes } from './size';
+import type { VoipState } from './voip';
 import { L3SwitchNode } from './l3switch';
 import { ModemNode, SwitchNode, type AclState, type ChannelState, type MacEntry, type ModemState, type StormState, type StpState } from './switch';
 import { CpeNode } from './cpe';
@@ -47,7 +50,9 @@ export interface PacketLogEntry {
   /** "lost": Rahmen kam nicht an, siehe `lostBecause`. */
   status: 'inTransit' | 'delivered' | 'lost';
   /** "removed": Kabel während der Übertragung entfernt; "damaged": beschädigtes Kabel. */
-  lostBecause?: 'removed' | 'damaged';
+  lostBecause?: 'removed' | 'damaged' | 'queueFull';
+  /** Wartezeit in der Warteschlange eines Ports mit begrenzter Bandbreite (ms). */
+  queued?: number;
 }
 
 /** Kleiner, schneller Zufallsgenerator mit festem Startwert (Mulberry32): gleiche Abläufe, gleiche Verluste. */
@@ -80,6 +85,8 @@ export interface DeviceState {
   browser?: BrowserState;
   mail?: MailClientState;
   mailboxes?: { user: string; count: number }[];
+  voip?: VoipState;
+  sipRegistrations?: { number: string; address: string }[];
   nat?: NatEntry[];
   stp?: StpState;
   /** Switch im Broadcast-Sturm (Schleife ohne Spanning Tree). */
@@ -140,6 +147,8 @@ export class Simulation {
   #nodes = new Map<string, SimNode>();
   #consoles = new Map<string, ConsoleLine[]>();
   #random = seededRandom(20_260_001);
+  /** Ports mit begrenzter Bandbreite: Warteschlangen und ob gerade gesendet wird. */
+  #ports = new Map<string, { queues: { frame: EthernetFrame; at: number }[][]; busy: boolean }>();
 
   constructor(topology: Topology) {
     this.#topology = topology;
@@ -175,7 +184,7 @@ export class Simulation {
   #bootDhcpClients() {
     const order = (d: Device) => (DEVICE_SPECS[d.type].role === 'endpoint' ? 1 : 0);
     for (const device of [...this.#topology.devices].sort((a, b) => order(a) - order(b))) {
-      if (DEVICE_SPECS[device.type].role === 'endpoint' && !device.dhcp && !device.wifi) continue;
+      if (DEVICE_SPECS[device.type].role === 'endpoint' && !device.dhcp && !device.wifi && !device.voip) continue;
       this.#node(device.id)?.boot?.();
     }
   }
@@ -278,6 +287,21 @@ export class Simulation {
     this.#host(deviceId)?.browse(url);
   }
 
+  /** IP-Telefon: Rufnummer oder IP-Adresse anrufen; das Gespräch dauert `seconds` Sekunden. */
+  call(deviceId: string, target: string, seconds?: number) {
+    const host = this.#host(deviceId);
+    if (host && this.#topology.devices.find((d) => d.id === deviceId)?.type === 'ipphone') host.phone.call(target, seconds);
+  }
+
+  hangup(deviceId: string) {
+    this.#host(deviceId)?.phone.hangup();
+  }
+
+  /** Lastgenerator (wie iperf -u): `kbps` kbit/s UDP an `target` während `seconds` Sekunden. */
+  iperf(deviceId: string, target: string, kbps: number, seconds: number, dscp = 0) {
+    this.#host(deviceId)?.iperf.start(target, kbps, seconds, dscp);
+  }
+
   /** E-Mail-Programm: Nachricht über den SMTP-Server des Kontos senden. */
   sendMail(deviceId: string, message: { to: string[]; subject: string; body: string }) {
     this.#host(deviceId)?.mail.send(message);
@@ -377,9 +401,70 @@ export class Simulation {
     };
   }
 
+  /** QoS ohne Vertrauen («no trust»): DSCP und PCP ankommender Pakete auf 0 zurücksetzen. */
+  #ingress(deviceId: string, frame: EthernetFrame): EthernetFrame {
+    const qos = getDevice(this.#topology, deviceId)?.qos;
+    if (qos?.trust !== false || frame.payload.kind !== 'ipv4' || !frame.payload.dscp) return frame;
+    const { pcp: _p, ...rest } = frame;
+    return { ...rest, payload: { ...frame.payload, dscp: 0 } };
+  }
+
   #transmit(from: Endpoint, original: EthernetFrame): boolean {
     const cable = cableAt(this.#topology, from);
     // Abgeschaltete Anschlüsse und Funkverbindungen ohne Anmeldung übertragen nichts.
+    if (!cable || !linkStatus(this.#topology, cable).up) return false;
+    const device = getDevice(this.#topology, from.device);
+    let frame = original;
+    // QoS: Auf Trunks trägt der 802.1Q-Tag die Priorität aus dem DSCP (Klassenauswahl, RFC 2474).
+    if (device?.qos && frame.vlan !== undefined && frame.payload.kind === 'ipv4' && frame.payload.dscp) frame = { ...frame, pcp: pcpOfDscp(frame.payload.dscp) };
+    const rate = device?.interfaces[from.iface]?.rate;
+    if (rate) return this.#enqueue(from, frame, rate, !!device?.qos);
+    return this.#send(from, frame, 0);
+  }
+
+  /** Port mit begrenzter Bandbreite: einreihen (mit QoS nach Klasse, sonst eine Warteschlange). */
+  #enqueue(from: Endpoint, frame: EthernetFrame, rate: number, qos: boolean): boolean {
+    const key = `${from.device}:${from.iface}`;
+    let port = this.#ports.get(key);
+    if (!port) this.#ports.set(key, (port = { queues: Array.from({ length: QUEUE_COUNT }, () => []), busy: false }));
+    const dscp = frame.payload.kind === 'ipv4' ? frame.payload.dscp : undefined;
+    const queue = port.queues[qos ? queueOf(dscp, frame.pcp) : QUEUE_COUNT - 1]!;
+    if (queue.length >= QUEUE_LIMIT) {
+      // Tail Drop: Die Warteschlange ist voll, der Rahmen geht verloren.
+      const cable = cableAt(this.#topology, from);
+      if (cable) this.#record(from, otherEnd(cable, from.device), cable.id, frame, this.#now, 'lost', 'queueFull');
+      return true;
+    }
+    queue.push({ frame, at: this.#now });
+    if (!port.busy) this.#serve(from, rate);
+    return true;
+  }
+
+  /** Nächsten Rahmen senden: strikte Priorität, Warteschlange 0 zuerst. */
+  #serve(from: Endpoint, rate: number) {
+    const port = this.#ports.get(`${from.device}:${from.iface}`)!;
+    const next = port.queues.find((q) => q.length > 0)?.shift();
+    if (!next) {
+      port.busy = false;
+      return;
+    }
+    port.busy = true;
+    // Sendezeit: Bits / (kbit/s) = Millisekunden.
+    const ms = (frameBytes(next.frame) * 8) / rate;
+    const current = getDevice(this.#topology, from.device)?.interfaces[from.iface]?.rate ?? rate;
+    this.#send(from, next.frame, ms, this.#now - next.at);
+    this.#queue.push(this.#now + ms, () => this.#serve(from, current));
+  }
+
+  #record(from: Endpoint, to: Endpoint, cable: string, frame: EthernetFrame, arrives: number, status: PacketLogEntry['status'], lostBecause?: PacketLogEntry['lostBecause']): PacketLogEntry {
+    const entry: PacketLogEntry = { id: this.#nextLogId++, sent: this.#now, arrives, from, to, cable, frame, status, ...(lostBecause ? { lostBecause } : {}) };
+    this.#log.push(entry);
+    if (this.#log.length > LOG_LIMIT) this.#log.splice(0, this.#log.length - LOG_LIMIT);
+    return entry;
+  }
+
+  #send(from: Endpoint, original: EthernetFrame, txMs: number, waited = 0): boolean {
+    const cable = cableAt(this.#topology, from);
     if (!cable || !linkStatus(this.#topology, cable).up) return false;
     const to = otherEnd(cable, from.device);
     // Auf der Zugangsleitung eines Modems reisen Nutzdaten in dessen Technik (DOCSIS, GPON, PPPoE, LTE).
@@ -388,7 +473,8 @@ export class Simulation {
     const entry: PacketLogEntry = {
       id: this.#nextLogId++,
       sent: this.#now,
-      arrives: this.#now + MEDIUM_DELAY[cable.medium ?? 'tp'],
+      ...(waited > 0 ? { queued: Math.round(waited * 10) / 10 } : {}),
+      arrives: this.#now + txMs + MEDIUM_DELAY[cable.medium ?? 'tp'],
       from,
       to,
       cable: cable.id,
@@ -412,7 +498,7 @@ export class Simulation {
         return;
       }
       entry.status = 'delivered';
-      this.#node(to.device)?.receive(to.iface, frame);
+      this.#node(to.device)?.receive(to.iface, this.#ingress(to.device, frame));
     });
     return true;
   }

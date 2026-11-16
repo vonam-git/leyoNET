@@ -3,12 +3,12 @@
 // DNS, Bereiche, Verbindungen). Die Vorschläge landen im Aufgabeneditor und
 // lassen sich dort streichen oder gewichten.
 
-import { DEVICE_SPECS, ROUTER_REF, formatIp, networkOf, parseIp, parseMask, type Device, type DeviceType, type Topology } from '../core';
+import { DEVICE_SPECS, ROUTER_REF, isPowered, needsPoe, formatIp, networkOf, parseIp, parseMask, type Device, type DeviceType, type Topology } from '../core';
 import { t } from '../i18n';
 import type { GoalDraft } from './taskForm';
 
 const ROUTERS = new Set<DeviceType>(['router', 'firewall', 'l3switch']);
-const DEVICE_ORDER: DeviceType[] = ['router', 'firewall', 'l3switch', 'switch', 'accesspoint', 'server', 'pc', 'notebook'];
+const DEVICE_ORDER: DeviceType[] = ['router', 'firewall', 'l3switch', 'switch', 'accesspoint', 'server', 'pc', 'notebook', 'ipphone', 'camera'];
 
 const netOf = (d: Device): string | null => {
   const ip = d.interfaces[0]?.ip ? parseIp(d.interfaces[0].ip) : null;
@@ -70,6 +70,9 @@ export function suggestGoals(topology: Topology, taken: Iterable<string> = []): 
   for (const d of devices.filter((x) => x.dnsServer)) {
     for (const r of d.dnsServer!.records.filter((x) => x.type === 'A')) add('services', 'dnsRecord', { device: d.name, name: r.name, value: r.value });
   }
+
+  // PoE: gespeiste Geräte (Telefon, Kamera, Access Point mit PoE).
+  for (const d of devices.filter((x) => needsPoe(x) && isPowered(topology, x))) add('services', 'poePowered', { device: d.name });
 
   // Verbindungen: je Netz ein Gerät, Pings im Kreis; Webseiten aus einem anderen Netz.
   const reps = new Map<string, Device>();
