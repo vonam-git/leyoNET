@@ -102,9 +102,17 @@
       "titel": "Definition of the Differentiated Services Field (DS Field) in the IPv4 and IPv6 Headers",
       "verwendung": "DSCP im IPv4- und IPv6-Kopf"
     },
+    "2475": {
+      "titel": "An Architecture for Differentiated Services",
+      "verwendung": "DiffServ-Architektur: Markieren am Rand, Behandlung je Klasse (QoS)"
+    },
     "2516": {
       "titel": "A Method for Transmitting PPP Over Ethernet (PPPoE)",
       "verwendung": "PPPoE bei DSL"
+    },
+    "2597": {
+      "titel": "Assured Forwarding PHB Group",
+      "verwendung": "DSCP-Klassen AF11–AF43 (QoS)"
     },
     "2606": {
       "titel": "Reserved Top Level DNS Names",
@@ -117,6 +125,22 @@
     "3168": {
       "titel": "The Addition of Explicit Congestion Notification (ECN) to IP",
       "verwendung": "ECN-Bits im IPv4- und IPv6-Kopf, Flags ECE und CWR bei TCP"
+    },
+    "3246": {
+      "titel": "An Expedited Forwarding PHB (Per-Hop Behavior)",
+      "verwendung": "DSCP EF (46) für Sprache"
+    },
+    "3261": {
+      "titel": "SIP: Session Initiation Protocol",
+      "verwendung": "Telefonie: REGISTER, INVITE, ACK, BYE, Registrar und Proxy"
+    },
+    "3550": {
+      "titel": "RTP: A Transport Protocol for Real-Time Applications",
+      "verwendung": "Sprachpakete (RTP-Kopf), Jitter nach Abschnitt 6.4.1"
+    },
+    "3551": {
+      "titel": "RTP Profile for Audio and Video Conferences with Minimal Control",
+      "verwendung": "Payload Type 0 (PCMU, G.711 µ-law, 8000 Hz)"
     },
     "3596": {
       "titel": "DNS Extensions to Support IP Version 6",
@@ -161,6 +185,10 @@
     "4443": {
       "titel": "Internet Control Message Protocol (ICMPv6) for the Internet Protocol Version 6 (IPv6) Specification",
       "verwendung": "ICMPv6: Echo, Destination Unreachable, Time Exceeded"
+    },
+    "4594": {
+      "titel": "Configuration Guidelines for DiffServ Service Classes",
+      "verwendung": "Empfohlene Klassen: Telefonie EF, Signalisierung CS5, Netzsteuerung CS6"
     },
     "4632": {
       "titel": "Classless Inter-domain Routing (CIDR): The Internet Address Assignment and Aggregation Plan",
@@ -234,6 +262,10 @@
       "titel": "Internet Protocol, Version 6 (IPv6) Specification",
       "verwendung": "IPv6-Kopf, Hop Limit, Pseudo-Header für Prüfsummen"
     },
+    "8866": {
+      "titel": "SDP: Session Description Protocol",
+      "verwendung": "Adresse, Port und Codec der Sprache im INVITE und im 200 OK"
+    },
     "9051": {
       "titel": "Internet Message Access Protocol (IMAP) – Version 4rev2",
       "verwendung": "IMAP im Mailserver"
@@ -275,10 +307,14 @@
     {
       "id": "IEEE 802.1Q",
       "organisation": "IEEE",
-      "verwendung": "VLAN-Tags, Trunks, Bridging",
+      "verwendung": "VLAN-Tags, Trunks, Bridging, Priority Code Point (PCP, 802.1p) für QoS",
       "aktuell": "IEEE 802.1Q-2022",
       "geprueft": "2026-10-30",
-      "titel": "Bridges and Bridged Networks"
+      "titel": "Bridges and Bridged Networks",
+      "auch": [
+        "IEEE 802.1p"
+      ],
+      "bemerkung": " 802.1p (Prioritäten, PCP) ist seit 1998 Teil von 802.1D/802.1Q."
     },
     {
       "id": "IEEE 802.2",
@@ -390,6 +426,24 @@
       "aktuell": "ISO/IEC 11801-1:2017 mit Amd 1:2025",
       "bemerkung": "In Europa als EN 50173-1 übernommen.",
       "geprueft": "2026-11-16"
+    },
+    {
+      "id": "ITU-T G.711",
+      "organisation": "ITU-T",
+      "verwendung": "Sprachcodec PCM 64 kbit/s (µ-law), in RTP als Payload Type 0",
+      "aktuell": "ITU-T G.711 (11/1988) mit Ergänzungen",
+      "bemerkung": "Weiterhin gültig und in der Telefonie Standard.",
+      "geprueft": "2026-11-16",
+      "titel": "Pulse code modulation (PCM) of voice frequencies"
+    },
+    {
+      "id": "ITU-T G.114",
+      "organisation": "ITU-T",
+      "verwendung": "Grenze für die Laufzeit in eine Richtung (bis 150 ms für die meisten Anwendungen gut)",
+      "aktuell": "ITU-T G.114 (05/2003)",
+      "bemerkung": "Gültig; die Bewertung in leyoNET lehnt sich an die 150-ms-Grenze an.",
+      "geprueft": "2026-11-16",
+      "titel": "One-way transmission time"
     }
   ]
 }

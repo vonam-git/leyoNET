@@ -11,6 +11,10 @@ import {
   connect,
   emptyTopology,
   setDhcpServer,
+  setPoe,
+  setPortRate,
+  setSipServer,
+  setVoip,
   setDnsServerEnabled,
   setInterfaceAddress,
   setInterfaceCount,
@@ -142,6 +146,53 @@ const ENTRIES: CatalogEntry[] = [
           goal('webDns', 1, { type: 'ping', from: 'Notebook', to: 'Webserver' }),
           goal('webDns', 2, { type: 'http', from: 'Notebook', url: 'http://10.1.1.80/index.html' }),
           goal('webDns', 3, { type: 'http', from: 'Notebook', url: 'http://www.schule.example/index.html' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'voip-qos',
+    stars: 4,
+    features: ['service.voip', 'net.qos', 'device.ipphone', 'net.poe'],
+    build() {
+      const s = new Start()
+        .router('Router Zürich', -160, -120, ['192.168.1.1/24', '10.0.0.1/30'])
+        .router('Router Bern', 160, -120, ['192.168.2.1/24', '10.0.0.2/30'])
+        .route('Router Zürich', '192.168.2.0', '255.255.255.0', '10.0.0.2')
+        .route('Router Bern', '192.168.1.0', '255.255.255.0', '10.0.0.1')
+        .add('switch', 'Switch Zürich', -320, 20, { ports: 8 })
+        .add('switch', 'Switch Bern', 320, 20, { ports: 8 })
+        .add('server', 'Telefonanlage', -460, -120)
+        .add('ipphone', 'Telefon 201', -440, 160)
+        .add('pc', 'PC Zürich', -220, 160)
+        .add('ipphone', 'Telefon 202', 220, 160)
+        .add('server', 'Server Bern', 440, 160)
+        .host('Telefonanlage', '192.168.1.5', '24', '192.168.1.1')
+        .host('Telefon 201', '192.168.1.21', '24', '192.168.1.1')
+        .host('PC Zürich', '192.168.1.10', '24', '192.168.1.1')
+        .host('Telefon 202', '192.168.2.22', '24', '192.168.2.1')
+        .host('Server Bern', '192.168.2.10', '24', '192.168.2.1')
+        .link('Switch Zürich', 'Router Zürich')
+        .link('Switch Zürich', 'Telefonanlage')
+        .link('Switch Zürich', 'Telefon 201')
+        .link('Switch Zürich', 'PC Zürich')
+        .link('Switch Bern', 'Router Bern')
+        .link('Switch Bern', 'Telefon 202')
+        .link('Switch Bern', 'Server Bern')
+        .link('Router Zürich', 'Router Bern')
+        .apply((t, id) => {
+          let next = unwrap(setSipServer(t, id('Telefonanlage'), true));
+          next = unwrap(setVoip(next, id('Telefon 201'), { number: '201', server: '192.168.1.5' }));
+          next = unwrap(setVoip(next, id('Telefon 202'), { number: '202', server: '192.168.1.5' }));
+          for (const sw of ['Switch Zürich', 'Switch Bern']) next = unwrap(setPoe(next, id(sw), { standard: 'at', budget: 120 }));
+          for (const r of ['Router Zürich', 'Router Bern']) next = unwrap(setPortRate(next, id(r), 1, 2000));
+          return next;
+        });
+      return {
+        topology: s.topology,
+        tasks: task('voip-qos', 4, [
+          goal('voip-qos', 1, { type: 'call', from: 'Telefon 201', to: 'Telefon 202' }),
+          goal('voip-qos', 2, { type: 'call', from: 'Telefon 201', to: 'Telefon 202', loadFrom: 'PC Zürich', loadTo: 'Server Bern', loadKbps: 4000, maxLoss: 1 }),
         ]),
       };
     },

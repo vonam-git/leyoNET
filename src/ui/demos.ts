@@ -28,7 +28,9 @@ export type DemoCheck =
   | { kind: 'mail'; device: string; subject: string }
   | { kind: 'storm' }
   | { kind: 'macFlap'; device: string }
-  | { kind: 'trace'; device: string };
+  | { kind: 'trace'; device: string }
+  /** Telefongespräch endet mit guter Qualität («voip.ended.good»). */
+  | { kind: 'call'; device: string };
 
 /**
  * Schritt einer geführten Demo. Den Text spricht der Avatar
@@ -312,6 +314,27 @@ export const DEMOS: readonly Demo[] = [
       { action: { at: 0, device: 'Web 1', command: 'ping 192.168.10.12' }, highlight: 'Web 2' },
       { action: { at: 0, device: 'DB 1', command: 'ping 192.168.20.12' }, highlight: 'DB 2' },
       { highlight: 'Leaf 1', window: { device: 'Leaf 1', tab: 'state' } },
+    ],
+  },
+  {
+    id: 'voipQos',
+    file: 'voip-qos.json',
+    topic: 'services',
+    layers: [3, 4, 7],
+    actions: [
+      { at: 5000, device: 'PC Zürich', command: 'iperf -c 192.168.2.10 -u -b 4M -t 20' },
+      { at: 6000, device: 'Telefon 201', command: 'call 202 8' },
+    ],
+    check: { kind: 'call', device: 'Telefon 201' },
+    until: 20_000,
+    tour: [
+      { sim: false, highlight: 'Telefonanlage', window: { device: 'Telefonanlage', tab: 'voip' } },
+      { highlight: 'Telefon 201', window: { device: 'Telefon 201', tab: 'voip' } },
+      { highlight: 'Router Zürich', window: { device: 'Router Zürich', tab: 'qos' } },
+      { sim: true, pause: false, action: { at: 0, device: 'PC Zürich', command: 'iperf -c 192.168.2.10 -u -b 4M -t 20' }, highlight: 'PC Zürich' },
+      { action: { at: 0, device: 'Telefon 201', command: 'call 202 8' }, highlight: 'Telefon 202' },
+      { highlight: 'Telefon 201', window: { device: 'Telefon 201', tab: 'voip' } },
+      { highlight: 'Router Zürich' },
     ],
   },
   {

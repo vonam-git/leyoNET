@@ -26,11 +26,11 @@ export const HELP_GROUPS: { id: string; topics: string[] }[] = [
   },
   { id: 'links', topics: ['cables', 'poe', 'sfp', 'serial', 'wlan', 'roaming', 'access'] },
   { id: 'addressing', topics: ['ip', 'duplicates', 'subnetting', 'ipv6', 'ipcalc', 'scopes', 'dhcp', 'dns'] },
-  { id: 'switching', topics: ['switching', 'vlan', 'trunk', 'stp', 'lag', 'vxlan', 'routerOnAStick'] },
+  { id: 'switching', topics: ['switching', 'vlan', 'trunk', 'stp', 'lag', 'qos', 'vxlan', 'routerOnAStick'] },
   { id: 'routing', topics: ['routing', 'autoRouting', 'ospf', 'rip', 'bgp', 'ospf6', 'ripng', 'vrf', 'loopback'] },
   { id: 'nat', topics: ['nat', 'staticNat', 'portForward', 'cgnat', 'dsLite'] },
   { id: 'security', topics: ['firewall', 'acl', 'vpn'] },
-  { id: 'services', topics: ['web', 'mail', 'cli', 'ssh'] },
+  { id: 'services', topics: ['web', 'mail', 'voip', 'cli', 'ssh'] },
   { id: 'analysis', topics: ['sniffer', 'osi', 'osiStep', 'filter', 'pcap'] },
   { id: 'documentation', topics: ['areas', 'racks', 'floors', 'snapshots'] },
 ];

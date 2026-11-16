@@ -76,6 +76,8 @@ export interface SendOptions {
   ttl?: number;
   /** Routingtabelle einer VRF statt der globalen («ping vrf KUNDE-A …»). */
   vrf?: string;
+  /** DSCP-Markierung (RFC 2474), z.B. 46 (EF) für Sprache. */
+  dscp?: number;
 }
 
 const isLoopback = (ip: number) => ip >>> 24 === 127;
@@ -618,7 +620,7 @@ export class IpNode implements SimNode {
       return;
     }
     const build = (src: string): Ipv4Packet => {
-      const packet: Ipv4Packet = { kind: 'ipv4', src: options.src ?? src, dst: dstText, ttl: options.ttl ?? DEFAULT_TTL, id: ++this.#ipId, payload };
+      const packet: Ipv4Packet = { kind: 'ipv4', src: options.src ?? src, dst: dstText, ttl: options.ttl ?? DEFAULT_TTL, id: ++this.#ipId, ...(options.dscp ? { dscp: options.dscp } : {}), payload };
       // Endgerät mit Firewall: eigene Verbindungen merken, damit die Antworten herein dürfen.
       if (this.guardsSelf()) this.firewall.track(packet);
       return packet;

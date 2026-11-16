@@ -69,6 +69,7 @@ Statische Prüfungen schauen nur auf das gebaute Netz. **Dynamische** Prüfungen
 | `noDuplicateIp` ⚡ | – | keine IP-Adresse im selben Netz doppelt vergeben ist (auch per DHCP bezogene) |
 | `seenAs` ⚡ | `from`, `to`, `address` | ein Ping von `from` bei `to` mit der Absenderadresse `address` ankommt (prüft NAT: PAT, SNAT, 1:1) |
 | `modemOnline` ⚡ | `device` | das Modem seine Zugangsleitung aufgebaut hat |
+| `call` ⚡ | `from` (IP-Telefon), `to` (Telefon, Rufnummer oder IP), `loadFrom`?, `loadTo`?, `loadKbps`?, `maxLoss`? (Standard 5) | ein Gespräch zustande kommt und höchstens `maxLoss` % Sprachpakete verliert, auf Wunsch während `loadFrom` mit `loadKbps` kbit/s an `loadTo` sendet (iperf) |
 | `poePowered` | `device` | das Gerät (IP-Telefon, Kamera, Access Point) per PoE Strom bekommt: PoE am Switch eingeschaltet, Klasse passt zum Typ, Budget reicht |
 | `groupLeases` ⚡ | `device` (Client-Gruppe), `min`? (Standard: alle) | so viele Mitglieder der Gruppe eine Adresse per DHCP haben |
 | `budget` | `max` (CHF) | die Richtpreise aller Geräte, Kabel und Module zusammen höchstens `max` ergeben |

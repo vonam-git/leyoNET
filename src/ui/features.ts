@@ -49,6 +49,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('service.dns', 'services', 2),
   f('service.web', 'services', 2),
   f('service.mail', 'services', 3),
+  f('service.voip', 'services', 3),
   // Netzwerk
   f('net.portShutdown', 'network', 2),
   f('net.macEdit', 'network', 3),
@@ -56,6 +57,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('net.vlan', 'network', 3),
   f('net.stp', 'network', 3),
   f('net.poe', 'network', 3),
+  f('net.qos', 'network', 4),
   f('net.wlanMesh', 'network', 3),
   f('net.dhcpRelay', 'network', 3),
   f('net.nat', 'network', 3),
@@ -137,6 +139,8 @@ export function usedFeatures(t: Topology): string[] {
     if (d.mailServer || d.mailAccount) used.add('service.mail');
     if (d.stp) used.add('net.stp');
     if (d.poe || d.power === 'poe') used.add('net.poe');
+    if (d.qos || d.interfaces.some((i) => i.rate)) used.add('net.qos');
+    if (d.voip || d.sipServer) used.add('service.voip');
     if (d.verbund || d.verbundProvider) used.add('net.verbund');
     if (d.subinterfaces?.length) used.add('net.subinterfaces');
     if (d.portForwards?.length) used.add('net.nat');

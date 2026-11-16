@@ -24,11 +24,16 @@ import {
   type StpBpdu,
   type LacpPdu,
   type VxlanMessage,
+  type SipMessage,
+  type RtpPacket,
+  type DataBlock,
+  RTP_PAYLOAD_BYTES,
   type TcpSegment,
   type UdpDatagram,
 } from '../sim/frames';
 import { Part, crc32, fcs16, hex, internetChecksum, ipBytes, latin1, le, macBytes, u16, u32, utf8, type WireField, type WireLayer } from './part';
 import { ip6Bytes } from '../net/ipv6';
+import { dscpName } from '../net/qos';
 
 export type { WireField, WireLayer, OsiLayer } from './part';
 
@@ -138,6 +143,56 @@ function dns(m: DnsMessage): Part {
   return p;
 }
 
+/** SIP (RFC 3261) als Text; Rumpf mit SDP (RFC 8866) bei INVITE und 200 OK. */
+export function sipText(m: SipMessage): string {
+  const REASONS: Record<number, string> = { 100: 'Trying', 180: 'Ringing', 200: 'OK', 404: 'Not Found', 480: 'Temporarily Unavailable', 486: 'Busy Here' };
+  const start = m.method ? `${m.method} ${m.uri} SIP/2.0` : `SIP/2.0 ${m.status} ${REASONS[m.status ?? 0] ?? ''}`.trimEnd();
+  const body = m.sdp ? ['v=0', `o=- ${m.cseq} 1 IN IP4 ${m.sdp.ip}`, 's=leyoNET', `c=IN IP4 ${m.sdp.ip}`, 't=0 0', `m=audio ${m.sdp.port} RTP/AVP 0`, 'a=rtpmap:0 PCMU/8000', ''].join('\r\n') : '';
+  const headers = [
+    start,
+    ...m.via.map((v) => `Via: SIP/2.0/UDP ${v}`),
+    `From: <${m.from}>`,
+    `To: <${m.to}>`,
+    `Call-ID: ${m.callId}`,
+    `CSeq: ${m.cseq} ${m.cseqMethod}`,
+    ...(m.contact ? [`Contact: <sip:${m.contact}>`] : []),
+    ...(m.sdp ? ['Content-Type: application/sdp'] : []),
+    `Content-Length: ${body.length}`,
+  ];
+  return `${headers.join('\r\n')}\r\n\r\n${body}`;
+}
+
+function sip(m: SipMessage): Part {
+  const p = new Part();
+  const text = sipText(m);
+  p.field('app.data', text.split('\r\n')[0]!, latin1(text));
+  p.close(7, 'SIP', 0, { text });
+  return p;
+}
+
+/** RTP-Kopf (RFC 3550, 12 Bytes) und 20 ms G.711 µ-law (RFC 3551, Payload Type 0). */
+function rtp(m: RtpPacket): Part {
+  const p = new Part();
+  p.u8('rtp.flags', 0x80, '0x80 (Version 2)');
+  p.u8('rtp.payloadType', 0, '0 (PCMU, G.711 µ-law)');
+  p.u16('rtp.seq', m.seq & 0xffff);
+  p.u32('rtp.timestamp', m.timestamp >>> 0);
+  p.u32('rtp.ssrc', m.ssrc >>> 0, hex(m.ssrc >>> 0, 8));
+  // Stille in µ-law ist 0xFF; die Simulation überträgt keine echte Sprache.
+  p.field('rtp.payload', `${RTP_PAYLOAD_BYTES} Bytes`, new Array(RTP_PAYLOAD_BYTES).fill(0xff));
+  p.close(7, 'RTP', 0);
+  return p;
+}
+
+/** Testdaten (iperf): Sequenznummer und Füllbytes. */
+function data(m: DataBlock): Part {
+  const p = new Part();
+  p.u32('data.seq', m.seq >>> 0);
+  p.field('app.data', `${m.bytes} Bytes`, new Array(Math.max(0, m.bytes - 4)).fill(0x30 + (m.seq % 10)));
+  p.close(7, 'iperf', 0);
+  return p;
+}
+
 function rip(m: RipMessage): Part {
   const p = new Part();
   p.u8('rip.command', m.command === 'request' ? 1 : 2, m.command === 'request' ? '1 (Request)' : '2 (Response)');
@@ -237,7 +292,7 @@ function readable(data: string): string {
 }
 
 function portName(port: number): string {
-  const names: Record<number, string> = { 53: 'DNS', 67: 'DHCP Server', 68: 'DHCP Client', 500: 'IKE', 520: 'RIP', 521: 'RIPng', 546: 'DHCPv6 Client', 547: 'DHCPv6 Server', ...TCP_APPS };
+  const names: Record<number, string> = { 5060: 'SIP', 5201: 'iperf', 53: 'DNS', 67: 'DHCP Server', 68: 'DHCP Client', 500: 'IKE', 520: 'RIP', 521: 'RIPng', 546: 'DHCPv6 Client', 547: 'DHCPv6 Server', ...TCP_APPS };
   return names[port] ? `${port} (${names[port]})` : String(port);
 }
 
@@ -253,7 +308,8 @@ function pseudoHeader6(src: string, dst: string, nextHeader: number, length: num
 function udp(d: UdpDatagram, srcIp: string, dstIp: string, v6 = false): Part {
   const p = new Part();
   const m = d.payload;
-  const inner = m.kind === 'dhcp' ? dhcp(m) : m.kind === 'dns' ? dns(m) : m.kind === 'dhcpv6' ? dhcp6(m) : m.kind === 'ike' ? ike(m) : m.kind === 'ripng' ? ripng(m) : m.kind === 'vxlan' ? vxlan(m) : rip(m);
+  const inner =
+    m.kind === 'dhcp' ? dhcp(m) : m.kind === 'dns' ? dns(m) : m.kind === 'dhcpv6' ? dhcp6(m) : m.kind === 'ike' ? ike(m) : m.kind === 'ripng' ? ripng(m) : m.kind === 'vxlan' ? vxlan(m) : m.kind === 'sip' ? sip(m) : m.kind === 'rtp' ? rtp(m) : m.kind === 'data' ? data(m) : rip(m);
   p.u16('udp.srcPort', d.srcPort, portName(d.srcPort));
   p.u16('udp.dstPort', d.dstPort, portName(d.dstPort));
   p.u16('udp.length', 8 + inner.length);
@@ -585,7 +641,7 @@ function ospf(m: OspfPacket): Part {
 }
 
 function ipv4Header(packet: Ipv4Packet, payloadLength: number, protocol: number, df = false): number[] {
-  const header = [0x45, 0, ...u16(20 + payloadLength), ...u16(packet.id & 0xffff), ...u16(df ? 0x4000 : 0), packet.ttl & 0xff, protocol, 0, 0, ...ipBytes(packet.src), ...ipBytes(packet.dst)];
+  const header = [0x45, ((packet.dscp ?? 0) & 63) << 2, ...u16(20 + payloadLength), ...u16(packet.id & 0xffff), ...u16(df ? 0x4000 : 0), packet.ttl & 0xff, protocol, 0, 0, ...ipBytes(packet.src), ...ipBytes(packet.dst)];
   const sum = internetChecksum(header);
   header[10] = sum >> 8;
   header[11] = sum & 0xff;
@@ -667,7 +723,7 @@ function ipv4(packet: Ipv4Packet): Part {
   const header = ipv4Header(packet, payload.length, protocol, df);
   const p = new Part();
   p.field('ip.versionIhl', '4, 20 Bytes', [header[0]!]);
-  p.field('ip.dscp', '0x00 (Best Effort)', [header[1]!]);
+  p.field('ip.dscp', `${hex(packet.dscp ?? 0, 2)} (${dscpName(packet.dscp ?? 0)})`, [header[1]!]);
   p.field('ip.totalLength', 20 + payload.length, header.slice(2, 4));
   p.field('ip.id', hex(packet.id & 0xffff, 4), header.slice(4, 6));
   p.field('ip.flags', df ? "0x4000 (Don't Fragment)" : '0x0000', header.slice(6, 8));
@@ -802,7 +858,8 @@ function ethernet(frame: EthernetFrame, inner: Part, etherType: number, header =
   p.mac('eth.src', frame.src);
   if (frame.vlan !== undefined) {
     p.u16('eth.tpid', 0x8100, '0x8100 (802.1Q)');
-    p.u16('eth.tci', frame.vlan & 0xfff, `PCP 0, VLAN ${frame.vlan}`);
+    const pcp = (frame.pcp ?? 0) & 7;
+    p.u16('eth.tci', (pcp << 13) | (frame.vlan & 0xfff), `PCP ${pcp}, VLAN ${frame.vlan}`);
   }
   if (etherType) p.u16('eth.type', etherType, `${hex(etherType, 4)} (${{ 0x0800: 'IPv4', 0x86dd: 'IPv6', 0x0806: 'ARP', 0x8863: 'PPPoE Discovery', 0x8864: 'PPPoE Session', 0x888e: '802.1X', 0x8809: 'Slow Protocols' }[etherType] ?? ''})`);
   else p.u16('eth.length', inner.length, `${inner.length} (IEEE 802.3)`);

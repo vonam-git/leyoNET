@@ -82,6 +82,14 @@ export const CHECK_FIELDS: Record<Check['type'], FieldSpec[]> = {
   ],
   modemOnline: [{ key: 'device', kind: 'device' }],
   poePowered: [{ key: 'device', kind: 'device' }],
+  call: [
+    { key: 'from', kind: 'device', label: 'callFrom' },
+    { key: 'to', kind: 'device', label: 'callTo' },
+    { key: 'loadFrom', kind: 'device', optional: true },
+    { key: 'loadTo', kind: 'device', optional: true },
+    { key: 'loadKbps', kind: 'number', optional: true },
+    { key: 'maxLoss', kind: 'number', optional: true },
+  ],
   verbundSite: [{ key: 'level', kind: 'choice', optional: true, label: 'verbundLevel', options: ['online', 'services'] }],
   groupLeases: [
     { key: 'device', kind: 'device' },

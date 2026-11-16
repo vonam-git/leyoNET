@@ -47,6 +47,8 @@ export type Check =
   | { type: 'modemOnline'; device: string }
   /** Gerät wird per PoE gespeist (IEEE 802.3, Klausel 33/145). */
   | { type: 'poePowered'; device: string }
+  /** Telefongespräch (SIP, RTP) gelingt, optional unter Last (iperf) und mit höchstens `maxLoss` % Verlust. */
+  | { type: 'call'; from: string; to: string; loadFrom?: string; loadTo?: string; loadKbps?: number; maxLoss?: number }
   /** Alle (oder mindestens `min`) Rechner der Client-Gruppe haben eine Adresse. */
   | { type: 'groupLeases'; device: string; min?: number }
   /** Gesamtkosten höchstens so viele CHF. */
@@ -105,6 +107,7 @@ export const CHECK_TYPES = [
   'seenAs',
   'modemOnline',
   'poePowered',
+  'call',
   'verbundSite',
   'groupLeases',
   'budget',
@@ -537,6 +540,30 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       const state = poeReport(topology).devices.get(device.id);
       return state?.powered ? { id, passed: true } : fail(id, 'noPoe', { name: device.name });
     }
+    case 'call': {
+      const from = need(check.from);
+      if (!from) return missing(check.from);
+      if (from.type !== 'ipphone') return fail(id, 'notAPhone', { name: from.name });
+      const sim = bootedSimulation(topology);
+      const target = need(check.to);
+      const address = (d: Device) => staticIpv4(d) ?? sim.getDeviceState(d.id).address?.ip;
+      const dial = target ? (target.voip?.number && from.voip?.server && target.voip.server ? target.voip.number : address(target)) : check.to;
+      if (!dial) return fail(id, 'noAddress', { name: check.to });
+      if (check.loadFrom && check.loadTo && check.loadKbps) {
+        const source = need(check.loadFrom);
+        if (!source) return missing(check.loadFrom);
+        const sink = need(check.loadTo);
+        const sinkIp = sink ? address(sink) : check.loadTo;
+        if (sinkIp) sim.iperf(source.id, sinkIp, check.loadKbps, 10);
+      }
+      sim.call(from.id, dial, 5);
+      const end = sim.now + 9000;
+      while (sim.now < end && sim.runUntil(end) > 0);
+      const call = sim.getDeviceState(from.id).voip?.call;
+      if (!call || call.stats.received === 0) return fail(id, 'callFailed', { from: from.name, to: check.to, reason: call?.reason ? `(${call.reason})` : '' });
+      const maxLoss = check.maxLoss ?? 5;
+      return call.stats.loss <= maxLoss ? { id, passed: true } : fail(id, 'callQuality', { loss: call.stats.loss, max: maxLoss, jitter: call.stats.jitter, delay: call.stats.delay });
+    }
     case 'groupLeases': {
       const device = need(check.device);
       if (!device) return missing(check.device);
@@ -801,6 +828,21 @@ export function readTasks(value: unknown, invalid: (path: string) => never, read
         case 'seenAs':
           check = { type, from: str(c.from, `${cp}.from`), to: str(c.to, `${cp}.to`), address: str(c.address, `${cp}.address`) };
           break;
+        case 'call': {
+          const optNumber = (v: unknown, path: string, max: number) => (v === undefined ? undefined : typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= max ? v : invalid(path));
+          const loadKbps = optNumber(c.loadKbps, `${cp}.loadKbps`, 100_000);
+          const maxLoss = optNumber(c.maxLoss, `${cp}.maxLoss`, 100);
+          check = {
+            type,
+            from: str(c.from, `${cp}.from`),
+            to: str(c.to, `${cp}.to`),
+            ...(c.loadFrom !== undefined ? { loadFrom: str(c.loadFrom, `${cp}.loadFrom`) } : {}),
+            ...(c.loadTo !== undefined ? { loadTo: str(c.loadTo, `${cp}.loadTo`) } : {}),
+            ...(loadKbps !== undefined ? { loadKbps } : {}),
+            ...(maxLoss !== undefined ? { maxLoss } : {}),
+          };
+          break;
+        }
         case 'modemOnline':
         case 'poePowered':
           check = { type, device: str(c.device, `${cp}.device`) };

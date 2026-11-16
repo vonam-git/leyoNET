@@ -6,7 +6,7 @@ reihenfolge: 2.5
 schicht: 7 (Anwendung), Strom über Schicht 1
 hilfe: [device.ipphone]
 demos: [poe]
-verwandt: [poe, switch, ip-kamera]
+verwandt: [poe, telefonie, qos, switch, ip-kamera]
 ---
 ## Wozu
 

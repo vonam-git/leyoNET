@@ -1,10 +1,11 @@
+import { MAX_RATE, MIN_RATE } from '../net/qos';
 import { MAX_POE_BUDGET, POE_STANDARDS, canBePowered, canSupplyPoe } from '../model/poe';
-import { DEVICE_SPECS, canAutoRoute, isDeviceType, isRouterLike, isSwitchType } from '../model/devices';
+import { DEVICE_SPECS, canAutoRoute, canHostServices, isDeviceType, isRouterLike, isSwitchType } from '../model/devices';
 import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME } from '../net/routing';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
 import { MAX_DHCP_EXCLUDED, MAX_DHCP_POOLS, canDhcpPool, checkDhcpPool, normalizePool } from '../net/dhcp';
 import { MAC_PATTERN } from '../model/mac';
-import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
+import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, PHONE_NUMBER, canQos, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
 import { ACL_NAME, MAX_ACLS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
 import { MAX_GROUP_SIZE } from '../model/devices';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
@@ -413,6 +414,11 @@ function readDevice(v: unknown, path: string): Device {
     }
     if (io.shutdown !== undefined && bool(io.shutdown, `${p}.shutdown`)) iface.shutdown = true;
     if (io.poeOff !== undefined && bool(io.poeOff, `${p}.poeOff`)) iface.poeOff = true;
+    if (io.rate !== undefined) {
+      const rate = int(io.rate, `${p}.rate`);
+      if (rate < MIN_RATE || rate > MAX_RATE) throw new Invalid(`${p}.rate`);
+      iface.rate = rate;
+    }
     if (io.color !== undefined) iface.color = color(io.color, `${p}.color`);
     if (io.description !== undefined) iface.description = text(io.description, `${p}.description`, 80);
     if (io.sfpSlot !== undefined && bool(io.sfpSlot, `${p}.sfpSlot`)) iface.sfpSlot = true;
@@ -581,6 +587,24 @@ function readDevice(v: unknown, path: string): Device {
     const poeClass = int(o.poeClass, `${path}.poeClass`);
     if (!canBePowered(device.type) || poeClass < 0 || poeClass > 8) throw new Invalid(`${path}.poeClass`);
     device.poeClass = poeClass;
+  }
+  if (o.voip !== undefined) {
+    const v = obj(o.voip, `${path}.voip`);
+    const number = text(v.number, `${path}.voip.number`, 8);
+    if (device.type !== 'ipphone' || !PHONE_NUMBER.test(number)) throw new Invalid(`${path}.voip`);
+    const server = v.server === undefined ? undefined : text(v.server, `${path}.voip.server`, 15);
+    if (server !== undefined && parseIp(server) === null) throw new Invalid(`${path}.voip.server`);
+    if (v.marking !== undefined && typeof v.marking !== 'boolean') throw new Invalid(`${path}.voip.marking`);
+    device.voip = { number, ...(server ? { server } : {}), ...(v.marking === false ? { marking: false } : {}) };
+  }
+  if (o.sipServer !== undefined) {
+    if (o.sipServer !== true || !canHostServices(device.type)) throw new Invalid(`${path}.sipServer`);
+    device.sipServer = true;
+  }
+  if (o.qos !== undefined) {
+    const q = obj(o.qos, `${path}.qos`);
+    if (!canQos(device.type) || (q.trust !== undefined && typeof q.trust !== 'boolean')) throw new Invalid(`${path}.qos`);
+    device.qos = q.trust === false ? { trust: false } : {};
   }
   if (o.portForwards !== undefined) {
     device.portForwards = arr(o.portForwards, `${path}.portForwards`).map((raw, i) => {

@@ -68,6 +68,14 @@ Testen in der Eingabeaufforderung:
 
 Antworten aus der eigenen Zone sind «autorisierend», weitergeleitete «nicht autorisierend». Siehe Demo «DNS mit Weiterleitung».
 
+## Telefonie und QoS
+
+Ein Server wird unter **Erweitert → Telefonie** zur Telefonanlage. IP-Telefone tragen dort ihre Rufnummer und die Adresse der Anlage ein; sie brauchen Strom per PoE (Switch mit PoE, Reiter **PoE**).
+
+- `call 202` ruft die Nummer 202 über die Anlage an, `call 192.168.1.22` direkt eine Adresse; `hangup` legt auf. Nach dem Gespräch stehen Verlust, Laufzeit, Jitter und Qualität im Reiter Telefonie.
+- `iperf -c 192.168.2.10 -u -b 4M -t 20` auf einem PC erzeugt Last (UDP, 4 Mbit/s, 20 s).
+- **Erweitert → QoS** (Router, Switch, Layer-3-Switch, Firewall): Bandbreite je Port (z.B. `2M` für eine WAN-Leitung) und «QoS einschalten» (Sprache mit DSCP EF zuerst). Siehe Demo «Telefonie mit QoS über eine WAN-Leitung».
+
 ## Firewall
 
 Im Fenster **Erweitert … → Firewall** (Router, Internet-Box und Endgeräte, ab Profil 3) schaltest du die Firewall ein. Sicher ist der Start mit **«alles verbieten, was nicht erlaubt ist»**. Dann trägst du Regeln ein:

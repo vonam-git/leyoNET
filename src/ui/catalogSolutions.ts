@@ -8,6 +8,7 @@ import {
   addDnsRecord,
   setPoe,
   setPowerSource,
+  setQos,
   addStaticNat,
   addVpnTunnel,
   setFirewall,
@@ -254,6 +255,10 @@ export const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
   'web-dns': (t) => {
     t = unwrap(addDnsRecord(t, byName(t, 'DNS-Server'), { name: 'www.schule.example', type: 'A', value: '10.1.1.80', ttl: 60 }));
     return unwrap(configureHost(t, byName(t, 'Notebook'), { ip: '10.1.1.10', mask: '24', dns: '10.1.1.53' }));
+  },
+  'voip-qos': (t) => {
+    for (const r of ['Router Zürich', 'Router Bern']) t = unwrap(setQos(t, byName(t, r), {}));
+    return t;
   },
   poe: (t) => {
     const sw = byName(t, 'Switch');

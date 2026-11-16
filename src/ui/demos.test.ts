@@ -34,7 +34,8 @@ function run(demo: Demo) {
     else if ('mail' in action) sim.sendMail(device, action.mail);
     else sim.fetchMail(device);
   }
-  sim.runUntil(demo.until);
+  // Viele Ereignisse (Last mit iperf): weiterlaufen, bis die Zeit wirklich erreicht ist.
+  while (sim.now < demo.until && sim.runUntil(demo.until) > 0);
   return { sim, id };
 }
 
@@ -82,6 +83,9 @@ describe('Demo-Netze', () => {
         break;
       case 'macFlap':
         expect(codes(check.device)).toContain('switch.macFlap');
+        break;
+      case 'call':
+        expect(codes(check.device)).toContain('voip.ended.good');
         break;
       case 'storm':
         expect(sim.stormingDevices().length).toBeGreaterThan(0);

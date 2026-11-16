@@ -75,6 +75,20 @@ export interface PoeConfig {
 }
 export type PowerSource = 'poe' | 'local';
 
+export interface VoipConfig {
+  /** Rufnummer (Nebenstelle), 2–8 Ziffern. */
+  number: string;
+  /** Adresse der Telefonanlage; fehlt = nur direkte Anrufe an eine IP-Adresse. */
+  server?: string;
+  /** Sprache mit EF (46), Signalisierung mit CS5 (40) markieren (RFC 4594); false = alles Best Effort. */
+  marking?: boolean;
+}
+
+export interface QosConfig {
+  /** DSCP der ankommenden Pakete übernehmen («trust dscp»); false = auf 0 zurücksetzen. Fehlt = true. */
+  trust?: boolean;
+}
+
 export interface NetInterface {
   index: number;
   mac: string;
@@ -106,6 +120,8 @@ export interface NetInterface {
   shutdown?: boolean;
   /** Nur Switch mit PoE: an diesem Anschluss kein Strom liefern («power inline never»). */
   poeOff?: boolean;
+  /** Bandbreite in kbit/s, mit der der Port sendet (Engpass, z.B. WAN-Leitung); fehlt = unbegrenzt. */
+  rate?: number;
   /** Farbmarkierung des Anschlusses (z.B. für Patchfelder und Dokumentation). */
   color?: TagColor;
   /** Beschreibung, z.B. «Uplink Stock 2» («description» in der CLI). */
@@ -258,6 +274,12 @@ export interface Device {
   power?: PowerSource;
   /** Gespeistes Gerät: PoE-Klasse 0–8 (IEEE 802.3, Klausel 33 und 145); fehlt = Standard des Geräts. */
   poeClass?: number;
+  /** IP-Telefon: Rufnummer und Telefonanlage (SIP, RFC 3261). */
+  voip?: VoipConfig;
+  /** Server: Telefonanlage (SIP-Registrar und -Proxy). */
+  sipServer?: boolean;
+  /** Switch, Layer-3-Switch, Router, Firewall: QoS mit Prioritäts-Warteschlangen (DiffServ, RFC 2474). */
+  qos?: QosConfig;
   /** Nur Router: 802.1Q-Subinterfaces (Router-on-a-Stick). */
   subinterfaces?: SubInterface[];
   /** Router, Firewall, Layer-3-Switch: Loopback-Interfaces. */
