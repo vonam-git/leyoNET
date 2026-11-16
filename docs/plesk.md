@@ -32,7 +32,7 @@ Rechner (du)  ──git push──►  GitHub: develop  ──Plesk Git (Pull)�
      | Name | Wert | Zweck |
      |---|---|---|
      | `ADMIN_PASSWORD` | ein langes, zufälliges Passwort | öffnet die Admin-Konsole; ohne diese Variable ist sie gesperrt |
-     | `DATA_DIR` | optional, z.B. `/var/www/vhosts/deine-domain.ch/simulator-data` | Ablage der Sessions; Standard ist `httpdocs/data` (ausserhalb des Dokumentstamms) |
+     | `DATA_DIR` | optional, z.B. `/var/www/vhosts/deine-domain.ch/simulator-data` | Ablage der Sessions, Klassen und Prüfungen. **Empfohlen: ein Ordner ausserhalb von `httpdocs`**, damit die Daten auch bei falsch gesetztem Dokumentstamm nie abrufbar sind (die `.htaccess` im Datenordner wirkt nur mit Apache, nicht wenn nginx Dateien direkt ausliefert). Standard ist `httpdocs/data`; der Server meldet das beim Start als Hinweis. Umziehen: App stoppen, Ordner verschieben, `DATA_DIR` setzen, App starten |
      | `MAX_SESSIONS` | optional, Standard `5000` | höchstens so viele Sessions gleichzeitig (Schutz vor Überlastung) |
      | `LEYONET_CHANNEL` | nur für die Testumgebung: `beta` | zeigt oben «Testversion» und hält Suchmaschinen fern (`noindex`, `robots.txt`) |
      | `MAX_STORAGE_MB` | optional, Standard `1024` | höchstens so viel Platz für Sessions und Rückmeldungen; Prüfungen sind ausgenommen |
