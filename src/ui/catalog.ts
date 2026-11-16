@@ -43,6 +43,7 @@ import { M117 } from './catalogM117';
 import { M129 } from './catalogM129';
 import { M145 } from './catalogM145';
 import { ADVANCED } from './catalogAdvanced';
+import { VERBUND_HUB_IP, VERBUND_HUB_NAME } from './verbundTemplate';
 
 export type { CatalogEntry } from './catalogKit';
 
@@ -1113,6 +1114,37 @@ const ENTRIES: CatalogEntry[] = [
           goal('verbundWeb', 1, { type: 'verbundSite' }),
           goal('verbundWeb', 2, { type: 'verbundSite', level: 'services' }),
           goal('verbundWeb', 3, { type: 'http', from: 'PC Standort', url: 'http://198.51.100.10/' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'verbund-dhcp-dns',
+    stars: 3,
+    verbund: true,
+    features: ['net.verbund', 'net.nat', 'routing.static', 'service.dhcp', 'service.dns'],
+    level: 3,
+    build() {
+      const s = new Start()
+        .add('pc', 'PC 1', -360, -60)
+        .add('notebook', 'Notebook 1', -360, 80)
+        .add('switch', 'Switch', -120, 0)
+        .router('Standort-Router', 140, 0, ['192.168.50.1/24'])
+        .link('PC 1', 'Switch')
+        .link('Notebook 1', 'Switch')
+        .link('Switch', 'Standort-Router')
+        .apply((t, id) => {
+          const next = unwrap(configureHost(t, id('PC 1'), { ip: '', mask: '', dhcp: true }));
+          return unwrap(configureHost(next, id('Notebook 1'), { ip: '', mask: '', dhcp: true }));
+        })
+        .area('Mein Standort', 'teal', -460, -170, 720, 330, '192.168.50.0/24');
+      return {
+        topology: s.topology,
+        tasks: task('verbundDhcpDns', 3, [
+          goal('verbundDhcpDns', 1, { type: 'verbundSite' }),
+          goal('verbundDhcpDns', 2, { type: 'dhcpLease', device: 'PC 1', dns: VERBUND_HUB_IP }),
+          goal('verbundDhcpDns', 3, { type: 'dhcpLease', device: 'Notebook 1', dns: VERBUND_HUB_IP }),
+          goal('verbundDhcpDns', 4, { type: 'http', from: 'Notebook 1', url: `http://${VERBUND_HUB_NAME}/` }),
         ]),
       };
     },

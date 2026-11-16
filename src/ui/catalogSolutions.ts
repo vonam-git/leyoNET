@@ -37,6 +37,7 @@ import {
   insertSfpModule,
   parseProject,
   serializeProject,
+  setDhcpPool,
   setDhcpServer,
   setInterfaceAddress,
   setInterfaceNat,
@@ -204,6 +205,12 @@ export const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
     const r = byName(t, 'Standort-Router');
     t = unwrap(applyVerbundAddresses(t, r, 1));
     return unwrap(addPortForward(t, r, { protocol: 'tcp', port: 80, to: '192.168.50.80', toPort: 80 }));
+  },
+  'verbund-dhcp-dns': (t) => {
+    const r = byName(t, 'Standort-Router');
+    t = unwrap(setVerbund(t, r, 1));
+    t = unwrap(applyVerbundAddresses(t, r, 1));
+    return unwrap(setDhcpPool(t, r, 'LAN', { name: 'LAN', network: '192.168.50.0', mask: '255.255.255.0', gateway: '192.168.50.1', dns: '198.51.100.10' }));
   },
   'port-forward': (t) => unwrap(addPortForward(t, byName(t, 'Heimrouter'), { protocol: 'tcp', port: 8080, to: '192.168.1.20', toPort: 80 })),
   'snat-mail': (t) => unwrap(addStaticNat(t, byName(t, 'Firmenrouter'), { inside: '192.168.0.25', outside: '203.0.113.5', kind: 'snat' })),

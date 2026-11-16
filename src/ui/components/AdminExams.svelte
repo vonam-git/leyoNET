@@ -5,7 +5,7 @@
   import { downloadText } from '../persist/files';
   import { dialogs } from '../state/dialogs.svelte';
   import { reviewInbox } from '../state/reviewInbox';
-  import { seatCardsHtml } from '../seatCards';
+  import { examSheetsHtml, seatCardsHtml, type SheetSeat } from '../seatCards';
   import SebPanel from './SebPanel.svelte';
 
   /**
@@ -204,6 +204,34 @@
     downloadText(`platzkarten-${open.label.replace(/[^\p{L}\p{N}]+/gu, '-').toLowerCase()}.html`, html, 'text/html');
   }
 
+  /** Code zum Beenden des Prüfungsmodus (aus dem Schlüssel), erst auf Klick geladen. */
+  let unlock = $state<{ exam: string; code: string | null } | null>(null);
+  const slug = (s: string) => s.replace(/[^\p{L}\p{N}]+/gu, '-').toLowerCase();
+
+  async function sheet() {
+    return call<{ code: string | null; seats: SheetSeat[] }>('GET', `exams/${open!.id}/sheet`);
+  }
+
+  async function printSheets() {
+    if (!open) return;
+    try {
+      const data = await sheet();
+      const html = examSheetsHtml({ title: open.title, label: open.label, minutes: open.minutes, url: location.origin + location.pathname, seats: data.seats });
+      downloadText(`pruefungsblaetter-${slug(open.label)}.html`, html, 'text/html');
+    } catch {
+      notify('error', t('admin.exams.sheetError'));
+    }
+  }
+
+  async function showUnlock() {
+    if (!open) return;
+    try {
+      unlock = { exam: open.id, code: (await sheet()).code };
+    } catch {
+      notify('error', t('admin.exams.sheetError'));
+    }
+  }
+
   const left = (seat: Seat) => {
     if (!seat.until) return '';
     const s = Math.round((seat.until - now) / 1000);
@@ -262,18 +290,26 @@
   <h3>{open.label}{open.title !== open.label ? ` · ${open.title}` : ''}</h3>
   <div class="row">
     {#if open.state === 'ready'}
-      <button onclick={printCards}>🖨 {t('admin.exams.print')}</button>
+      <button onclick={printSheets}>🖨 {t('admin.exams.printSheets')}</button>
+      <button onclick={printCards}>✂ {t('admin.exams.print')}</button>
       <button class="primary" onclick={() => act('start', undefined, t('admin.exams.confirmStart', { n: seatList.length, min: open!.minutes }))}>▶ {t('admin.exams.start')}</button>
     {:else}
       <span>{t('admin.exams.startedAt', { time: time(open.started) })}</span>
       {#if open.state === 'running'}
         <button class="danger" onclick={() => act('end', undefined, t('admin.exams.confirmEnd'))}>■ {t('admin.exams.end')}</button>
-        <button onclick={printCards}>🖨 {t('admin.exams.print')}</button>
+        <button onclick={printSheets}>🖨 {t('admin.exams.printSheets')}</button>
       {/if}
     {/if}
+    <button onclick={showUnlock} title={t('admin.exams.unlockHint')}>🔑 {t('admin.exams.unlock')}</button>
     <button onclick={evaluate} disabled={open.state === 'ready'}>✓ {t('admin.exams.evaluate')}</button>
     <button onclick={download} disabled={open.state === 'ready'}>⬇ {t('admin.exams.download')}</button>
   </div>
+  {#if unlock && unlock.exam === open.id}
+    <p class="unlock" role="status">
+      {#if unlock.code}{t('admin.exams.unlockIs')} <code>{unlock.code}</code>{:else}{t('admin.exams.unlockMissing')}{/if}
+      <button class="ghost" onclick={() => (unlock = null)} aria-label={t('about.close')}>✕</button>
+    </p>
+  {/if}
   <p class="muted">{t(`admin.exams.help.${open.state}`)}</p>
   <SebPanel exam={open} onchange={(on, text) => act('seb', { on }, text)} />
   <table>
@@ -306,6 +342,19 @@
 {/if}
 
 <style>
+  .unlock {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: var(--panel-2, #f1f5f9);
+  }
+  .unlock code {
+    font-size: 1.3rem;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+  }
   .check {
     display: flex;
     align-items: center;

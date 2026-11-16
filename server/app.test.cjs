@@ -224,6 +224,12 @@ test('Prüfung: Plätze mit Code, warten, starten, speichern, Nachteilsausgleich
   const raw = fs.readFileSync(path.join(dataDir, 'exams', `${exam.id}.json`), 'utf8');
   assert.doesNotMatch(raw, /pruefungsschluessel/);
 
+  // Prüfungsblätter: Aufgabentext je Platz und Code zum Beenden, nur für die Lehrperson.
+  const sheet = (await call('GET', `/api/admin/exams/${exam.id}/sheet`, null, token)).data;
+  assert.equal(sheet.code, 'ABCD');
+  assert.deepEqual(sheet.seats.map((s) => [s.id, s.code, s.sheet.title]), [['01', seat1.code, 'Platz 1'], ['02', seat2.code, 'Platz 2']]);
+  assert.equal((await call('GET', `/api/admin/exams/${exam.id}/sheet`)).status, 401);
+
   // Vor dem Start: warten, keine Session.
   assert.equal((await call('POST', '/api/exams/join', { seatCode: seat1.code })).data.exam.state, 'waiting');
   assert.equal((await call('POST', '/api/exams/join', { seatCode: 'AAAA-AAAA' })).status, 404);

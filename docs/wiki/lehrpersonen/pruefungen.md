@@ -22,6 +22,6 @@ Beim Öffnen der Prüfungsdatei beginnt der **Prüfungsmodus**: Katalog, Demos, 
 
 ## In der Webversion
 
-Prüfungsdatei und Schlüssel in der Admin-Konsole hochladen, Platzkarten mit Platz-Codes drucken, starten. Gespeichert wird alle 20 Sekunden; ist die Zeit um, ist automatisch abgegeben. Das Prüfungscockpit zeigt je Platz, ob er verbunden ist, erlaubt Nachteilsausgleich (+5′, +15′) und «Ansehen» live. Am Ende wertet leyoNET alle Plätze aus, mit Nachkorrektur und Bericht.
+Prüfungsdatei und Schlüssel in der Admin-Konsole hochladen, **Prüfungsblätter drucken** (je Platz eine Seite mit Platz-Code, Zeit, Ablauf und Auftrag) und verteilen, starten. Den Code zum Beenden zeigt das Cockpit auf Klick. Gespeichert wird alle 20 Sekunden; ist die Zeit um, gibt leyoNET den letzten Stand automatisch ab. Das Prüfungscockpit zeigt je Platz, ob er verbunden ist, erlaubt Nachteilsausgleich (+5′, +15′) und «Ansehen» live. Am Ende wertet leyoNET alle Plätze aus, mit Nachkorrektur und Bericht.
 
 Ablauf, Grenzen und was leyoNET gegen Abschreiben tun kann: [Prüfungen](https://github.com/vonam-git/leyoNET/blob/main/docs/pruefungen.md).

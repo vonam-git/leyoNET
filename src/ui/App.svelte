@@ -8,7 +8,7 @@
   import { verbund } from './state/verbund.svelte';
   import { parseProject, serializeProject } from '../core';
   import { locale, t } from '../i18n';
-  import { ensureProjectFeatures } from './actions';
+  import { ensureProjectFeatures, saveProject } from './actions';
   import { handleShortcut } from './commands.svelte';
   import Canvas from './components/Canvas.svelte';
   import CliWindow from './components/CliWindow.svelte';
@@ -55,6 +55,24 @@
       const fallback = (['design', 'simulation'] as const).find((m) => ui.allowed(m));
       if (fallback) untrack(() => editor.setMode(fallback));
     }
+  });
+
+  // Prüfung: Ist die Zeit um, wird automatisch abgegeben. Webversion: letzter Stand sofort an den
+  // Server, danach «Abgegeben». Prüfungsdatei: einmal den Stand als Datei speichern.
+  let autoSubmitted = $state<string | null>(null);
+  $effect(() => {
+    const a = examMode.active;
+    if (!a) return;
+    const s = a.server;
+    const left = s?.until ? s.until - (examMode.now + s.offset) : a.minutes ? a.started + a.minutes * 60_000 - examMode.now : null;
+    const key = `${a.started}`;
+    if (left === null || left > 0 || autoSubmitted === key || s?.state === 'closed' || s?.state === 'waiting') return;
+    autoSubmitted = key;
+    untrack(() => {
+      editor.notify(t('exam.mode.autoSubmit'));
+      if (s) void session.submitExam().finally(() => examMode.updateServer({ state: 'closed', until: s.until, now: Date.now() + s.offset, title: a.title, seat: a.variant ?? '' }));
+      else saveProject();
+    });
   });
 
   // Sprache der Seite für Vorlesehilfen und Silbentrennung.

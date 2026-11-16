@@ -56,6 +56,7 @@ Nachrichten liegen nur im Arbeitsspeicher des Servers (höchstens 200 je Klasse,
 Im Aufgabenkatalog erscheinen Verbund-Übungen nur in einer Klasse mit freigegebenem Verbund:
 
 - **Standort an die Zentrale anschliessen** (★★): Anschluss markieren, Adressen eintragen, NAT; PC erreicht die Zentrale.
+- **Standort mit DHCP und Namen der Zentrale** (★★★): DHCP-Pool am Standort-Router mit DNS der Zentrale; das Notebook ruft http://zentrale.verbund.example/ auf. Die Vorlage der Infrastruktur macht die Zentrale dafür zum DNS-Server.
 - **Eigenen Webserver im Verbund veröffentlichen** (★★★): Portweiterleitung, damit die Zentrale die Webseite des Standorts abruft.
 
 Jede Verbund-Übung zeigt im Aufgabenfenster den Kasten **«Dein Platz im Klassen-Verbund»**: Platznummer und Gruppe, Transitnetz, WAN-Adresse, Provider und Zentrale für genau diesen Platz, dazu das Ziel in einem Satz. Wer noch keiner Klasse beigetreten ist oder wessen Lehrperson noch keine Infrastruktur geladen hat, liest dort, was fehlt. Der Auftrag selbst ist gegliedert in «Worum es geht», «Dein Auftrag» und «Fertig bist du, wenn».

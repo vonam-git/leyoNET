@@ -38,6 +38,9 @@
   let code = $state(randomCode());
   let draft = $state<Draft>(toDraft(randomExam(firstSeed, '1')));
   let seat = $state('01');
+  /** Bei mehreren Plätzen: eigene Namen für die drei Standorte (Hauptsitz, Filialen), sonst gewürfelt. */
+  let towns = $state('');
+  const townNames = $derived(towns.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 3));
   let built = $state<BuiltExam | null>(null);
   let busy = $state(false);
 
@@ -45,10 +48,13 @@
   /** Eine Variante (von Hand anpassbar) oder je Platz eine gewürfelte. */
   const specs = $derived.by((): ExamSpec[] => {
     if (seats <= 1) return [fromDraft($state.snapshot(draft) as Draft)];
-    return Array.from({ length: Math.min(seats, 40) }, (_, i) => randomExam(seed + i * 104_729, seatId(i)));
+    return Array.from({ length: Math.min(seats, 40) }, (_, i) => {
+      const s = randomExam(seed + i * 104_729, seatId(i));
+      return townNames.length === 3 ? { ...s, sites: s.sites.map((site, k) => ({ ...site, name: townNames[k]! })) as ExamSpec['sites'] } : s;
+    });
   });
   const spec = $derived(specs[0]!);
-  const issue = $derived(seats <= 1 ? checkExamSpec(spec) : null);
+  const issue = $derived(seats <= 1 ? checkExamSpec(spec) : townNames.length && townNames.length !== 3 ? { code: 'towns', field: 'towns' } : townNames.length === 3 ? checkExamSpec(spec) : null);
   const issueText = $derived(issue ? t(`exam.issue.${issue.code}`, issue.params ?? {}) : null);
   const facts = $derived(issue ? null : spec.sites.map(siteFacts));
   const title = $derived(seats <= 1 ? buildExamTasks(spec).title : t('exam.manyTitle', { n: specs.length }));
@@ -114,6 +120,7 @@
 
   {#if seats > 1}
     <p class="muted">{t('exam.seatsIntro', { n: specs.length })}</p>
+    <label class="grow">{t('exam.towns')}<input bind:value={towns} placeholder={t('exam.townsPlaceholder')} aria-invalid={invalid('towns')} /></label>
     <table class="list">
       <thead><tr><th scope="col">{t('exam.seatWord')}</th><th scope="col">{t('exam.company')}</th>{#each [0, 1, 2] as i (i)}<th scope="col">{t(i === 0 ? 'exam.seatShort' : 'exam.branchShort', { n: i })}</th>{/each}</tr></thead>
       <tbody>
