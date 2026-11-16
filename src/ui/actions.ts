@@ -2,6 +2,7 @@ import { parseProject, serializeProject, toPcapng } from '../core';
 import { t } from '../i18n';
 import { usedFeatures } from './features';
 import { errorText, featureName } from './labels';
+import { configText, networkDocCsv } from './netdoc';
 import { downloadText, projectFilename } from './persist/files';
 import { dialogs } from './state/dialogs.svelte';
 import { editor } from './state/editor.svelte';
@@ -82,6 +83,23 @@ export async function openProject() {
 }
 
 /** Paketmitschnitt für Wireshark. */
+/** Adressplan und Verbindungen als CSV (mit BOM, damit Excel die Umlaute richtig liest). */
+export function exportNetDoc() {
+  if (editor.topology.devices.length === 0) return editor.notify(t('netdoc.empty'), 'error');
+  const filename = projectFilename(new Date(), editor.topology.title).replace(/\.json$/, '-dokumentation.csv');
+  downloadText(filename, '\ufeff' + networkDocCsv(editor.topology), 'text/csv');
+  editor.notify(t('status.saved', { file: filename }));
+}
+
+/** Konfiguration aller Geräte mit Befehlszeile als Textdatei. */
+export function exportConfigText() {
+  const text = configText(editor.topology);
+  if (!text) return editor.notify(t('netdoc.noCli'), 'error');
+  const filename = projectFilename(new Date(), editor.topology.title).replace(/\.json$/, '-konfiguration.txt');
+  downloadText(filename, text, 'text/plain');
+  editor.notify(t('status.saved', { file: filename }));
+}
+
 export function exportPcap() {
   const sim = simStore.sim;
   const log = sim?.getPacketLog() ?? [];

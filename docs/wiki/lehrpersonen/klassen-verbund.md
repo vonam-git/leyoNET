@@ -23,7 +23,7 @@ Das Dashboard rechnet in Ihrem Browser alle 20 Sekunden den ganzen Verbund durch
 ## Didaktische Hinweise
 
 - Die erste Viertelstunde gehört dem Anschluss: Die Klasse sieht live, wie ein Standort nach dem anderen grün wird. Das motiviert.
-- Danach die Verbund-Übungen im Katalog, z.B. den eigenen Webserver per Portweiterleitung veröffentlichen ([[nat]]).
+- Danach die Verbund-Übungen im Katalog, z.B. den eigenen Webserver per Portweiterleitung veröffentlichen ([[nat]]). Jede Verbund-Übung zeigt im Aufgabenfenster den Kasten «Dein Platz im Klassen-Verbund» mit Platznummer, Transitnetz, WAN-Adresse, Provider und Zentrale für genau diesen Platz und nennt das Ziel in einem Satz.
 - Fehlersuche gemeinsam: Ein Klick auf einen Standort im Dashboard zeigt sein Netz, die Klasse sucht den Fehler mit.
 
 Ausführlich: [Klassen-Verbund](https://github.com/vonam-git/leyoNET/blob/main/docs/verbund.md).

@@ -2,7 +2,7 @@
 titel: Netze dokumentieren
 kurz: Bereiche mit Netz und VLAN, Notizen, Racks, Stockwerke, Snapshots und Richtpreise: wie ein Netzplan entsteht, den man auch abgeben kann.
 reihenfolge: 5
-hilfe: [areas, racks, floors, snapshots, costs]
+hilfe: [areas, racks, floors, snapshots, costs, netdoc]
 demos: [rzVerbund]
 uebungen: [vlan-colors, budget-office]
 verwandt: [netzwerkdesign, vlan]
@@ -19,6 +19,7 @@ Ein Netz, das niemand versteht, lässt sich nicht betreiben. In leyoNET ist die 
 - **Ports:** Jeder Anschluss hat eine Farbe und eine Beschreibung («Uplink Core»), wie die Etiketten im echten Rack.
 - **Stockwerke:** Geräte und Bereiche liegen auf Stockwerken; WLAN-Signale werden über Stockwerke schwächer.
 - **Snapshots:** benannte Zwischenstände, automatisch vor jedem Start der Simulation.
+- **Export:** Datei → «Netzdokumentation exportieren (CSV)» liefert Adressplan und Verbindungen als Tabelle, «Konfiguration als Text exportieren» die Konfiguration aller Router, Switches und Firewalls.
 - **Kosten:** Richtpreise für alle Geräte und Kabel, Total in CHF; Übungen können ein Budget verlangen.
 
 ## Ein gutes Beispiel

@@ -32,7 +32,7 @@ export const HELP_GROUPS: { id: string; topics: string[] }[] = [
   { id: 'security', topics: ['firewall', 'acl', 'vpn'] },
   { id: 'services', topics: ['web', 'mail', 'voip', 'cli', 'ssh'] },
   { id: 'analysis', topics: ['sniffer', 'osi', 'osiStep', 'filter', 'pcap'] },
-  { id: 'documentation', topics: ['areas', 'racks', 'floors', 'snapshots'] },
+  { id: 'documentation', topics: ['areas', 'racks', 'floors', 'snapshots', 'netdoc'] },
 ];
 
 export const HELP_TOPICS = HELP_GROUPS.flatMap((g) => g.topics);

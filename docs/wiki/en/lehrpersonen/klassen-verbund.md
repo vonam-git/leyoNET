@@ -18,7 +18,7 @@ Every 20 seconds the dashboard computes the whole network in your browser and ch
 ## Teaching notes
 
 - The first quarter of an hour belongs to connecting: the class sees live how one site after another turns green. That motivates.
-- Then the class network exercises in the catalog, e.g. publishing your own web server via port forwarding ([[nat]]).
+- Then the class network exercises in the catalog, e.g. publishing your own web server via port forwarding ([[nat]]). Every class network exercise shows the box “Your seat in the class network” in the task window, with seat number, transit network, WAN address, provider and hub for exactly this seat, and states the goal in one sentence.
 - Troubleshooting together: clicking a site in the dashboard shows its network, the class helps find the mistake.
 
 In detail: [class network](https://github.com/vonam-git/leyoNET/blob/main/docs/verbund.md) (in German).

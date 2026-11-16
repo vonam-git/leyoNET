@@ -22,7 +22,7 @@ Rechner (du)  ──git push──►  GitHub: develop  ──Plesk Git (Pull)�
      mkdir -p server/tmp && touch server/tmp/restart.txt
      ```
 3. **Node.js aktivieren** (bei der Subdomain auf **Node.js**):
-   - Node.js-Version: **18 oder neuer** (empfohlen: die neueste LTS)
+   - Node.js-Version: **22 oder neuer** (die neueste LTS; ältere Versionen erhalten keine Sicherheitsupdates mehr)
    - Anwendungsmodus: `production`
    - Anwendungsstamm: **`/httpdocs/server`** (dort liegt eine eigene `package.json` ohne Abhängigkeiten; im Hauptordner würde Plesk ab Version 18.0.81 wegen Vite eine «statische» App erkennen und den Node-Server nicht starten)
    - Dokumentstamm: `/httpdocs/server/public` (absichtlich leer, so ist der Quellcode nicht direkt erreichbar)
