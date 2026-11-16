@@ -74,6 +74,7 @@ Switch(config-ext-nacl)#
 | `show interfaces trunk` | Trunks mit Native VLAN, erlaubten und aktiven VLANs (Switch) |
 | `show interfaces status` | Ports mit Status und VLAN (Switch) |
 | `show spanning-tree` | Root-Bridge, Port-Rollen und -Zustände (Switch) |
+| `show power inline` | PoE-Budget, Verbrauch und gespeiste Geräte je Port (Switch mit PoE) |
 | `show access-lists` (auch `show ip access-lists`) | Zugriffslisten mit Ports und Treffern (Switch) |
 | `show firewall` | Firewall-Regeln mit Trefferzählern, blockierte Pakete, gemerkte Verbindungen (Router, Firewall) |
 | `ping 192.168.1.10` | vier Echo-Anfragen vom Gerät aus (Simulation) |
@@ -223,6 +224,9 @@ interface port24
  switchport trunk allowed vlan 10,20      ! nur diese VLANs (add/remove/except/all/none)
  switchport trunk native vlan 99          ! VLAN ohne Tag
  description Uplink zum Router
+!
+interface port5
+ power inline never            ! kein PoE an diesem Port (power inline auto = wieder erlauben)
 !
 interface range port7-8
  channel-group 1 mode active   ! Port-Channel mit LACP (passive; on = ohne LACP); no channel-group

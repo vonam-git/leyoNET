@@ -155,7 +155,8 @@ Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routi
 | Switch, L3-Switch | Verbinden Geräte im selben Netz; der L3-Switch routet zusätzlich zwischen VLANs. |
 | Router | Verbindet Netze. Ports wahlweise Ethernet oder seriell. NAT, OSPF, RIP, BGP; für IPv6 OSPFv3 und RIPng. |
 | Firewall | Routet wie ein Router, filtert ab Werk: Zonen WAN, LAN, DMZ, OPT; von innen nach aussen offen, vom WAN gesperrt. |
-| Access Point | WLAN-Funkzelle. |
+| Access Point | WLAN-Funkzelle; mit Netzteil oder per PoE gespeist. |
+| IP-Telefon, IP-Kamera | Endgeräte, die ihren Strom per PoE vom Switch beziehen (Klasse 2, Kamera 3, schwenkbar 4). Ohne Strom sind sie aus (grau mit Blitz). |
 | Modem | Kabel, Glasfaser, Mobilfunk, ADSL oder VDSL zum Provider. |
 | Internet-Box (CPE) | Wie zu Hause: Modem, Router mit NAT, DHCP-Server und vier LAN-Buchsen in einem Gerät. Ab Werk LAN 192.168.1.1/24; einzutragen sind nur WAN-Adresse und Gateway des Providers. |
 | Internet | Provider mit öffentlichen Adressen und Webseiten. |

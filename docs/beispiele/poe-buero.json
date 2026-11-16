@@ -1,0 +1,262 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d1",
+        "type": "switch",
+        "name": "Switch PoE",
+        "position": {
+          "x": 400,
+          "y": 260
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:01:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:01:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:01:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:01:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:01:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:01:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:01:07"
+          }
+        ],
+        "vlanDb": [],
+        "poe": {
+          "standard": "at",
+          "budget": 80
+        }
+      },
+      {
+        "id": "d2",
+        "type": "ipphone",
+        "name": "Telefon 1",
+        "position": {
+          "x": 160,
+          "y": 120
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "192.168.10.21",
+            "mask": "255.255.255.0"
+          }
+        ]
+      },
+      {
+        "id": "d3",
+        "type": "ipphone",
+        "name": "Telefon 2",
+        "position": {
+          "x": 160,
+          "y": 260
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ip": "192.168.10.22",
+            "mask": "255.255.255.0"
+          }
+        ]
+      },
+      {
+        "id": "d4",
+        "type": "camera",
+        "name": "Kamera Eingang",
+        "position": {
+          "x": 400,
+          "y": 80
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ip": "192.168.10.51",
+            "mask": "255.255.255.0"
+          }
+        ]
+      },
+      {
+        "id": "d5",
+        "type": "camera",
+        "name": "Kamera Lager",
+        "position": {
+          "x": 640,
+          "y": 80
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ip": "192.168.10.52",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "variant": "ptz"
+      },
+      {
+        "id": "d6",
+        "type": "accesspoint",
+        "name": "AP Büro",
+        "position": {
+          "x": 640,
+          "y": 260
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:06:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:06:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:06:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:06:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:06:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:06:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:06:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:06:07"
+          },
+          {
+            "index": 8,
+            "mac": "02:00:00:00:06:08"
+          }
+        ],
+        "power": "poe"
+      },
+      {
+        "id": "d7",
+        "type": "pc",
+        "name": "PC Empfang",
+        "position": {
+          "x": 400,
+          "y": 440
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:07:00",
+            "ip": "192.168.10.10",
+            "mask": "255.255.255.0"
+          }
+        ]
+      }
+    ],
+    "cables": [
+      {
+        "id": "c8",
+        "a": {
+          "device": "d1",
+          "iface": 0
+        },
+        "b": {
+          "device": "d2",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c9",
+        "a": {
+          "device": "d1",
+          "iface": 1
+        },
+        "b": {
+          "device": "d3",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c10",
+        "a": {
+          "device": "d1",
+          "iface": 2
+        },
+        "b": {
+          "device": "d4",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c11",
+        "a": {
+          "device": "d1",
+          "iface": 3
+        },
+        "b": {
+          "device": "d5",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c12",
+        "a": {
+          "device": "d1",
+          "iface": 4
+        },
+        "b": {
+          "device": "d6",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c13",
+        "a": {
+          "device": "d1",
+          "iface": 5
+        },
+        "b": {
+          "device": "d7",
+          "iface": 0
+        }
+      }
+    ],
+    "nextId": 14
+  },
+  "configuration": {}
+}

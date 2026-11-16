@@ -7,6 +7,7 @@ import { DEVICE_TYPES, isSwitchType } from '../model/devices';
 import { cablesOf, otherEnd, vlanColor, vlanExists } from '../model/topology';
 import { linkStatus, mediumOf } from '../model/links';
 import { costOf } from '../model/costs';
+import { poeReport } from '../model/poe';
 import { duplicateAddresses } from '../model/duplicates';
 import { isForeignId, isInfraId } from '../model/federation';
 import { MEDIA, type Device, type DeviceType, type Medium, type TagColor, type Topology } from '../model/types';
@@ -44,6 +45,8 @@ export type Check =
   | { type: 'verbundSite'; level?: 'online' | 'services' }
   /** Modem hat seine Zugangsleitung aufgebaut. */
   | { type: 'modemOnline'; device: string }
+  /** Gerät wird per PoE gespeist (IEEE 802.3, Klausel 33/145). */
+  | { type: 'poePowered'; device: string }
   /** Alle (oder mindestens `min`) Rechner der Client-Gruppe haben eine Adresse. */
   | { type: 'groupLeases'; device: string; min?: number }
   /** Gesamtkosten höchstens so viele CHF. */
@@ -101,6 +104,7 @@ export const CHECK_TYPES = [
   'noDuplicateIp',
   'seenAs',
   'modemOnline',
+  'poePowered',
   'verbundSite',
   'groupLeases',
   'budget',
@@ -527,6 +531,12 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       const modem = bootedSimulation(topology).getDeviceState(device.id).modem;
       return modem?.phase === 'online' ? { id, passed: true } : fail(id, 'modemOffline', { name: device.name });
     }
+    case 'poePowered': {
+      const device = need(check.device);
+      if (!device) return missing(check.device);
+      const state = poeReport(topology).devices.get(device.id);
+      return state?.powered ? { id, passed: true } : fail(id, 'noPoe', { name: device.name });
+    }
     case 'groupLeases': {
       const device = need(check.device);
       if (!device) return missing(check.device);
@@ -792,6 +802,7 @@ export function readTasks(value: unknown, invalid: (path: string) => never, read
           check = { type, from: str(c.from, `${cp}.from`), to: str(c.to, `${cp}.to`), address: str(c.address, `${cp}.address`) };
           break;
         case 'modemOnline':
+        case 'poePowered':
           check = { type, device: str(c.device, `${cp}.device`) };
           break;
         case 'verbundSite':

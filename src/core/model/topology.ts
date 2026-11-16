@@ -8,6 +8,7 @@ import { cliIfaceName } from '../cli/names';
 import { DEFAULT_GROUP_SIZE, DEVICE_SPECS, MAX_GROUP_SIZE, isRouterLike, canAutoRoute, canHostServices, canRouteDynamically, hasRoutingTable, isRackable, isSwitchType, isWifiCapable } from './devices';
 import { MIN_SIGNAL, portMedium, signalBetween } from './links';
 import { macFor, normalizeMac } from './mac';
+import { MAX_POE_BUDGET, POE_STANDARDS, canBePowered, canSupplyPoe } from './poe';
 import { MAX_ACLS, MAX_VPN_TUNNELS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type VpnTunnel } from './security';
 import { formatCidr6, formatIp6, isLinkLocal6, isLoopback6, isMulticast6, isUnspecified6, networkOf6, parseCidr6, parseIp6 } from '../net/ipv6';
 import type {
@@ -33,7 +34,9 @@ import type {
   Mailbox,
   NetInterface,
   Point,
+  PoeConfig,
   PortForward,
+  PowerSource,
   StaticRoute,
   SubInterface,
   ChannelMode,
@@ -120,6 +123,10 @@ export type ErrorCode =
   | 'duplicateRoute'
   | 'dhcpServerNeedsStatic'
   | 'notAServer'
+  | 'notPoeCapable'
+  | 'notPowerable'
+  | 'invalidPoeBudget'
+  | 'invalidPoeClass'
   | 'dhcpServerNeedsAddress'
   | 'dhcpRangeOutsideSubnet'
   | 'dhcpRangeOrder'
@@ -2618,4 +2625,45 @@ export function setVerbundProvider(t: Topology, id: string, on: boolean): Result
   if (device.type !== 'internet') return { ok: false, error: { code: 'verbundNotSupported' } };
   const cleared = { ...t, devices: t.devices.map((d) => (d.verbundProvider ? without(d, 'verbundProvider') : d)) };
   return ok(on ? updateDevice(cleared, id, (d) => ({ ...d, verbundProvider: true })) : cleared);
+}
+
+// --- Power over Ethernet ----------------------------------------------------------
+
+/** PoE eines Switches einschalten (Typ und Budget in Watt) oder mit null ausschalten. */
+export function setPoe(t: Topology, id: string, config: PoeConfig | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canSupplyPoe(device.type)) return fail('notPoeCapable');
+  if (config === null) return ok(updateDevice(t, id, (d) => without(d, 'poe')));
+  if (!(config.standard in POE_STANDARDS)) return fail('invalidPoeBudget', { value: String(config.standard) });
+  const budget = Math.round(config.budget * 10) / 10;
+  if (!Number.isFinite(budget) || budget <= 0 || budget > MAX_POE_BUDGET) return fail('invalidPoeBudget', { value: String(config.budget) });
+  return ok(updateDevice(t, id, (d) => ({ ...d, poe: { standard: config.standard, budget } })));
+}
+
+/** PoE an einem Port abschalten («power inline never») oder wieder erlauben. */
+export function setPortPoe(t: Topology, id: string, index: number, enabled: boolean): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canSupplyPoe(device.type)) return fail('notPoeCapable');
+  if (!device.interfaces[index]) return fail('unknownInterface');
+  return ok(updatePort(t, id, index, (i) => (enabled ? without(i, 'poeOff') : { ...i, poeOff: true })));
+}
+
+/** Stromversorgung eines gespeisten Geräts: PoE oder Netzteil. */
+export function setPowerSource(t: Topology, id: string, power: PowerSource): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canBePowered(device.type)) return fail('notPowerable');
+  return ok(updateDevice(t, id, (d) => ({ ...d, power })));
+}
+
+/** PoE-Klasse 0–8 eines gespeisten Geräts; null = Standard des Geräts. */
+export function setPoeClass(t: Topology, id: string, poeClass: number | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canBePowered(device.type)) return fail('notPowerable');
+  if (poeClass === null) return ok(updateDevice(t, id, (d) => without(d, 'poeClass')));
+  if (!Number.isInteger(poeClass) || poeClass < 0 || poeClass > 8) return fail('invalidPoeClass', { value: String(poeClass) });
+  return ok(updateDevice(t, id, (d) => ({ ...d, poeClass })));
 }

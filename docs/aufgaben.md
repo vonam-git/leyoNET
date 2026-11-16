@@ -69,6 +69,7 @@ Statische Prüfungen schauen nur auf das gebaute Netz. **Dynamische** Prüfungen
 | `noDuplicateIp` ⚡ | – | keine IP-Adresse im selben Netz doppelt vergeben ist (auch per DHCP bezogene) |
 | `seenAs` ⚡ | `from`, `to`, `address` | ein Ping von `from` bei `to` mit der Absenderadresse `address` ankommt (prüft NAT: PAT, SNAT, 1:1) |
 | `modemOnline` ⚡ | `device` | das Modem seine Zugangsleitung aufgebaut hat |
+| `poePowered` | `device` | das Gerät (IP-Telefon, Kamera, Access Point) per PoE Strom bekommt: PoE am Switch eingeschaltet, Klasse passt zum Typ, Budget reicht |
 | `groupLeases` ⚡ | `device` (Client-Gruppe), `min`? (Standard: alle) | so viele Mitglieder der Gruppe eine Adresse per DHCP haben |
 | `budget` | `max` (CHF) | die Richtpreise aller Geräte, Kabel und Module zusammen höchstens `max` ergeben |
 | `linkUp` | `a`, `b`, `medium`? (`tp`, `fiber`, `wireless`, `serial`, `coax`, `dsl`, `cellular`) | die beiden Geräte direkt verbunden sind, die Verbindung aktiv ist (keine abgeschalteten Ports, passende Kapselung …) und optional die Art stimmt |

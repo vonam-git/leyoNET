@@ -94,6 +94,36 @@
       "max": 600,
       "beschreibung": "Business-Access-Point Wi-Fi 5/6"
     },
+    "ipphone": {
+      "min": 80,
+      "max": 400,
+      "beschreibung": "SIP-Tischtelefon mit PoE"
+    },
+    "camera": {
+      "min": 120,
+      "max": 700,
+      "beschreibung": "IP-Kamera (Dome oder Bullet), PoE"
+    },
+    "poePort.af": {
+      "min": 4,
+      "max": 20,
+      "beschreibung": "Zuschlag je Switch-Port für PoE (802.3af)"
+    },
+    "poePort.at": {
+      "min": 6,
+      "max": 30,
+      "beschreibung": "Zuschlag je Switch-Port für PoE+ (802.3at)"
+    },
+    "poePort.bt3": {
+      "min": 12,
+      "max": 50,
+      "beschreibung": "Zuschlag je Switch-Port für PoE++ Typ 3 (802.3bt)"
+    },
+    "poePort.bt4": {
+      "min": 18,
+      "max": 70,
+      "beschreibung": "Zuschlag je Switch-Port für PoE++ Typ 4 (802.3bt)"
+    },
     "rack": {
       "min": 400,
       "max": 1800,

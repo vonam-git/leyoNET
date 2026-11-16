@@ -22,6 +22,12 @@ const ICONS: Record<string, IconShape[]> = {
   pc: [rect(-24, -18, 30, 22, 2), line('M-9 4 V10 M-15 11 H-3'), rect(11, -18, 13, 30, 2), line('M14 -12 H21 M14 -7 H21')],
   'server:rack': [rect(-24, -13, 48, 11, 2), rect(-24, 1, 48, 11, 2), line('M-18 -7.5 H-6 M-18 6.5 H-6'), circle(17, -7.5, 1.8, 'fill'), circle(17, 6.5, 1.8, 'fill')],
   server: [rect(-13, -20, 26, 40, 3), line('M-8 -13 H8 M-8 -7 H8 M-8 -1 H8'), circle(0, 12, 2.2, 'fill')],
+  // IP-Telefon: Hörer links, Gehäuse mit Anzeige und Tasten.
+  ipphone: [path('M-24 -13 Q-24 -18 -19 -18 H-14 Q-9 -18 -9 -13 V11 Q-9 16 -14 16 H-19 Q-24 16 -24 11 Z'), rect(-4, -15, 28, 31, 3), rect(1, -11, 18, 7, 1), circle(4, 3, 1.5, 'fill'), circle(10, 3, 1.5, 'fill'), circle(16, 3, 1.5, 'fill'), circle(4, 9, 1.5, 'fill'), circle(10, 9, 1.5, 'fill'), circle(16, 9, 1.5, 'fill')],
+  // IP-Kamera: Gehäuse mit Objektiv, Halterung an der Wand.
+  camera: [rect(-20, -14, 34, 17, 4), circle(14, -5.5, 6), circle(14, -5.5, 2.4, 'fill'), line('M-6 3 V11 M-16 15 H4 M-6 11 L-12 15 M-6 11 L0 15'), line('M-15 -8 H-5')],
+  // Schwenkbare Kamera: Kuppel unter der Deckenhalterung.
+  'camera:ptz': [rect(-20, -16, 40, 9, 3), path('M-15 -7 H15 A15 15 0 0 1 -15 -7 Z'), circle(0, 1, 4, 'fill'), line('M-6 13 Q0 16 6 13')],
   clientgroup: [rect(-8, -20, 26, 18, 2), rect(-16, -12, 26, 18, 2), rect(-24, -4, 26, 18, 2), line('M-11 14 V19 M-17 19 H-5')],
   switch: [rect(-25, -12, 50, 24, 4), line('M-14 -5 H14 M9 -8 L14 -5 L9 -2 M14 5 H-14 M-9 2 L-14 5 L-9 8')],
   l3switch: [rect(-25, -12, 50, 24, 4), line('M-14 -5 H6 M1 -8 L6 -5 L1 -2 M6 5 H-14 M-9 2 L-14 5 L-9 8'), circle(16, 0, 6), line('M13 0 H19 M16 -3 V3')],

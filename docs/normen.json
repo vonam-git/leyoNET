@@ -260,12 +260,15 @@
       "id": "IEEE 802.3",
       "auch": [
         "IEEE 802.3ab",
-        "IEEE 802.3z"
+        "IEEE 802.3z",
+        "IEEE 802.3af",
+        "IEEE 802.3at",
+        "IEEE 802.3bt"
       ],
       "organisation": "IEEE",
-      "verwendung": "Ethernet, 1000BASE-T, 1000BASE-SX/LX",
+      "verwendung": "Ethernet, 1000BASE-T, 1000BASE-SX/LX, Power over Ethernet (Klausel 33: Typ 1/2, Klausel 145: Typ 3/4)",
       "aktuell": "IEEE 802.3-2022",
-      "bemerkung": "802.3ab und 802.3z sind Ergänzungen, die in der Gesamtausgabe enthalten sind. Die Bezeichnungen 1000BASE-T/-SX/-LX gelten unverändert.",
+      "bemerkung": "802.3ab und 802.3z sind Ergänzungen, die in der Gesamtausgabe enthalten sind. Die Bezeichnungen 1000BASE-T/-SX/-LX gelten unverändert. 802.3af, 802.3at und 802.3bt (PoE) sind ebenfalls in IEEE 802.3-2022 enthalten (Klausel 33 und 145).",
       "geprueft": "2026-10-30",
       "titel": "IEEE Standard for Ethernet"
     },

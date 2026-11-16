@@ -315,6 +315,22 @@ export const DEMOS: readonly Demo[] = [
     ],
   },
   {
+    id: 'poe',
+    file: 'poe-buero.json',
+    topic: 'switching',
+    layers: [1],
+    actions: [{ at: 600, device: 'PC Empfang', command: 'ping 192.168.10.51' }],
+    check: { kind: 'ping', device: 'PC Empfang' },
+    until: 8000,
+    tour: [
+      { sim: false, highlight: 'Switch PoE' },
+      { highlight: 'Switch PoE', window: { device: 'Switch PoE', tab: 'poe' } },
+      { highlight: 'AP Büro', window: { device: 'AP Büro', tab: 'poe' } },
+      { sim: true, pause: false, action: { at: 0, device: 'PC Empfang', command: 'ping 192.168.10.51' }, highlight: 'Kamera Eingang' },
+      { highlight: 'Switch PoE' },
+    ],
+  },
+  {
     id: 'portChannel',
     file: 'port-channel.json',
     topic: 'switching',

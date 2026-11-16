@@ -1,6 +1,6 @@
 {
   "version": "1.5.1",
-  "date": "2026-11-16T06:07:29.914Z",
+  "date": "2026-11-16T06:57:45.301Z",
   "checks": [
     {
       "id": "privacy.noExternal",
@@ -108,7 +108,7 @@
       "id": "standards.registered",
       "category": "standards",
       "status": "pass",
-      "detail": "79 zitierte Normen, alle im Verzeichnis (63 RFCs, 14 IEEE/ITU-T/CableLabs)."
+      "detail": "82 zitierte Normen, alle im Verzeichnis (63 RFCs, 14 IEEE/ITU-T/CableLabs)."
     },
     {
       "id": "standards.reviewed",
@@ -120,7 +120,7 @@
       "id": "standards.prices",
       "category": "standards",
       "status": "pass",
-      "detail": "37 Richtpreise im plausiblen Bereich, zuletzt am 2026-11-01 mit dem Markt verglichen."
+      "detail": "43 Richtpreise im plausiblen Bereich, zuletzt am 2026-11-01 mit dem Markt verglichen."
     }
   ]
 }

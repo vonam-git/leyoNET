@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_SPECS, canAccessList, canAutoRoute, canFirewall, canVrf, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterLike, isRouterType, isSwitchType } from '../../core';
+  import { DEVICE_SPECS, canBePowered, canSupplyPoe, needsPoe, canAccessList, canAutoRoute, canFirewall, canVrf, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterLike, isRouterType, isSwitchType } from '../../core';
   import { t } from '../../i18n';
   import { typeLabel } from '../labels';
   import { dialogs, type DeviceWindowState } from '../state/dialogs.svelte';
@@ -25,6 +25,7 @@
   import NetDevicePanel from './NetDevicePanel.svelte';
   import PortPanel from './PortPanel.svelte';
   import PortTable from './PortTable.svelte';
+  import PoeConfig from './PoeConfig.svelte';
   import RouterConfig from './RouterConfig.svelte';
   import RoutingEditor from './RoutingEditor.svelte';
   import Routing6Editor from './Routing6Editor.svelte';
@@ -62,7 +63,7 @@
   );
   const position = $derived(device ? order.findIndex((d) => d.id === device.id) : -1);
 
-  type TabId = 'general' | 'addresses' | 'ports' | 'routing' | 'nat' | 'relay' | 'dhcp' | 'switching' | 'wlan' | 'mail' | 'services' | 'modem' | 'group' | 'state' | 'firewall' | 'acl' | 'vrf' | 'vpn';
+  type TabId = 'general' | 'addresses' | 'ports' | 'routing' | 'nat' | 'relay' | 'dhcp' | 'switching' | 'wlan' | 'mail' | 'services' | 'modem' | 'group' | 'state' | 'firewall' | 'acl' | 'vrf' | 'vpn' | 'poe';
 
   const tabs = $derived.by((): TabId[] => {
     if (!device) return [];
@@ -83,6 +84,7 @@
     if (canVrf(d.type) && ui.has('net.vrf')) list.push('vrf');
     if (isRouterLike(d.type) && ui.has('net.vpn')) list.push('vpn');
     if (isSwitchType(d.type)) list.push('switching');
+    if ((canSupplyPoe(d.type) && (ui.has('net.poe') || d.poe)) || (canBePowered(d.type) && (ui.has('net.poe') || needsPoe(d)))) list.push('poe');
     if (d.type === 'accesspoint' || (role === 'endpoint' && canUseWifi(d) && ui.has('medium.wireless'))) list.push('wlan');
     if (role === 'endpoint' && ui.has('service.mail') && d.type !== 'clientgroup') list.push('mail');
     if (canHostServices(d.type)) list.push('services');
@@ -95,7 +97,7 @@
     return wanted && tabs.includes(wanted) ? wanted : (tabs[0] ?? 'general');
   });
 
-  const HELP: Partial<Record<TabId, string>> = { routing: 'routing', nat: 'nat', relay: 'dhcp', dhcp: 'dhcp', wlan: 'wlan', mail: 'mail', switching: 'vlan', services: 'dhcp', firewall: 'firewall', acl: 'acl', vrf: 'vrf', vpn: 'vpn' };
+  const HELP: Partial<Record<TabId, string>> = { routing: 'routing', nat: 'nat', relay: 'dhcp', dhcp: 'dhcp', wlan: 'wlan', mail: 'mail', switching: 'vlan', services: 'dhcp', firewall: 'firewall', acl: 'acl', vrf: 'vrf', vpn: 'vpn', poe: 'poe' };
 
   // Gerät gelöscht oder Projekt gewechselt: schliessen.
   $effect(() => {
@@ -286,6 +288,8 @@
         {:else if tab === 'switching'}
           <SwitchConfig {device} />
           {#if device.type === 'l3switch' && ui.has('net.vxlan')}<VxlanConfig {device} />{/if}
+        {:else if tab === 'poe'}
+          <PoeConfig {device} />
         {:else if tab === 'wlan'}
           {#if device.type === 'accesspoint'}<WlanConfig {device} />{:else}<h3>{t('wifi.title')}</h3><WifiClientForm {device} />{/if}
         {:else if tab === 'mail'}

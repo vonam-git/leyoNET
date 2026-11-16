@@ -3,6 +3,7 @@ export * from './model/devices';
 export * from './model/mac';
 export * from './model/topology';
 export * from './model/links';
+export * from './model/poe';
 export * from './model/duplicates';
 export * from './model/fragment';
 export * from './model/federation';

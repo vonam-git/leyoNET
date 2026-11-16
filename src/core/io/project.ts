@@ -1,3 +1,4 @@
+import { MAX_POE_BUDGET, POE_STANDARDS, canBePowered, canSupplyPoe } from '../model/poe';
 import { DEVICE_SPECS, canAutoRoute, isDeviceType, isRouterLike, isSwitchType } from '../model/devices';
 import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME } from '../net/routing';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
@@ -10,6 +11,7 @@ import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, no
 import { logicalInterfaces, sviId, vrfOfIface } from '../net/routing';
 import type {
   DhcpPool,
+  PoeStandard,
   Cable,
   Device,
   DhcpServerConfig,
@@ -410,6 +412,7 @@ function readDevice(v: unknown, path: string): Device {
       iface.aclIn = name;
     }
     if (io.shutdown !== undefined && bool(io.shutdown, `${p}.shutdown`)) iface.shutdown = true;
+    if (io.poeOff !== undefined && bool(io.poeOff, `${p}.poeOff`)) iface.poeOff = true;
     if (io.color !== undefined) iface.color = color(io.color, `${p}.color`);
     if (io.description !== undefined) iface.description = text(io.description, `${p}.description`, 80);
     if (io.sfpSlot !== undefined && bool(io.sfpSlot, `${p}.sfpSlot`)) iface.sfpSlot = true;
@@ -562,6 +565,22 @@ function readDevice(v: unknown, path: string): Device {
     const priority = int(o.stpPriority, `${path}.stpPriority`);
     if (priority < 0 || priority > 61440) throw new Invalid(`${path}.stpPriority`);
     device.stpPriority = priority;
+  }
+  if (o.poe !== undefined) {
+    const poe = obj(o.poe, `${path}.poe`);
+    if (!canSupplyPoe(device.type) || typeof poe.standard !== 'string' || !(poe.standard in POE_STANDARDS)) throw new Invalid(`${path}.poe`);
+    const budget = num(poe.budget, `${path}.poe.budget`);
+    if (budget <= 0 || budget > MAX_POE_BUDGET) throw new Invalid(`${path}.poe.budget`);
+    device.poe = { standard: poe.standard as PoeStandard, budget };
+  }
+  if (o.power !== undefined) {
+    if (!canBePowered(device.type) || (o.power !== 'poe' && o.power !== 'local')) throw new Invalid(`${path}.power`);
+    device.power = o.power;
+  }
+  if (o.poeClass !== undefined) {
+    const poeClass = int(o.poeClass, `${path}.poeClass`);
+    if (!canBePowered(device.type) || poeClass < 0 || poeClass > 8) throw new Invalid(`${path}.poeClass`);
+    device.poeClass = poeClass;
   }
   if (o.portForwards !== undefined) {
     device.portForwards = arr(o.portForwards, `${path}.portForwards`).map((raw, i) => {

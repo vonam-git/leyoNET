@@ -147,6 +147,33 @@ const ENTRIES: CatalogEntry[] = [
     },
   },
   {
+    id: 'poe',
+    stars: 2,
+    features: ['net.poe', 'device.ipphone', 'device.camera', 'device.accesspoint'],
+    build() {
+      const s = new Start()
+        .add('switch', 'Switch', 0, 0, { ports: 8 })
+        .add('ipphone', 'Telefon 1', -300, -140)
+        .add('ipphone', 'Telefon 2', -300, 0)
+        .add('camera', 'Kamera', 0, -200, { variant: 'ptz' })
+        .add('accesspoint', 'Access Point', 300, -140)
+        .add('pc', 'PC Empfang', 300, 60)
+        .link('PC Empfang', 'Switch')
+        .host('Kamera', '192.168.20.50', '24')
+        .host('PC Empfang', '192.168.20.10', '24');
+      return {
+        topology: s.topology,
+        tasks: task('poe', 2, [
+          goal('poe', 1, { type: 'poePowered', device: 'Telefon 1' }),
+          goal('poe', 2, { type: 'poePowered', device: 'Telefon 2' }),
+          goal('poe', 3, { type: 'poePowered', device: 'Kamera' }),
+          goal('poe', 4, { type: 'poePowered', device: 'Access Point' }),
+          goal('poe', 5, { type: 'ping', from: 'PC Empfang', to: 'Kamera' }),
+        ]),
+      };
+    },
+  },
+  {
     id: 'wlan',
     stars: 3,
     build() {

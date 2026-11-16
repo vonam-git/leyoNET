@@ -13,6 +13,8 @@ export const DEVICE_TYPES: readonly DeviceType[] = [
   'notebook',
   'pc',
   'server',
+  'ipphone',
+  'camera',
   'clientgroup',
   'switch',
   'l3switch',
@@ -32,6 +34,9 @@ export const DEVICE_SPECS: Record<DeviceType, DeviceSpec> = {
   notebook: { role: 'endpoint', defaultInterfaces: 1, minInterfaces: 1, maxInterfaces: 1 },
   pc: { role: 'endpoint', defaultInterfaces: 1, minInterfaces: 1, maxInterfaces: 1 },
   server: { role: 'endpoint', defaultInterfaces: 1, minInterfaces: 1, maxInterfaces: 1 },
+  // IP-Telefon und IP-Kamera: Endgeräte mit einem Anschluss, gespeist per PoE (siehe poe.ts).
+  ipphone: { role: 'endpoint', defaultInterfaces: 1, minInterfaces: 1, maxInterfaces: 1 },
+  camera: { role: 'endpoint', defaultInterfaces: 1, minInterfaces: 1, maxInterfaces: 1 },
   clientgroup: { role: 'endpoint', defaultInterfaces: 1, minInterfaces: 1, maxInterfaces: 1 },
   switch: { role: 'distribution', sfpSlots: 0, defaultInterfaces: 8, minInterfaces: 2, maxInterfaces: 24 },
   l3switch: { role: 'distribution', sfpSlots: 0, defaultInterfaces: 8, minInterfaces: 2, maxInterfaces: 48 },

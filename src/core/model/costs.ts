@@ -1,6 +1,6 @@
 import { mediumOf } from './links';
 import { copperPorts } from './topology';
-import type { Device, Medium, ModemKind, SfpModule, Topology } from './types';
+import type { Device, Medium, ModemKind, PoeStandard, SfpModule, Topology } from './types';
 
 /**
  * Richtpreise in CHF (Schweizer Fachhandel 2026, gerundet, ohne Installation).
@@ -27,6 +27,11 @@ export const PRICES = {
   firewallBase: 650,
   firewallPort: 40,
   accesspoint: 320,
+  /** IP-Tischtelefon (SIP, PoE) und IP-Kamera (Dome, PoE). */
+  ipphone: 180,
+  camera: 260,
+  /** Zuschlag je Kupferport für PoE (Typ 1/2, Typ 3/4). */
+  poePort: { af: 8, at: 12, bt3: 25, bt4: 35 } as Record<PoeStandard, number>,
   rack: 900,
   modem: { cable: 180, fiber: 120, mobile: 280, adsl: 60, vdsl: 110 } as Record<ModemKind, number>,
   legacyModem: 100,
@@ -45,7 +50,7 @@ export function convert(chf: number, currency: Currency): number {
 }
 
 /** Preis eines Geräts ohne eingesteckte Module. */
-export function devicePrice(device: Pick<Device, 'type' | 'interfaces' | 'variant' | 'groupSize' | 'modem'>): number {
+export function devicePrice(device: Pick<Device, 'type' | 'interfaces' | 'variant' | 'groupSize' | 'modem' | 'poe'>): number {
   const slots = device.interfaces.filter((i) => i.sfpSlot).length;
   const serial = device.interfaces.filter((i) => i.serial).length;
   const copper = copperPorts(device as Device).length - serial;
@@ -54,14 +59,18 @@ export function devicePrice(device: Pick<Device, 'type' | 'interfaces' | 'varian
       return PRICES.notebook;
     case 'pc':
       return PRICES.pc;
+    case 'ipphone':
+      return PRICES.ipphone;
+    case 'camera':
+      return PRICES.camera;
     case 'server':
       return device.variant === 'rack' ? PRICES.serverRack : PRICES.server;
     case 'clientgroup':
       return (device.groupSize ?? 0) * PRICES.groupMember;
     case 'switch':
-      return PRICES.switchBase + copper * PRICES.switchPort + slots * PRICES.switchSfp;
+      return PRICES.switchBase + copper * (PRICES.switchPort + (device.poe ? PRICES.poePort[device.poe.standard] : 0)) + slots * PRICES.switchSfp;
     case 'l3switch':
-      return PRICES.l3Base + copper * PRICES.l3Port + slots * PRICES.l3Sfp;
+      return PRICES.l3Base + copper * (PRICES.l3Port + (device.poe ? PRICES.poePort[device.poe.standard] : 0)) + slots * PRICES.l3Sfp;
     case 'router':
       return PRICES.routerBase + copper * PRICES.routerEth + serial * PRICES.routerSerial + slots * PRICES.routerSfp;
     case 'firewall':
