@@ -21,7 +21,8 @@ export function openDesktop(deviceId: string, app?: string) {
     existing.minimized = false;
     if (app) existing.app = app;
   } else {
-    desktops.windows.push({ deviceId, app: app ?? 'terminal', minimized: false });
+    // Beim IP-Telefon öffnet das Telefon selbst (DesktopWindow wählt es, weil «phone» zuerst steht).
+    desktops.windows.push({ deviceId, app: app ?? '', minimized: false });
   }
   desktops.active = deviceId;
 }

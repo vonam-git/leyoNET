@@ -313,41 +313,141 @@ function statsOf(call: Call): CallStats {
   return { ...s, quality: call.received ? rateCall(s) : 'poor' };
 }
 
-/** Telefonanlage: Registrar (Rufnummer → Adresse) und Proxy für alle Anfragen eines Gesprächs. */
+/** Adresse und Port, wie die Anlage sie sieht (nach NAT). */
+interface Addr {
+  ip: string;
+  port: number;
+}
+
+interface Relay {
+  /** Hier sendet der Anrufer seine Sprache hin, von hier geht die Sprache an ihn. */
+  a: number;
+  /** Dasselbe für den Angerufenen. */
+  b: number;
+  /** Gelernte Absender (symmetrisches RTP, «Latching»). */
+  callerMedia?: Addr;
+  calleeMedia?: Addr;
+}
+
+interface ProxyCall {
+  caller: Addr;
+  callee: Addr;
+  /** SDP-Adressen der Telefone; ohne NAT direkt erreichbar. */
+  callerSdp?: { ip: string; port: number };
+  calleeSdp?: { ip: string; port: number };
+  callerNat: boolean;
+  calleeNat: boolean;
+  relay?: Relay;
+}
+
+const RELAY_PORT = 20000;
+const sameAddr = (a: Addr, b: Addr) => a.ip === b.ip && a.port === b.port;
+
+/**
+ * Telefonanlage bzw. SIP-Provider: Registrar (Rufnummer → Adresse) und Proxy für alle Anfragen
+ * eines Gesprächs. Hinter NAT (Heimnetz mit Internet-Box) gilt die Adresse, von der die
+ * Anfrage wirklich kam, samt Port (wie «received» und «rport», RFC 3581). Ist ein Telefon
+ * hinter NAT, leitet die Anlage auch die Sprache weiter (Media-Relay wie ein Session Border
+ * Controller): Die SDP-Adresse wird durch die eigene ersetzt, Ziel ist der Absender der
+ * ersten RTP-Pakete (symmetrisches RTP).
+ */
 export class SipServer {
-  readonly registrations = new Map<string, string>();
+  readonly registrations = new Map<string, { addr: Addr; nat: boolean }>();
+  readonly #calls = new Map<string, ProxyCall>();
+  #relays = 0;
 
   constructor(private readonly host: VoipHost) {}
 
-  #send(dst: string, msg: SipMessage) {
-    this.host.sendIp(dst, { kind: 'udp', srcPort: SIP_PORT, dstPort: SIP_PORT, payload: msg }, { dscp: DSCP.CS5 });
+  #send(to: Addr, msg: SipMessage) {
+    this.host.sendIp(to.ip, { kind: 'udp', srcPort: SIP_PORT, dstPort: to.port, payload: msg }, { dscp: DSCP.CS5 });
   }
 
-  onSip(packet: Ipv4Packet, msg: SipMessage) {
+  /** Ist diese SIP-Nachricht für die Anlage (und nicht für ein Telefon auf demselben Gerät)? */
+  handles(packet: Ipv4Packet, msg: SipMessage): boolean {
+    if (msg.status !== undefined) return this.#calls.has(msg.callId);
+    return msg.method === 'REGISTER' || msg.uri.endsWith(`@${packet.dst}`) || this.#calls.has(msg.callId);
+  }
+
+  onSip(packet: Ipv4Packet, datagram: UdpDatagram, msg: SipMessage) {
     const own = packet.dst;
+    const src: Addr = { ip: packet.src, port: datagram.srcPort };
+    const ctx = this.host.ctx;
+    const call = this.#calls.get(msg.callId);
+
     if (msg.status !== undefined) {
-      // Antwort: eigenen Via-Eintrag entfernen und an den nächsten weitergeben.
-      const via = msg.via[0] === own ? msg.via.slice(1) : msg.via;
-      if (via[0]) this.#send(via[0], { ...msg, via });
+      if (!call) return;
+      const toCaller = sameAddr(src, call.callee);
+      const out: SipMessage = { ...msg, via: msg.via[0] === own ? msg.via.slice(1) : msg.via };
+      if (msg.sdp && toCaller) {
+        call.calleeSdp = msg.sdp;
+        if (call.relay) out.sdp = { ip: own, port: call.relay.a };
+      }
+      this.#send(toCaller ? call.caller : call.callee, out);
+      if (msg.cseqMethod === 'BYE' && msg.status === 200) this.#calls.delete(msg.callId);
       return;
     }
+
     if (msg.method === 'REGISTER') {
       const number = /^sip:([0-9]+)@/.exec(msg.from)?.[1];
-      if (number) this.registrations.set(number, packet.src);
-      this.#send(packet.src, { ...withoutMethod(msg), status: number ? 200 : 404 });
+      const contactIp = msg.contact?.split('@')[1];
+      const nat = contactIp !== undefined && (contactIp !== packet.src || datagram.srcPort !== SIP_PORT);
+      if (number) {
+        this.registrations.set(number, { addr: src, nat });
+        ctx.print(nat ? 'sip.registerNat' : 'sip.register', { number, address: `${src.ip}:${src.port}`, contact: contactIp ?? '' });
+      }
+      this.#send(src, { ...withoutMethod(msg), status: number ? 200 : 404 });
       return;
     }
+
+    if (call) {
+      // Weitere Anfragen eines Gesprächs (ACK, BYE) an die Gegenseite.
+      const fromCaller = sameAddr(src, call.caller);
+      this.#send(fromCaller ? call.callee : call.caller, { ...msg, via: [own, ...msg.via] });
+      return;
+    }
+    if (msg.method !== 'INVITE') return;
     const number = /^sip:([0-9]+)@/.exec(msg.uri)?.[1];
     const target = number ? this.registrations.get(number) : undefined;
     if (!target) {
-      if (msg.method === 'INVITE') this.#send(packet.src, { ...withoutMethod(msg), status: 404 });
+      ctx.print('sip.notFound', { number: number ?? msg.uri });
+      this.#send(src, { ...withoutMethod(msg), status: 404 });
       return;
     }
-    this.#send(target, { ...msg, via: [own, ...msg.via] });
+    const callerNat = !!msg.sdp && msg.sdp.ip !== packet.src;
+    const entry: ProxyCall = { caller: src, callee: target.addr, ...(msg.sdp ? { callerSdp: msg.sdp } : {}), callerNat, calleeNat: target.nat };
+    const out: SipMessage = { ...msg, via: [own, ...msg.via] };
+    if (callerNat || target.nat) {
+      const n = this.#relays++ % 1000;
+      entry.relay = { a: RELAY_PORT + 2 * n, b: RELAY_PORT + 2 * n + 1 };
+      out.sdp = { ip: own, port: entry.relay.b };
+    }
+    this.#calls.set(msg.callId, entry);
+    ctx.print(entry.relay ? 'sip.inviteRelay' : 'sip.invite', { from: msg.from.replace(/^sip:/, ''), to: number!, address: `${target.addr.ip}:${target.addr.port}` });
+    this.#send(target.addr, out);
   }
 
-  state(): { number: string; address: string }[] {
-    return [...this.registrations].map(([number, address]) => ({ number, address })).sort((a, b) => a.number.localeCompare(b.number));
+  /** Sprache über die Anlage (nur bei NAT): an die Gegenseite weitergeben. */
+  onRtp(packet: Ipv4Packet, datagram: UdpDatagram, rtp: RtpPacket) {
+    const port = datagram.dstPort;
+    for (const call of this.#calls.values()) {
+      const relay = call.relay;
+      if (!relay || (port !== relay.a && port !== relay.b)) continue;
+      const fromCaller = port === relay.a;
+      const src: Addr = { ip: packet.src, port: datagram.srcPort };
+      if (fromCaller) relay.callerMedia = src;
+      else relay.calleeMedia = src;
+      // Ziel: gelernter Absender der Gegenseite, ohne NAT auch die Adresse aus ihrem SDP.
+      const dest = fromCaller ? (relay.calleeMedia ?? (call.calleeNat ? undefined : call.calleeSdp)) : (relay.callerMedia ?? (call.callerNat ? undefined : call.callerSdp));
+      if (!dest) return;
+      this.host.sendIp(dest.ip, { kind: 'udp', srcPort: fromCaller ? relay.b : relay.a, dstPort: dest.port, payload: rtp }, { dscp: DSCP.EF });
+      return;
+    }
+  }
+
+  state(): { number: string; address: string; nat?: boolean }[] {
+    return [...this.registrations]
+      .map(([number, r]) => ({ number, address: r.addr.port === SIP_PORT ? r.addr.ip : `${r.addr.ip}:${r.addr.port}`, ...(r.nat ? { nat: true } : {}) }))
+      .sort((a, b) => a.number.localeCompare(b.number));
   }
 }
 

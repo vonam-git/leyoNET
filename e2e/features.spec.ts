@@ -643,3 +643,10 @@ test('Textfeld (Bereich) mit gegliedertem Text', async ({ page }) => {
   await expect(canvas.locator('foreignObject strong')).toHaveText('Ping');
   if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
 });
+
+test('Aufgaben mit KI nur in der Webversion nach Admin-Anmeldung, offline nicht im Menü', async ({ page }) => {
+  await page.getByRole('menubar').getByRole('menuitem', { name: 'Werkzeuge', exact: true }).click();
+  const tools = page.getByRole('menu');
+  await expect(tools.getByRole('menuitem', { name: /^Als Prüfung speichern/ })).toBeVisible();
+  await expect(tools.getByRole('menuitem', { name: /Aufgaben mit KI/ })).toHaveCount(0);
+});

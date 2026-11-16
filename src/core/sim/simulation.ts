@@ -86,7 +86,7 @@ export interface DeviceState {
   mail?: MailClientState;
   mailboxes?: { user: string; count: number }[];
   voip?: VoipState;
-  sipRegistrations?: { number: string; address: string }[];
+  sipRegistrations?: { number: string; address: string; nat?: boolean }[];
   nat?: NatEntry[];
   stp?: StpState;
   /** Switch im Broadcast-Sturm (Schleife ohne Spanning Tree). */

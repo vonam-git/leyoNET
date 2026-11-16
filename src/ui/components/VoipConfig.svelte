@@ -3,6 +3,7 @@
   import { t } from '../../i18n';
   import { editor } from '../state/editor.svelte';
   import { simStore } from '../state/sim.svelte';
+  import { openDesktop } from '../state/desktop.svelte';
 
   /**
    * Telefonie (SIP, RFC 3261): beim IP-Telefon Rufnummer, Telefonanlage und Markierung, in der
@@ -13,7 +14,6 @@
   let number = $state('');
   let server = $state('');
   let error = $state<string | null>(null);
-  let target = $state('');
   $effect(() => {
     number = device.voip?.number ?? '';
     server = device.voip?.server ?? '';
@@ -34,16 +34,12 @@
     editor.apply(setVoip(editor.topology, device.id, { ...device.voip, marking: on }));
   }
 
-  function call(event: SubmitEvent) {
-    event.preventDefault();
-    if (target.trim()) simStore.sim?.call(device.id, target.trim());
-  }
 </script>
 
 {#if device.type === 'ipphone'}
   <h3 data-help="voip">{t('voip.title')}</h3>
   <div class="row">
-    <label>{t('voip.number')}<input bind:value={number} onchange={save} inputmode="numeric" maxlength="8" placeholder="201" disabled={!editor.editable} /></label>
+    <label>{t('voip.number')}<input bind:value={number} onchange={save} inputmode="numeric" maxlength="15" placeholder="201" disabled={!editor.editable} /></label>
     <label>{t('voip.server')}<input bind:value={server} onchange={save} placeholder="192.168.10.5" spellcheck="false" disabled={!editor.editable} /></label>
   </div>
   {#if error}<p class="error" role="alert">{error}</p>{/if}
@@ -52,24 +48,7 @@
   {#if editor.acting && live?.voip}
     {@const v = live.voip}
     <p class="status">{v.number ? t(v.registered ? 'voip.state.registered' : 'voip.state.unregistered', { number: v.number, server: v.server ?? '' }) : t('voip.state.direct')}</p>
-    <form class="row" onsubmit={call}>
-      <input bind:value={target} placeholder={t('voip.target')} aria-label={t('voip.target')} />
-      <button class="primary" type="submit">{t('voip.call')}</button>
-      <button type="button" onclick={() => simStore.sim?.hangup(device.id)}>{t('voip.hangup')}</button>
-    </form>
-    {#if v.call}
-      {@const s = v.call.stats}
-      <table>
-        <tbody>
-          <tr><th>{t('voip.peer')}</th><td>{v.call.peer} · {t(`voip.phase.${v.call.phase}`)}{v.call.reason ? ` (${v.call.reason})` : ''}</td></tr>
-          <tr><th>{t('voip.packets')}</th><td>{t('voip.packetsValue', { sent: s.sent, received: s.received, lost: s.lost })}</td></tr>
-          <tr><th>{t('voip.loss')}</th><td>{s.loss} %</td></tr>
-          <tr><th>{t('voip.delay')}</th><td>{s.delay} ms</td></tr>
-          <tr><th>{t('voip.jitter')}</th><td>{s.jitter} ms</td></tr>
-          <tr><th>{t('voip.quality')}</th><td class="q-{s.quality}">{t(`voip.quality.${s.quality}`)}</td></tr>
-        </tbody>
-      </table>
-    {/if}
+    <button class="primary" type="button" onclick={() => openDesktop(device.id, 'phone')}>📞 {t('phone.open')}</button>
   {/if}
 {:else}
   <h3 data-help="voip">{t('voip.pbx')}</h3>
@@ -134,17 +113,5 @@
   th {
     color: var(--muted);
     font-weight: 500;
-  }
-  .q-good {
-    color: var(--ok, #2e9e5b);
-    font-weight: 600;
-  }
-  .q-fair {
-    color: var(--warn, #d08a00);
-    font-weight: 600;
-  }
-  .q-poor {
-    color: var(--danger, #c0392b);
-    font-weight: 600;
   }
 </style>

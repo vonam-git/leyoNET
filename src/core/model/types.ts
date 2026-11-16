@@ -76,7 +76,7 @@ export interface PoeConfig {
 export type PowerSource = 'poe' | 'local';
 
 export interface VoipConfig {
-  /** Rufnummer (Nebenstelle), 2–8 Ziffern. */
+  /** Rufnummer: Nebenstelle (z.B. 201) oder Nummer beim SIP-Provider (z.B. 0441234567), 2–15 Ziffern. */
   number: string;
   /** Adresse der Telefonanlage; fehlt = nur direkte Anrufe an eine IP-Adresse. */
   server?: string;

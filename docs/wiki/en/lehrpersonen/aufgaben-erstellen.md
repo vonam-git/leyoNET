@@ -12,7 +12,7 @@ kurz: Put learning goals together in a form, let leyoNET suggest goals from a mo
 
 It is quicker with a **model solution**: build the finished network and choose “Suggest goals from this network” in the task editor. leyoNET creates goals for devices, addresses, gateways, DHCP, DNS, areas and connections. Delete what does not fit and weight the rest.
 
-With an **AI**: Tools → Tasks with AI creates instructions with all rules, the schema of the checks and the open task as an example. Paste the AI's reply (JSON in the format “leyonet-ki-aufgabe”) back; leyoNET builds the start network and the task from it and rejects anything faulty with the exact place. Check every AI task by solving it once yourself.
+With an **AI** (web version only, after signing in with the admin password): Tools → Tasks with AI creates instructions with all rules, the schema of the checks and the open task as an example. Paste the AI's reply (JSON in the format “leyonet-ki-aufgabe”) back; leyoNET builds the start network and the task from it and rejects anything faulty with the exact place. Check every AI task by solving it once yourself.
 
 ## Check blocks (selection)
 

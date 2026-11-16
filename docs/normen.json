@@ -142,6 +142,10 @@
       "titel": "RTP Profile for Audio and Video Conferences with Minimal Control",
       "verwendung": "Payload Type 0 (PCMU, G.711 µ-law, 8000 Hz)"
     },
+    "3581": {
+      "titel": "An Extension to SIP for Symmetric Response Routing",
+      "verwendung": "Telefonanlage antwortet an die gesehene Adresse und den Port (received, rport), nötig hinter NAT"
+    },
     "3596": {
       "titel": "DNS Extensions to Support IP Version 6",
       "verwendung": "AAAA-Einträge, Rückwärtsauflösung unter ip6.arpa"
@@ -444,6 +448,15 @@
       "bemerkung": "Gültig; die Bewertung in leyoNET lehnt sich an die 150-ms-Grenze an.",
       "geprueft": "2026-11-16",
       "titel": "One-way transmission time"
+    },
+    {
+      "id": "ITU-T E.164",
+      "organisation": "ITU-T",
+      "verwendung": "Rufnummern: höchstens 15 Ziffern",
+      "aktuell": "ITU-T E.164 (11/2010)",
+      "bemerkung": "Gültig.",
+      "geprueft": "2026-11-16",
+      "titel": "The international public telecommunication numbering plan"
     }
   ]
 }

@@ -13,7 +13,7 @@ Eine Prüfung besteht aus zwei Dateien: der **Prüfungsdatei** für die Lernende
 
 - **Generator:** Werkzeuge → Prüfung erstellen erzeugt ein Firmennetz mit drei Standorten, 75 Punkte, Note = 5 × Punkte / 75 + 1. Je Platz eine eigene Variante ist möglich.
 - **Jede Aufgabe als Prüfung:** Werkzeuge → Als Prüfung speichern, mit Startnetz leer, nur Geräte, aktuell oder als **Fehlersuche** mit zufälligen Fehlern je Platz.
-- **Mit einer KI:** Werkzeuge → Aufgaben mit KI erstellt eine Anleitung mit Regeln, Schema aller Prüfbausteine und der offenen Aufgabe als Beispiel. Die Antwort der KI fügen Sie wieder ein; leyoNET prüft sie streng und öffnet sie im Aufgabeneditor. Einmal selbst lösen, dann als Prüfung speichern. leyoNET sendet nichts an eine KI, geben Sie ihr keine Personendaten mit.
+- **Mit einer KI** (nur Webversion, nach der Anmeldung mit dem Admin-Passwort): Werkzeuge → Aufgaben mit KI erstellt eine Anleitung mit Regeln, Schema aller Prüfbausteine und der offenen Aufgabe als Beispiel. Die Antwort der KI fügen Sie wieder ein; leyoNET prüft sie streng und öffnet sie im Aufgabeneditor. Einmal selbst lösen, dann als Prüfung speichern. leyoNET sendet nichts an eine KI, geben Sie ihr keine Personendaten mit.
 - **Gerechter auswerten:** Teilpunkte, Folgefehler (Gateway «ein Router im eigenen Netz»), Fragen direkt in leyoNET, Bausteine «von Hand».
 
 ## Während der Prüfung

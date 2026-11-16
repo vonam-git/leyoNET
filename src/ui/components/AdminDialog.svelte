@@ -1,4 +1,6 @@
 <script lang="ts">
+  // Admin-Anmeldung nur für diesen Tab, nicht dauerhaft gespeichert.
+  import { adminToken } from '../state/admin.svelte';
   import { parseProject, reviewSubmission, serializeProject, siteName, type SubmissionReview } from '../../core';
   import { locale, t } from '../../i18n';
   import { editor } from '../state/editor.svelte';
@@ -292,10 +294,6 @@
   }
 </script>
 
-<script lang="ts" module>
-  /** Admin-Anmeldung nur für diesen Tab, nicht dauerhaft gespeichert. */
-  export const adminToken: { value: string | null } = { value: null };
-</script>
 
 {#if !dashboard}
 <Modal title={t('admin.title')} {onclose} width={860}>

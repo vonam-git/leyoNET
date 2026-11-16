@@ -55,9 +55,19 @@ With all headers (RTP 12, UDP 8, IP 20, Ethernet 18 bytes) a call needs about **
 
 When a line is congested, voice suffers first: it waits behind large data packets. [[qos]] helps.
 
+## SIP provider and NAT
+
+At home there is no phone system: the phone registers directly with the **SIP provider** on the internet, using its landline number (up to 15 digits according to ITU-T E.164). Since the switch to all IP, every landline in Switzerland works like this. In between sits the home router with NAT, which causes two problems:
+
+- **Signalling:** the phone writes its private address (192.168.1.100) into the SIP message. The provider therefore answers to the address and port the REGISTER really came from (`received` and `rport`, RFC 3581). Through this entry in the NAT table it can also reach the phone for an incoming call.
+- **Voice:** the SDP also contains the private address. The provider replaces it with its own and forwards the RTP packets (**media relay**, like a session border controller). The target is always the address the other side sends from (symmetric RTP).
+
+That way calls between two home networks work, even if both use the same private addresses.
+
 ## In leyoNET
 
-- Phone: settings → Telephony: number and address of the phone system. Command line: `call 202`, `call 192.168.1.22`, `hangup`.
+- Phone: settings → Telephony: number and address of the phone system or SIP provider. In the simulation a double click opens the **phone** with a keypad: enter the number, call, hang up. On the command line: `call 202`, `call 192.168.1.22`, `hangup`.
+- SIP provider: a server with a public address and the phone system enabled; behind NAT it relays the voice itself.
 - Server: settings → Telephony → “Enable phone system”; in the simulation the registered numbers are listed there.
 - Packet list: filter `sip` or `rtp`; the bytes show the SIP text and the RTP header.
 - Check “Phone call”, optionally under load.

@@ -2260,7 +2260,8 @@ export function setAftr(t: Topology, id: string, enabled: boolean): Result<Topol
 
 /** Geräte mit Firewall: Router, Internet-Box und Endgeräte (ausser Client-Gruppen). */
 export function canFirewall(type: DeviceType): boolean {
-  return isRouterLike(type) || type === 'cpe' || (DEVICE_SPECS[type].role === 'endpoint' && type !== 'clientgroup');
+  // IP-Telefon und Kamera: Spezialgeräte ohne eigene Firewall (wie im Handel).
+  return isRouterLike(type) || type === 'cpe' || (DEVICE_SPECS[type].role === 'endpoint' && type !== 'clientgroup' && type !== 'ipphone' && type !== 'camera');
 }
 
 /** Firewall eines Geräts setzen (ganze Konfiguration); null = keine Firewall. */
@@ -2701,7 +2702,8 @@ export function setPortRate(t: Topology, id: string, index: number, rate: number
   return ok(updatePort(t, id, index, (i) => ({ ...i, rate })));
 }
 
-export const PHONE_NUMBER = /^[0-9]{2,8}$/;
+/** Rufnummer: 2–15 Ziffern (Nebenstelle bis Nummer im E.164-Umfang, ITU-T E.164). */
+export const PHONE_NUMBER = /^[0-9]{2,15}$/;
 
 /** IP-Telefon: Rufnummer, Telefonanlage und Markierung; null entfernt die Einstellung. */
 export function setVoip(t: Topology, id: string, config: VoipConfig | null): Result<Topology> {
