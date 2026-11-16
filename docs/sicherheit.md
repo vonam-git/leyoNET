@@ -95,7 +95,7 @@ Diese Seite beschreibt, wie man leyoNET angreifen könnte, was dagegen getan ist
 | Sicherheitslücken melden | `SECURITY.md`, `/.well-known/security.txt` (RFC 9116) auf Server und Website, Meldung vertraulich über GitHub. Die Live-Prüfung warnt 30 Tage vor Ablauf der Datei auf der Website. |
 | Musterlösungen in der App oder im öffentlichen Repo | `catalogSolutions.ts` und `catalogSheets.ts` sind nur im Test und im Erzeuger der Arbeitsblätter eingebunden, nicht in der App; die `_mL.pdf` bleiben ausserhalb von Git (`.gitignore`). |
 | Fremde Pakete mit Schadcode | Server ohne Abhängigkeiten; Oberfläche ohne Laufzeitabhängigkeiten; Lizenz- und `npm audit`-Prüfung bei jedem Release. |
-| Manipulierte GitHub-Action oder Werkzeug im Release-Workflow | Alle Actions sind auf einen Commit gepinnt (Kennung im Kommentar), Schreibrechte haben nur die beiden Aufträge, die das Release anlegen; `cargo-about` mit fester Version. Dependabot (`.github/dependabot.yml`) schlägt wöchentlich Updates für npm, Rust und Actions vor. |
+| Manipulierte GitHub-Action oder Werkzeug im Release-Workflow | Alle Actions sind auf einen Commit gepinnt (Kennung im Kommentar), Schreibrechte haben nur die beiden Aufträge, die das Release anlegen; `cargo-about` mit fester Version. Dependabot meldet nur Sicherheitslücken («Dependabot security updates» in den Repo-Einstellungen) und legt dann einen Pull Request an; normale Updates machen wir von Hand bei einem Release (grosse Versionssprünge bewusst, Pins mit Kennung nachführen). |
 
 ## Was offen bleibt
 
