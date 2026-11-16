@@ -101,15 +101,17 @@ describe('Website leyonet.ch', () => {
     expect(js).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|sendBeacon|document\.cookie|localStorage|innerHTML\s*=/);
   });
 
-  it('keine Kontaktdaten im Repo: Impressum und Datenschutz nur als Vorlage mit Platzhaltern', () => {
+  it('keine persönlichen Kontaktdaten im Repo: Impressum und Datenschutz als Vorlage mit Platzhaltern, nur info@leyonet.ch', () => {
     expect(pages).toContain('impressum.vorlage.html');
     expect(pages).toContain('datenschutz.vorlage.html');
     for (const page of pages) {
       const html = read(page);
-      expect(html, page).not.toMatch(/[\w.-]+(@|\(at\))[\w-]+\.[a-z]{2,}/i);
+      // Erlaubt ist nur die Projektadresse info@leyonet.ch, keine persönliche Adresse.
+      for (const [mail] of html.matchAll(/[\w.-]+(@|\(at\))[\w-]+\.[a-z]{2,}/gi)) expect(mail, page).toMatch(/^info(@|\(at\))leyonet\.ch$/);
       expect(html, page).not.toMatch(/\b\d{4} [A-ZÄÖÜ][a-zäöü]+/);
     }
-    for (const v of ['impressum', 'datenschutz']) expect(read(`${v}.vorlage.html`)).toContain('[E-Mail-Adresse]');
+    // Name und Postadresse bleiben Platzhalter (nur in der echten Datei, nicht im Repo).
+    for (const v of ['impressum', 'datenschutz']) expect(read(`${v}.vorlage.html`)).toContain('class="platzhalter"');
   });
 
   it('Sicherheits-Köpfe in .htaccess', () => {
