@@ -1,4 +1,6 @@
 <script lang="ts">
+  /** Titel aus dev.html, wie Suchmaschinen ihn sehen. */
+  const START_TITLE = document.title;
   import Splitter from './components/Splitter.svelte';
   import { onMount, untrack } from 'svelte';
   import { takeSebKey } from './seb';
@@ -60,7 +62,8 @@
     document.documentElement.lang = locale();
     const title = editor.topology.title;
     const name = session.config?.channel === 'beta' ? `${t('beta.titlePrefix')} ${t('app.title')}` : t('app.title');
-    document.title = title ? `${title} – ${name}` : name;
+    // Ohne Projekttitel bleibt der beschreibende Titel aus dev.html (Suchmaschinen, Lesezeichen).
+    document.title = title ? `${title} – ${name}` : session.config?.channel === 'beta' ? `${t('beta.titlePrefix')} ${START_TITLE}` : START_TITLE;
   });
 
   // In der Simulation läuft die Zeit, im Entwurf pausiert sie (Zustände bleiben).
