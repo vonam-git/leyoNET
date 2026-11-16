@@ -10,6 +10,7 @@ An exam consists of two files: the **exam file** for the learners (task, startin
 
 - **Generator:** Tools → Create exam generates a company network with three sites, 75 points, grade = 5 × points / 75 + 1. A separate variant per seat is possible.
 - **Any task as an exam:** Tools → Save as exam, with an empty starting network, devices only, the current network or as **troubleshooting** with random faults per seat.
+- **With an AI:** Tools → Tasks with AI creates instructions with rules, the schema of all checks and the open task as an example. You paste the AI's reply back; leyoNET checks it strictly and opens it in the task editor. Solve it once yourself, then save it as an exam. leyoNET sends nothing to an AI; do not give it personal data.
 - **Fairer marking:** partial points, follow-on errors (gateway “a router in its own network”), questions directly in leyoNET, “manual” blocks.
 
 ## During the exam

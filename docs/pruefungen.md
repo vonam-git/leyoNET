@@ -30,6 +30,33 @@ Die Lernenden sehen also nur, *was* zu tun ist und wie viele Punkte ein Teil gib
 
 **Prüfung aus einer Musterlösung:** Lösung bauen, im Aufgabeneditor «Ziele aus diesem Netz vorschlagen». leyoNET schlägt Ziele mit Punkten und Teilen vor (Geräte, Adressen, Gateways, DHCP, DNS, Bereiche, Verbindungen, Webseiten). Streichen, gewichten, dann «Als Prüfung speichern».
 
+## Aufgaben und Prüfungen mit KI
+
+**Werkzeuge → Aufgaben mit KI …** erzeugt eine Anleitung (Prompt, Markdown) für eine KI nach Wahl:
+
+- Regeln: genau ein JSON-Objekt, nur Adressen aus RFC 1918/5737, Domains auf `.example`, eindeutige Gerätenamen, Startnetz ohne Lösung, Punkte und `section` für Prüfungen.
+- Schema des Austauschformats `leyonet-ki-aufgabe` (Version 1) mit allen Prüfbausteinen. Die Liste entsteht aus `CHECK_FIELDS` (`src/ui/taskForm.ts`) und veraltet deshalb nicht.
+- Die offene Aufgabe mit Startnetz als Beispiel (sonst ein eingebautes Beispiel), dazu der Wunsch der Lehrperson («Prüfung M117, zwei VLANs mit DHCP, 30 Punkte»).
+
+Die Antwort der KI wird eingefügt oder als Datei geöffnet und importiert (`src/core/tasks/aiExchange.ts`). Der Import baut das Startnetz mit den Funktionen des Kerns (`addDevice`, `connect`, `configureHost`, `setInterfaceAddress`) und prüft die Ziele mit `readTasks`. Bei einem Fehler wird nichts übernommen; die Meldung nennt die Stelle (z.B. `start.links[2].b`). Danach steht die Aufgabe im Editor; einmal selbst lösen und mit «Als Prüfung speichern» weiter wie oben. leyoNET verbindet sich mit keiner KI.
+
+Austauschformat in Kürze:
+
+```json
+{
+  "format": "leyonet-ki-aufgabe", "version": 1,
+  "title": "…", "description": "…", "difficulty": 2, "grading": true,
+  "start": {
+    "devices": [{ "name": "R1", "type": "router", "x": 300, "y": 160, "addresses": [{ "port": 0, "ip": "192.168.10.1", "mask": "255.255.255.0" }] },
+                { "name": "PC1", "type": "pc", "x": 100, "y": 160, "dhcp": true }],
+    "links": [{ "a": "PC1", "b": "R1", "medium": "tp" }]
+  },
+  "goals": [{ "text": "PC1 erreicht R1.", "check": { "type": "ping", "from": "PC1", "to": "R1" }, "points": 3, "section": "Routing" }]
+}
+```
+
+Grenzen: 300 000 Zeichen, 150 Geräte, 300 Kabel, 100 Ziele. Das Startnetz kennt nur Geräte, Anschlüsse, feste Adressen, Gateway/DNS/DHCP der Endgeräte und Kabel; weitergehende Einstellungen (VLANs, SFP-Module, Dienste) gehören in die Aufgabe der Lernenden.
+
 ## Gerechtere Auswertung
 
 - **Teilpunkte:** Bei Gerätelisten, mehreren Pings und der Dokumentation gibt es Punkte anteilig (auf halbe Punkte gerundet).
@@ -126,6 +153,7 @@ Darum gehört zur Prüfung die **Organisation**:
 - Prüfungsdatei: normale Projektdatei (`netzwerk-simulator`) mit `tasks.exam` (Kennung, Variante bzw. Varianten zur Auswahl, Prüfwert des Codes, Dauer, Punkteraster). Antworten auf Fragen stehen in `tasks.answers`.
 - Schlüssel: `meta.format = "netzwerk-simulator-pruefungsschluessel"`, je Variante die vollständige Aufgabe.
 - Abgaben einer Server-Prüfung: `meta.format = "netzwerk-simulator-abgaben"` mit Titel, Bezeichnung, Schlüssel und je Platz `seat`, `updated`, `project`.
+- Austausch mit einer KI: `format = "leyonet-ki-aufgabe"`, siehe «Aufgaben und Prüfungen mit KI».
 - Korrektur: `meta.format = "netzwerk-simulator-korrektur"`, je Datei Punkte, Bemerkungen und Gesamtbemerkung. Sie enthält Dateinamen der Abgaben und bleibt bei der Lehrperson.
 
 Bausteine im Detail: [aufgaben.md](aufgaben.md).

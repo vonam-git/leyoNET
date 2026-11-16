@@ -50,3 +50,4 @@ export type { GroupMemberState } from './sim/group';
 export type { ModemState, StormState } from './sim/switch';
 export { decodeBgp } from './sim/bgp';
 export { subnetInfo, splitEqual, splitByHosts, prefixForHosts, parseAddressInput, type SubnetInfo } from './net/calc';
+export * from './tasks/aiExchange';

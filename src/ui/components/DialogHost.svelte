@@ -3,6 +3,7 @@
   import AboutDialog from './AboutDialog.svelte';
   import AdminDialog from './AdminDialog.svelte';
   import CatalogDialog from './CatalogDialog.svelte';
+  import ExamAiDialog from './ExamAiDialog.svelte';
   import CommandPalette from './CommandPalette.svelte';
   import CostDialog from './CostDialog.svelte';
   import AvatarEditor from './AvatarEditor.svelte';
@@ -63,6 +64,8 @@
   <ExamDialog onclose={close} />
 {:else if dialogs.open === 'examExport'}
   <ExamExportDialog onclose={close} />
+{:else if dialogs.open === 'examAi'}
+  <ExamAiDialog onclose={close} />
 {:else if dialogs.open === 'examStart'}
   <ExamStartDialog onclose={close} />
 {:else if dialogs.open === 'examJoin'}

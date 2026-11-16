@@ -92,6 +92,8 @@ Statische Prüfungen schauen nur auf das gebaute Netz. **Dynamische** Prüfungen
 
 Prüfungsdatei ohne Prüfbausteine, Schlüssel für die Lehrperson, Platzwahl, Fehlersuche, Prüfungsmodus, Nachkorrektur und Berichte: siehe [pruefungen.md](pruefungen.md).
 
+Aufgaben mit einer KI schreiben lassen (Anleitung exportieren, Antwort importieren): siehe [pruefungen.md](pruefungen.md#aufgaben-und-prüfungen-mit-ki).
+
 ## Sicherheit
 
 Aufgabendateien enthalten nur Daten. Unbekannte Prüfbausteine werden beim Öffnen abgelehnt, ausführbarer Code ist nicht möglich. Seiten von simulierten Webservern laufen ohne Skripte.
