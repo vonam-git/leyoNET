@@ -82,6 +82,7 @@ export const CHECK_FIELDS: Record<Check['type'], FieldSpec[]> = {
   ],
   modemOnline: [{ key: 'device', kind: 'device' }],
   poePowered: [{ key: 'device', kind: 'device' }],
+  configSaved: [{ key: 'device', kind: 'device' }],
   call: [
     { key: 'from', kind: 'device', label: 'callFrom' },
     { key: 'to', kind: 'device', label: 'callTo' },

@@ -74,21 +74,23 @@ Die praktische Prüfung (LB3) erstellt **Werkzeuge → Prüfung erstellen …**:
 
 ## Modul 129: Subnetting, Routing und Protokollanalyse
 
-Der Reiter **«M129»** im Aufgaben-Katalog enthält drei Gruppen mit je einem ausfüllbaren Arbeitsblatt. Alles läuft in leyoNET: Router, Firewall, Server und die Paketanalyse. Adressen im «Internet» stammen aus den Dokumentationsbereichen nach RFC 5737, Namen enden auf `.example`.
+Der Reiter **«M129»** im Aufgaben-Katalog enthält vier Gruppen mit je einem ausfüllbaren Arbeitsblatt. Alles läuft in leyoNET: Router, Firewall, Server und die Paketanalyse. Adressen im «Internet» stammen aus den Dokumentationsbereichen nach RFC 5737, Namen enden auf `.example`.
 
 | Sterne | Übung | Arbeitsblatt |
 |---|---|---|
 | ★★ | Subnetting – Auftrag 1: Vier gleich grosse Subnetze | M129_Subnetting |
 | ★★★★ | Subnetting – Auftrag 2: Subnetze nach Bedarf (VLSM) | M129_Subnetting |
 | ★★★ | Subnetting – Auftrag 3: Fehlersuche im Firmennetz | M129_Subnetting |
-| ★★★ | Routing – Auftrag 1: Drei Router statisch verbinden | M129_Routing |
-| ★★★★ | Routing – Auftrag 2: Ins Internet mit NAT | M129_Routing |
-| ★★★ | Routing – Auftrag 3: Verwaltungsnetz und SSH | M129_Routing |
+| ★★★ | Statisches Routing – Auftrag 1: Drei Router statisch verbinden | M129_Routing |
+| ★★★★ | Statisches Routing – Auftrag 2: Ins Internet mit NAT | M129_Routing |
+| ★★★ | Statisches Routing – Auftrag 3: Verwaltungsnetz und SSH | M129_Routing |
+| ★★★ | Dynamisches Routing – Auftrag 1: Automatisch routen mit RIP | M129_Dynamisches_Routing |
+| ★★★★ | Dynamisches Routing – Auftrag 2: OSPF mit Standardroute | M129_Dynamisches_Routing |
 | ★★ | Protokollanalyse – Auftrag 1: ICMP und TTL | M129_Protokollanalyse |
 | ★★★ | Protokollanalyse – Auftrag 2: DHCP | M129_Protokollanalyse |
 | ★★★★ | Protokollanalyse – Auftrag 3: ARP, DNS und HTTP | M129_Protokollanalyse |
 
-Neu sind **Fragen direkt in leyoNET** (Baustein «Antwort»): z.B. der EtherType von ARP oder die TTL nach der Firewall. «Prüfen» bewertet sie zusammen mit den Netzzielen. Das Arbeitsblatt zum Routing zeigt die passenden Befehle für die Befehlszeile der Router. Nummern und Titel der Übungen lassen sich später an die Unterlagen der Schule anpassen (`src/ui/catalogM129.ts`, Texte in `src/i18n`, Arbeitsblätter in `scripts/arbeitsblaetter/inhaltM129.mjs`).
+Neu sind **Fragen direkt in leyoNET** (Baustein «Antwort»): z.B. der EtherType von ARP oder die TTL nach der Firewall. «Prüfen» bewertet sie zusammen mit den Netzzielen. Die Arbeitsblätter zum Routing zeigen die Theorie und Beispielbefehle mit anderen Adressen; die Befehle für das eigene Netz erarbeiten die Lernenden selbst (Musterlösung im Blatt `_mL`). Zum Schluss speichern sie auf jedem Router mit `copy running-config startup-config`, das prüft die Übung mit. Nummern und Titel der Übungen lassen sich später an die Unterlagen der Schule anpassen (`src/ui/catalogM129.ts`, Texte in `src/i18n`, Arbeitsblätter in `scripts/arbeitsblaetter/inhaltM129.mjs`).
 
 ### Modul 145: VLAN, Inter-VLAN-Routing, DHCP, Netzwerkdesign
 

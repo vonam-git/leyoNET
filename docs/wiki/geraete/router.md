@@ -40,6 +40,10 @@ Router(config-if)# ip address 192.168.1.1/24
 Router(config-if)# exit
 Router(config)# ip route 0.0.0.0/0 203.0.113.1
 Router(config)# do show ip route
+Router(config)# end
+Router# copy running-config startup-config
 ```
+
+**running-config und startup-config:** Jede Änderung gilt sofort, steht aber nur in der laufenden Konfiguration (`show running-config`). Erst `copy running-config startup-config` (kurz `write memory`) speichert sie; `show startup-config` zeigt das Gespeicherte, `erase startup-config` löscht es. Das Fenster der Konsole zeigt oben, ob die Konfiguration gespeichert ist, und `reload` warnt vor ungespeicherten Änderungen. Übungen können das Speichern mitprüfen.
 
 Die vollständige Befehlsreferenz steht in der Dokumentation [Befehlszeile](https://github.com/vonam-git/leyoNET/blob/main/docs/cli.md).

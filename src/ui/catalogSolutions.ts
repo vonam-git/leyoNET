@@ -51,7 +51,7 @@ import {
   type Result,
   type Topology,
 } from '../core';
-import { LAB_ANSWERS, solveLab2, solveRouting1, solveRouting2, solveRouting3, solveSub1, solveSub2, solveSub3 } from './catalogM129';
+import { LAB_ANSWERS, solveLab2, solveOspf, solveRip, solveRouting1Saved, solveRouting2, solveRouting3, solveSub1, solveSub2, solveSub3 } from './catalogM129';
 import { ADVANCED_ANSWERS, solveDatacenter, solveGuest, solveLoopback, solveVrf } from './catalogAdvanced';
 import { M145_ANSWERS, solveFaults, solveLag, solveMgmt, solveUe02, solveUe03, solveUe04, solveUe06, solveUe07, solveUe07b, solveUe08, solveUe09, solveUe10, solveUe11 } from './catalogM145';
 import { readdressUe03, solveHolzer, solveUe03a1, solveUe04a1, solveUe04a2, solveUe05, solveWatch1, solveWatch2 } from './catalogM117';
@@ -82,7 +82,9 @@ export const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
   'm129-sub-a1': solveSub1,
   'm129-sub-a2': solveSub2,
   'm129-sub-a3': solveSub3,
-  'm129-routing-a1': solveRouting1,
+  'm129-routing-a1': solveRouting1Saved,
+  'm129-dyn-a1': solveRip,
+  'm129-dyn-a2': solveOspf,
   'm129-routing-a2': solveRouting2,
   'm129-routing-a3': solveRouting3,
   'm129-lab-a1': (t) => t,
