@@ -472,7 +472,7 @@ ${o.body}
       <p>${escapeHtml(u('footer', { v: version }))}</p>
       <ul>
         <li><a href="${REPO}">GitHub</a></li>
-        <li><a href="https://www.patreon.com/cw/vonam">Patreon</a></li>
+        <li><a href="https://patreon.com/leyonet">Patreon</a></li>
         <li><a href="${siteRoot}impressum.html#kontakt">${u('contact')}</a></li>
         <li><a href="${siteRoot}impressum.html"${lang === 'de' ? '' : ' hreflang="de"'}>${u('imprint')}</a></li>
         <li><a href="${siteRoot}datenschutz.html"${lang === 'de' ? '' : ' hreflang="de"'}>${u('privacy')}</a></li>

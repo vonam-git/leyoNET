@@ -15,7 +15,7 @@ import { EXAM_BLOCKED_COMMANDS, examMode } from './state/exam.svelte';
 import { verbund } from './state/verbund.svelte';
 
 /** Freiwillige Unterstützung (nur ein Link, nichts wird eingebunden). */
-export const SUPPORT_URL = 'https://www.patreon.com/cw/vonam';
+export const SUPPORT_URL = 'https://patreon.com/leyonet';
 
 /**
  * Alle Befehle an einer Stelle: Menüleiste, Befehlssuche (Strg+K) und
