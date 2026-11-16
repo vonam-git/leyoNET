@@ -2563,7 +2563,7 @@
         "y": -900,
         "width": 920,
         "height": 300,
-        "note": "Öffentliche Transfernetze 203.0.113.0/24 (RFC 5737), je Standort ein /30. Zwischen den Rechenzentren laufen IPsec-Tunnel (Vollvermaschung).",
+        "note": "Öffentliche Transitnetze 203.0.113.0/24 (RFC 5737), je Standort ein /30. Zwischen den Rechenzentren laufen IPsec-Tunnel (Vollvermaschung).",
         "public": true
       },
       {

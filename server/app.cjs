@@ -26,6 +26,9 @@ const http = require('node:http');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const net = require('node:net');
+const { promisify } = require('node:util');
+const scrypt = promisify(crypto.scrypt);
 
 const ROOT = path.join(__dirname, '..');
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'data'));
@@ -91,6 +94,9 @@ const LEASE_MS = 60_000;
 const PIN = /^\d{4,8}$/;
 const PIN_FAILS = 5;
 const PIN_WINDOW_MS = 10 * 60_000;
+/** Ein Klassencode gilt höchstens so lange (beim Anlegen und beim Verlängern, ab heute gerechnet). */
+const MAX_CLASS_DAYS = 180;
+const validDays = (v) => Number.isInteger(v) && v >= 1 && v <= MAX_CLASS_DAYS;
 const MAX_EXAM_SEATS = 60;
 const MAX_EXAM_MINUTES = 600;
 
@@ -299,12 +305,30 @@ const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
  */
 function clientIp(req) {
   const direct = req.socket.remoteAddress || '';
-  if (!LOOPBACK.has(direct)) return direct;
+  // Ohne Adresse: Unix-Socket (so bindet Phusion Passenger die App an). Dort kommt jede
+  // Anfrage vom Proxy auf demselben Rechner; ohne diese Zeile teilten sich alle einen Zähler.
+  if (direct && !LOOPBACK.has(direct)) return rateAddress(direct);
   const forwarded = String(req.headers['x-forwarded-for'] || '')
     .split(',')
     .map((x) => x.trim())
     .filter(Boolean);
-  return forwarded.length ? forwarded[forwarded.length - 1] : String(req.headers['x-real-ip'] || direct);
+  return rateAddress(forwarded.length ? forwarded[forwarded.length - 1] : String(req.headers['x-real-ip'] || direct));
+}
+
+/**
+ * IPv6 auf das /64-Netz kürzen: Ein Anschluss erhält meist ein ganzes /64 und könnte sonst mit
+ * wechselnden Adressen jede Grenze umgehen und die Zählerliste füllen. IPv4 bleibt unverändert.
+ */
+function rateAddress(address) {
+  const a = String(address || '').slice(0, 64).replace(/%.*$/, '');
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(a);
+  if (mapped) return mapped[1];
+  if (!net.isIPv6(a)) return a;
+  const [head, tail = ''] = a.split('::');
+  const left = head ? head.split(':') : [];
+  const right = tail ? tail.split(':') : [];
+  const groups = a.includes('::') ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill('0'), ...right] : left;
+  return `${groups.slice(0, 4).map((g) => (parseInt(g, 16) || 0).toString(16)).join(':')}::/64`;
 }
 
 function limited(req, kind, perMinute) {
@@ -412,23 +436,23 @@ function connected(code, now = Date.now()) {
   return seen !== undefined && now - seen < LEASE_MS;
 }
 
-function pinHash(pin, salt) {
-  return crypto.scryptSync(String(pin), salt, 32).toString('base64url');
+/** Asynchron: scrypt kostet rund 30 ms und darf den Server nicht für alle anderen anhalten. */
+async function pinHash(pin, salt) {
+  return (await scrypt(String(pin), salt, 32)).toString('base64url');
 }
 
 /** PIN prüfen; nach zu vielen Fehlversuchen für diese Session vorübergehend gesperrt. */
-function checkPin(code, item, pin) {
-  if (!item.lock) return 'ok';
+async function checkPin(code, item, pin) {
   const now = Date.now();
   const fails = pinFails.get(code);
   if (fails && now - fails.since < PIN_WINDOW_MS && fails.count >= PIN_FAILS) return 'tooMany';
   if (typeof pin !== 'string' || !PIN.test(pin)) return pin ? 'wrong' : 'missing';
-  if (sameHash(pinHash(pin, item.lock.salt), item.lock.hash)) {
+  // Vor dem Rechnen zählen: gleichzeitige Versuche dürfen die Grenze nicht umgehen.
+  pinFails.set(code, fails && now - fails.since < PIN_WINDOW_MS ? { since: fails.since, count: fails.count + 1 } : { since: now, count: 1 });
+  if (sameHash(await pinHash(pin, item.lock.salt), item.lock.hash)) {
     pinFails.delete(code);
     return 'ok';
   }
-  const next = fails && now - fails.since < PIN_WINDOW_MS ? { since: fails.since, count: fails.count + 1 } : { since: now, count: 1 };
-  pinFails.set(code, next);
   return 'wrong';
 }
 
@@ -436,18 +460,30 @@ function checkPin(code, item, pin) {
  * Schreibrecht holen: das eigene Token gilt weiter; sonst nur, wenn gerade kein anderes
  * Gerät verbunden ist (und bei gesperrter Session mit PIN). Liefert das (neue) Token.
  */
-function claimWriter(code, item, token, pin) {
-  const now = Date.now();
+async function claimWriter(code, item, token, pin) {
   if (isWriter(item, token)) {
-    leases.set(code, now);
+    leases.set(code, Date.now());
     return { token, item };
   }
-  if (connected(code, now)) return { error: 'sessionInUse', status: 409 };
-  const pinState = checkPin(code, item, pin);
-  if (pinState === 'tooMany') return { error: 'rateLimited', status: 429 };
-  if (pinState !== 'ok') return { error: pinState === 'wrong' ? 'wrongPin' : 'sessionLocked', status: 423 };
+  // Prüfungsplatz: Ein anderes Gerät kommt nur hinein, nachdem die Lehrperson den Platz freigegeben
+  // hat (auch wenn das erste Gerät gerade still ist). Sonst könnte jemand mit dem Code der Platzkarte
+  // die Arbeit lesen und das erste Gerät am Speichern hindern.
+  if (item.exam && item.writer) return { error: 'sessionInUse', status: 409 };
+  if (connected(code)) return { error: 'sessionInUse', status: 409 };
+  let current = item;
+  if (item.lock) {
+    const pinState = await checkPin(code, item, pin);
+    if (pinState === 'tooMany') return { error: 'rateLimited', status: 429 };
+    if (pinState !== 'ok') return { error: pinState === 'wrong' ? 'wrongPin' : 'sessionLocked', status: 423 };
+    // Während der Rechnung kann sich die Session geändert haben: neu lesen und nochmals prüfen.
+    current = loadSession(code);
+    if (!current) return { error: 'unknownSession', status: 404 };
+    if (current.writer !== item.writer || connected(code)) return { error: 'sessionInUse', status: 409 };
+    if (!current.lock || current.lock.hash !== item.lock.hash) return { error: 'sessionLocked', status: 423 };
+  }
+  const now = Date.now();
   const fresh = crypto.randomBytes(24).toString('base64url');
-  const next = { ...item, writer: writerHash(fresh) };
+  const next = { ...current, writer: writerHash(fresh) };
   store('sessions', code, next);
   leases.set(code, now);
   return { token: fresh, item: next };
@@ -718,23 +754,70 @@ function decryptKey(box) {
   }
 }
 
+// Prüfungsdateien sind gross (bis 12 MB) und werden beim Warten auf den Start von jedem Platz
+// alle paar Sekunden gebraucht. Darum: zuletzt gelesene Prüfungen im Arbeitsspeicher (neu gelesen,
+// wenn sich die Datei geändert hat) und ein Verzeichnis Platz-Code → Prüfung. So liest eine
+// Anfrage ohne Anmeldung nie alle Prüfungsdateien.
+const examCache = new Map();
+const MAX_EXAM_CACHE = 20;
+let seatIndex = null;
+
+const examFile = (id) => path.join(dirs.exams, `${id}.json`);
+
 function loadExam(id) {
   if (!/^[0-9a-f]{16}$/.test(id || '')) return null;
-  const item = readJson(path.join(dirs.exams, `${id}.json`));
-  return item && item.expires > Date.now() ? item : null;
+  let stat;
+  try {
+    stat = fs.statSync(examFile(id));
+  } catch {
+    examCache.delete(id);
+    return null;
+  }
+  let hit = examCache.get(id);
+  if (!hit || hit.mtimeMs !== stat.mtimeMs || hit.size !== stat.size) {
+    const exam = readJson(examFile(id));
+    if (!exam) return null;
+    hit = { mtimeMs: stat.mtimeMs, size: stat.size, exam };
+    examCache.delete(id);
+    examCache.set(id, hit);
+    while (examCache.size > MAX_EXAM_CACHE) examCache.delete(examCache.keys().next().value);
+  }
+  // Kopie der veränderlichen Teile: Aufrufer ändern Plätze und Eckdaten und speichern danach.
+  const exam = hit.exam;
+  return exam.expires > Date.now() ? { ...exam, seats: exam.seats.map((s) => ({ ...s })), ...(exam.seb ? { seb: { ...exam.seb } } : {}) } : null;
 }
 
 function saveExam(exam) {
-  writeJson(path.join(dirs.exams, `${exam.id}.json`), exam);
+  writeJson(examFile(exam.id), exam);
+  examCache.delete(exam.id);
+  if (seatIndex) for (const s of exam.seats) seatIndex.set(s.code, exam.id);
+}
+
+function removeExam(exam) {
+  remove(examFile(exam.id));
+  examCache.delete(exam.id);
+  if (seatIndex) for (const s of exam.seats) seatIndex.delete(s.code);
+}
+
+/** Platz-Code → Kennung der Prüfung; einmal aufgebaut, danach beim Speichern und Löschen nachgeführt. */
+function seatCodes() {
+  if (!seatIndex) {
+    seatIndex = new Map();
+    for (const exam of list(dirs.exams)) for (const s of exam.seats) seatIndex.set(s.code, exam.id);
+  }
+  return seatIndex;
 }
 
 /** Prüfung und Platz zu einem Platz-Code. */
 function findSeat(seatCode) {
-  for (const exam of list(dirs.exams)) {
-    const seat = exam.seats.find((s) => s.code === seatCode);
-    if (seat) return { exam, seat };
+  const id = seatCodes().get(seatCode);
+  const exam = id ? loadExam(id) : null;
+  const seat = exam && exam.seats.find((s) => s.code === seatCode);
+  if (!seat) {
+    if (id) seatIndex.delete(seatCode);
+    return null;
   }
-  return null;
+  return { exam, seat };
 }
 
 /** Zustand eines Platzes: wartet (nicht gestartet), offen (Zeit läuft) oder abgegeben. */
@@ -849,7 +932,8 @@ function cleanStatus(sites) {
 
 /** Platz für eine neue Session in der Klasse: gewünschter, sonst der nächste freie. */
 function seatFor(classCode, wanted) {
-  const taken = new Set(entries('sessions').filter((s) => s.classCode === classCode).map((s) => loadSession(s.code)?.site?.seat).filter(Boolean));
+  // Platz und Gruppe stehen im Verzeichnis (alles ausser dem Projekt): keine Datei lesen.
+  const taken = new Set(entries('sessions').filter((s) => s.classCode === classCode).map((s) => s.site && s.site.seat).filter(Boolean));
   if (validSeat(wanted) && !taken.has(wanted)) return wanted;
   for (let n = 1; n <= MAX_SEAT; n++) if (!taken.has(n)) return n;
   return null;
@@ -903,6 +987,10 @@ async function api(req, res, url) {
 
     if (tooManyMisses(req, 'session')) return fail(res, 429, 'rateLimited');
     const code = normalizeCode(parts[1]);
+    // Erst den Inhalt der Anfrage lesen (kann bei langsamer Leitung dauern), dann den Stand laden:
+    // sonst überschriebe ein laufendes Speichern eine inzwischen gesetzte Sperre, eine Freigabe
+    // oder brächte eine gelöschte Session zurück.
+    const body = code && (method === 'PUT' || method === 'POST') ? await readBody(req) : {};
     const item = code && parts.length <= 3 ? loadSession(code) : null;
     if (!item) {
       countMiss(req, 'session');
@@ -921,7 +1009,6 @@ async function api(req, res, url) {
     if (parts[2] === 'site' && method === 'PUT') {
       if (!item.classCode) return fail(res, 400, 'notInClass');
       if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
-      const body = await readBody(req);
       const current = item.site || {};
       let seat = current.seat;
       if (body.seat !== undefined && body.seat !== current.seat) {
@@ -939,10 +1026,15 @@ async function api(req, res, url) {
       if (item.exam) return fail(res, 403, 'examSession');
       if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
       if (method === 'POST') {
-        const body = await readBody(req);
         if (typeof body.pin !== 'string' || !PIN.test(body.pin)) return fail(res, 400, 'invalidPin');
+        // Sperren rechnet (scrypt): eigene, enge Grenze.
+        if (limited(req, 'lock', 20)) return fail(res, 429, 'rateLimited');
         const salt = crypto.randomBytes(16).toString('base64url');
-        store('sessions', code, { ...item, lock: { salt, hash: pinHash(body.pin, salt) } });
+        const hash = await pinHash(body.pin, salt);
+        // Nach der Rechnung neu lesen: inzwischen kann gespeichert worden sein.
+        const latest = loadSession(code);
+        if (!latest || !isWriter(latest, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(latest || item) });
+        store('sessions', code, { ...latest, lock: { salt, hash } });
         return json(res, 200, { locked: true });
       }
       if (method === 'DELETE') {
@@ -955,16 +1047,22 @@ async function api(req, res, url) {
     if (parts.length !== 2) return fail(res, 404, 'unknownSession');
 
     if (method === 'GET') {
+      // Prüfungsplatz mit SEB-Pflicht: auch Lesen nur aus dem Safe Exam Browser (die Lehrperson
+      // sieht Plätze über die Admin-Konsole an).
+      if (item.exam) {
+        const exam = loadExam(item.exam.id);
+        if (!exam) return fail(res, 404, 'unknownSession');
+        if (!sebAllowed(req, exam, req.headers['x-leyonet-seb'])) return fail(res, 403, 'sebRequired');
+      }
       const base = { code, expires: item.expires, classCode: item.classCode, site: item.site || null, project: item.project };
       // Nur ansehen (z.B. Lehrperson): kein Schreibrecht, verdrängt niemanden.
       if (url.searchParams.get('watch') === '1') return json(res, 200, { ...base, updated: item.updated, watch: true, ...about(item) });
       const pin = req.headers['x-leyonet-pin'];
-      const claimed = claimWriter(code, item, token, typeof pin === 'string' ? pin : '');
+      const claimed = await claimWriter(code, item, token, typeof pin === 'string' ? pin : '');
       if (claimed.error) return json(res, claimed.status, { error: claimed.error, ...about(item) });
-      return json(res, 200, { ...base, writer: claimed.token, ...about(claimed.item) });
+      return json(res, 200, { ...base, project: claimed.item.project, writer: claimed.token, ...about(claimed.item) });
     }
     if (method === 'PUT') {
-      const body = await readBody(req);
       if (!validProject(body.project)) return fail(res, 400, 'invalidProject');
       // Ältere Sessions ohne Schreib-Token übernimmt das erste Gerät, das speichert.
       if (item.writer && !isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
@@ -1022,11 +1120,13 @@ async function api(req, res, url) {
     const status = seatStatus(exam, seat);
     if (status.state === 'waiting') return json(res, 200, { exam: status });
     // Weiterarbeiten: vorhandene Session des Platzes; sonst neue mit der Prüfungsdatei.
+    // Abgegeben: Die Arbeit geht nicht mehr hinaus (der Platz-Code steht auf der Platzkarte).
+    // Öffnet die Lehrperson den Platz wieder (Nachteilsausgleich), geht es normal weiter.
+    if (status.state === 'closed') return json(res, 200, { exam: status });
     const known = entries('sessions').find((x) => x.exam && x.exam.id === exam.id && x.exam.seat === seat.id);
     let session = known ? loadSession(known.code) : null;
     let fresh = false;
     if (!session) {
-      if (status.state === 'closed') return json(res, 200, { exam: status });
       let code = newCode();
       while (indexes.sessions.has(code) || fs.existsSync(fileFor(dirs.sessions, code))) code = newCode();
       const now = Date.now();
@@ -1036,7 +1136,7 @@ async function api(req, res, url) {
       fresh = true;
     }
     // Ein Platz ist nur an einem Gerät offen; ein zweiter Browser wartet, bis die Lehrperson freigibt.
-    const claimed = claimWriter(session.code, session, typeof body.writer === 'string' ? body.writer : '', '');
+    const claimed = await claimWriter(session.code, session, typeof body.writer === 'string' ? body.writer : '', '');
     if (claimed.error) return json(res, 409, { error: 'seatInUse', exam: status });
     return json(res, 200, { exam: status, session: session.code, fresh, variant: seat.variant || null, project: claimed.item.project, writer: claimed.token });
   }
@@ -1065,10 +1165,8 @@ async function api(req, res, url) {
     if (!v.enabled) return json(res, 200, { enabled: false });
     // Nur Geändertes seit `since` mitschicken: Die ganze Klasse fragt alle paar Sekunden.
     const since = Number(new URL(req.url, 'http://x').searchParams.get('since')) || 0;
-    const members = entries('sessions')
-      .filter((m) => m.classCode === code)
-      .map((m) => loadSession(m.code))
-      .filter((x) => x && x.site);
+    // Eckdaten aus dem Verzeichnis; das Projekt nur von der Platte, wenn es mitgeschickt wird.
+    const members = entries('sessions').filter((m) => m.classCode === code && m.site);
     const status = verbundStatus.get(code);
     return json(res, 200, {
       enabled: true,
@@ -1078,7 +1176,10 @@ async function api(req, res, url) {
       infraUpdated: v.infraUpdated,
       ...(v.infra && v.infraUpdated > since ? { infra: v.infra } : {}),
       // Andere Standorte (Netzwerk-Konfiguration) nur, wenn die Lehrperson das freigibt; nie Session-Codes.
-      sites: members.map((x) => ({ seat: x.site.seat, label: x.site.label || '', updated: x.updated, ...(v.shareSites && x.updated > since ? { project: x.project } : {}) })),
+      sites: members.map((x) => {
+        const full = v.shareSites && x.updated > since ? loadSession(x.code) : null;
+        return { seat: x.site.seat, label: x.site.label || '', updated: x.updated, ...(full ? { project: full.project } : {}) };
+      }),
       ...(v.showMap && status ? { status: status.sites, statusTime: status.time } : {}),
       now: Date.now(),
     });
@@ -1163,15 +1264,21 @@ function list(dir) {
 async function admin(req, res, parts, method) {
   if (parts[0] === 'login' && method === 'POST') {
     // Auch insgesamt begrenzt: Raten des Passworts bleibt aussichtslos, selbst mit vielen Adressen.
-    if (limited(req, 'login', 10) || limitedGlobal('login', 30)) return fail(res, 429, 'rateLimited');
     if (!ADMIN_PASSWORD) return fail(res, 403, 'adminDisabled');
-    const body = await readBody(req);
+    if (limited(req, 'loginAny', 120)) return fail(res, 429, 'rateLimited');
+    const body = await readBody(req, 4096);
     const given = typeof body.password === 'string' ? body.password : '';
     let who = null;
-    if (checkPassword(given)) who = { role: 'super', tenant: null, label: null };
-    else {
+    if (TENANT_KEY.test(given.trim())) {
+      // Zugangsschlüssel haben 192 Bit Zufall: Raten ist aussichtslos, darum zählt hier nicht die
+      // enge Grenze der Passwörter. So sperrt niemand aus dem Schulnetz mit falschen Anmeldungen
+      // die Lehrpersonen aus (z.B. vor einer Prüfung).
       const t = tenantByKey(given);
       if (t) who = { role: t.role, tenant: t.id, label: t.label };
+    } else {
+      // Passwort (von Menschen gewählt): je Adresse und insgesamt begrenzt.
+      if (limited(req, 'login', 10) || limitedGlobal('login', 30)) return fail(res, 429, 'rateLimited');
+      if (checkPassword(given)) who = { role: 'super', tenant: null, label: null };
     }
     if (!who) return fail(res, 401, 'wrongPassword');
     const token = crypto.randomBytes(32).toString('base64url');
@@ -1323,11 +1430,15 @@ async function admin(req, res, parts, method) {
       let code = newCode();
       while (fs.existsSync(fileFor(dirs.classes, code))) code = newCode();
       const now = Date.now();
-      const item = { code, label, created: now, expires: now + s.classHours * 3_600_000, owner: ownerOf(who), catalog: readCatalog(body.catalog, EMPTY_CATALOG), verbund: { enabled: false, shareSites: false, infra: null, infraUpdated: 0 } };
+      // Gültigkeit direkt beim Anlegen wählbar (Tage), sonst die Voreinstellung des Hauptadmins.
+      const ttl = validDays(body.days) ? body.days * 86_400_000 : s.classHours * 3_600_000;
+      const item = { code, label, created: now, expires: now + ttl, owner: ownerOf(who), catalog: readCatalog(body.catalog, EMPTY_CATALOG), verbund: { enabled: false, shareSites: false, infra: null, infraUpdated: 0 } };
       writeJson(fileFor(dirs.classes, code), item);
       return json(res, 201, classView(item, []));
     }
     const code = normalizeCode(parts[1]);
+    // Inhalt zuerst lesen, dann den Stand laden (siehe Sessions).
+    const body = code && method !== 'GET' && method !== 'DELETE' ? await readBody(req) : {};
     const item = code && loadClass(code);
     if (!item || !canSee(who, item.owner)) return fail(res, 404, 'unknownClass');
     if (parts[2] === 'sessions' && method === 'GET') {
@@ -1341,10 +1452,15 @@ async function admin(req, res, parts, method) {
       return json(res, 200, sessions);
     }
     if (parts.length === 2 && method === 'PATCH') {
-      const body = await readBody(req);
       const next = { ...item };
       if (typeof body.label === 'string' && body.label.trim()) next.label = body.label.trim().slice(0, 40);
       if (body.catalog !== undefined) next.catalog = readCatalog(body.catalog, item.catalog || EMPTY_CATALOG);
+      // Verlängern: ab dem bisherigen Ablauf, aber nie weiter als MAX_CLASS_DAYS ab heute.
+      if (body.extendDays !== undefined) {
+        if (!validDays(body.extendDays)) return fail(res, 400, 'badDays');
+        const now = Date.now();
+        next.expires = Math.min(Math.max(item.expires, now) + body.extendDays * 86_400_000, now + MAX_CLASS_DAYS * 86_400_000);
+      }
       if (body.verbund && typeof body.verbund === 'object') {
         const v = verbundOf(item);
         next.verbund = {
@@ -1359,7 +1475,6 @@ async function admin(req, res, parts, method) {
     }
     // Infrastruktur des Verbunds (Projekt der Lehrperson).
     if (parts[2] === 'infra' && method === 'PUT') {
-      const body = await readBody(req);
       if (body.project !== null && !validProject(body.project)) return fail(res, 400, 'invalidProject');
       if (body.project && !fits(projectSize(body.project))) return fail(res, 507, 'storageFull');
       const next = { ...item, verbund: { ...verbundOf(item), infra: body.project || null, infraUpdated: Date.now() } };
@@ -1368,7 +1483,6 @@ async function admin(req, res, parts, method) {
     }
     // Status vom Dashboard der Lehrperson (berechnet in ihrem Browser), für die Karte der Lernenden.
     if (parts[2] === 'status' && method === 'POST') {
-      const body = await readBody(req);
       verbundStatus.set(code, { time: Date.now(), sites: cleanStatus(body.sites) });
       return json(res, 200, { ok: true });
     }
@@ -1424,7 +1538,7 @@ async function adminExams(req, res, parts, method, who) {
       key = encryptKey(body.key);
     }
     const minutes = Number.isInteger(body.minutes) && body.minutes > 0 && body.minutes <= MAX_EXAM_MINUTES ? body.minutes : Number.isInteger(info.minutes) ? info.minutes : 60;
-    const used = new Set(list(dirs.exams).flatMap((e) => e.seats.map((s) => s.code)));
+    const used = new Set(seatCodes().keys());
     const seats = Array.from({ length: count }, (_, i) => {
       let code = newCode();
       while (used.has(code)) code = newCode();
@@ -1450,18 +1564,19 @@ async function adminExams(req, res, parts, method, who) {
     saveExam(exam);
     return json(res, 201, examSummary(exam, true));
   }
+  // Inhalt zuerst lesen, dann den Stand laden (siehe Sessions).
+  const body = method === 'POST' ? await readBody(req) : {};
   const exam = loadExam(parts[0]);
   if (!exam || !canSee(who, exam.owner)) return fail(res, 404, 'unknownExam');
   const now = Date.now();
   if (parts.length === 1 && method === 'GET') return json(res, 200, examSummary(exam, true));
   if (parts.length === 1 && method === 'DELETE') {
     for (const s of entries('sessions')) if (s.exam && s.exam.id === exam.id) drop('sessions', s.code);
-    remove(path.join(dirs.exams, `${exam.id}.json`));
+    removeExam(exam);
     return json(res, 200, { ok: true });
   }
   // Safe Exam Browser verlangen (neuer Schlüssel) oder nicht mehr verlangen.
   if (parts[1] === 'seb' && parts.length === 2 && method === 'POST') {
-    const body = await readBody(req);
     if (examState(exam, now) === 'ended') return fail(res, 409, 'examEnded');
     if (body.on === false) delete exam.seb;
     else exam.seb = { key: newSebKey() };
@@ -1487,7 +1602,6 @@ async function adminExams(req, res, parts, method, who) {
   if (parts[1] === 'seats' && parts[3] === 'extra' && method === 'POST') {
     const seat = exam.seats.find((s) => s.id === parts[2]);
     if (!seat) return fail(res, 404, 'unknownSeat');
-    const body = await readBody(req);
     const minutes = Number.isInteger(body.minutes) && Math.abs(body.minutes) <= MAX_EXAM_MINUTES && body.minutes !== 0 ? body.minutes : null;
     if (minutes === null) return fail(res, 400, 'badMinutes');
     seat.extra = Math.max(0, (seat.extra || 0) + minutes);
@@ -1597,4 +1711,4 @@ function createServer() {
 }
 
 // `_leases` nur für Tests (Gerät «verschwindet»).
-module.exports = { createServer, normalizeCode, newCode, cleanup, DATA_DIR, ADMIN_PASSWORD, _leases: leases };
+module.exports = { createServer, normalizeCode, newCode, cleanup, DATA_DIR, ROOT, ADMIN_PASSWORD, rateAddress, _leases: leases };

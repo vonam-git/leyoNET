@@ -2,6 +2,7 @@
   import { convert, costOf } from '../../core';
   import { t } from '../../i18n';
   import { command, keyLabel } from '../commands.svelte';
+  import { adminToken } from '../state/admin.svelte';
   import { dialogs } from '../state/dialogs.svelte';
   import { editor } from '../state/editor.svelte';
   import { session } from '../state/session.svelte';
@@ -114,6 +115,14 @@
       {session.code ? t('session.button', { code: session.code }) : t('session.buttonNone')}
     </button>
   {/if}
+  <!-- Schneller Weg in die Admin-Konsole. Sicher bleibt es, weil die Schaltfläche nur das Anmeldefenster öffnet:
+       kein Passwort und kein Token im Browser-Speicher, in der Prüfung gesperrt, ohne Admin auf dem Server versteckt. -->
+  {#if shown('tool.admin') && session.config?.admin}
+    <button class="chip admin" class:signed={!!adminToken.value} disabled={!enabled('tool.admin')} onclick={() => run('tool.admin')} title="{t(adminToken.value ? 'admin.chipSigned' : 'admin.chipHint')} ({keyLabel('Alt+A')})">
+      <Icon name="lock" size={16} />
+      {t('admin.chip')}{#if adminToken.value}&nbsp;✓{/if}
+    </button>
+  {/if}
   <div class="modes" role="radiogroup" aria-label={t('mode.label')}>
     {#if ui.allowed('design')}
       <button role="radio" aria-checked={editor.mode === 'design'} onclick={() => editor.setMode('design')} title="{t('mode.design.hint')} ({keyLabel('M')})">
@@ -216,6 +225,10 @@
   }
   .spacer {
     flex: 1;
+  }
+  .chip.admin.signed {
+    border-color: var(--distribution);
+    color: var(--distribution);
   }
   .chip {
     display: flex;

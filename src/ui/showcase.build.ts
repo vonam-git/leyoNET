@@ -347,7 +347,7 @@ export function buildShowcase(): Topology {
   ] as const) {
     net.t = u(addDnsRecord(net.t, dns, { name, type: 'A', value: ip, ttl: 3600 }));
   }
-  net.area('Provider (Internet)', 'yellow', -560, -900, 920, 300, { public: true, note: 'Öffentliche Transfernetze 203.0.113.0/24 (RFC 5737), je Standort ein /30. Zwischen den Rechenzentren laufen IPsec-Tunnel (Vollvermaschung).' });
+  net.area('Provider (Internet)', 'yellow', -560, -900, 920, 300, { public: true, note: 'Öffentliche Transitnetze 203.0.113.0/24 (RFC 5737), je Standort ein /30. Zwischen den Rechenzentren laufen IPsec-Tunnel (Vollvermaschung).' });
   net.area('Über dieses Netz', 'gray', -1660, -900, 1000, 300, {
     kind: 'note',
     note: '**Schaufenster leyoNET.** Drei Rechenzentren, drei Bauarten:\n- **Zürich:** dreistufig (Core, Distribution, Access), Glasfaser\n- **Bern:** Core/Distribution zusammen, Kabelmodem\n- **Basel:** Collapsed Core, VDSL\n\nRedundant: doppelte Leitungen im Port-Channel (LACP) und Access-Switches an zwei Switches mit Spanning Tree.\n\nIn der Simulation: Ping, Webseiten und DNS über die VPN-Tunnel. Alle Racks mit Frontplatten: Ansicht → Rack-Ansicht (Taste R).',

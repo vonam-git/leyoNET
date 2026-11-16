@@ -15,7 +15,7 @@ Statt dass alle allein an einem Netz arbeiten, wird die Klasse zu einem Netz: Je
 
 1. Admin-Konsole → Klasse → «Verbund freigeben», «Vorlage laden».
 2. Die Lernenden treten mit dem Klassencode, ihrer **Platznummer** und einer Gruppe (z.B. «Team Rot») bei.
-3. Am Router: Abschnitt «Klassen-Verbund» → «Anschluss an die Klassen-Infrastruktur», dann «Adressen eintragen». Jeder Platz *n* bekommt ein eigenes Transfernetz 203.0.113.(4·n)/30.
+3. Am Router: Abschnitt «Klassen-Verbund» → «Anschluss an die Klassen-Infrastruktur», dann «Adressen eintragen». Jeder Platz *n* bekommt ein eigenes Transitnetz 203.0.113.(4·n)/30.
 4. **Dashboard** öffnen (Admin-Konsole → Klasse → Dashboard), Vollbild auf den Beamer.
 
 Das Dashboard rechnet in Ihrem Browser alle 20 Sekunden den ganzen Verbund durch und prüft per Ping und Webseite: nicht verbunden, angeschlossen, online, Dienste erreichbar, fertig. Niemand kann «fertig» melden, grün wird nur, was funktioniert. Nachrichten zwischen den Standorten fliegen als Lichtpunkt über die Karte.
@@ -23,7 +23,7 @@ Das Dashboard rechnet in Ihrem Browser alle 20 Sekunden den ganzen Verbund durch
 ## Didaktische Hinweise
 
 - Die erste Viertelstunde gehört dem Anschluss: Die Klasse sieht live, wie ein Standort nach dem anderen grün wird. Das motiviert.
-- Danach die Verbund-Übungen im Katalog, z.B. den eigenen Webserver per Portweiterleitung veröffentlichen ([[nat]]).
+- Danach die Verbund-Übungen im Katalog, z.B. den eigenen Webserver per Portweiterleitung veröffentlichen ([[nat]]). Jede Verbund-Übung zeigt im Aufgabenfenster den Kasten «Dein Platz im Klassen-Verbund» mit Platznummer, Transitnetz, WAN-Adresse, Provider und Zentrale für genau diesen Platz und nennt das Ziel in einem Satz.
 - Fehlersuche gemeinsam: Ein Klick auf einen Standort im Dashboard zeigt sein Netz, die Klasse sucht den Fehler mit.
 
 Ausführlich: [Klassen-Verbund](https://github.com/vonam-git/leyoNET/blob/main/docs/verbund.md).

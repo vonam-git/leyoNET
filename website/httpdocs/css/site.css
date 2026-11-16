@@ -1368,3 +1368,14 @@ code {
     display: none;
   }
 }
+
+/* Zeile über der Hauptüberschrift: sagt Menschen und Suchmaschinen in der H1, was leyoNET ist. */
+.h1-kicker {
+  display: block;
+  margin-bottom: 0.5em;
+  font-size: 0.32em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}

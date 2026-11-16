@@ -518,7 +518,7 @@ class Editor {
   }
 
   /**
-   * Adressen des Platzes am Anschluss eintragen: WAN-Adresse im Transfernetz, Standardroute zum
+   * Adressen des Platzes am Anschluss eintragen: WAN-Adresse im Transitnetz, Standardroute zum
    * Provider und (Router/Firewall) NAT am WAN, in einem Schritt (ein Rückgängig).
    */
   applyVerbundAddresses(id: string, seat: number): TopologyError | null {

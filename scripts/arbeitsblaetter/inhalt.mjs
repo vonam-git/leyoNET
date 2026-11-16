@@ -219,14 +219,14 @@ export const SHEETS = [
       },
       {
         id: 'a2',
-        heading: 'Auftrag 2 – Zwei Router mit Transfernetz',
+        heading: 'Auftrag 2 – Zwei Router mit Transitnetz',
         stars: 3,
-        catalog: 'UE04 Router02 – Auftrag 2: Zwei Router mit Transfernetz',
+        catalog: 'UE04 Router02 – Auftrag 2: Zwei Router mit Transitnetz',
         blocks: [
-          { p: 'Wir erweitern das Netz mit einem zweiten Router. Die Netze von Sursee und Zürich bleiben; die Router-Anschlüsse ins LAN bekommen die kleinste Adresse (.1). Zwischen den Routern liegt ein sogenanntes **Transfernetz**:' },
+          { p: 'Wir erweitern das Netz mit einem zweiten Router. Die Netze von Sursee und Zürich bleiben; die Router-Anschlüsse ins LAN bekommen die kleinste Adresse (.1). Zwischen den Routern liegt ein sogenanntes **Transitnetz**:' },
           {
             table: [
-              ['Router', 'Transfernetz', 'Adresse'],
+              ['Router', 'Transitnetz', 'Adresse'],
               ['Router 01', '172.16.0.0/30', '172.16.0.1'],
               ['Router 02', '172.16.0.0/30', '172.16.0.2'],
             ],
@@ -236,7 +236,7 @@ export const SHEETS = [
           {
             question: {
               name: 'warum30',
-              text: 'Warum genügt für ein Transfernetz ein /30?',
+              text: 'Warum genügt für ein Transitnetz ein /30?',
               answer: 'Zwischen zwei Routern braucht es genau zwei Adressen. Ein /30 hat vier Adressen: Netz, zwei Hosts, Broadcast. So wird kein Adressraum verschwendet.',
             },
           },
@@ -257,7 +257,7 @@ export const SHEETS = [
     file: 'M06E_M117_UE05_Router03',
     block: 'Block 6: IP und Router',
     title: 'UE05: Router03',
-    subtitle: 'Drei Standorte mit Standleitungen · Richtzeit 90 Minuten',
+    subtitle: 'Drei Standorte mit Transitnetzen · Richtzeit 90 Minuten',
     entries: ['m117-ue05'],
     projects: ['M06E_UE05'],
     sections: [
@@ -265,7 +265,7 @@ export const SHEETS = [
         id: 'netz',
         heading: 'Auftrag – Netz mit drei Standorten',
         stars: 4,
-        catalog: 'UE05 Router03: Drei Standorte mit Standleitungen',
+        catalog: 'UE05 Router03: Drei Standorte mit Transitnetzen',
         blocks: [
           { p: 'Wir erstellen ein neues Netz mit drei Standorten. Von jedem Standort ist eine Adresse aus seinem Netz bekannt:' },
           {
@@ -281,13 +281,13 @@ export const SHEETS = [
             list: [
               'Jeder Standort hat **3 Notebooks** mit fester Adresse («Notebook Sursee 1» bis «Notebook Sursee 3»), einen **Switch** («Switch Sursee») und einen **Router** («Router Sursee»); ebenso für Luzern und Zürich.',
               'Router-Anschlüsse ins LAN erhalten immer die **kleinste Host-Adresse**.',
-              'Die Router sind über **Standleitungen** (Transportnetze /30) verbunden, siehe Tabelle. Routing: «Automatisches Routing».',
+              'Die Router sind über **Transitnetze** (/30) verbunden, siehe Tabelle. Routing: «Automatisches Routing».',
               'Dokumentation: Jeder Standort ist ein farbiger **Bereich** mit seinem Netz (Feld «Netz (CIDR)»). leyoNET zeigt dann Maske, kleinsten und grössten Host, Broadcast und Anzahl Hosts. Die Router-Schnittstellen mit Adresse im CIDR-Format blendest du unter **Ansicht** ein.',
             ],
           },
           {
             table: [
-              ['Standleitung', 'Netz', 'erster Router', 'zweiter Router'],
+              ['Transitnetz', 'Netz', 'erster Router', 'zweiter Router'],
               ['Sursee – Luzern', '172.31.0.0/30', 'Sursee .1', 'Luzern .2'],
               ['Sursee – Zürich', '172.31.0.4/30', 'Sursee .5', 'Zürich .6'],
               ['Luzern – Zürich', '172.31.0.8/30', 'Luzern .9', 'Zürich .10'],
@@ -338,7 +338,7 @@ export const SHEETS = [
           },
           {
             table: [
-              ['Standleitung (WAN)', 'Netz', 'Adressen'],
+              ['Transitnetz (WAN)', 'Netz', 'Adressen'],
               ['Router Bern – Router Basel', '172.16.50.0/30', 'Bern .1, Basel .2'],
               ['Router Bern – Router Locarno', '172.16.51.0/30', 'Bern .1, Locarno .2'],
               ['Router Basel – Router Locarno', '172.16.52.0/30', 'Basel .1, Locarno .2'],
@@ -482,7 +482,7 @@ export const SHEETS = [
             list: [
               'Namen: Switch **SW_<Standort>**, Router **R_<Standort>** (tiefste Adresse im Netz), Server **DHCP <Standort>**. Die Notebooks heissen wie ihre IP-Adresse, z.B. «10.33.1.0».',
               'Dynamische Notebooks beziehen ihre Adresse per DHCP, feste über eine **feste Zuweisung** im DHCP-Server (MAC-Adresse).',
-              'Transportnetze: R_Sarnen – R_Sempach **10.10.10.0/30**, R_Sarnen – R_Luzern **10.10.10.4/30**, R_Luzern – R_Sempach **10.10.10.8/30** (zuerst genannter Router .1). Routing: «Automatisches Routing».',
+              'Transitnetze: R_Sarnen – R_Sempach **10.10.10.0/30**, R_Sarnen – R_Luzern **10.10.10.4/30**, R_Luzern – R_Sempach **10.10.10.8/30** (zuerst genannter Router .1). Routing: «Automatisches Routing».',
               'Intranet **192.168.0.0/24** am R_Luzern (zusätzlicher Anschluss 192.168.0.1), Webserver «Webserver» 192.168.0.10.',
               'Auf allen DHCP-Servern läuft auch DNS mit dem A-Eintrag **intranet.holzer.example** » 192.168.0.10; der DHCP-Server gibt den DNS-Server mit.',
               'Bereiche mit Netz: Sarnen **blau**, Sempach **rot**, Luzern **grün**, Intranet **orange**. In die **Notiz** jedes Standorts gehören Netzadresse, Maske, kleinster und grösster Host, Broadcast und Anzahl Hosts (wird mitbewertet). Router-Schnittstellen im CIDR-Format einblenden (Ansicht).',

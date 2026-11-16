@@ -140,7 +140,7 @@ group('BGP', () => {
 });
 
 group('OSPF mit mehreren Wegen und Adressen', () => {
-  /** Drei Router an einem LAN-Switch, R1–R2 zusätzlich direkt verbunden, R3–R4 als Transfernetz. */
+  /** Drei Router an einem LAN-Switch, R1–R2 zusätzlich direkt verbunden, R3–R4 als Transitnetz. */
   function mesh(r4Address = '10.0.34.6/30') {
     const net = new NetBuilder();
     const sw = net.add('switch', 'SW');

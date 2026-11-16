@@ -22,7 +22,7 @@ Eine **MAC-Adresse** hat 48 Bit, geschrieben als sechs Hexadezimal-Paare. Die er
 
 ## Wie ein Switch lernt
 
-Ein Switch merkt sich zu jedem Absender, an welchem Port er ihn gesehen hat: die **MAC-Tabelle**. Kommt ein Rahmen an eine bekannte Adresse, geht er nur zu diesem Port. Ist die Adresse unbekannt oder ein Broadcast, schickt der Switch ihn an alle anderen Ports (**Flooding**). Einträge verfallen nach einigen Minuten.
+Ein Switch merkt sich zu jedem Absender, an welchem Port er ihn gesehen hat: die **MAC-Tabelle**, auch **SAT** (Source Address Table) genannt: Der Switch lernt aus der **Absender**-Adresse. Kommt ein Rahmen an eine bekannte Adresse, geht er nur zu diesem Port. Ist die Adresse unbekannt oder ein Broadcast, schickt der Switch ihn an alle anderen Ports (**Flooding**). Einträge verfallen nach einigen Minuten.
 
 > In leyoNET: Switch anklicken, rechts steht die MAC-Tabelle. Nach dem ersten Ping kennt der Switch beide PCs.
 

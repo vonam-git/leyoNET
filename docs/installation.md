@@ -66,7 +66,7 @@ git pull
 docker compose up -d --build
 ```
 
-Der Container baut nichts selbst, sondern übernimmt die fertige Datei aus `release/`. Ist das Basis-Image `nginx:1.27-alpine` einmal heruntergeladen, funktioniert das auch ohne Internet.
+Der Container baut nichts selbst, sondern übernimmt die fertige Datei aus `release/`. Ist das Basis-Image `nginx:stable-alpine` einmal heruntergeladen, funktioniert das auch ohne Internet.
 
 ### Mit HTTPS (optional)
 

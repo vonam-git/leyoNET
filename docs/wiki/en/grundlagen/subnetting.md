@@ -12,7 +12,7 @@ An IPv4 address has 32 bits. The **mask** says how many bits at the front identi
 | /25 | 255.255.255.128 | 128 | 126 |
 | /26 | 255.255.255.192 | 64 | 62 |
 | /27 | 255.255.255.224 | 32 | 30 |
-| /30 | 255.255.255.252 | 4 | 2 (transfer network between routers) |
+| /30 | 255.255.255.252 | 4 | 2 (transit network between routers) |
 
 The first address is the **network address**, the last the **broadcast**; the device addresses lie in between.
 

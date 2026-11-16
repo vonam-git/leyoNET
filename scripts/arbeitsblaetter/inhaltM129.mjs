@@ -102,7 +102,7 @@ export const M129_SHEETS = [
           { fields: subnetFields('bu_', { net: '10.20.0.128/26', mask: '255.255.255.192', first: '10.20.0.129', last: '10.20.0.190', bc: '10.20.0.191', router: '10.20.0.129' }) },
           { h: 'Labor (20 Hosts)' },
           { fields: subnetFields('lab_', { net: '10.20.0.192/27', mask: '255.255.255.224', first: '10.20.0.193', last: '10.20.0.222', bc: '10.20.0.223', router: '10.20.0.193' }) },
-          { h: 'Transfernetz' },
+          { h: 'Transitnetz' },
           {
             fields: [
               { label: 'Netzadresse mit CIDR', name: 'tr_netz', answer: '10.20.0.224/30' },
@@ -219,7 +219,7 @@ export const M129_SHEETS = [
         catalog: 'Routing – Auftrag 1: Drei Router statisch verbinden',
         blocks: [
           { p: 'Richte die Anschlüsse aller drei Router und die beiden PCs (PC LAN1 192.168.1.10, PC LAN3 192.168.3.10) ein. Trage danach **statische Routen** ein, kein automatisches Routing.' },
-          { h: 'Transfernetze berechnen' },
+          { h: 'Transitnetze berechnen' },
           {
             fields: [
               { label: 'LAN2: Hosts', name: 'lan2_hosts', answer: '2 (.1 und .2)' },

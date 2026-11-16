@@ -18,7 +18,7 @@ Eine IPv4-Adresse hat 32 Bit. Die **Maske** sagt, wie viele Bit vorne das Netz b
 | /25 | 255.255.255.128 | 128 | 126 |
 | /26 | 255.255.255.192 | 64 | 62 |
 | /27 | 255.255.255.224 | 32 | 30 |
-| /30 | 255.255.255.252 | 4 | 2 (Transfernetz zwischen Routern) |
+| /30 | 255.255.255.252 | 4 | 2 (Transitnetz zwischen Routern) |
 
 Die erste Adresse ist die **Netzadresse**, die letzte der **Broadcast**; dazwischen liegen die Geräteadressen.
 

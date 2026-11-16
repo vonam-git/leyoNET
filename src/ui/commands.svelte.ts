@@ -1,6 +1,6 @@
 import { DEVICE_SPECS, hasCli, type Medium } from '../core';
 import { LOCALES, locale, setLocale, t, type Locale } from '../i18n';
-import { exportPcap, loadFeatureFile, openProject, saveProject } from './actions';
+import { exportConfigText, exportNetDoc, exportPcap, loadFeatureFile, openProject, saveProject } from './actions';
 import { PROFILE_LEVELS } from './features';
 import { SHOP_CATEGORIES, itemsOf, itemLabel, type ShopItem } from './shop';
 import { openCli } from './state/cli.svelte';
@@ -70,6 +70,8 @@ const COMMANDS: Command[] = [
   { id: 'file.demos', label: () => t('menu.file.demos'), run: () => dialogs.show('demos'), icon: 'play' },
   { id: 'help.avatar', label: () => t('avatar.edit'), run: () => dialogs.show('avatar') },
   { id: 'file.save', label: () => t('menu.file.save'), keys: ['Mod+S'], run: saveProject, icon: 'download' },
+  { id: 'file.netdoc', label: () => t('menu.file.netdoc'), run: exportNetDoc, enabled: () => editor.topology.devices.length > 0 },
+  { id: 'file.configText', label: () => t('menu.file.configText'), run: exportConfigText, visible: () => ui.has('net.cli'), enabled: () => editor.topology.devices.some((d) => hasCli(d.type)) },
   { id: 'file.pcap', label: () => t('menu.file.pcap'), run: exportPcap, visible: () => ui.has('tool.pcap'), enabled: () => (simStore.sim?.getPacketLog().length ?? 0) > 0 },
   { id: 'file.snapshots', label: () => t('menu.file.snapshots'), keys: ['Shift+Mod+S'], run: () => dialogs.show('snapshots'), visible: () => ui.has('tool.snapshots'), icon: 'snapshot' },
   { id: 'file.examJoin', label: () => t('menu.file.examJoin'), run: () => dialogs.show('examJoin'), visible: () => ui.online },
@@ -162,7 +164,7 @@ const COMMANDS: Command[] = [
   { id: 'tool.review', label: () => t('menu.tool.review'), run: () => dialogs.show('review'), visible: () => ui.has('tool.taskEditor') },
   { id: 'tool.features', label: () => t('menu.tool.features'), run: () => dialogs.show('features'), icon: 'layers' },
   { id: 'tool.loadFeatures', label: () => t('menu.tool.loadFeatures'), run: () => void loadFeatureFile(), enabled: () => !ui.locked },
-  { id: 'tool.admin', label: () => t('admin.menu'), run: () => dialogs.show('admin'), visible: () => ui.online, icon: 'lock' },
+  { id: 'tool.admin', label: () => t('admin.menu'), keys: ['Alt+A'], run: () => dialogs.show('admin'), visible: () => ui.online, icon: 'lock' },
 
   // Hilfe
   { id: 'help.help', label: () => t('menu.help.help'), keys: ['F1'], run: () => dialogs.showHelp(helpTopicFor()), icon: 'help' },
@@ -233,6 +235,8 @@ export const MENUS: Menu[] = [
       { separator: true },
       { command: 'file.snapshots' },
       { command: 'file.pcap' },
+      { command: 'file.netdoc' },
+      { command: 'file.configText' },
       { command: 'file.session' },
       { command: 'file.examJoin' },
     ],
