@@ -24,18 +24,18 @@
     "server": "node server/start.cjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.1",
+    "@playwright/test": "^1.65.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tauri-apps/cli": "^2.12.4",
-    "@tsconfig/svelte": "^5.0.8",
-    "@types/node": "^26.6.5",
+    "@tsconfig/svelte": "^5.0.9",
+    "@types/node": "^26.6.6",
     "pdf-lib": "1.17.1",
     "svelte": "^5.57.3",
-    "svelte-check": "^4.7.7",
-    "typescript": "^6.0.3",
-    "vite": "^8.3.5",
+    "svelte-check": "^4.7.8",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
     "vite-plugin-singlefile": "^2.3.4",
-    "vitest": "^4.1.12"
+    "vitest": "^5.1.0"
   },
   "license": "AGPL-3.0-or-later",
   "author": "Mark v. A. & Mikael v. A.",
