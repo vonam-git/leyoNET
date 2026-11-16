@@ -8,7 +8,7 @@ The “Internet” device replaces everything behind the connection: the provide
 
 ## Interfaces and addresses
 
-Every interface of the provider leads to a customer, usually with a small **transfer network** (/30): one address for the provider, one for the customer. Public example addresses come from the documentation networks according to RFC 5737 (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24).
+Every interface of the provider leads to a customer, usually with a small **transit network** (/30): one address for the provider, one for the customer. Public example addresses come from the documentation networks according to RFC 5737 (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24).
 
 ## Special functions
 

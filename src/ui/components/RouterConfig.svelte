@@ -61,6 +61,18 @@
     });
   }
 
+  // Anschluss auf der Zeichenfläche hervorheben, solange seine Zeile den Fokus hat oder die Maus darauf steht.
+  const focusPort = (index: number) => (ui.focusPort = { device: device.id, iface: index });
+  function blurPort(event: Event, index: number) {
+    const row = event.currentTarget as HTMLElement;
+    // Maus weg, aber das Feld hat noch den Fokus: hervorgehoben lassen.
+    if (event.type === 'pointerleave' && row.contains(document.activeElement)) return;
+    if (ui.focusPort?.device === device.id && ui.focusPort.iface === index) ui.focusPort = null;
+  }
+  $effect(() => () => {
+    if (ui.focusPort?.device === device.id) ui.focusPort = null;
+  });
+
   const connected = (index: number) => !!cableAt(editor.topology, { device: device.id, iface: index });
 
   // --- Statisches NAT -----------------------------------------------------------
@@ -177,7 +189,16 @@
         {/if}
       </div>
     {/if}
-    <form class="iface" use:autosave={(quiet) => saveInterface(index, quiet)} onsubmit={(e) => (e.preventDefault(), saveInterface(index, false))}>
+    <form
+      class="iface"
+      class:focused={ui.focusPort?.device === device.id && ui.focusPort.iface === index}
+      use:autosave={(quiet) => saveInterface(index, quiet)}
+      onsubmit={(e) => (e.preventDefault(), saveInterface(index, false))}
+      onfocusin={() => focusPort(index)}
+      onfocusout={(e) => blurPort(e, index)}
+      onpointerenter={() => focusPort(index)}
+      onpointerleave={(e) => blurPort(e, index)}
+    >
       <span class="label">{interfaceLabel(device, index)}</span>
       <input
         aria-label={t('router.ifaceIp', { iface: interfaceLabel(device, index) })}
@@ -480,6 +501,11 @@
     gap: 4px;
     align-items: center;
     margin-top: 6px;
+  }
+  /* Dieselbe Farbe wie die Hervorhebung auf der Zeichenfläche. */
+  .iface.focused .label {
+    color: var(--routing);
+    font-weight: 700;
   }
   .label {
     font-size: 0.8rem;

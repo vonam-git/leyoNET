@@ -94,6 +94,9 @@ const LEASE_MS = 60_000;
 const PIN = /^\d{4,8}$/;
 const PIN_FAILS = 5;
 const PIN_WINDOW_MS = 10 * 60_000;
+/** Ein Klassencode gilt höchstens so lange (beim Anlegen und beim Verlängern, ab heute gerechnet). */
+const MAX_CLASS_DAYS = 180;
+const validDays = (v) => Number.isInteger(v) && v >= 1 && v <= MAX_CLASS_DAYS;
 const MAX_EXAM_SEATS = 60;
 const MAX_EXAM_MINUTES = 600;
 
@@ -1427,7 +1430,9 @@ async function admin(req, res, parts, method) {
       let code = newCode();
       while (fs.existsSync(fileFor(dirs.classes, code))) code = newCode();
       const now = Date.now();
-      const item = { code, label, created: now, expires: now + s.classHours * 3_600_000, owner: ownerOf(who), catalog: readCatalog(body.catalog, EMPTY_CATALOG), verbund: { enabled: false, shareSites: false, infra: null, infraUpdated: 0 } };
+      // Gültigkeit direkt beim Anlegen wählbar (Tage), sonst die Voreinstellung des Hauptadmins.
+      const ttl = validDays(body.days) ? body.days * 86_400_000 : s.classHours * 3_600_000;
+      const item = { code, label, created: now, expires: now + ttl, owner: ownerOf(who), catalog: readCatalog(body.catalog, EMPTY_CATALOG), verbund: { enabled: false, shareSites: false, infra: null, infraUpdated: 0 } };
       writeJson(fileFor(dirs.classes, code), item);
       return json(res, 201, classView(item, []));
     }
@@ -1450,6 +1455,12 @@ async function admin(req, res, parts, method) {
       const next = { ...item };
       if (typeof body.label === 'string' && body.label.trim()) next.label = body.label.trim().slice(0, 40);
       if (body.catalog !== undefined) next.catalog = readCatalog(body.catalog, item.catalog || EMPTY_CATALOG);
+      // Verlängern: ab dem bisherigen Ablauf, aber nie weiter als MAX_CLASS_DAYS ab heute.
+      if (body.extendDays !== undefined) {
+        if (!validDays(body.extendDays)) return fail(res, 400, 'badDays');
+        const now = Date.now();
+        next.expires = Math.min(Math.max(item.expires, now) + body.extendDays * 86_400_000, now + MAX_CLASS_DAYS * 86_400_000);
+      }
       if (body.verbund && typeof body.verbund === 'object') {
         const v = verbundOf(item);
         next.verbund = {

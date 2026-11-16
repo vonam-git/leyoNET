@@ -441,3 +441,23 @@ test('Klassen-Verbund: Plätze, Infrastruktur, Standorte nur bei Freigabe, Nachr
   await call('PATCH', `/api/admin/classes/${klasse.code}`, { verbund: { showMap: true } }, token);
   assert.deepEqual((await foreign('GET', `/api/classes/${klasse.code}/verbund`)).data.status, { 3: { level: 'online', goals: 2, total: 4 } });
 });
+
+test('Klasse: Gültigkeit beim Anlegen wählen und später verlängern (höchstens 180 Tage ab heute)', async () => {
+  const { token } = (await call('POST', '/api/admin/login', { password: 'test-admin-passwort' })).data;
+  const day = 86_400_000;
+  const created = (await call('POST', '/api/admin/classes', { label: 'INF24a', days: 3 }, token)).data;
+  assert.ok(Math.abs(created.expires - created.created - 3 * day) < 1000);
+  // Ohne Angabe gilt die Voreinstellung (14 Tage), ungültige Angaben ebenfalls.
+  const standard = (await call('POST', '/api/admin/classes', { label: 'INF24b', days: 9999 }, token)).data;
+  assert.ok(Math.abs(standard.expires - standard.created - 14 * day) < 1000);
+  const longer = (await call('PATCH', `/api/admin/classes/${created.code}`, { extendDays: 7 }, token)).data;
+  assert.ok(Math.abs(longer.expires - created.expires - 7 * day) < 1000);
+  assert.equal(longer.label, 'INF24a');
+  // Deckel: nie weiter als 180 Tage ab heute; ungültige Werte werden abgewiesen.
+  const capped = (await call('PATCH', `/api/admin/classes/${created.code}`, { extendDays: 180 }, token)).data;
+  assert.ok(capped.expires <= Date.now() + 180 * day);
+  assert.equal((await call('PATCH', `/api/admin/classes/${created.code}`, { extendDays: 0 }, token)).data.error, 'badDays');
+  assert.equal((await call('PATCH', `/api/admin/classes/${created.code}`, { extendDays: '7' }, token)).data.error, 'badDays');
+  // Ohne Anmeldung nicht möglich.
+  assert.equal((await call('PATCH', `/api/admin/classes/${created.code}`, { extendDays: 7 })).status, 401);
+});

@@ -15,7 +15,7 @@ Die Lernenden sehen also nur, *was* zu tun ist und wie viele Punkte ein Teil gib
 
 ## Prüfung erstellen
 
-**Generator «Firmennetz mit drei Standorten»** (Werkzeuge → Prüfung erstellen …): Hauptsitz und zwei Filialen mit DHCP/DNS-Server, Transportnetzen und Intranet mit Webserver, 75 Punkte (je Standort 21, Netzwerkdienste 12).
+**Generator «Firmennetz mit drei Standorten»** (Werkzeuge → Prüfung erstellen …): Hauptsitz und zwei Filialen mit DHCP/DNS-Server, Transitnetzen und Intranet mit Webserver, 75 Punkte (je Standort 21, Netzwerkdienste 12).
 
 - Eine Variante würfeln (Startwert) und von Hand anpassen, oder **je Platz eine eigene Variante** (bis 40 Plätze). Mit demselben Startwert entstehen wieder dieselben Varianten.
 - «Erstellen» → Prüfungsdatei und Schlüssel speichern. «Aufgabenblätter (HTML)» gibt alle Varianten zum Drucken aus. «Musterlösung öffnen» zeigt die Lösung eines Platzes.

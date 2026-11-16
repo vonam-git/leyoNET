@@ -10,7 +10,7 @@ Instead of everyone working alone on a network, the class becomes one network: e
 
 1. Admin console → class → “Enable class network”, “Load template”.
 2. Learners join with the class code, their **seat number** and a group (e.g. “Team Red”).
-3. On the router: section “Class network” → “Connect to the class infrastructure”, then “Fill in addresses”. Every seat *n* gets its own transfer network 203.0.113.(4·n)/30.
+3. On the router: section “Class network” → “Connect to the class infrastructure”, then “Fill in addresses”. Every seat *n* gets its own transit network 203.0.113.(4·n)/30.
 4. Open the **dashboard** (admin console → class → dashboard), full screen on the projector.
 
 Every 20 seconds the dashboard computes the whole network in your browser and checks by ping and web page: not connected, connected, online, services reachable, done. Nobody can report “done” – only what works turns green. Messages between sites fly across the map as a dot of light.

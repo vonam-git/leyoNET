@@ -14,7 +14,7 @@ A **MAC address** has 48 bits, written as six hexadecimal pairs. On a real devic
 
 ## How a switch learns
 
-A switch remembers for every sender on which port it has seen it: the **MAC table**. A frame to a known address goes only to that port. If the address is unknown or a broadcast, the switch sends it to all other ports (**flooding**). Entries expire after a few minutes.
+A switch remembers for every sender on which port it has seen it: the **MAC table**, also called **SAT** (source address table): the switch learns from the **source** address. A frame to a known address goes only to that port. If the address is unknown or a broadcast, the switch sends it to all other ports (**flooding**). Entries expire after a few minutes.
 
 > In leyoNET: click the switch, the MAC table is shown on the right. After the first ping the switch knows both PCs.
 

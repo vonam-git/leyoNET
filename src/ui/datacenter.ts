@@ -52,7 +52,7 @@ const transfer = (s: number, l: number) => ({ vlan: 100 + (s + 1) * 10 + (l + 1)
 
 const id = (t: Topology, name: string) => t.devices.find((d) => d.name === name)!.id;
 
-/** Verkabelt, Transfernetze und Loopbacks adressiert, Server im richtigen VLAN; ohne BGP und VXLAN. */
+/** Verkabelt, Transitnetze und Loopbacks adressiert, Server im richtigen VLAN; ohne BGP und VXLAN. */
 export function datacenterUnderlay(): Topology {
   const s = new Start();
   DC.spines.forEach((sp, i) => s.add('l3switch', sp.name, -220 + i * 440, -260));

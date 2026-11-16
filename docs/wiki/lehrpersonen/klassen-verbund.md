@@ -15,7 +15,7 @@ Statt dass alle allein an einem Netz arbeiten, wird die Klasse zu einem Netz: Je
 
 1. Admin-Konsole → Klasse → «Verbund freigeben», «Vorlage laden».
 2. Die Lernenden treten mit dem Klassencode, ihrer **Platznummer** und einer Gruppe (z.B. «Team Rot») bei.
-3. Am Router: Abschnitt «Klassen-Verbund» → «Anschluss an die Klassen-Infrastruktur», dann «Adressen eintragen». Jeder Platz *n* bekommt ein eigenes Transfernetz 203.0.113.(4·n)/30.
+3. Am Router: Abschnitt «Klassen-Verbund» → «Anschluss an die Klassen-Infrastruktur», dann «Adressen eintragen». Jeder Platz *n* bekommt ein eigenes Transitnetz 203.0.113.(4·n)/30.
 4. **Dashboard** öffnen (Admin-Konsole → Klasse → Dashboard), Vollbild auf den Beamer.
 
 Das Dashboard rechnet in Ihrem Browser alle 20 Sekunden den ganzen Verbund durch und prüft per Ping und Webseite: nicht verbunden, angeschlossen, online, Dienste erreichbar, fertig. Niemand kann «fertig» melden, grün wird nur, was funktioniert. Nachrichten zwischen den Standorten fliegen als Lichtpunkt über die Karte.

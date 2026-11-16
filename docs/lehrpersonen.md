@@ -62,8 +62,8 @@ Im Aufgaben-Katalog gibt es den Reiter **«M117»** (Reiter oben im Katalog) mit
 | ★★ | UE03 Router01 – Auftrag 3: Maske /25 | M06C_M117_UE03_Router01 |
 | ★★ | UE03 Router01 – Auftrag 4: Maske /26 (optional) | M06C_M117_UE03_Router01 |
 | ★★ | UE04 Router02 – Auftrag 1: Ein Router verbindet Sursee und Zürich | M06D_M117_UE04_Router02 |
-| ★★★ | UE04 Router02 – Auftrag 2: Zwei Router mit Transfernetz | M06D_M117_UE04_Router02 |
-| ★★★★ | UE05 Router03: Drei Standorte mit Standleitungen | M06E_M117_UE05_Router03 |
+| ★★★ | UE04 Router02 – Auftrag 2: Zwei Router mit Transitnetz | M06D_M117_UE04_Router02 |
+| ★★★★ | UE05 Router03: Drei Standorte mit Transitnetzen | M06E_M117_UE05_Router03 |
 | ★★★ | UE01 Netzwerkdienste: Firmennetz Watch SA mit DHCP | M07A_M117_UE01_Netzwerkdienste |
 | ★★★★ | UE02 Netzwerkdienste: Webserver, DNS und feste Zuweisungen | M07B_M117_UE02_Netzwerkdienste |
 | ★★★★★ | UE03 Netzwerkdienste: Firmennetz Holzer AG (Prüfungsvorbereitung mit Punkten und Note) | M07C_M117_UE03_Netzwerkdienste |

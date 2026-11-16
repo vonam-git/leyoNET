@@ -69,7 +69,7 @@ describe('Klassen-Verbund: Standorte zusammensetzen', () => {
     const macs = f.topology.devices.flatMap((d) => d.interfaces.map((i) => i.mac));
     expect(new Set(macs).size).toBe(macs.length);
     expect(f.sites.map((s) => s.name)).toEqual(['Platz 1', 'Bern']);
-    // Jeder verbundene Standort hängt am Provider im Transfernetz seines Platzes.
+    // Jeder verbundene Standort hängt am Provider im Transitnetz seines Platzes.
     const provider = f.topology.devices.find((d) => d.id === f.provider)!;
     expect(provider.interfaces.map((i) => i.ip)).toEqual(expect.arrayContaining(['198.51.100.1', '203.0.113.5', '203.0.113.9']));
   });

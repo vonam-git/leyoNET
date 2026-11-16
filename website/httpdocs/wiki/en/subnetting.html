@@ -90,7 +90,7 @@
       <article class="prose">
 <h2 id="network-part-and-host-part">Network part and host part</h2>
 <p>An IPv4 address has 32 bits. The <strong>mask</strong> says how many bits at the front identify the network; the rest numbers the devices in the network. <code>/24</code> (255.255.255.0) means 24 bits network, 8 bits host.</p>
-<div class="table-wrap"><table><thead><tr><th>Prefix</th><th>Mask</th><th>Addresses</th><th>usable</th></tr></thead><tbody><tr><td>/24</td><td>255.255.255.0</td><td>256</td><td>254</td></tr><tr><td>/25</td><td>255.255.255.128</td><td>128</td><td>126</td></tr><tr><td>/26</td><td>255.255.255.192</td><td>64</td><td>62</td></tr><tr><td>/27</td><td>255.255.255.224</td><td>32</td><td>30</td></tr><tr><td>/30</td><td>255.255.255.252</td><td>4</td><td>2 (transfer network between routers)</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Prefix</th><th>Mask</th><th>Addresses</th><th>usable</th></tr></thead><tbody><tr><td>/24</td><td>255.255.255.0</td><td>256</td><td>254</td></tr><tr><td>/25</td><td>255.255.255.128</td><td>128</td><td>126</td></tr><tr><td>/26</td><td>255.255.255.192</td><td>64</td><td>62</td></tr><tr><td>/27</td><td>255.255.255.224</td><td>32</td><td>30</td></tr><tr><td>/30</td><td>255.255.255.252</td><td>4</td><td>2 (transit network between routers)</td></tr></tbody></table></div>
 <p>The first address is the <strong>network address</strong>, the last the <strong>broadcast</strong>; the device addresses lie in between.</p>
 <h2 id="example">Example</h2>
 <p>The network <code>192.168.10.0/24</code> is to be split into four equal networks. Four networks need 2 more bits: <code>/26</code>. Each network has 64 addresses:</p>

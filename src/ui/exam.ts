@@ -1,6 +1,6 @@
 /**
  * Prüfungen «Firmennetz mit drei Standorten» (wie die praktische Prüfung im
- * Modul 117): Aus einer Vorgabe (Firma, drei Standorte, Transportnetze,
+ * Modul 117): Aus einer Vorgabe (Firma, drei Standorte, Transitnetze,
  * Intranet mit Webserver) entstehen
  *   - die Aufgabe mit automatischer Prüfung und Punkten (je Standort 21,
  *     Netzwerkdienste 12, total 75; Note = 5 × Punkte / 75 + 1),
@@ -59,7 +59,7 @@ export interface ExamSpec {
   company: string;
   /** Hauptsitz, Filiale, Filiale mit Intranet. */
   sites: [ExamSite, ExamSite, ExamSite];
-  /** Transportnetze /30: Hauptsitz–Filiale 1, Hauptsitz–Filiale 2, Filiale 2–Filiale 1. */
+  /** Transitnetze /30: Hauptsitz–Filiale 1, Hauptsitz–Filiale 2, Filiale 2–Filiale 1. */
   transfers: [string, string, string];
   intranet: { network: string; web: string; domain: string; color: TagColor };
 }
@@ -117,13 +117,13 @@ export function siteFacts(site: ExamSite): SiteFacts {
   };
 }
 
-/** Adresse `n` im Transportnetz (1 oder 2). */
+/** Adresse `n` im Transitnetz (1 oder 2). */
 function transferIp(net: string, n: 1 | 2): string {
   const c = cidr(net)!;
   return formatIp(networkOf(c.ip, c.prefix) + n);
 }
 
-/** Welche Standorte ein Transportnetz verbindet (Index in `sites`), in der Reihenfolge .1, .2. */
+/** Welche Standorte ein Transitnetz verbindet (Index in `sites`), in der Reihenfolge .1, .2. */
 export const TRANSFER_ENDS: readonly [number, number][] = [
   [0, 1],
   [0, 2],
@@ -370,7 +370,7 @@ export function buildExamSolution(spec: ExamSpec): Topology {
     ).topology;
     routers.push(router);
   });
-  // Transportnetze: Anschluss 1 und 2 der Router, in der Reihenfolge der Vorgabe.
+  // Transitnetze: Anschluss 1 und 2 der Router, in der Reihenfolge der Vorgabe.
   const nextPort = [1, 1, 1];
   TRANSFER_ENDS.forEach(([a, b], k) => {
     const pa = nextPort[a]!++;

@@ -162,7 +162,7 @@ const COMMANDS: Command[] = [
   { id: 'tool.review', label: () => t('menu.tool.review'), run: () => dialogs.show('review'), visible: () => ui.has('tool.taskEditor') },
   { id: 'tool.features', label: () => t('menu.tool.features'), run: () => dialogs.show('features'), icon: 'layers' },
   { id: 'tool.loadFeatures', label: () => t('menu.tool.loadFeatures'), run: () => void loadFeatureFile(), enabled: () => !ui.locked },
-  { id: 'tool.admin', label: () => t('admin.menu'), run: () => dialogs.show('admin'), visible: () => ui.online, icon: 'lock' },
+  { id: 'tool.admin', label: () => t('admin.menu'), keys: ['Alt+A'], run: () => dialogs.show('admin'), visible: () => ui.online, icon: 'lock' },
 
   // Hilfe
   { id: 'help.help', label: () => t('menu.help.help'), keys: ['F1'], run: () => dialogs.showHelp(helpTopicFor()), icon: 'help' },
