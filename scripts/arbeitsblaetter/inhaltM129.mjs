@@ -201,24 +201,42 @@ export const M129_SHEETS = [
         table: [
           ['Netz', 'Adressbereich', 'Router', 'Adresse'],
           ['LAN1', '192.168.1.0/24', 'Router1 eth0', '192.168.1.254/24'],
-          ['LAN2 (Transfer)', '192.168.2.0/30', 'Router1 eth1 / Router2 eth1', '.1 / .2'],
+          ['LAN2 (Transit)', '192.168.2.0/30', 'Router1 eth1 / Router2 eth1', '.1 / .2'],
           ['LAN3', '192.168.3.0/24', 'Router2 eth0', '192.168.3.254/24'],
-          ['LAN4 (Transfer)', '172.16.12.80/28', 'Router2 eth2 / Router3 eth0', '.94 / .81'],
+          ['LAN4 (Transit)', '172.16.12.80/28', 'Router2 eth2 / Router3 eth0', '.94 / .81'],
           ['Provider', '203.0.113.0/24', 'Router3 eth1 / Provider', '.1 / .2'],
           ['Verwaltung', '192.168.56.0/24', 'Router1/2/3', '.101 / .102 / .103'],
         ],
         widths: [1.3, 1.4, 1.9, 1.4],
       },
-      { tip: 'Der Provider steht auf 203.0.113.2, der Webserver im Internet auf 198.51.100.10 (Adressen für Dokumentation, RFC 5737).' },
+      { tip: 'Ein **Transitnetz** verbindet nur Router miteinander, es stehen keine PCs darin. Darum genügt ein kleines Netz wie /30 mit zwei Adressen. Der Provider steht auf 203.0.113.2, der Webserver im Internet auf 198.51.100.10 (Adressen für Dokumentation, RFC 5737).' },
+      { h: 'Theorie: die Befehlszeile eines Routers' },
+      { p: 'Ein Router kennt von sich aus nur die Netze, an denen er direkt hängt. Für jedes andere Ziel braucht er eine **Route**: «Netz X erreichst du über den Nachbarn Y (Next Hop)». Eine **Standardroute** 0.0.0.0/0 gilt für alles, wofür es keine genauere Route gibt. Und: Jedes Paket braucht auch einen **Rückweg**.' },
+      { p: 'Die Befehle unten zeigen den Aufbau mit **anderen Beispieladressen** (10.0.0.0/8). Die Befehle für dein Netz überlegst du selbst. Hilfe gibt es jederzeit mit `?` oder der Taste Tab auf der Befehlszeile und mit **F1** in leyoNET.' },
+      {
+        table: [
+          ['Zweck', 'Beispiel (nicht dein Netz)'],
+          ['Konfigurieren beginnen', 'enable, configure terminal'],
+          ['Anschluss einrichten', 'interface eth0, ip address 10.0.1.1/24, end'],
+          ['Statische Route', 'ip route 10.0.9.0/24 10.0.255.2 (Zielnetz/Präfix, Next Hop)'],
+          ['Standardroute', 'ip route 0.0.0.0/0 10.0.255.2'],
+          ['Kontrolle', 'show ip interface brief, show ip route, ping 10.0.9.1'],
+          ['Laufende Konfiguration', 'show running-config (gilt sofort, aber nur bis zum Neustart)'],
+          ['Speichern', 'copy running-config startup-config (oder kurz: write memory)'],
+          ['Gespeichertes ansehen', 'show startup-config'],
+        ],
+        widths: [1.6, 4],
+      },
+      { tip: 'Echte Router unterscheiden die **running-config** (im Arbeitsspeicher, sofort wirksam) und die **startup-config** (gespeichert, wird beim Start geladen). Wer nicht speichert, verliert nach einem Neustart alle Änderungen. In leyoNET zeigt das Fenster der Befehlszeile oben an, ob die Konfiguration gespeichert ist.' },
     ],
     sections: [
       {
         id: 'a1',
         heading: 'Auftrag 1 – Drei Router statisch verbinden',
         stars: 3,
-        catalog: 'Routing – Auftrag 1: Drei Router statisch verbinden',
+        catalog: 'Statisches Routing – Auftrag 1: Drei Router statisch verbinden',
         blocks: [
-          { p: 'Richte die Anschlüsse aller drei Router und die beiden PCs (PC LAN1 192.168.1.10, PC LAN3 192.168.3.10) ein. Trage danach **statische Routen** ein, kein automatisches Routing.' },
+          { p: 'Richte die Anschlüsse aller drei Router und die beiden PCs (PC LAN1 192.168.1.10, PC LAN3 192.168.3.10) ein. Trage danach **statische Routen** ein, kein automatisches Routing. Speichere zum Schluss die Konfiguration jedes Routers.' },
           { h: 'Transitnetze berechnen' },
           {
             fields: [
@@ -228,20 +246,7 @@ export const M129_SHEETS = [
               { label: 'LAN4: Broadcast', name: 'lan4_bc', answer: '172.16.12.95' },
             ],
           },
-          { h: 'Befehlszeile: so geht es in leyoNET' },
-          {
-            table: [
-              ['Schritt', 'Befehl in leyoNET'],
-              ['Konfigurieren', 'enable, configure terminal'],
-              ['Name', 'hostname Router1'],
-              ['Adresse', 'interface eth0, ip address 192.168.1.254/24'],
-              ['Statische Route', 'ip route 0.0.0.0/0 192.168.2.2'],
-              ['Übernehmen', 'sofort wirksam (mit «end» zurück, Rückgängig mit Strg+Z)'],
-              ['Kontrolle', 'show ip interface brief, show ip route'],
-            ],
-            widths: [1.4, 4],
-          },
-          { h: 'Statische Routen planen' },
+          { h: 'Statische Routen planen: Welche Netze kennt der Router nicht direkt, und über wen erreicht er sie?' },
           {
             fields: [
               { label: 'Router1', name: 'r1_route', answer: '0.0.0.0/0 (Standardroute) über 192.168.2.2', wide: true },
@@ -250,12 +255,44 @@ export const M129_SHEETS = [
               { label: 'Router3', name: 'r3_route', answer: '192.168.1.0/24, 192.168.2.0/30 und 192.168.3.0/24 über 172.16.12.94', wide: true },
             ],
           },
+          { h: 'Deine Befehle (selbst erarbeitet)' },
+          {
+            question: {
+              name: 'cmd_r1',
+              lines: 4,
+              text: 'Router1: Befehle für die Anschlüsse, die Route(n) und das Speichern.',
+              answer: 'interface eth0, ip address 192.168.1.254/24; interface eth1, ip address 192.168.2.1/30; ip route 0.0.0.0/0 192.168.2.2; copy running-config startup-config',
+            },
+          },
+          {
+            question: {
+              name: 'cmd_r2',
+              lines: 4,
+              text: 'Router2: Befehle für die Anschlüsse, die Route(n) und das Speichern.',
+              answer: 'interface eth0, ip address 192.168.3.254/24; interface eth1, ip address 192.168.2.2/30; interface eth2, ip address 172.16.12.94/28; ip route 192.168.1.0/24 192.168.2.1; ip route 0.0.0.0/0 172.16.12.81; copy running-config startup-config',
+            },
+          },
+          {
+            question: {
+              name: 'cmd_r3',
+              lines: 4,
+              text: 'Router3: Befehle für die Anschlüsse, die Route(n) und das Speichern.',
+              answer: 'interface eth0, ip address 172.16.12.81/28; interface eth1, ip address 203.0.113.1/24; ip route 192.168.1.0/24 172.16.12.94; ip route 192.168.2.0/30 172.16.12.94; ip route 192.168.3.0/24 172.16.12.94; copy running-config startup-config',
+            },
+          },
           {
             question: {
               name: 'standard',
               lines: 3,
               text: 'Warum genügt bei Router1 eine einzige Route, während Router3 drei Routen braucht?',
               answer: 'Router1 hat nur einen Weg nach aussen: Alles, was nicht in seinen eigenen Netzen liegt, geht zu Router2 (Standardroute). Router3 dagegen hat zwei Richtungen: Die internen Netze liegen hinter Router2, alles andere im Internet. Darum braucht er für jedes interne Netz eine Route (oder eine Sammelroute) und für das Internet die Standardroute.',
+            },
+          },
+          {
+            question: {
+              name: 'speichern',
+              text: 'Was passiert mit deinen Routen, wenn der Router neu startet und du nicht gespeichert hast?',
+              answer: 'Sie sind weg: Der Router lädt beim Start die startup-config. Nur was mit «copy running-config startup-config» gespeichert wurde, bleibt erhalten.',
             },
           },
           { h: 'Abnahme: Pings von den Routern (Befehlszeile «ping …»)' },
@@ -269,24 +306,31 @@ export const M129_SHEETS = [
               { label: 'Router3: ping 192.168.3.254', name: 'ab_r3b', answer: 'Antwort' },
             ],
           },
-          { check: 11 },
+          { check: 14 },
         ],
       },
       {
         id: 'a2',
         heading: 'Auftrag 2 – Ins Internet mit NAT',
         stars: 4,
-        catalog: 'Routing – Auftrag 2: Ins Internet mit NAT',
+        catalog: 'Statisches Routing – Auftrag 2: Ins Internet mit NAT',
         blocks: [
           { p: 'Die LANs sollen ins Internet. Router3 braucht dafür eine **Standardroute zum Provider** (203.0.113.2) und muss die privaten Absenderadressen übersetzen: **Source-NAT mit Masquerade**, das heisst «nimm die Adresse des ausgehenden Anschlusses».' },
           {
             table: [
-              ['Schritt', 'Befehl in leyoNET (Router3)'],
-              ['Standardroute', 'ip route 0.0.0.0/0 203.0.113.2'],
-              ['NAT (Masquerade)', 'interface eth1, ip nat outside'],
+              ['Zweck', 'Beispiel (nicht dein Netz)'],
+              ['NAT auf dem Anschluss zum Provider', 'interface eth5, ip nat outside'],
               ['Kontrolle', 'show ip route, show ip nat translations'],
             ],
-            widths: [1.4, 4],
+            widths: [1.6, 4],
+          },
+          {
+            question: {
+              name: 'cmd_nat',
+              lines: 3,
+              text: 'Router3: Deine Befehle für die Standardroute, NAT und das Speichern.',
+              answer: 'ip route 0.0.0.0/0 203.0.113.2; interface eth1, ip nat outside; copy running-config startup-config',
+            },
           },
           {
             question: {
@@ -324,18 +368,25 @@ export const M129_SHEETS = [
         id: 'a3',
         heading: 'Auftrag 3 – Verwaltungsnetz und SSH',
         stars: 3,
-        catalog: 'Routing – Auftrag 3: Verwaltungsnetz und SSH',
+        catalog: 'Statisches Routing – Auftrag 3: Verwaltungsnetz und SSH',
         blocks: [
           { p: 'Router werden selten an der Konsole eingerichtet, sondern über das Netz. Dafür bekommen sie einen eigenen Anschluss in einem **Verwaltungsnetz** 192.168.56.0/24. Das Admin-Notebook (192.168.56.10/24) meldet sich per **SSH** an.' },
           {
             table: [
-              ['Schritt', 'leyoNET (Befehlszeile)'],
-              ['Anschluss', 'interface eth2, ip address 192.168.56.101/24 (Router2: eth3, .102; Router3: eth2, .103)'],
-              ['Benutzer', 'username admin password …'],
+              ['Zweck', 'Beispiel (nicht dein Netz)'],
+              ['Benutzer anlegen', 'username chefin password …'],
               ['SSH einschalten', 'ip ssh, line vty, transport input ssh, login local'],
-              ['Anmelden (Admin-Notebook)', 'ssh admin@192.168.56.101'],
+              ['Anmelden', 'ssh chefin@10.0.56.1'],
             ],
-            widths: [1.4, 4],
+            widths: [1.6, 4],
+          },
+          {
+            question: {
+              name: 'cmd_ssh',
+              lines: 4,
+              text: 'Deine Befehle für Router1: Anschluss ins Verwaltungsnetz, Benutzer admin, SSH, Speichern, und die Anmeldung vom Admin-Notebook.',
+              answer: 'interface eth2, ip address 192.168.56.101/24; username admin password …; ip ssh; line vty, transport input ssh, login local; copy running-config startup-config; Admin-Notebook: ssh admin@192.168.56.101 (Router2: eth3 .102, Router3: eth2 .103)',
+            },
           },
           {
             question: {
@@ -359,6 +410,177 @@ export const M129_SHEETS = [
             ],
           },
           { check: 6 },
+        ],
+      },
+    ],
+  },
+
+  // --- Dynamisches Routing ----------------------------------------------------------------
+  {
+    ...M129,
+    file: 'M129_Dynamisches_Routing',
+    block: 'Dynamisches Routing',
+    title: 'Dynamisches Routing mit RIP und OSPF',
+    subtitle: 'Router tauschen ihre Netze selbst aus · Richtzeit 2 × 90 Minuten',
+    entries: ['m129-dyn-a1', 'm129-dyn-a2'],
+    projects: ['M129_Dyn_A1', 'M129_Dyn_A2'],
+    intro: [
+      { p: 'Dasselbe Netz wie beim statischen Routing. Alle Adressen sind schon eingerichtet, aber **kein Router hat eine Route**. Statt jede Route von Hand einzutragen, lässt du die Router ihre Netze selbst austauschen: mit einem **Routingprotokoll**.' },
+      {
+        table: [
+          ['Netz', 'Adressbereich', 'Router', 'Adresse'],
+          ['LAN1', '192.168.1.0/24', 'Router1 eth0', '192.168.1.254/24'],
+          ['LAN2 (Transit)', '192.168.2.0/30', 'Router1 eth1 / Router2 eth1', '.1 / .2'],
+          ['LAN3', '192.168.3.0/24', 'Router2 eth0', '192.168.3.254/24'],
+          ['LAN4 (Transit)', '172.16.12.80/28', 'Router2 eth2 / Router3 eth0', '.94 / .81'],
+          ['Provider', '203.0.113.0/24', 'Router3 eth1 / Provider', '.1 / .2'],
+        ],
+        widths: [1.3, 1.4, 1.9, 1.4],
+      },
+      { h: 'Theorie: RIP und OSPF' },
+      {
+        table: [
+          ['', 'RIP (Version 2)', 'OSPF'],
+          ['Art', 'Distanzvektor: «Netz X ist n Sprünge entfernt»', 'Link-State: jeder Router kennt die ganze Karte des Netzes'],
+          ['Metrik', 'Anzahl Router (Hops), höchstens 15', 'Kosten, abhängig von der Bandbreite'],
+          ['Updates', 'ganze Tabelle alle 30 Sekunden', 'Hello-Pakete, Änderungen sofort'],
+          ['Einsatz', 'kleine, einfache Netze', 'grössere Netze, schnelle Umschaltung'],
+          ['Kennzeichen in show ip route', 'R', 'O'],
+        ],
+        widths: [1.5, 2.3, 2.6],
+      },
+      { p: 'Bei beiden gibst du mit **network** an, welche **eigenen, direkt angeschlossenen Netze** der Router ankündigen und auf welchen Anschlüssen er mit Nachbarn sprechen soll. Fremde Netze trägst du nicht ein: Die lernt der Router von den Nachbarn.' },
+      { p: 'Die Befehle unten zeigen den Aufbau mit **anderen Beispieladressen** (10.0.0.0/8). Die Befehle für dein Netz erarbeitest du selbst. Hilfe gibt es mit `?` oder Tab auf der Befehlszeile und mit **F1** in leyoNET.' },
+      {
+        table: [
+          ['Zweck', 'Beispiel (nicht dein Netz)'],
+          ['RIP einschalten', 'configure terminal, router rip, version 2'],
+          ['RIP: eigenes Netz ankündigen', 'network 10.0.1.0/24 (für jedes angeschlossene Netz)'],
+          ['OSPF einschalten', 'configure terminal, router ospf'],
+          ['OSPF: eigenes Netz in Area 0', 'network 10.0.1.0/24 area 0'],
+          ['OSPF: Standardroute weitergeben', 'default-information originate'],
+          ['Kontrolle', 'show ip route, show ip protocols, show ip rip, show ip ospf neighbor'],
+          ['Speichern', 'end, copy running-config startup-config'],
+        ],
+        widths: [1.8, 4],
+      },
+      { tip: 'Ein Routingprotokoll ersetzt nur die Routen, nicht die Adressen. Funktioniert etwas nicht, prüfe zuerst mit «show ip interface brief», ob alle Anschlüsse eine Adresse haben, und mit «ping», ob der direkte Nachbar antwortet.' },
+    ],
+    sections: [
+      {
+        id: 'a1',
+        heading: 'Auftrag 1 – Automatisch routen mit RIP',
+        stars: 3,
+        catalog: 'Dynamisches Routing – Auftrag 1: Automatisch routen mit RIP',
+        blocks: [
+          { p: 'Schalte auf allen drei Routern **RIP** ein und kündige die eigenen Netze an. Das Provider-Netz 203.0.113.0/24 gehört nicht dazu. Prüfe danach die Routingtabellen und speichere die Konfiguration.' },
+          { h: 'Planen: Welche Netze kündigt jeder Router an?' },
+          {
+            fields: [
+              { label: 'Router1', name: 'rip_r1', answer: '192.168.1.0/24, 192.168.2.0/30', wide: true },
+              { label: 'Router2', name: 'rip_r2', answer: '192.168.2.0/30, 192.168.3.0/24, 172.16.12.80/28', wide: true },
+              { label: 'Router3', name: 'rip_r3', answer: '172.16.12.80/28', wide: true },
+            ],
+          },
+          { h: 'Deine Befehle (selbst erarbeitet)' },
+          {
+            question: {
+              name: 'rip_cmd_r1',
+              lines: 3,
+              text: 'Router1:',
+              answer: 'configure terminal; router rip; version 2; network 192.168.1.0/24; network 192.168.2.0/30; end; copy running-config startup-config',
+            },
+          },
+          {
+            question: {
+              name: 'rip_cmd_r2',
+              lines: 3,
+              text: 'Router2:',
+              answer: 'configure terminal; router rip; version 2; network 192.168.2.0/30; network 192.168.3.0/24; network 172.16.12.80/28; end; copy running-config startup-config',
+            },
+          },
+          {
+            question: {
+              name: 'rip_cmd_r3',
+              lines: 3,
+              text: 'Router3:',
+              answer: 'configure terminal; router rip; version 2; network 172.16.12.80/28; end; copy running-config startup-config',
+            },
+          },
+          { h: 'Kontrolle mit «show ip route»' },
+          {
+            fields: [
+              { label: 'R1: Next Hop zu LAN3', name: 'rip_nh', answer: '192.168.2.2' },
+              { label: 'R3: Hops zu LAN1', name: 'rip_hops', answer: '2' },
+            ],
+          },
+          {
+            question: {
+              name: 'rip_vs_static',
+              lines: 3,
+              text: 'Vergleiche mit dem statischen Routing: Was musstest du hier nicht mehr eintragen, und was passiert, wenn ein neues LAN dazukommt?',
+              answer: 'Keine Routen zu fremden Netzen und keine Rückwege: Die Router lernen sie voneinander. Kommt ein LAN dazu, kündigt man es nur auf seinem Router mit «network» an; alle anderen lernen es automatisch.',
+            },
+          },
+          { check: 8 },
+        ],
+      },
+      {
+        id: 'a2',
+        heading: 'Auftrag 2 – OSPF mit Standardroute',
+        stars: 4,
+        catalog: 'Dynamisches Routing – Auftrag 2: OSPF mit Standardroute',
+        blocks: [
+          { p: 'Router1 und Router2 haben wieder keine Routen. Router3 hat bereits eine **Standardroute zum Provider** (203.0.113.2) und NAT auf eth1. Richte **OSPF** in der Area 0 ein. Router3 soll seine Standardroute an die anderen Router weitergeben, damit alle LANs ins Internet kommen.' },
+          { h: 'Deine Befehle (selbst erarbeitet)' },
+          {
+            question: {
+              name: 'ospf_cmd_r1',
+              lines: 3,
+              text: 'Router1:',
+              answer: 'configure terminal; router ospf; network 192.168.1.0/24 area 0; network 192.168.2.0/30 area 0; end; copy running-config startup-config',
+            },
+          },
+          {
+            question: {
+              name: 'ospf_cmd_r2',
+              lines: 3,
+              text: 'Router2:',
+              answer: 'configure terminal; router ospf; network 192.168.2.0/30 area 0; network 192.168.3.0/24 area 0; network 172.16.12.80/28 area 0; end; copy running-config startup-config',
+            },
+          },
+          {
+            question: {
+              name: 'ospf_cmd_r3',
+              lines: 3,
+              text: 'Router3:',
+              answer: 'configure terminal; router ospf; network 172.16.12.80/28 area 0; default-information originate; end; copy running-config startup-config',
+            },
+          },
+          { h: 'Kontrolle' },
+          {
+            fields: [
+              { label: 'Router2: OSPF-Nachbarn', name: 'ospf_nb', answer: '2 (Router1 und Router3)', wide: true },
+              { label: 'Router1: Code Standardroute', name: 'ospf_def', answer: 'O (von OSPF gelernt)', wide: true },
+              { label: 'Absender am Webserver', name: 'ospf_src', answer: '203.0.113.1', wide: true },
+            ],
+          },
+          {
+            question: {
+              name: 'ospf_vs_rip',
+              lines: 3,
+              text: 'Nenne zwei Unterschiede zwischen RIP und OSPF.',
+              answer: 'RIP zählt Sprünge (höchstens 15), OSPF rechnet mit Kosten; RIP schickt periodisch die ganze Tabelle, OSPF nur Änderungen und Hellos; OSPF kennt die ganze Netzkarte (Link-State) und schaltet schneller um; OSPF bildet Nachbarschaften und Areas.',
+            },
+          },
+          {
+            question: {
+              name: 'ospf_default',
+              text: 'Warum ist es geschickt, die Standardroute nur auf Router3 einzutragen und per OSPF zu verteilen?',
+              answer: 'Nur Router3 kennt den Provider. Wechselt der Provider oder die Adresse, ändert man nur Router3; alle anderen lernen den Weg ins Internet automatisch.',
+            },
+          },
+          { check: 9 },
         ],
       },
     ],

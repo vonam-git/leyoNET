@@ -26,6 +26,7 @@ import {
   setIpRouting,
   setPortTrunk,
   setPortVlan,
+  setStartupConfig,
   setStp,
   setStpPriority,
   setSubinterface,
@@ -501,9 +502,23 @@ const COMMANDS: Command[] = [
   { modes: [...EXEC, ...CONFIG_ALL], syntax: 'exit', help: 'Exit current mode / close the session', run: ({ session }) => exitMode(session) },
   { modes: EXEC, syntax: 'logout', help: 'Close the session', run: ({ session }) => ({ close: true, lines: session.remote ? ['Connection closed.'] : [] }) },
   { modes: CONFIG_ALL, syntax: 'end', help: 'Return to privileged mode', run: ({ session }) => ({ session: { device: session.device, mode: 'enable', ...(session.remote ? { remote: true } : {}) } }) },
-  { modes: ['enable'], syntax: 'write memory', help: 'Save the running configuration', run: () => ok(['Building configuration...', '[OK]']) },
-  { modes: ['enable'], syntax: 'write', help: 'Save the running configuration', run: () => ok(['Building configuration...', '[OK]']) },
-  { modes: ['enable'], syntax: 'copy running-config startup-config', help: 'Save the running configuration', run: () => ok(['Building configuration...', '[OK]']) },
+  { modes: ['enable'], syntax: 'write memory', help: 'Save the running configuration', run: (call) => saveConfig(call) },
+  { modes: ['enable'], syntax: 'write', help: 'Save the running configuration', run: (call) => saveConfig(call) },
+  { modes: ['enable'], syntax: 'copy running-config startup-config', help: 'Save the running configuration', run: (call) => saveConfig(call, true) },
+  { modes: ['enable'], syntax: 'show startup-config', help: 'Saved configuration (used after a restart)', run: ({ device }) => ok(device.startupConfig ? device.startupConfig.split('\n') : ['startup-config is not present']) },
+  { modes: ['enable'], syntax: 'erase startup-config', help: 'Delete the saved configuration', run: ({ device, env }) => apply(setStartupConfig(env.topology, device.id, null), ['Erasing the nvram filesystem will remove all configuration files! Continue? [confirm]', '[OK]', 'Erase of nvram: complete']) },
+  { modes: ['enable'], syntax: 'write erase', help: 'Delete the saved configuration', run: ({ device, env }) => apply(setStartupConfig(env.topology, device.id, null), ['Erasing the nvram filesystem will remove all configuration files! Continue? [confirm]', '[OK]', 'Erase of nvram: complete']) },
+  {
+    modes: ['enable'],
+    syntax: 'reload',
+    help: 'Restart the device (warns about unsaved changes)',
+    run: ({ device }) =>
+      ok(
+        configSaved(device)
+          ? ['Proceed with reload? [confirm]', '% leyoNET: the device keeps running; the saved configuration matches the running configuration.']
+          : ['System configuration has been modified. Save? [yes/no]: no', '% leyoNET: on a real device the changes since the last save would now be lost.', '% Save first with: copy running-config startup-config'],
+      ),
+  },
   {
     modes: EXEC,
     types: L3,
@@ -2024,6 +2039,18 @@ function showPowerInline(device: Device, env: CliEnv): string[] {
     '',
     ...table(['Interface', 'Admin', 'Oper', 'Power(W)', 'Device', 'Class'], rows),
   ];
+}
+
+// --- Konfiguration speichern ------------------------------------------------------
+
+/** Ist die laufende Konfiguration gespeichert (startup-config gleich running-config)? */
+export function configSaved(device: Device): boolean {
+  return device.startupConfig === runningConfig(device).join('\n');
+}
+
+function saveConfig(call: Call, ask = false): Partial<CliOutput> {
+  const text = runningConfig(call.device).join('\n');
+  return apply(setStartupConfig(call.env.topology, call.device.id, text), [...(ask ? ['Destination filename [startup-config]? '] : []), 'Building configuration...', '[OK]']);
 }
 
 // --- running-config ------------------------------------------------------------

@@ -19,6 +19,10 @@ import {
   setInterfaceCount,
   setRoutingMode,
   addStaticRoute,
+  runningConfig,
+  setOspf,
+  setRip,
+  setStartupConfig,
   type Topology,
 } from '../core';
 import { Start, goal, task, unwrap, type CatalogEntry } from './catalogKit';
@@ -216,6 +220,68 @@ export function solveRouting1(topology: Topology): Topology {
   return t;
 }
 
+/** Konfiguration der Router speichern («copy running-config startup-config»). */
+export function saveRouters(topology: Topology, names = ['Router1', 'Router2', 'Router3']): Topology {
+  let t = topology;
+  for (const name of names) {
+    const device = t.devices.find((d) => d.name === name)!;
+    t = unwrap(setStartupConfig(t, device.id, runningConfig(device).join('\n')));
+  }
+  return t;
+}
+
+/** Auftrag 1 mit gespeicherter Konfiguration (Musterlösung im Katalog). */
+export const solveRouting1Saved = (t: Topology) => saveRouters(solveRouting1(t));
+
+// --- Dynamisches Routing (RIP, OSPF) mit denselben drei Routern --------------------------
+
+/** Startnetz: Adressen und PCs eingerichtet, keine Routen. Für OSPF zusätzlich Standardroute und NAT auf Router3. */
+export function dynamicStart(withInternet: boolean): Topology {
+  let t = routingStart().topology;
+  t = host(t, 'PC LAN1', '192.168.1.10', '24', '192.168.1.254');
+  t = host(t, 'PC LAN3', '192.168.3.10', '24', '192.168.3.254');
+  t = port(t, 'Router1', 0, R129.r1.lan);
+  t = port(t, 'Router1', 1, R129.r1.transfer);
+  t = port(t, 'Router2', 0, R129.r2.lan);
+  t = port(t, 'Router2', 1, R129.r2.transfer);
+  t = port(t, 'Router2', 2, R129.r2.transfer2);
+  t = port(t, 'Router3', 0, R129.r3.transfer2);
+  t = port(t, 'Router3', 1, R129.r3.wan);
+  if (withInternet) {
+    t = route(t, 'Router3', '0.0.0.0', '0', '203.0.113.2');
+    t = unwrap(setInterfaceNat(t, id(t, 'Router3'), 1, true));
+  }
+  return t;
+}
+
+const INNER = {
+  Router1: [
+    ['192.168.1.0', '255.255.255.0'],
+    ['192.168.2.0', '255.255.255.252'],
+  ],
+  Router2: [
+    ['192.168.2.0', '255.255.255.252'],
+    ['192.168.3.0', '255.255.255.0'],
+    ['172.16.12.80', '255.255.255.240'],
+  ],
+  Router3: [['172.16.12.80', '255.255.255.240']],
+} as const;
+
+/** Auftrag 1: RIP auf allen drei Routern, Konfiguration gespeichert. */
+export function solveRip(topology: Topology): Topology {
+  let t = topology;
+  for (const [name, nets] of Object.entries(INNER)) t = unwrap(setRip(t, id(t, name), { networks: nets.map(([network, mask]) => ({ network, mask })) }));
+  return saveRouters(t);
+}
+
+/** Auftrag 2: OSPF Area 0, Router3 verteilt die Standardroute, Konfiguration gespeichert. */
+export function solveOspf(topology: Topology): Topology {
+  let t = topology;
+  for (const [name, nets] of Object.entries(INNER))
+    t = unwrap(setOspf(t, id(t, name), { networks: nets.map(([network, mask]) => ({ network, mask, area: 0 })), ...(name === 'Router3' ? { defaultOriginate: true } : {}) }));
+  return saveRouters(t);
+}
+
 /** Auftrag 2: Standardroute zum Provider und NAT (Masquerade) auf Router3. */
 export function solveRouting2(topology: Topology): Topology {
   let t = topology;
@@ -406,6 +472,9 @@ export const M129: CatalogEntry[] = [
           goal(key, 9, { type: 'ping', from: 'PC LAN1', to: 'PC LAN3' }),
           goal(key, 10, { type: 'ping', from: 'PC LAN3', to: 'Router3' }),
           goal(key, 11, { type: 'ping', from: 'PC LAN1', to: 'Router3' }),
+          goal(key, 12, { type: 'configSaved', device: 'Router1' }),
+          goal(key, 13, { type: 'configSaved', device: 'Router2' }),
+          goal(key, 14, { type: 'configSaved', device: 'Router3' }),
         ]),
       };
     },
@@ -453,6 +522,55 @@ export const M129: CatalogEntry[] = [
             goal(key, 6, { type: 'answer', accept: ['192.168.2.2'] }),
           ]),
         },
+      };
+    },
+  },
+  {
+    id: 'm129-dyn-a1',
+    features: ['routing.rip', 'net.cli'],
+    stars: 3,
+    level: 3,
+    series: 'm129',
+    sheet: 'M129_Dynamisches_Routing',
+    build: () => {
+      const key = 'm129dyna1';
+      return {
+        topology: dynamicStart(false),
+        tasks: tasksWith(key, 3, [
+          goal(key, 1, { type: 'routeLearned', device: 'Router1', network: '192.168.3.0/24', protocol: 'rip' }),
+          goal(key, 2, { type: 'routeLearned', device: 'Router1', network: '172.16.12.80/28', protocol: 'rip' }),
+          goal(key, 3, { type: 'routeLearned', device: 'Router3', network: '192.168.1.0/24', protocol: 'rip' }),
+          goal(key, 4, { type: 'ping', from: 'PC LAN1', to: 'PC LAN3' }),
+          goal(key, 5, { type: 'ping', from: 'PC LAN3', to: 'Router3' }),
+          goal(key, 6, { type: 'configSaved', device: 'Router1' }),
+          goal(key, 7, { type: 'configSaved', device: 'Router2' }),
+          goal(key, 8, { type: 'configSaved', device: 'Router3' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'm129-dyn-a2',
+    features: ['routing.ospf', 'net.nat', 'net.cli'],
+    stars: 4,
+    level: 3,
+    series: 'm129',
+    sheet: 'M129_Dynamisches_Routing',
+    build: () => {
+      const key = 'm129dyna2';
+      return {
+        topology: dynamicStart(true),
+        tasks: tasksWith(key, 4, [
+          goal(key, 1, { type: 'neighbors', device: 'Router2', protocol: 'ospf', min: 2 }),
+          goal(key, 2, { type: 'routeLearned', device: 'Router1', network: '172.16.12.80/28', protocol: 'ospf' }),
+          goal(key, 3, { type: 'routeLearned', device: 'Router3', network: '192.168.1.0/24', protocol: 'ospf' }),
+          goal(key, 4, { type: 'routeLearned', device: 'Router1', network: '0.0.0.0/0', protocol: 'ospf' }),
+          goal(key, 5, { type: 'ping', from: 'PC LAN1', to: 'PC LAN3' }),
+          goal(key, 6, { type: 'ping', from: 'PC LAN1', to: 'Webserver Internet' }),
+          goal(key, 7, { type: 'configSaved', device: 'Router1' }),
+          goal(key, 8, { type: 'configSaved', device: 'Router2' }),
+          goal(key, 9, { type: 'configSaved', device: 'Router3' }),
+        ]),
       };
     },
   },

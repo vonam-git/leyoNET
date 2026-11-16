@@ -2726,3 +2726,15 @@ export function setSipServer(t: Topology, id: string, enabled: boolean): Result<
   if (!canHostServices(device.type)) return fail('notAServer');
   return ok(updateDevice(t, id, (d) => (enabled ? { ...d, sipServer: true } : without(d, 'sipServer'))));
 }
+
+/** Grösse der gespeicherten Konfiguration (Text) höchstens. */
+export const MAX_STARTUP_CONFIG = 200_000;
+
+/** Konfiguration speichern («startup-config») oder mit null löschen («erase startup-config»). */
+export function setStartupConfig(t: Topology, id: string, text: string | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (text === null) return ok(updateDevice(t, id, (d) => without(d, 'startupConfig')));
+  if (text.length > MAX_STARTUP_CONFIG) return fail('tooMany', { max: MAX_STARTUP_CONFIG });
+  return ok(updateDevice(t, id, (d) => ({ ...d, startupConfig: text })));
+}

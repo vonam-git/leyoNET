@@ -274,6 +274,8 @@ export interface Device {
   power?: PowerSource;
   /** Gespeistes Gerät: PoE-Klasse 0–8 (IEEE 802.3, Klausel 33 und 145); fehlt = Standard des Geräts. */
   poeClass?: number;
+  /** Gespeicherte Konfiguration («copy running-config startup-config»), als Text wie «show running-config». */
+  startupConfig?: string;
   /** IP-Telefon: Rufnummer und Telefonanlage (SIP, RFC 3261). */
   voip?: VoipConfig;
   /** Server: Telefonanlage (SIP-Registrar und -Proxy). */

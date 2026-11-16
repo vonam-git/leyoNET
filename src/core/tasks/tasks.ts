@@ -8,6 +8,7 @@ import { cablesOf, otherEnd, vlanColor, vlanExists } from '../model/topology';
 import { linkStatus, mediumOf } from '../model/links';
 import { costOf } from '../model/costs';
 import { poeReport } from '../model/poe';
+import { configSaved } from '../cli/cli';
 import { duplicateAddresses } from '../model/duplicates';
 import { isForeignId, isInfraId } from '../model/federation';
 import { MEDIA, type Device, type DeviceType, type Medium, type TagColor, type Topology } from '../model/types';
@@ -47,6 +48,8 @@ export type Check =
   | { type: 'modemOnline'; device: string }
   /** Gerät wird per PoE gespeist (IEEE 802.3, Klausel 33/145). */
   | { type: 'poePowered'; device: string }
+  /** Konfiguration gespeichert: startup-config gleich running-config. */
+  | { type: 'configSaved'; device: string }
   /** Telefongespräch (SIP, RTP) gelingt, optional unter Last (iperf) und mit höchstens `maxLoss` % Verlust. */
   | { type: 'call'; from: string; to: string; loadFrom?: string; loadTo?: string; loadKbps?: number; maxLoss?: number }
   /** Alle (oder mindestens `min`) Rechner der Client-Gruppe haben eine Adresse. */
@@ -107,6 +110,7 @@ export const CHECK_TYPES = [
   'seenAs',
   'modemOnline',
   'poePowered',
+  'configSaved',
   'call',
   'verbundSite',
   'groupLeases',
@@ -534,6 +538,12 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       const modem = bootedSimulation(topology).getDeviceState(device.id).modem;
       return modem?.phase === 'online' ? { id, passed: true } : fail(id, 'modemOffline', { name: device.name });
     }
+    case 'configSaved': {
+      const device = need(check.device);
+      if (!device) return missing(check.device);
+      if (!device.startupConfig) return fail(id, 'configNotSaved', { name: device.name });
+      return configSaved(device) ? { id, passed: true } : fail(id, 'configChanged', { name: device.name });
+    }
     case 'poePowered': {
       const device = need(check.device);
       if (!device) return missing(check.device);
@@ -844,6 +854,7 @@ export function readTasks(value: unknown, invalid: (path: string) => never, read
           break;
         }
         case 'modemOnline':
+        case 'configSaved':
         case 'poePowered':
           check = { type, device: str(c.device, `${cp}.device`) };
           break;

@@ -78,7 +78,10 @@ Switch(config-ext-nacl)#
 | `show access-lists` (auch `show ip access-lists`) | Zugriffslisten mit Ports und Treffern (Switch) |
 | `show firewall` | Firewall-Regeln mit Trefferzählern, blockierte Pakete, gemerkte Verbindungen (Router, Firewall) |
 | `ping 192.168.1.10` | vier Echo-Anfragen vom Gerät aus (Simulation) |
-| `write memory` | «speichert» (die Konfiguration gilt ohnehin sofort) |
+| `copy running-config startup-config`, `write memory`, `write` | Konfiguration speichern: Die laufende Konfiguration (running-config) wird als startup-config abgelegt und mit dem Projekt gespeichert. Änderungen gelten in leyoNET sofort; der Kopf des CLI-Fensters zeigt «gespeichert» oder «nicht gespeichert». Prüfbaustein «Konfiguration gespeichert». |
+| `show startup-config` | gespeicherte Konfiguration anzeigen |
+| `erase startup-config`, `write erase` | gespeicherte Konfiguration löschen |
+| `reload` | warnt, wenn seit dem letzten Speichern etwas geändert wurde (ein echtes Gerät verlöre diese Änderungen); das Gerät läuft in leyoNET weiter |
 
 ### Allgemein (`(config)#`)
 

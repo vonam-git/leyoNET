@@ -16,7 +16,8 @@ Ausfüllbare PDFs zu **allen** Übungen im Aufgaben-Katalog (Werkzeuge » Aufgab
 | Arbeitsblatt | Übungen im Katalog | Sterne |
 |---|---|---|
 | [M129_Subnetting](M129_Subnetting.pdf) | Subnetting, Aufträge 1–3: vier gleich grosse Subnetze, VLSM, Fehlersuche | ★★ ★★★★ ★★★ |
-| [M129_Routing](M129_Routing.pdf) | Routing, Aufträge 1–3: drei Router statisch, Internet mit NAT, Verwaltungsnetz und SSH | ★★★ ★★★★ ★★★ |
+| [M129_Routing](M129_Routing.pdf) | Statisches Routing, Aufträge 1–3: drei Router statisch, Internet mit NAT, Verwaltungsnetz und SSH | ★★★ ★★★★ ★★★ |
+| [M129_Dynamisches_Routing](M129_Dynamisches_Routing.pdf) | Dynamisches Routing, Aufträge 1–2: RIP, OSPF mit Standardroute | ★★★ ★★★★ |
 | [M129_Protokollanalyse](M129_Protokollanalyse.pdf) | Protokollanalyse, Aufträge 1–3: ICMP und TTL, DHCP, ARP/DNS/HTTP | ★★ ★★★ ★★★★ |
 | [M145_UE02_Netzwerk_OldSchool](M145_UE02_Netzwerk_OldSchool.pdf) | Zwei Netze mit einem Router | ★ |
 | [M145_UE03_Portbasiertes_VLAN](M145_UE03_Portbasiertes_VLAN.pdf) | VLAN 10 und 20 an einem Switch | ★★ |

@@ -316,7 +316,7 @@
 
 
 {#if !dashboard}
-<Modal title={t('admin.title')} {onclose} width={860}>
+<Modal title={t('admin.title')} {onclose} width={1240}>
   {#if !ui.online}
     <p class="muted">{t('settings.onlineOnly')}</p>
   {:else if !token}

@@ -59,6 +59,13 @@
             <tr><th>{t('verbund.place.hub')}</th><td><code>{VERBUND_HUB_IP}</code></td></tr>
           </tbody>
         </table>
+        <p class="what">{t('verbund.place.what', { seat: place.seat })}</p>
+        <ol class="steps">
+          <li>✓ {t('verbund.place.step1', { seat: place.seat })}</li>
+          <li>{t('verbund.place.step2')}</li>
+          <li>{t('verbund.place.step3', { site: place.site, provider: place.provider })}</li>
+          <li>{t('verbund.place.step4')}</li>
+        </ol>
         <p>{t('verbund.place.goal')}</p>
         {#if !verbund.infra}<p class="warn">{t('verbund.place.noInfra')}</p>{/if}
       {:else}
@@ -114,6 +121,16 @@
 </div>
 
 <style>
+  .place .steps {
+    margin: 6px 0;
+    padding-left: 1.4em;
+  }
+  .place .steps li {
+    margin: 2px 0;
+  }
+  .place .what {
+    margin: 6px 0 0;
+  }
   .task-body {
     font-size: 0.8rem;
   }

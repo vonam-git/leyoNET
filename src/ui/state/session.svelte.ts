@@ -317,6 +317,14 @@ class SessionStore {
     this.#timer = setTimeout(() => void this.flush(), 1500);
   }
 
+  /** Prüfung: Zeit um, den letzten Stand sofort abgeben (ohne die Drosselung von 20 Sekunden). */
+  async submitExam() {
+    clearTimeout(this.#timer);
+    this.#timer = undefined;
+    if (!this.#pending && this.#last) this.#pending = this.#last;
+    await this.flush();
+  }
+
   async flush() {
     const json = this.#pending;
     if (!json || this.#busy) return;

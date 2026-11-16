@@ -19,6 +19,6 @@ Opening the exam file starts the **exam mode**: catalog, demos, task editor and 
 
 ## In the web version
 
-Upload exam file and key in the admin console, print seat cards with seat codes, start. Work is saved every 20 seconds; when time is up it is handed in automatically. The exam cockpit shows per seat whether it is connected, allows extra time (+5′, +15′) and live “watching”. At the end leyoNET evaluates all seats, with manual correction and a report.
+Upload exam file and key in the admin console, **print exam sheets** (one page per seat with seat code, time, procedure and task) and hand them out, start. The cockpit shows the exit code on click. Work is saved every 20 seconds; when time is up leyoNET submits the latest state automatically. The exam cockpit shows per seat whether it is connected, allows extra time (+5′, +15′) and live “watching”. At the end leyoNET evaluates all seats, with manual correction and a report.
 
 Procedure, limits and what leyoNET can do against copying: [exams](https://github.com/vonam-git/leyoNET/blob/main/docs/pruefungen.md) (in German).

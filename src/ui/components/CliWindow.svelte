@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getDevice } from '../../core';
+  import { configSaved, getDevice } from '../../core';
   import { t } from '../../i18n';
   import { cliWindow, closeCli } from '../state/cli.svelte';
   import { editor } from '../state/editor.svelte';
@@ -42,6 +42,7 @@
     <!-- svelte-ignore a11y_no_static_element_interactions (Ziehen mit der Maus; Tastatur: Fenster bleibt bedienbar) -->
     <header onpointerdown={onHeadDown} onpointermove={onHeadMove} onpointerup={onHeadUp} onpointercancel={onHeadUp} title={t('desktop.dragHint')}>
       <h2 id="cli-title">{t('cli.title', { name: device.name })}</h2>
+      <span class="saved" class:dirty={!configSaved(device)} title={t('cli.savedHint')}>{configSaved(device) ? t('cli.saved') : device.startupConfig ? t('cli.changed') : t('cli.notSaved')}</span>
       <span class="hint">{t('cli.hint')}</span>
       <button class="close" onclick={closeCli} aria-label={t('desktop.close')}>✕</button>
     </header>
@@ -54,6 +55,16 @@
 {/if}
 
 <style>
+  .saved {
+    font-size: 0.72rem;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--ok, #2e9e5b) 18%, transparent);
+    white-space: nowrap;
+  }
+  .saved.dirty {
+    background: color-mix(in srgb, var(--warn, #d08a00) 20%, transparent);
+  }
   .window {
     position: absolute;
     top: 52px;

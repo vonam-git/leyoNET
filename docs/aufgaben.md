@@ -64,6 +64,7 @@ Statische Prüfungen schauen nur auf das gebaute Netz. **Dynamische** Prüfungen
 | `mail` ⚡ | `from` (Gerät mit E-Mail-Konto), `to` (Adresse) | der Mailserver eine Nachricht an diese Adresse annimmt |
 | `noPing` ⚡ | `from`, `to` | **keine** Echo-Antwort ankommt (Netze getrennt) |
 | `routeLearned` ⚡ | `device`, `network` (z.B. `"10.2.0.0/16"`), `protocol`? (`ospf`, `rip`, `bgp`) | der Router nach 25 s virtueller Zeit (Zeit für das Routingprotokoll) eine Route in dieses Netz kennt (optional: gelernt über dieses Protokoll) |
+| `configSaved` | `device` | die Konfiguration des Routers gespeichert ist und der laufenden entspricht (`copy running-config startup-config` bzw. `write memory`, danach keine Änderung mehr) |
 | `neighbors` ⚡ | `device`, `protocol` (`ospf` oder `bgp`), `min`? (Standard 1) | nach 25 s mindestens so viele OSPF-Nachbarn im Zustand *Full* bzw. BGP-Sitzungen *Established* bestehen |
 | `noStorm` ⚡ | – | kurz nach dem Start kein Switch einen Broadcast-Sturm meldet |
 | `noDuplicateIp` ⚡ | – | keine IP-Adresse im selben Netz doppelt vergeben ist (auch per DHCP bezogene) |

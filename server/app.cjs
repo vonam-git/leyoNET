@@ -1623,6 +1623,25 @@ async function adminExams(req, res, parts, method, who) {
     return json(res, 200, examSummary(exam, true));
   }
   // Abgaben für die Auswertung, mit entschlüsseltem Schlüssel.
+  // Für die Lehrperson: Aufgabentexte je Platz (für die gedruckten Prüfungsblätter) und der
+  // Code zum Beenden des Prüfungsmodus aus dem Schlüssel. Nur Text, keine Prüfbausteine.
+  if (parts[1] === 'sheet' && parts.length === 2 && method === 'GET') {
+    const key = exam.key ? decryptKey(exam.key) : null;
+    const tasks = exam.learner && exam.learner.tasks;
+    const text = (v, max) => (typeof v === 'string' ? v.slice(0, max) : undefined);
+    const goals = (list) => (Array.isArray(list) ? list.slice(0, 200).map((g) => ({ text: text(g && g.text, 2000) || '', points: Number.isFinite(g && g.points) ? g.points : undefined, section: text(g && g.section, 80) })) : []);
+    const raster = (list) => (Array.isArray(list) ? list.slice(0, 50).map((r) => ({ label: text(r && r.label, 120) || '', points: Number.isFinite(r && r.points) ? r.points : 0 })) : []);
+    const variants = tasks && tasks.exam && Array.isArray(tasks.exam.variants) ? tasks.exam.variants : [];
+    const sheetOf = (v) => ({ title: text(v.title, 160) || exam.title, description: text(v.description, 20000) || '', goals: goals(v.goals), raster: raster(v.raster) });
+    const base = tasks ? sheetOf({ title: tasks.title, description: tasks.description, goals: tasks.goals, raster: tasks.exam && tasks.exam.raster }) : null;
+    return json(res, 200, {
+      code: key && key.key && typeof key.key.code === 'string' ? key.key.code : null,
+      seats: exam.seats.map((s) => {
+        const v = s.variant ? variants.find((x) => String(x.id) === s.variant) : null;
+        return { id: s.id, code: s.code, extra: s.extra || 0, sheet: v ? sheetOf(v) : base };
+      }),
+    });
+  }
   if (parts[1] === 'submissions' && method === 'GET') {
     const key = exam.key ? decryptKey(exam.key) : null;
     const submissions = entries('sessions')

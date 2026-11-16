@@ -5,7 +5,7 @@ import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME } from '../net/routing';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
 import { MAX_DHCP_EXCLUDED, MAX_DHCP_POOLS, canDhcpPool, checkDhcpPool, normalizePool } from '../net/dhcp';
 import { MAC_PATTERN } from '../model/mac';
-import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, PHONE_NUMBER, canQos, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
+import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, PHONE_NUMBER, MAX_STARTUP_CONFIG, canQos, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
 import { ACL_NAME, MAX_ACLS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
 import { MAX_GROUP_SIZE } from '../model/devices';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
@@ -587,6 +587,10 @@ function readDevice(v: unknown, path: string): Device {
     const poeClass = int(o.poeClass, `${path}.poeClass`);
     if (!canBePowered(device.type) || poeClass < 0 || poeClass > 8) throw new Invalid(`${path}.poeClass`);
     device.poeClass = poeClass;
+  }
+  if (o.startupConfig !== undefined) {
+    if (typeof o.startupConfig !== 'string' || o.startupConfig.length > MAX_STARTUP_CONFIG) throw new Invalid(`${path}.startupConfig`);
+    device.startupConfig = o.startupConfig;
   }
   if (o.voip !== undefined) {
     const v = obj(o.voip, `${path}.voip`);

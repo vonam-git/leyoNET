@@ -38,6 +38,15 @@
   let key = $state.raw<ExamKey | null>(null);
   let corrections = $state<Corrections>({});
   let selected = $state<{ file: string; goal: string | null } | null>(null);
+  /** Spalte (Ziel), deren Text unten in der Legende hervorgehoben ist. */
+  let column = $state<string | null>(null);
+  const activeColumn = $derived(selected?.goal ?? column);
+  let legend = $state<HTMLOListElement | undefined>();
+  function showGoal(id: string) {
+    column = id;
+    // Den Text des Ziels unten zeigen, ohne die Tabelle zu verlassen.
+    queueMicrotask(() => legend?.querySelector('li.active')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+  }
   let running = $state(0);
   let total = $state(0);
   /** Namensliste der Lehrperson: bleibt nur in diesem Fenster, wird nirgends gespeichert. */
@@ -231,7 +240,7 @@
             {#if withPoints}<th scope="col" class="num">{t('review.points')}</th>{/if}
             {#if columns.grading}<th scope="col" class="num">{t('review.grade')}</th>{/if}
             {#each columns.goals as goal, i (goal.id)}
-              <th scope="col" class="goal" title={goal.text}>{i + 1}</th>
+              <th scope="col" class="goal" class:col={activeColumn === goal.id} title={goal.text}><button class="link" onclick={() => showGoal(goal.id)} aria-label={t('review.showGoal', { n: i + 1 })}>{i + 1}</button></th>
             {/each}
           </tr>
         </thead>
@@ -266,10 +275,11 @@
                     class:failed={p === 0 && !(m && !m.skipped && m.manual && !own)}
                     class:manual={m && !m.skipped && m.manual && !own}
                     class:sel={selected?.file === review.name && selected.goal === goal.id}
+                    class:col={activeColumn === goal.id}
                   >
                     <button
                       class="cell"
-                      onclick={() => (selected = { file: review.name, goal: goal.id })}
+                      onclick={() => ((selected = { file: review.name, goal: goal.id }), showGoal(goal.id))}
                       title={m?.skipped ? t('review.skipped') : m && !m.passed && m.reason ? t(`tasks.reason.${m.reason.code}`, m.reason.params) : (g?.text ?? goal.text)}
                     >
                       {#if !m}{''}{:else if m.skipped}–{:else if m.manual && !own}✎{:else if withPoints && g}{fmt(p ?? 0)}{:else}{m.passed ? '✓' : '✗'}{/if}{own || c?.notes?.[goal.id] ? '*' : ''}
@@ -302,9 +312,9 @@
       </div>
     {/if}
 
-    <ol class="legend muted">
+    <ol class="legend muted" bind:this={legend}>
       {#each columns.goals as goal (goal.id)}
-        <li>{goal.section ? `${goal.section}: ` : ''}{goal.text}{#if withPoints} ({t('tasks.points', { n: goal.points ?? 1 })}){/if}</li>
+        <li class:active={activeColumn === goal.id}>{goal.section ? `${goal.section}: ` : ''}{goal.text}{#if withPoints} ({t('tasks.points', { n: goal.points ?? 1 })}){/if}</li>
       {/each}
     </ol>
   {/if}
@@ -471,6 +481,17 @@
   .person {
     margin-left: 4px;
     font-weight: 600;
+  }
+  th.col,
+  td.col {
+    background: color-mix(in srgb, var(--accent, #2563eb) 10%, transparent);
+  }
+  .legend li.active {
+    color: var(--text);
+    font-weight: 600;
+    background: color-mix(in srgb, var(--accent, #2563eb) 14%, transparent);
+    border-radius: 4px;
+    outline: 2px solid color-mix(in srgb, var(--accent, #2563eb) 45%, transparent);
   }
   .legend {
     font-size: 0.75rem;
