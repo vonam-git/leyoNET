@@ -9,7 +9,7 @@ Ausfüllbare PDFs zu **allen** Übungen im Aufgaben-Katalog (Werkzeuge » Aufgab
 | [M06E_M117_UE05_Router03](M06E_M117_UE05_Router03.pdf) | UE05 Router03: drei Standorte mit Transitnetzen | ★★★★ |
 | [M07A_M117_UE01_Netzwerkdienste](M07A_M117_UE01_Netzwerkdienste.pdf) | UE01 Netzwerkdienste: Firmennetz Watch SA mit DHCP | ★★★ |
 | [M07B_M117_UE02_Netzwerkdienste](M07B_M117_UE02_Netzwerkdienste.pdf) | UE02 Netzwerkdienste: Webserver, DNS und feste Zuweisungen | ★★★★ |
-| [M07C_M117_UE03_Netzwerkdienste](M07C_M117_UE03_Netzwerkdienste.pdf) | UE03 Netzwerkdienste: Firmennetz Holzer AG (Prüfungsvorbereitung, 75 Punkte mit Note) | ★★★★★ |
+| [M07C_M117_UE03_Netzwerkdienste](M07C_M117_UE03_Netzwerkdienste.pdf) | UE03 Netzwerkdienste: Firmennetz Holzer AG (Prüfungsvorbereitung, 84 Punkte mit Note) | ★★★★★ |
 
 **Modul 129:**
 

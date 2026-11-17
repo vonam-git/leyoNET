@@ -423,6 +423,12 @@ export function buildWiki(root: string, version: string): WikiBuild {
       }).join('\n      ')}
     </nav>`;
 
+    /** Suchmaschinen zeigen rund 155 Zeichen (Bing meldet längere als «too long»): an einer Wortgrenze kürzen. */
+    const metaDescription = (text: string) => {
+      if (text.length <= 155) return text;
+      const cut = text.slice(0, 154);
+      return `${cut.slice(0, cut.lastIndexOf(' ')).replace(/[\s,;:–-]+$/, '')}…`;
+    };
     const frame = (o: { title: string; description: string; slug: string; body: string }) => {
       const path = o.slug ? `${o.slug}.html` : '';
       const otherLang: Lang = lang === 'de' ? 'en' : 'de';
@@ -432,7 +438,7 @@ export function buildWiki(root: string, version: string): WikiBuild {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(o.title)}</title>
-  <meta name="description" content="${escapeHtml(o.description)}">
+  <meta name="description" content="${escapeHtml(metaDescription(o.description))}">
   <link rel="canonical" href="${urlOf(lang, path)}">
   <link rel="alternate" hreflang="${lang}" href="${urlOf(lang, path)}">
   <link rel="alternate" hreflang="${otherLang}" href="${urlOf(otherLang, path)}">

@@ -110,7 +110,7 @@ test('Prüfungsplätze funktionieren auch bei vollem Speicher', async () => {
   const login = await call('POST', '/api/admin/login', { password: 'test-admin-passwort' });
   const auth = { Authorization: `Bearer ${login.data.token}` };
   const learner = { ...project(), tasks: { title: 'P', goals: [], exam: { id: 'E1', minutes: 10 } } };
-  const exam = await call('POST', '/api/admin/exams', { label: 'Test', learner, seats: 1 }, auth);
+  const exam = await call('POST', '/api/admin/exams', { label: 'Test', learner, seats: 1, minutes: 30 }, auth);
   assert.equal(exam.status, 201);
   await call('POST', `/api/admin/exams/${exam.data.id}/start`, undefined, auth);
   const join = await call('POST', '/api/exams/join', { seatCode: exam.data.seats[0].code }, { 'X-Forwarded-For': '192.0.2.20' });

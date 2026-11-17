@@ -55,6 +55,8 @@
   });
   const spec = $derived(specs[0]!);
   const issue = $derived(seats <= 1 ? checkExamSpec(spec) : townNames.length && townNames.length !== 3 ? { code: 'towns', field: 'towns' } : townNames.length === 3 ? checkExamSpec(spec) : null);
+  /** Die Prüfungszeit muss angegeben sein (1 bis 600 Minuten). */
+  const minutesOk = $derived(/^\d+$/.test(minutes.trim()) && Number(minutes) >= 1 && Number(minutes) <= 600);
   const issueText = $derived(issue ? t(`exam.issue.${issue.code}`, issue.params ?? {}) : null);
   const facts = $derived(issue ? null : spec.sites.map(siteFacts));
   const title = $derived(seats <= 1 ? buildExamTasks(spec).title : t('exam.manyTitle', { n: specs.length }));
@@ -70,7 +72,7 @@
   }
 
   async function create() {
-    if (issue) return;
+    if (issue || !minutesOk) return;
     busy = true;
     try {
       const m = Number(minutes);
@@ -78,7 +80,7 @@
         id: randomExamId(),
         title: seats <= 1 ? title : `M117_LB3 ${t('exam.manyTitle', { n: specs.length })}`,
         description: t('exam.chooseSeatText'),
-        ...(Number.isInteger(m) && m > 0 ? { minutes: m } : {}),
+        minutes: m,
         code: code.trim().toUpperCase() || randomCode(),
         variants: specs.map((s, i) => ({ id: seats <= 1 ? '1' : seatId(i), tasks: buildExamTasks(s), topology: emptyTopology() })),
       });
@@ -107,13 +109,13 @@
 </script>
 
 <Modal title={t('exam.dialogTitle')} {onclose} width={1000}>
-  <p class="muted">{t('exam.dialogIntro', { total: EXAM_POINTS.total, site: EXAM_POINTS.site, services: EXAM_POINTS.services })}</p>
+  <p class="muted">{t('exam.dialogIntro', { total: EXAM_POINTS.total, site: EXAM_POINTS.site, transit: EXAM_POINTS.transit, services: EXAM_POINTS.services })}</p>
 
   <div class="row">
     <label class="short">{t('exam.seats')}<input type="number" min="1" max="40" bind:value={seats} /></label>
     <label class="short">{t('exam.seed')}<input type="number" bind:value={seed} onchange={() => (draft = toDraft(randomExam(seed, '1')))} /></label>
     <button onclick={shuffle}>🎲 {t('exam.shuffle')}</button>
-    <label class="short">{t('exam.export.minutes')}<input bind:value={minutes} inputmode="numeric" /></label>
+    <label class="short">{t('exam.export.minutesRequired')}<input bind:value={minutes} inputmode="numeric" required aria-invalid={!minutesOk} /></label>
     <label class="short">{t('exam.export.code')}<input class="mono" bind:value={code} spellcheck="false" autocomplete="off" /></label>
     {#if seats <= 1}<label class="grow">{t('exam.company')}<input bind:value={draft.company} aria-invalid={invalid('company')} /></label>{/if}
   </div>
@@ -189,6 +191,7 @@
 
   {/if}
 
+  {#if !minutesOk}<p class="error" role="alert">{t('exam.export.badMinutes')}</p>{/if}
   {#if issueText}<p class="error" role="alert">{issueText}</p>{:else}<p class="ok" role="status">✓ {t('exam.valid')}</p>{/if}
   {#if built}
     <div class="done" role="status">
@@ -209,7 +212,7 @@
     <button onclick={() => open(true)} disabled={!!issue}>{t('exam.openSolution')}</button>
     {#if seats <= 1}<button onclick={() => open(false)} disabled={!!issue}>{t('exam.open')}</button>{/if}
     <button onclick={saveSheets} disabled={!!issue}>{t('exam.saveSheet')}</button>
-    <button class="primary" onclick={create} disabled={!!issue || busy}>{t('exam.export.create')}</button>
+    <button class="primary" onclick={create} disabled={!!issue || !minutesOk || busy}>{t('exam.export.create')}</button>
   {/snippet}
 </Modal>
 

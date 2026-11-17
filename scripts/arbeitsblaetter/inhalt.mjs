@@ -468,7 +468,7 @@ export const SHEETS = [
         stars: 5,
         catalog: 'UE03 Netzwerkdienste: Firmennetz Holzer AG (Prüfungsvorbereitung)',
         blocks: [
-          { p: 'Die Firma Holzer AG mit Sitz in Sarnen eröffnet zwei Filialen. Ein Ingenieurbüro hat das Netzwerkkonzept erstellt; es ist genehmigt. Als Netzwerkspezialistin oder Netzwerkspezialist setzt du es um, dokumentierst es und nimmst es in Betrieb. Die Übung ist aufgebaut wie die praktische Prüfung: **75 Punkte, Note = 5 × Punkte / 75 + 1.**' },
+          { p: 'Die Firma Holzer AG mit Sitz in Sarnen eröffnet zwei Filialen. Ein Ingenieurbüro hat das Netzwerkkonzept erstellt; es ist genehmigt. Als Netzwerkspezialistin oder Netzwerkspezialist setzt du es um, dokumentierst es und nimmst es in Betrieb. Die Übung ist aufgebaut wie die praktische Prüfung: **84 Punkte, Note = 5 × Punkte / 84 + 1.**' },
           {
             table: [
               ['Standort', 'Netz', 'DHCP-Server', 'DHCP-Bereich', 'Notebooks'],
@@ -482,8 +482,8 @@ export const SHEETS = [
             list: [
               'Namen: Switch **SW_<Standort>**, Router **R_<Standort>** (tiefste Adresse im Netz), Server **DHCP <Standort>**. Die Notebooks heissen wie ihre IP-Adresse, z.B. «10.33.1.0».',
               'Dynamische Notebooks beziehen ihre Adresse per DHCP, feste über eine **feste Zuweisung** im DHCP-Server (MAC-Adresse).',
-              'Transitnetze: R_Sarnen – R_Sempach **10.10.10.0/30**, R_Sarnen – R_Luzern **10.10.10.4/30**, R_Luzern – R_Sempach **10.10.10.8/30** (zuerst genannter Router .1). Routing: «Automatisches Routing».',
-              'Intranet **192.168.0.0/24** am R_Luzern (zusätzlicher Anschluss 192.168.0.1), Webserver «Webserver» 192.168.0.10.',
+              'Transitnetze: R_Sarnen – R_Sempach **10.10.10.0/30**, R_Sarnen – R_Luzern **10.10.10.4/30**, R_Luzern – R_Sempach **10.10.10.8/30** (zuerst genannter Router .1). Routing: «Automatisches Routing». Anschlüsse: eth0 = eigenes LAN, eth1 und eth2 = Transitnetze in dieser Reihenfolge. Bewertet werden die Adressen und ob die richtigen Router verbunden sind (9 Punkte), nicht die Nummer des Anschlusses.',
+              'Intranet **192.168.0.0/24** am R_Luzern (Anschluss eth3, 192.168.0.1), Webserver «Webserver» 192.168.0.10.',
               'Auf allen DHCP-Servern läuft auch DNS mit dem A-Eintrag **intranet.holzer.example** » 192.168.0.10; der DHCP-Server gibt den DNS-Server mit.',
               'Bereiche mit Netz: Sarnen **blau**, Sempach **rot**, Luzern **grün**, Intranet **orange**. In die **Notiz** jedes Standorts gehören Netzadresse, Maske, kleinster und grösster Host, Broadcast und Anzahl Hosts (wird mitbewertet). Router-Schnittstellen im CIDR-Format einblenden (Ansicht).',
               'Tipp: Luzern braucht einen Switch mit mehr als 8 Anschlüssen.',
@@ -502,7 +502,7 @@ export const SHEETS = [
               answer: 'Ja. Im Netz 10.33.0.0/22 sind nur 10.33.0.0 (Netzadresse) und 10.33.3.255 (Broadcast) reserviert. 10.33.1.0 liegt dazwischen und ist ein normaler Host.',
             },
           },
-          { check: { points: 75 } },
+          { check: { points: 84 } },
         ],
       },
     ],

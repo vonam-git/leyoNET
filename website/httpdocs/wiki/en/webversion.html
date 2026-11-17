@@ -4,18 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Web version: sessions, classes and watching – leyoNET Wiki</title>
-  <meta name="description" content="Work saved under a code, class sessions, watching learners’ work live and the admin console with its own access keys.">
+  <meta name="description" content="Work saved under a code, class sessions, watching work live, the admin console at /admin with statistics and two-factor sign-in.">
   <link rel="canonical" href="https://leyonet.ch/wiki/en/webversion.html">
   <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/webversion.html">
   <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/webversion.html">
   <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../../css/site.css?v=1.6.1">
-  <link rel="stylesheet" href="../farben.css?v=1.6.1">
-  <link rel="stylesheet" href="../aufbau.css?v=1.6.1">
-  <link rel="stylesheet" href="../wiki.css?v=1.6.1">
-  <script src="../../js/site.js?v=1.6.1" defer></script>
-  <script src="suche.js?v=1.6.1" defer></script>
-  <script src="../wiki.js?v=1.6.1" defer></script>
+  <link rel="stylesheet" href="../../css/site.css?v=1.7.0">
+  <link rel="stylesheet" href="../farben.css?v=1.7.0">
+  <link rel="stylesheet" href="../aufbau.css?v=1.7.0">
+  <link rel="stylesheet" href="../wiki.css?v=1.7.0">
+  <script src="../../js/site.js?v=1.7.0" defer></script>
+  <script src="suche.js?v=1.7.0" defer></script>
+  <script src="../wiki.js?v=1.7.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Skip to content</a>
@@ -84,15 +84,20 @@
     <main id="inhalt" class="wiki-main">
       <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#lehrpersonen">Crash course for teachers</a></p>
       <div class="page-head"><div><h1>Web version: sessions, classes and watching</h1>
-      <p class="lead">Work saved under a code, class sessions, watching learners’ work live and the admin console with its own access keys.</p></div></div>
+      <p class="lead">Work saved under a code, class sessions, watching work live, the admin console at /admin with statistics and two-factor sign-in.</p></div></div>
       
-      <nav class="toc" aria-label="On this page"><strong>On this page</strong><ol><li><a href="#sessions-instead-of-accounts">Sessions instead of accounts</a></li><li><a href="#classes">Classes</a></li><li><a href="#own-access-keys">Own access keys</a></li><li><a href="#weiter">Read on</a></li></ol></nav>
+      <nav class="toc" aria-label="On this page"><strong>On this page</strong><ol><li><a href="#sessions-instead-of-accounts">Sessions instead of accounts</a></li><li><a href="#classes">Classes</a></li><li><a href="#the-admin-console">The admin console</a></li><li><a href="#two-factor-sign-in">Two-factor sign-in</a></li><li><a href="#own-access-keys">Own access keys</a></li><li><a href="#weiter">Read on</a></li></ol></nav>
       <article class="prose">
 <h2 id="sessions-instead-of-accounts">Sessions instead of accounts</h2>
 <p>In the web version (<a href="https://app.leyonet.ch">app.leyonet.ch</a> or on the school server) leyoNET saves the work under a <strong>session code</strong> such as <code>K7QX-3MPA</code>. Whoever knows the code continues on another device. Only the network configuration is stored, no names; after a configurable time the session is deleted.</p>
 <h2 id="classes">Classes</h2>
-<p>In the <strong>admin console</strong> (Tools → Admin console) you open a class with a label such as “INF22a” and hand out the <strong>class code</strong>. Learners join the class under “Session”. You then see all sessions of the class with their state and progress and can <strong>watch</strong> each one: the network appears read-only on your screen and is reloaded every few seconds. “End” brings back your own project.</p>
+<p>In the <strong>admin console</strong> you open a class with a label such as “INF22a” and hand out the <strong>class code</strong>. Learners join the class under “Session”. You then see all sessions of the class with their state and progress and can <strong>watch</strong> each one: the network appears read-only on your screen and is reloaded every few seconds. “End” brings back your own project.</p>
 <p>For each class you show or hide exercises and whole modules and enable the <a href="klassen-verbund.html">Class network in the classroom</a>.</p>
+<h2 id="the-admin-console">The admin console</h2>
+<p>The admin console is a page of its own: <strong><code>/admin</code></strong> (e.g. <code>https://app.leyonet.ch/admin</code>). “Admin” or Alt+A in the simulator opens it in its own tab that can stay open next to the lesson. The sections are on the left; the <strong>overview</strong> shows running exams, classes, active sessions and the security state. While an exam is running, a red bar at the top shows progress and time left.</p>
+<p><strong>Sessions and statistics</strong> lists all active sessions with key figures; each can be watched live, opened in the editor, extended or deleted. Only technical data is stored and shown.</p>
+<h2 id="two-factor-sign-in">Two-factor sign-in</h2>
+<p>Under <strong>Security</strong> you set up an authenticator app (e.g. Aegis, 2FAS, Google or Microsoft Authenticator): scan the QR code, confirm a code, keep the eight recovery codes safe. From then on signing in needs the password or key <strong>and</strong> the code from the app. The app computes only on the phone; leyoNET knows neither phone number nor e-mail. The main admin can require two-factor for all access keys.</p>
 <h2 id="own-access-keys">Own access keys</h2>
 <p>If several teachers or schools work on the same instance, the main admin creates <strong>access keys</strong>: a label (without personal names) and a key <code>LN-…</code> that is shown only once. Each access key only sees its own classes and exams, a school also those of its teachers.</p>
 <p>Setting up your own server: <a href="https://github.com/vonam-git/leyoNET/blob/main/docs/plesk.md">Plesk</a> or <a href="https://github.com/vonam-git/leyoNET/blob/main/docs/installation.md">installation with Docker</a> (in German).</p>
@@ -108,7 +113,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET wiki · as of version 1.6.1 · texts under the same licence as leyoNET (AGPL-3.0).</p>
+      <p>leyoNET wiki · as of version 1.7.0 · texts under the same licence as leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://patreon.com/leyonet">Patreon</a></li>

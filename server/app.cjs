@@ -56,6 +56,8 @@ const MAX_FEEDBACK = 500;
 /** Neue Sessions je Adresse und Minute (eine Klasse tritt auf einmal bei). */
 const NEW_SESSIONS_PER_MINUTE = 60;
 const ADMIN_TOKEN_HOURS = 8;
+/** Admin-Anmeldung endet nach so langer Untätigkeit (offene Konsole fragt regelmässig nach und bleibt angemeldet). */
+const ADMIN_IDLE_MS = 60 * 60_000;
 
 /** Feature-IDs dürfen nur aus Buchstaben, Ziffern und Punkten bestehen (Liste in src/ui/features.ts). */
 const FEATURE_ID = /^[a-z]+\.[A-Za-z0-9]+$/;
@@ -73,6 +75,8 @@ const DEFAULT_SETTINGS = {
   classHours: 24 * 14,
   /** Aufgaben-Katalog in der Webversion: ausgeblendete Übungen und Reihen, Verbund-Aufgaben erlaubt. */
   catalog: { hidden: [], hiddenSeries: [], verbund: true },
+  /** Zwei-Faktor-Anmeldung (Authenticator-App) für alle Admin-Zugänge verlangen. */
+  mfaRequired: false,
 };
 
 // --- Speicher ------------------------------------------------------------------
@@ -88,6 +92,9 @@ const dirs = {
 /** Prüfungen: Aufbewahrung der Abgaben, Gnadenfrist fürs letzte Speichern, Grenzen. */
 const EXAM_DAYS = 60;
 const EXAM_GRACE_MS = 30_000;
+/** Statistik: höchstens so viele Zeilen; Sessions höchstens so lange gültig (auch verlängert). */
+const MAX_STATS_ROWS = 2000;
+const MAX_SESSION_DAYS = 60;
 /** Ein Gerät gilt als verbunden, solange es sich innerhalb dieser Zeit gemeldet hat (Speichern oder Ping alle 20 s). */
 const LEASE_MS = 60_000;
 /** PIN zum Sperren einer Session: 4 bis 8 Ziffern. */
@@ -395,6 +402,149 @@ function checkPassword(given) {
   return crypto.timingSafeEqual(a, b);
 }
 
+// --- Zwei-Faktor-Anmeldung (TOTP, RFC 6238) --------------------------------------------
+//
+// Optional je Zugang (Hauptadmin, Schule, Lehrperson): Nach dem Passwort bzw. Schlüssel ein
+// sechsstelliger Code aus einer Authenticator-App. Die App rechnet nur lokal (keine Verbindung,
+// keine Personendaten); der Server speichert je Zugang das Geheimnis verschlüsselt (wie den
+// Prüfungsschlüssel), den zuletzt verwendeten Zeitschritt (kein Code zweimal) und die Hashes von
+// acht Wiederherstellungscodes. Kein Konto, keine E-Mail, keine Telefonnummer.
+
+const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+function base32(buf) {
+  let bits = 0;
+  let value = 0;
+  let out = '';
+  for (const byte of buf) {
+    value = (value << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      out += B32[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) out += B32[(value << (5 - bits)) & 31];
+  return out;
+}
+function unbase32(text) {
+  let bits = 0;
+  let value = 0;
+  const out = [];
+  for (const ch of String(text).toUpperCase().replace(/[\s=]/g, '')) {
+    const v = B32.indexOf(ch);
+    if (v < 0) return null;
+    value = (value << 5) | v;
+    bits += 5;
+    if (bits >= 8) {
+      out.push((value >>> (bits - 8)) & 255);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(out);
+}
+/** HOTP (RFC 4226): sechs Ziffern aus Geheimnis und Zähler. */
+function hotp(secret, counter) {
+  const msg = Buffer.alloc(8);
+  msg.writeBigUInt64BE(BigInt(counter));
+  const h = crypto.createHmac('sha1', secret).update(msg).digest();
+  const o = h[h.length - 1] & 15;
+  return String((h.readUInt32BE(o) & 0x7fffffff) % 1_000_000).padStart(6, '0');
+}
+const TOTP_STEP_MS = 30_000;
+/** Gültiger Code im Fenster ±1 Schritt (Uhren weichen ab), nur Schritte nach dem zuletzt benutzten. */
+function totpStep(secret, code, lastStep, now = Date.now()) {
+  if (!/^\d{6}$/.test(code)) return null;
+  const current = Math.floor(now / TOTP_STEP_MS);
+  for (const step of [current - 1, current, current + 1]) {
+    if (step <= (lastStep || 0)) continue;
+    if (sameHash(hotp(secret, step), code)) return step;
+  }
+  return null;
+}
+const recoveryHash = (code) => crypto.createHash('sha256').update(String(code).toUpperCase().replace(/[^A-Z0-9]/g, '')).digest('hex');
+function newRecoveryCodes() {
+  return Array.from({ length: 8 }, () => {
+    const c = base32(crypto.randomBytes(7)).slice(0, 10);
+    return `${c.slice(0, 5)}-${c.slice(5)}`;
+  });
+}
+
+const SECURITY_FILE = () => path.join(DATA_DIR, 'security.json');
+/** Sicherheitsdaten eines Zugangs: Zwei-Faktor und letzte Anmeldung. Hauptadmin in security.json, Zugänge in ihrer Datei. */
+function accountData(who) {
+  if (who.role === 'super') return (readJson(SECURITY_FILE()) || {}).super || {};
+  const t = loadTenant(who.tenant);
+  return (t && t.security) || {};
+}
+function saveAccountData(who, data) {
+  if (who.role === 'super') {
+    const all = readJson(SECURITY_FILE()) || {};
+    writeJson(SECURITY_FILE(), { ...all, super: data });
+    return;
+  }
+  const t = loadTenant(who.tenant);
+  if (t) saveTenant({ ...t, security: data });
+}
+const accountId = (who) => (who.role === 'super' ? 'super' : `t:${who.tenant}`);
+/** Angefangene Einrichtungen (Geheimnis noch nicht bestätigt), nur im Arbeitsspeicher, 10 Minuten. */
+const mfaPending = new Map();
+/** Fehlversuche beim zweiten Faktor je Zugang: nach 5 in 15 Minuten gesperrt (Raten von 6 Ziffern). */
+const mfaFails = new Map();
+const MFA_FAIL_WINDOW_MS = 15 * 60_000;
+function mfaLocked(id) {
+  const f = mfaFails.get(id);
+  if (!f) return false;
+  if (Date.now() - f.since > MFA_FAIL_WINDOW_MS) {
+    mfaFails.delete(id);
+    return false;
+  }
+  return f.count >= 5;
+}
+function countMfaFail(id) {
+  const f = mfaFails.get(id);
+  if (!f || Date.now() - f.since > MFA_FAIL_WINDOW_MS) mfaFails.set(id, { since: Date.now(), count: 1 });
+  else f.count++;
+}
+
+/**
+ * Zweiten Faktor prüfen: TOTP-Code oder einmaliger Wiederherstellungscode. Bei Erfolg wird der
+ * Zeitschritt bzw. der verbrauchte Code gespeichert. Liefert 'ok', 'wrong' oder 'unreadable'
+ * (Geheimnis nicht entschlüsselbar, z.B. nach Wechsel von ADMIN_PASSWORD: dann nur noch
+ * Wiederherstellungscodes).
+ */
+function checkSecondFactor(who, data, given) {
+  const code = String(given || '').trim();
+  const mfa = data.mfa;
+  if (/^\d{6}$/.test(code.replace(/\s/g, ''))) {
+    const box = decryptKey(mfa.secret);
+    const secret = box && typeof box.secret === 'string' ? unbase32(box.secret) : null;
+    if (!secret) return 'unreadable';
+    const step = totpStep(secret, code.replace(/\s/g, ''), mfa.step);
+    if (step === null) return 'wrong';
+    saveAccountData(who, { ...data, mfa: { ...mfa, step } });
+    return 'ok';
+  }
+  const hash = recoveryHash(code);
+  const list = Array.isArray(mfa.recovery) ? mfa.recovery : [];
+  const index = list.findIndex((h) => sameHash(h, hash));
+  if (index < 0) return 'wrong';
+  saveAccountData(who, { ...data, mfa: { ...mfa, recovery: list.filter((_, i) => i !== index) } });
+  return 'ok';
+}
+
+/** Anmeldung abschliessen: Zeitpunkt merken, Token ausstellen. */
+function issueToken(res, who) {
+  const now = Date.now();
+  const fresh = accountData(who);
+  saveAccountData(who, { ...fresh, lastLogin: now, previousLogin: fresh.lastLogin || null });
+  // Zwei-Faktor verlangt, aber noch nicht eingerichtet: Anmeldung nur zum Einrichten.
+  const mfaSetup = !!settings().mfaRequired && !(fresh.mfa && fresh.mfa.enabled);
+  const token = crypto.randomBytes(32).toString('base64url');
+  for (const [k, e] of tokens) if (e.expires < now || now - (e.seen || 0) > ADMIN_IDLE_MS) tokens.delete(k);
+  tokens.set(token, { ...who, created: now, seen: now, expires: now + ADMIN_TOKEN_HOURS * 3_600_000, ...(mfaSetup ? { mfaSetup: true } : {}) });
+  return json(res, 200, { token, role: who.role, label: who.label, mfaSetup });
+}
+
 // --- Schreibrecht einer Session ------------------------------------------------------
 //
 // Nur ein Gerät schreibt: Wer eine Session öffnet, erhält ein zufälliges Schreib-Token
@@ -494,10 +644,13 @@ function principal(req) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   const entry = tokens.get(token);
-  if (!entry || entry.expires < Date.now()) {
+  const now = Date.now();
+  if (!entry || entry.expires < now || now - (entry.seen || 0) > ADMIN_IDLE_MS) {
     tokens.delete(token);
     return null;
   }
+  // Automatische Abfragen der offenen Konsole (ohne Eingabe) halten die Anmeldung nicht wach.
+  if (req.headers['x-leyonet-auto'] !== '1') entry.seen = now;
   // Gelöschter Zugang: sofort abgemeldet.
   if (entry.tenant && !loadTenant(entry.tenant)) {
     tokens.delete(token);
@@ -505,7 +658,10 @@ function principal(req) {
   }
   return entry;
 }
-const isAdmin = (req) => !!principal(req);
+const isAdmin = (req) => {
+  const who = principal(req);
+  return !!who && !who.mfaSetup;
+};
 
 // --- Zugänge (Schulen und Lehrpersonen) ----------------------------------------------
 //
@@ -558,7 +714,7 @@ function canSee(who, owner) {
   return false;
 }
 const ownerOf = (who) => (who.role === 'super' ? null : who.tenant);
-const tenantView = (t) => ({ id: t.id, label: t.label, role: t.role, school: t.school || null, created: t.created });
+const tenantView = (t) => ({ id: t.id, label: t.label, role: t.role, school: t.school || null, created: t.created, mfa: !!(t.security && t.security.mfa && t.security.mfa.enabled) });
 
 // --- Aufräumen ---------------------------------------------------------------------
 
@@ -823,17 +979,18 @@ function findSeat(seatCode) {
 /** Zustand eines Platzes: wartet (nicht gestartet), offen (Zeit läuft) oder abgegeben. */
 function seatState(exam, seat, now = Date.now()) {
   if (!exam.started) return 'waiting';
+  if (seat.submitted) return 'closed';
   return now <= seat.until ? 'open' : 'closed';
 }
 
 function examState(exam, now = Date.now()) {
   if (!exam.started) return 'ready';
-  return exam.seats.some((s) => now <= s.until) ? 'running' : 'ended';
+  return exam.seats.some((s) => !s.submitted && now <= s.until) ? 'running' : 'ended';
 }
 
 function seatStatus(exam, seat) {
   const now = Date.now();
-  return { state: seatState(exam, seat, now), until: seat.until || null, now, title: exam.title, seat: seat.id };
+  return { state: seatState(exam, seat, now), until: seat.until || null, submitted: seat.submitted || null, now, title: exam.title, seat: seat.id };
 }
 
 /** Übersicht für den Admin (ohne Schlüssel und ohne Projekte). */
@@ -854,7 +1011,7 @@ function examSummary(exam, withSeats = false) {
     seats: withSeats
       ? exam.seats.map((s) => {
           const session = sessions.get(s.id);
-          return { id: s.id, code: s.code, extra: s.extra || 0, until: s.until || null, state: seatState(exam, s, now), joined: !!session, saved: session ? session.updated : null, online: session ? connected(session.code, now) : false, session: session ? session.code : null };
+          return { id: s.id, code: s.code, extra: s.extra || 0, until: s.until || null, submitted: s.submitted || null, state: seatState(exam, s, now), joined: !!session, saved: session ? session.updated : null, online: session ? connected(session.code, now) : false, session: session ? session.code : null };
         })
       : exam.seats.length,
     joined: withSeats ? undefined : entries('sessions').filter((x) => x.exam && x.exam.id === exam.id).length,
@@ -1002,6 +1159,8 @@ async function api(req, res, url) {
     // Lebenszeichen des schreibenden Geräts (alle 20 s), damit kein zweites übernimmt.
     if (parts[2] === 'ping' && method === 'POST') {
       if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
+      // Abgegebener Prüfungsplatz: nicht mehr belegen.
+      if (item.submitted) return json(res, 423, { error: 'examClosed' });
       leases.set(code, Date.now());
       return json(res, 200, { ok: true, ...about(item) });
     }
@@ -1044,6 +1203,27 @@ async function api(req, res, url) {
       }
       return fail(res, 405, 'methodNotAllowed');
     }
+    // Prüfung abgeben: letzten Stand speichern und den Platz sofort schliessen (nur das schreibende
+    // Gerät). Danach nimmt der Server nichts mehr an, auch nicht in der Gnadenfrist; der Zeitpunkt
+    // steht im Cockpit der Lehrperson.
+    if (parts[2] === 'submit' && method === 'POST') {
+      if (!item.exam) return fail(res, 400, 'notAnExam');
+      if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
+      const exam = loadExam(item.exam.id);
+      const seat = exam && exam.seats.find((s) => s.id === item.exam.seat);
+      if (!exam || !seat) return fail(res, 404, 'unknownSession');
+      if (!sebAllowed(req, exam, req.headers['x-leyonet-seb'])) return fail(res, 403, 'sebRequired');
+      if (seat.submitted) return json(res, 200, { exam: seatStatus(exam, seat) });
+      const now = Date.now();
+      if (!exam.started || now > seat.until + EXAM_GRACE_MS) return json(res, 423, { error: 'examClosed', exam: seatStatus(exam, seat) });
+      if (body.project !== undefined && !validProject(body.project)) return fail(res, 400, 'invalidProject');
+      seat.submitted = now;
+      seat.until = Math.min(seat.until, now);
+      saveExam(exam);
+      store('sessions', code, { ...item, ...(body.project !== undefined ? { project: body.project, updated: now } : {}), submitted: now });
+      leases.delete(code);
+      return json(res, 200, { exam: seatStatus(exam, seat) });
+    }
     if (parts.length !== 2) return fail(res, 404, 'unknownSession');
 
     if (method === 'GET') {
@@ -1056,7 +1236,11 @@ async function api(req, res, url) {
       }
       const base = { code, expires: item.expires, classCode: item.classCode, site: item.site || null, project: item.project };
       // Nur ansehen (z.B. Lehrperson): kein Schreibrecht, verdrängt niemanden.
-      if (url.searchParams.get('watch') === '1') return json(res, 200, { ...base, updated: item.updated, watch: true, ...about(item) });
+      // Prüfungsplätze nie über den Session-Code ansehen: Die Lehrperson sieht sie über die Admin-Konsole.
+      if (url.searchParams.get('watch') === '1') {
+        if (item.exam) return fail(res, 403, 'examSession');
+        return json(res, 200, { ...base, updated: item.updated, watch: true, ...about(item) });
+      }
       const pin = req.headers['x-leyonet-pin'];
       const claimed = await claimWriter(code, item, token, typeof pin === 'string' ? pin : '');
       if (claimed.error) return json(res, claimed.status, { error: claimed.error, ...about(item) });
@@ -1078,7 +1262,7 @@ async function api(req, res, url) {
         const exam = loadExam(item.exam.id);
         const seat = exam && exam.seats.find((s) => s.id === item.exam.seat);
         if (!exam || !seat) return fail(res, 404, 'unknownSession');
-        if (!exam.started || now > seat.until + EXAM_GRACE_MS) return json(res, 423, { error: 'examClosed', exam: seatStatus(exam, seat) });
+        if (!exam.started || seat.submitted || now > seat.until + EXAM_GRACE_MS) return json(res, 423, { error: 'examClosed', exam: seatStatus(exam, seat) });
         if (!sebAllowed(req, exam, req.headers['x-leyonet-seb'])) return fail(res, 403, 'sebRequired');
         store('sessions', code, { ...item, project: body.project, updated: now });
         return json(res, 200, { code, expires: item.expires, exam: seatStatus(exam, seat), ...(writer ? { writer } : {}) });
@@ -1276,15 +1460,36 @@ async function admin(req, res, parts, method) {
       const t = tenantByKey(given);
       if (t) who = { role: t.role, tenant: t.id, label: t.label };
     } else {
-      // Passwort (von Menschen gewählt): je Adresse und insgesamt begrenzt.
-      if (limited(req, 'login', 10) || limitedGlobal('login', 30)) return fail(res, 429, 'rateLimited');
+      // Passwort (von Menschen gewählt): je Adresse und insgesamt begrenzt. Greift die Grenze für
+      // alle (viele Fehlversuche von vielen Adressen), kommt der Hauptadmin mit Zwei-Faktor trotzdem
+      // hinein: nur wenn Passwort und Code zusammen stimmen, sonst ohne jeden Hinweis 429 (kein
+      // Raten möglich, und die Fehlversuche sperren den Zugang nicht).
+      if (limited(req, 'login', 10)) return fail(res, 429, 'rateLimited');
+      if (limitedGlobal('login', 30)) {
+        const data = accountData({ role: 'super' });
+        const code = typeof body.code === 'string' ? body.code.slice(0, 40) : '';
+        if (!(data.mfa && data.mfa.enabled) || !code.trim() || !checkPassword(given)) return fail(res, 429, 'rateLimited');
+        if (checkSecondFactor({ role: 'super' }, data, code) !== 'ok') return fail(res, 429, 'rateLimited');
+        return issueToken(res, { role: 'super', tenant: null, label: null });
+      }
       if (checkPassword(given)) who = { role: 'super', tenant: null, label: null };
     }
     if (!who) return fail(res, 401, 'wrongPassword');
-    const token = crypto.randomBytes(32).toString('base64url');
-    for (const [k, e] of tokens) if (e.expires < Date.now()) tokens.delete(k);
-    tokens.set(token, { ...who, expires: Date.now() + ADMIN_TOKEN_HOURS * 3_600_000 });
-    return json(res, 200, { token, role: who.role, label: who.label });
+    // Zweiter Faktor (falls eingerichtet): erst nach richtigem Passwort bzw. Schlüssel gefragt.
+    const data = accountData(who);
+    const id = accountId(who);
+    if (data.mfa && data.mfa.enabled) {
+      if (typeof body.code !== 'string' || !body.code.trim()) return json(res, 401, { error: 'mfaRequired' });
+      if (limited(req, 'mfa', 60) || mfaLocked(id)) return fail(res, 429, 'rateLimited');
+      const result = checkSecondFactor(who, data, body.code.slice(0, 40));
+      if (result !== 'ok') {
+        countMfaFail(id);
+        if (result === 'unreadable') console.error('Zwei-Faktor: Geheimnis nicht lesbar (ADMIN_PASSWORD geändert?). Anmeldung mit Wiederherstellungscode möglich.');
+        return fail(res, 401, result === 'unreadable' ? 'mfaUnreadable' : 'wrongCode');
+      }
+      mfaFails.delete(id);
+    }
+    return issueToken(res, who);
   }
   const who = principal(req);
   if (!who) return fail(res, 401, 'notLoggedIn');
@@ -1295,10 +1500,94 @@ async function admin(req, res, parts, method) {
     return true;
   };
 
+  const current = (req.headers.authorization || '').slice(7);
   if (parts[0] === 'logout' && method === 'POST') {
-    tokens.delete((req.headers.authorization || '').slice(7));
+    const body = await readBody(req, 1024);
+    // «Überall abmelden»: alle Anmeldungen dieses Zugangs ausser der aktuellen beenden.
+    if (body.others === true) {
+      let n = 0;
+      for (const [k, e] of tokens) if (k !== current && accountId(e) === accountId(who)) (tokens.delete(k), n++);
+      return json(res, 200, { ok: true, ended: n });
+    }
+    tokens.delete(current);
     return json(res, 200, { ok: true });
   }
+
+  // Eigene Sicherheit: Zwei-Faktor, letzte Anmeldung, offene Anmeldungen (ohne Adressen oder Geräte).
+  if (parts[0] === 'me' && method === 'GET') {
+    const data = accountData(who);
+    const now = Date.now();
+    const logins = [...tokens.values()].filter((e) => accountId(e) === accountId(who) && e.expires > now && now - (e.seen || 0) <= ADMIN_IDLE_MS).length;
+    return json(res, 200, {
+      role: who.role,
+      label: who.label,
+      mfa: { enabled: !!(data.mfa && data.mfa.enabled), recoveryLeft: data.mfa && Array.isArray(data.mfa.recovery) ? data.mfa.recovery.length : 0, required: !!settings().mfaRequired, setupNeeded: !!who.mfaSetup || (!!settings().mfaRequired && !(data.mfa && data.mfa.enabled)) },
+      previousLogin: data.previousLogin || null,
+      logins,
+      idleMinutes: ADMIN_IDLE_MS / 60_000,
+    });
+  }
+  if (parts[0] === 'mfa' && method === 'POST') {
+    const body = await readBody(req, 2048);
+    const id = accountId(who);
+    const data = accountData(who);
+    // Einrichten, Schritt 1: neues Geheimnis (noch nicht aktiv), für App bzw. QR-Code.
+    // Ist Zwei-Faktor schon an, lässt er sich nicht einfach ersetzen (sonst bände ein entwendetes
+    // Token den Zugang an eine fremde App): erst mit gültigem Code ausschalten, dann neu einrichten.
+    if ((parts[1] === 'setup' || parts[1] === 'enable') && data.mfa && data.mfa.enabled) return fail(res, 409, 'mfaOn');
+    // Fehlversuche mit einem Token zählen getrennt von der Anmeldung (sperren sie nicht).
+    const tokenId = `${id}:token`;
+    if (parts[1] === 'setup') {
+      const secret = base32(crypto.randomBytes(20));
+      mfaPending.set(id, { secret, expires: Date.now() + 10 * 60_000 });
+      const name = who.role === 'super' ? 'Admin' : String(who.label || 'Zugang').replace(/[^\p{L}\p{N} ._-]/gu, '').slice(0, 40) || 'Zugang';
+      const issuer = 'leyoNET';
+      return json(res, 200, { secret, uri: `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(name)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30` });
+    }
+    // Schritt 2: mit einem Code aus der App bestätigen, dann aktiv; Wiederherstellungscodes einmal anzeigen.
+    if (parts[1] === 'enable') {
+      if (limited(req, 'mfa', 60) || mfaLocked(tokenId)) return fail(res, 429, 'rateLimited');
+      const pending = mfaPending.get(id);
+      if (!pending || pending.expires < Date.now()) return fail(res, 409, 'mfaNoSetup');
+      const step = totpStep(unbase32(pending.secret), String(body.code || '').replace(/\s/g, ''), 0);
+      if (step === null) {
+        countMfaFail(tokenId);
+        return fail(res, 401, 'wrongCode');
+      }
+      mfaPending.delete(id);
+      const recovery = newRecoveryCodes();
+      saveAccountData(who, { ...data, mfa: { enabled: true, since: Date.now(), secret: encryptKey({ secret: pending.secret }), step, recovery: recovery.map(recoveryHash) } });
+      const entry = tokens.get(current);
+      if (entry) delete entry.mfaSetup;
+      // Andere Anmeldungen dieses Zugangs (ohne zweiten Faktor ausgestellt) beenden.
+      for (const [k, e] of tokens) if (k !== current && accountId(e) === id) tokens.delete(k);
+      return json(res, 200, { enabled: true, recovery });
+    }
+    // Ausschalten oder neue Wiederherstellungscodes: nur mit gültigem Code (oder Wiederherstellungscode).
+    if (parts[1] === 'disable' || parts[1] === 'recovery') {
+      if (!data.mfa || !data.mfa.enabled) return fail(res, 409, 'mfaOff');
+      if (parts[1] === 'disable' && settings().mfaRequired) return fail(res, 409, 'mfaRequired');
+      if (limited(req, 'mfa', 60) || mfaLocked(tokenId)) return fail(res, 429, 'rateLimited');
+      const result = checkSecondFactor(who, data, String(body.code || '').slice(0, 40));
+      if (result !== 'ok') {
+        countMfaFail(tokenId);
+        return fail(res, 401, result === 'unreadable' ? 'mfaUnreadable' : 'wrongCode');
+      }
+      const after = accountData(who);
+      if (parts[1] === 'disable') {
+        const { mfa: _m, ...rest } = after;
+        saveAccountData(who, rest);
+        return json(res, 200, { enabled: false });
+      }
+      const recovery = newRecoveryCodes();
+      saveAccountData(who, { ...after, mfa: { ...after.mfa, recovery: recovery.map(recoveryHash) } });
+      return json(res, 200, { enabled: true, recovery });
+    }
+    return fail(res, 404, 'notFound');
+  }
+  // Zwei-Faktor verlangt und noch nicht eingerichtet: nur Einrichten und Abmelden.
+  // Auch Anmeldungen von vor dem Einschalten von «für alle verlangen» gelten nur noch zum Einrichten.
+  if (who.mfaSetup || (settings().mfaRequired && !(accountData(who).mfa && accountData(who).mfa.enabled))) return fail(res, 403, 'mfaSetupRequired');
 
   if (parts[0] === 'overview' && method === 'GET') {
     const sessions = entries('sessions');
@@ -1343,6 +1632,13 @@ async function admin(req, res, parts, method) {
     }
     const t = loadTenant(parts[1]);
     if (!t || !mine(t)) return fail(res, 404, 'unknownTenant');
+    // Zwei-Faktor zurücksetzen (Handy verloren): Hauptadmin für alle, Schule für ihre Lehrpersonen.
+    if (parts[2] === 'mfa' && method === 'DELETE') {
+      const { mfa: _m, ...rest } = t.security || {};
+      saveTenant({ ...t, security: rest });
+      for (const [k, e] of tokens) if (e.tenant === t.id) tokens.delete(k);
+      return json(res, 200, tenantView({ ...t, security: rest }));
+    }
     if (parts[2] === 'key' && method === 'POST') {
       // Neuer Schlüssel: der alte gilt sofort nicht mehr, Anmeldungen damit enden.
       const secret = newTenantSecret();
@@ -1394,7 +1690,10 @@ async function admin(req, res, parts, method) {
       feedbackDays: int(body.feedbackDays, 1, 365, current.feedbackDays),
       classHours: int(body.classHours, 1, 24 * 180, current.classHours),
       catalog: readCatalog(body.catalog, current.catalog),
+      mfaRequired: typeof body.mfaRequired === 'boolean' ? body.mfaRequired : !!current.mfaRequired,
     };
+    // Wer Zwei-Faktor für alle verlangt, muss ihn selbst eingerichtet haben (sonst sperrt man sich aus).
+    if (next.mfaRequired && !current.mfaRequired && !(accountData(who).mfa && accountData(who).mfa.enabled)) return fail(res, 409, 'mfaOwnFirst');
     writeJson(path.join(DATA_DIR, 'settings.json'), next);
     return json(res, 200, next);
   }
@@ -1494,6 +1793,50 @@ async function admin(req, res, parts, method) {
     }
   }
 
+  // Statistik: aktive Sessions (nur Kennzahlen, ohne Projekte). Zugänge sehen nur ihre Klassen und Prüfungen.
+  if (parts[0] === 'stats' && method === 'GET') {
+    const now = Date.now();
+    const classes = new Map(list(dirs.classes).map((c) => [c.code, { label: c.label, owner: c.owner || null }]));
+    const exams = new Map(list(dirs.exams).map((e) => [e.id, { label: e.label, owner: e.owner || null }]));
+    const visible = (m) =>
+      who.role === 'super' || (m.classCode && classes.has(m.classCode) && canSee(who, classes.get(m.classCode).owner)) || (m.exam && exams.has(m.exam.id) && canSee(who, exams.get(m.exam.id).owner));
+    const all = entries('sessions').filter(visible);
+    const kindOf = (m) => (m.exam ? 'exam' : m.classCode ? 'class' : 'single');
+    const day = 86_400_000;
+    const rows = all
+      .sort((a, b) => (b.updated || 0) - (a.updated || 0))
+      .slice(0, MAX_STATS_ROWS)
+      .map((m) => ({
+        code: m.code,
+        kind: kindOf(m),
+        group: m.exam ? (exams.get(m.exam.id) || {}).label || '' : m.classCode ? (classes.get(m.classCode) || {}).label || m.classCode : null,
+        seat: m.exam ? m.exam.seat : m.site ? m.site.seat : null,
+        created: m.created || null,
+        updated: m.updated || null,
+        expires: m.expires,
+        size: m.size || 0,
+        connected: connected(m.code, now),
+        locked: !!m.lock,
+        submitted: m.submitted || null,
+      }));
+    const u = usage();
+    return json(res, 200, {
+      total: all.length,
+      counts: {
+        single: all.filter((m) => kindOf(m) === 'single').length,
+        class: all.filter((m) => kindOf(m) === 'class').length,
+        exam: all.filter((m) => kindOf(m) === 'exam').length,
+        connected: all.filter((m) => connected(m.code, now)).length,
+        changed24h: all.filter((m) => now - (m.updated || 0) < day).length,
+        created24h: all.filter((m) => now - (m.created || 0) < day).length,
+        created7d: all.filter((m) => now - (m.created || 0) < 7 * day).length,
+        bytes: all.reduce((s, m) => s + (m.size || 0), 0),
+      },
+      storage: who.role === 'super' ? { bytes: u.bytes, maxBytes: MAX_STORAGE_BYTES, sessions: u.sessions, maxSessions: MAX_SESSIONS } : null,
+      sessions: rows,
+    });
+  }
+
   if (parts[0] === 'sessions') {
     if (parts.length === 1 && method === 'DELETE') {
       if (superOnly()) return;
@@ -1507,7 +1850,20 @@ async function admin(req, res, parts, method) {
     const visible = item && (who.role === 'super' || (item.classCode && canSee(who, loadClass(item.classCode)?.owner)) || (item.exam && canSee(who, loadExam(item.exam.id)?.owner)));
     if (!visible) return fail(res, 404, 'unknownSession');
     if (method === 'GET') return json(res, 200, { code, project: item.project, classCode: item.classCode, updated: item.updated, connected: connected(code), locked: !!item.lock });
+    // Verlängern (nicht für Prüfungsplätze: die gelten so lange wie die Prüfung).
+    if (method === 'PATCH') {
+      const body = await readBody(req, 1024);
+      if (item.exam) return fail(res, 409, 'examSession');
+      if (!(Number.isInteger(body.extendHours) && body.extendHours >= 1 && body.extendHours <= 24 * 30)) return fail(res, 400, 'badHours');
+      const now = Date.now();
+      const latest = loadSession(code) || item;
+      const expires = Math.min(Math.max(latest.expires, now) + body.extendHours * 3_600_000, now + MAX_SESSION_DAYS * 86_400_000);
+      store('sessions', code, { ...latest, expires });
+      return json(res, 200, { code, expires });
+    }
     if (method === 'DELETE') {
+      // Prüfungsabgaben nur mit der Prüfung löschen (nie versehentlich einzeln).
+      if (item.exam) return fail(res, 409, 'examSession');
       leases.delete(code);
       drop('sessions', code);
       return json(res, 200, { ok: true });
@@ -1537,7 +1893,10 @@ async function adminExams(req, res, parts, method, who) {
       if (!body.key.meta || body.key.meta.format !== 'netzwerk-simulator-pruefungsschluessel' || !body.key.key || body.key.key.id !== info.id) return fail(res, 400, 'keyMismatch');
       key = encryptKey(body.key);
     }
-    const minutes = Number.isInteger(body.minutes) && body.minutes > 0 && body.minutes <= MAX_EXAM_MINUTES ? body.minutes : Number.isInteger(info.minutes) ? info.minutes : 60;
+    // Die Prüfungszeit muss angegeben sein (Formular der Admin-Konsole oder Prüfungsdatei).
+    const valid = (m) => Number.isInteger(m) && m > 0 && m <= MAX_EXAM_MINUTES;
+    const minutes = valid(body.minutes) ? body.minutes : valid(info.minutes) ? info.minutes : 0;
+    if (!minutes) return fail(res, 400, 'badMinutes');
     const used = new Set(seatCodes().keys());
     const seats = Array.from({ length: count }, (_, i) => {
       let code = newCode();
@@ -1605,6 +1964,16 @@ async function adminExams(req, res, parts, method, who) {
     const minutes = Number.isInteger(body.minutes) && Math.abs(body.minutes) <= MAX_EXAM_MINUTES && body.minutes !== 0 ? body.minutes : null;
     if (minutes === null) return fail(res, 400, 'badMinutes');
     seat.extra = Math.max(0, (seat.extra || 0) + minutes);
+    // Mehr Zeit für einen abgegebenen Platz öffnet ihn wieder (z.B. versehentlich abgegeben).
+    if (minutes > 0 && seat.submitted) {
+      delete seat.submitted;
+      const known = entries('sessions').find((x) => x.exam && x.exam.id === exam.id && x.exam.seat === seat.id);
+      const item = known && loadSession(known.code);
+      if (item && item.submitted) {
+        const { submitted: _s, ...rest } = item;
+        store('sessions', item.code, rest);
+      }
+    }
     if (exam.started) seat.until = minutes > 0 ? Math.max(seat.until, now) + minutes * 60_000 : Math.max(exam.started, seat.until + minutes * 60_000);
     saveExam(exam);
     return json(res, 200, examSummary(exam, true));
@@ -1649,7 +2018,7 @@ async function adminExams(req, res, parts, method, who) {
       .map((m) => loadSession(m.code))
       .filter(Boolean)
       .sort((a, b) => a.exam.seat.localeCompare(b.exam.seat))
-      .map((s) => ({ seat: s.exam.seat, code: exam.seats.find((x) => x.id === s.exam.seat)?.code || '', updated: s.updated, project: s.project }));
+      .map((s) => ({ seat: s.exam.seat, code: exam.seats.find((x) => x.id === s.exam.seat)?.code || '', updated: s.updated, submitted: s.submitted || null, project: s.project }));
     return json(res, 200, { id: exam.id, examId: exam.examId, title: exam.title, label: exam.label, key, keyError: exam.key && !key ? 'unreadable' : null, submissions });
   }
   return fail(res, 404, 'notFound');
@@ -1659,6 +2028,16 @@ async function adminExams(req, res, parts, method, who) {
 
 function createServer() {
   ensureDirs();
+  // Handy mit der Authenticator-App verloren und keine Wiederherstellungscodes: einmal mit
+  // ADMIN_MFA_RESET=1 starten, dann ist die Zwei-Faktor-Anmeldung des Hauptadmins aus.
+  if (process.env.ADMIN_MFA_RESET === '1') {
+    const all = readJson(SECURITY_FILE()) || {};
+    if (all.super && all.super.mfa) {
+      const { mfa: _m, ...rest } = all.super;
+      writeJson(SECURITY_FILE(), { ...all, super: rest });
+      console.warn('Zwei-Faktor des Hauptadmins zurückgesetzt (ADMIN_MFA_RESET=1). Variable wieder entfernen.');
+    }
+  }
   // Verzeichnis im Hintergrund aufbauen, danach regelmässig aufräumen.
   const ready = buildIndexes()
     .then(cleanup)
@@ -1683,7 +2062,8 @@ function createServer() {
         return await api(req, res, url);
       }
       if (req.method !== 'GET' && req.method !== 'HEAD') return fail(res, 405, 'methodNotAllowed');
-      if (url.pathname === '/' || url.pathname === '/index.html') {
+      // Admin-Konsole als eigene Seite (eigener Tab): dieselbe App, sie erkennt die Adresse.
+      if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/admin' || url.pathname === '/admin/') {
         return send(res, 200, req.method === 'HEAD' ? '' : html(), { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': CSP });
       }
       const asset = url.pathname.startsWith('/assets/') ? bundle().assets.get(url.pathname) : undefined;

@@ -17,9 +17,12 @@
     call,
     notify,
     version = 0,
+    focus = null,
     onwatch,
   }: {
     version?: number;
+    /** Diese Prüfung gleich öffnen (z.B. aus der Leiste «Prüfung läuft»). */
+    focus?: string | null;
     call: <T>(method: string, path: string, body?: unknown) => Promise<T>;
     notify: (kind: 'ok' | 'error', text: string) => void;
     /** Platz live ansehen (nur lesen). */
@@ -31,6 +34,8 @@
     code: string;
     extra: number;
     until: number | null;
+    /** Von den Lernenden abgegeben um (ms); fehlt, wenn die Zeit ablief oder die Lehrperson beendete. */
+    submitted?: number | null;
     state: 'waiting' | 'open' | 'closed';
     joined: boolean;
     saved: number | null;
@@ -82,6 +87,13 @@
   }
 
   $effect(() => {
+    if (!focus) return;
+    void call<Exam>('GET', `exams/${focus}`)
+      .then((e) => (open = e))
+      .catch(() => undefined);
+  });
+
+  $effect(() => {
     void version;
     void load().catch(() => undefined);
     // Während einer Prüfung die Platztabelle laufend nachführen.
@@ -121,7 +133,7 @@
 
   function errorText(error: unknown): string {
     const code = (error as { code?: string }).code ?? 'other';
-    return t(`admin.exams.error.${['notAnExam', 'labelRequired', 'badSeats', 'keyMismatch', 'alreadyStarted', 'notStarted', 'unknownExam', 'tooLarge', 'examEnded'].includes(code) ? code : 'other'}`);
+    return t(`admin.exams.error.${['notAnExam', 'labelRequired', 'badSeats', 'badMinutes', 'keyMismatch', 'alreadyStarted', 'notStarted', 'unknownExam', 'tooLarge', 'examEnded'].includes(code) ? code : 'other'}`);
   }
 
   async function create(event: SubmitEvent) {
@@ -239,7 +251,8 @@
   };
 </script>
 
-<h3>{t('admin.exams.createTitle')}</h3>
+<details class="create-box" open={exams.length === 0 || !!learner}>
+<summary>➕ {t('admin.exams.createTitle')}</summary>
 <form class="create" onsubmit={create}>
   <div class="row">
     <button type="button" onclick={chooseLearner}>📄 {learner ? learner.name : t('admin.exams.learnerFile')}</button>
@@ -253,7 +266,7 @@
       {:else}
         <label class="short">{t('exam.seats')}<input type="number" min="1" max="60" bind:value={seats} /></label>
       {/if}
-      <label class="short">{t('admin.exams.minutes')}<input type="number" min="1" max="600" bind:value={minutes} /></label>
+      <label class="short">{t('admin.exams.minutesRequired')}<input type="number" min="1" max="600" step="1" bind:value={minutes} required /></label>
       <button type="submit" class="primary" disabled={busy || !label.trim()}>{t('admin.exams.create')}</button>
     </div>
     <label class="check"><input type="checkbox" bind:checked={seb} /> 🔒 {t('seb.create')}</label>
@@ -261,6 +274,7 @@
   {/if}
   <p class="muted">{t('admin.exams.hint')}</p>
 </form>
+</details>
 
 {#if exams.length === 0}
   <p class="muted">{t('admin.exams.none')}</p>
@@ -295,6 +309,7 @@
       <button class="primary" onclick={() => act('start', undefined, t('admin.exams.confirmStart', { n: seatList.length, min: open!.minutes }))}>▶ {t('admin.exams.start')}</button>
     {:else}
       <span>{t('admin.exams.startedAt', { time: time(open.started) })}</span>
+      <strong class="count">{t('admin.exams.submittedCount', { n: seatList.filter((x) => x.submitted).length, total: seatList.length })}</strong>
       {#if open.state === 'running'}
         <button class="danger" onclick={() => act('end', undefined, t('admin.exams.confirmEnd'))}>■ {t('admin.exams.end')}</button>
         <button onclick={printSheets}>🖨 {t('admin.exams.printSheets')}</button>
@@ -321,7 +336,9 @@
         <tr>
           <td>{s.id}</td>
           <td class="code">{s.code}</td>
-          <td class={s.state}>{s.state === 'open' && !s.joined ? t('admin.exams.seat.absent') : t(`admin.exams.seat.${s.state}`)}</td>
+          <td class={s.state} class:submitted={!!s.submitted}>
+            {#if s.submitted}✓ {t('admin.exams.seat.submittedAt', { time: time(s.submitted) })}{:else}{s.state === 'open' && !s.joined ? t('admin.exams.seat.absent') : t(`admin.exams.seat.${s.state}`)}{/if}
+          </td>
           <td>{time(s.saved)}</td>
           <td>{time(s.until)} {#if s.state === 'open'}<span class="muted">({left(s)})</span>{/if}</td>
           <td class="actions">
@@ -342,6 +359,26 @@
 {/if}
 
 <style>
+  .create-box {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    background: var(--surface);
+  }
+  .create-box summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .count {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, #15803d 14%, var(--surface));
+  }
+  td.submitted {
+    color: #15803d;
+    font-weight: 600;
+  }
   .unlock {
     display: flex;
     align-items: center;

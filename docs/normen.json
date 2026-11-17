@@ -166,6 +166,10 @@
       "titel": "Unique Local IPv6 Unicast Addresses",
       "verwendung": "Private IPv6-Adressen fd00::/8"
     },
+    "4226": {
+      "titel": "HOTP: An HMAC-Based One-Time Password Algorithm",
+      "verwendung": "Zwei-Faktor-Anmeldung der Admin-Konsole: Code aus HMAC-SHA1 und Zähler"
+    },
     "4253": {
       "titel": "The Secure Shell (SSH) Transport Layer Protocol",
       "verwendung": "SSH in der CLI"
@@ -225,6 +229,10 @@
     "5952": {
       "titel": "A Recommendation for IPv6 Address Text Representation",
       "verwendung": "Schreibweise von IPv6-Adressen"
+    },
+    "6238": {
+      "titel": "TOTP: Time-Based One-Time Password Algorithm",
+      "verwendung": "Zwei-Faktor-Anmeldung der Admin-Konsole mit Authenticator-App (30 Sekunden, 6 Ziffern)"
     },
     "6333": {
       "titel": "Dual-Stack Lite Broadband Deployments Following IPv4 Exhaustion",

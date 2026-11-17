@@ -15,7 +15,7 @@ Die Lernenden sehen also nur, *was* zu tun ist und wie viele Punkte ein Teil gib
 
 ## Prüfung erstellen
 
-**Generator «Firmennetz mit drei Standorten»** (Werkzeuge → Prüfung erstellen …): Hauptsitz und zwei Filialen mit DHCP/DNS-Server, Transitnetzen und Intranet mit Webserver, 75 Punkte (je Standort 21, Netzwerkdienste 12).
+**Generator «Firmennetz mit drei Standorten»** (Werkzeuge → Prüfung erstellen …): Hauptsitz und zwei Filialen mit DHCP/DNS-Server, Transitnetzen und Intranet mit Webserver, 84 Punkte (je Standort 21, Transitnetze 9, Netzwerkdienste 12). Die Aufgabe nennt für jeden Router, welcher Anschluss welches Netz bekommt (eth0 LAN, eth1/eth2 Transitnetze, eth3 Intranet); die Auswertung prüft aber nur Adressen und Verbindungen, nicht die Nummer des Anschlusses. Vertauschte Anschlüsse kosten also nichts, falsch verbundene Router schon.
 
 - Eine Variante würfeln (Startwert) und von Hand anpassen, oder **je Platz eine eigene Variante** (bis 40 Plätze). Mit demselben Startwert entstehen wieder dieselben Varianten.
 - «Erstellen» → Prüfungsdatei und Schlüssel speichern. «Aufgabenblätter (HTML)» gibt alle Varianten zum Drucken aus. «Musterlösung öffnen» zeigt die Lösung eines Platzes.
@@ -78,7 +78,7 @@ Grenzen: 300 000 Zeichen, 150 Geräte, 300 Kabel, 100 Ziele. Das Startnetz kennt
 
 Läuft leyoNET als Webversion mit Node-Server (siehe [plesk.md](plesk.md)), geht es ohne Dateiablage:
 
-1. **Admin-Konsole → Prüfungen:** Prüfungsdatei und Schlüssel hochladen, Bezeichnung (z.B. «INF22a LB3»), Plätze und Minuten. Bei einer Prüfung mit Varianten gibt es je Variante einen Platz.
+1. **Admin-Konsole (`/admin`, eigener Tab) → Prüfungen:** Prüfungsdatei und Schlüssel hochladen, Bezeichnung (z.B. «INF22a LB3»), Plätze und **Prüfungszeit (Pflicht)**. Ohne Zeit lässt sich keine Prüfung anlegen, weder im Generator noch auf dem Server. Bei einer Prüfung mit Varianten gibt es je Variante einen Platz.
 2. **Prüfungsblätter drucken:** eine A4-Seite je Platz mit Prüfung, Platznummer, Platz-Code (z.B. `K7QX-3MPA`), Zeit (mit Nachteilsausgleich), Ablauf, Regeln, Namensfeld und dem Auftrag dieses Platzes mit Zielen und Punkteraster, gegliedert wie im Aufgabenfenster. Eine Datei drucken, die Blätter verteilen. Kürzer gehen die **Platzkarten** (mehrere Karten je Seite zum Ausschneiden). Mit **🔑 Code zum Beenden** zeigt das Cockpit den Code, mit dem ein Platz den Prüfungsmodus verlässt (er steht im hochgeladenen Schlüssel).
 3. Die Lernenden öffnen leyoNET, **Datei → Prüfung beitreten …** und tippen den Platz-Code ein. Vor dem Start warten sie; danach erhält jeder Platz seine Variante, der Prüfungsmodus beginnt.
 4. **Starten.** Das **Prüfungscockpit** zeigt je Platz: beigetreten, zuletzt gespeichert, Ende und **Live**: ein grüner Punkt, solange das Gerät verbunden ist (es meldet sich alle 20 Sekunden). Der Stand wird **alle 20 Sekunden** automatisch gespeichert (und beim Schliessen der Seite). Ein Neuladen kostet höchstens diese 20 Sekunden.
@@ -86,9 +86,10 @@ Läuft leyoNET als Webversion mit Node-Server (siehe [plesk.md](plesk.md)), geht
    - **Freigeben:** Ist ein Browser abgestürzt oder wechselt jemand den Rechner, gibt die Lehrperson den Platz mit «Freigeben» frei. Danach tritt die Person am neuen Gerät mit demselben Platz-Code bei und arbeitet mit dem gespeicherten Stand weiter; das alte Gerät kann nicht mehr speichern. Ohne Freigabe bleibt der Platz beim ersten Gerät (bis v1.6.0 war er nach einer Minute ohne Lebenszeichen wieder frei; so hätte jemand mit dem Code einer fremden Platzkarte hineinkommen können).
    - **Ansehen:** «👁 Ansehen» zeigt den Stand eines Platzes live (alle 5 Sekunden neu, nur lesen). So lässt sich prüfen, ob alles funktioniert, oder eine Person begleiten. Das eigene Projekt kommt mit «Beenden» zurück.
 5. **Nachteilsausgleich** je Platz: «+5′», «+15′» (vor oder während der Prüfung, auch nach Ablauf – der Platz öffnet dann wieder), «−5′» zum Korrigieren.
-6. Ist die Zeit eines Platzes um, gibt leyoNET den letzten Stand sofort **automatisch ab** (ohne die 20 Sekunden abzuwarten), danach nimmt der Server nichts mehr an, und die Lernenden sehen «Abgegeben». Bei einer Prüfungsdatei ohne Server speichert leyoNET am Ende der Zeit einmal automatisch die Datei. «Für alle beenden» beendet alle Plätze sofort.
-7. In der Auswertung hebt ein Klick auf eine Spaltennummer (oder eine Zelle) unten den Text dieses Ziels hervor.
-8. **Automatisch auswerten:** alle Abgaben werden mit dem hinterlegten Schlüssel korrigiert (wie unten beschrieben, mit Nachkorrektur, CSV und Berichten). **Abgaben herunterladen** speichert eine Datei mit allen Abgaben und dem Schlüssel (`abgaben-….json`); «Abgaben auswerten» liest sie später wieder.
+6. **Abgeben:** In der Prüfungsleiste steht «📤 Abgeben». Nach einer Rückfrage geht der letzte Stand an den Server, der Platz ist sofort geschlossen (auch die 30 Sekunden Gnadenfrist gelten dann nicht mehr), und im Cockpit steht «✓ abgegeben 10:42» mit dem Zeitpunkt; oben zählt «Abgegeben: 5 von 16» mit. Bei den Lernenden beginnt eine neue, leere Fläche ohne Verbindung zur Abgabe: Was sie danach ändern, erreicht die Abgabe nicht. Kam die Abgabe nicht an (Netz), bleibt die Arbeit stehen und lässt sich erneut abgeben. Versehentlich abgegeben: «+5′» öffnet den Platz wieder.
+7. Ist die Zeit eines Platzes um, gibt leyoNET den letzten Stand sofort **automatisch ab** (ohne die 20 Sekunden abzuwarten), danach nimmt der Server nichts mehr an, und die Lernenden sehen «Abgegeben um …» und eine leere Fläche wie beim Abgeben von Hand. Kommt die automatische Abgabe nicht an, versucht leyoNET es alle 10 Sekunden erneut. Bei einer Prüfungsdatei ohne Server speichert leyoNET am Ende der Zeit einmal automatisch die Datei. «Für alle beenden» beendet alle Plätze sofort.
+8. In der Auswertung hebt ein Klick auf eine Spaltennummer (oder eine Zelle) unten den Text dieses Ziels hervor.
+9. **Automatisch auswerten:** alle Abgaben werden mit dem hinterlegten Schlüssel korrigiert (wie unten beschrieben, mit Nachkorrektur, CSV und Berichten). **Abgaben herunterladen** speichert eine Datei mit allen Abgaben und dem Schlüssel (`abgaben-….json`); «Abgaben auswerten» liest sie später wieder.
 
 ### Nur im Safe Exam Browser (SEB)
 

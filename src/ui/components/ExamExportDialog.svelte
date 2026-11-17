@@ -40,7 +40,7 @@
     const m = Number(minutes);
     if (!title.trim()) return (error = t('exam.export.needTitle'));
     if (!/^[A-Za-z0-9]{4,12}$/.test(code.trim())) return (error = t('exam.export.badCode'));
-    if (minutes && (!Number.isInteger(m) || m < 1 || m > 600)) return (error = t('exam.export.badMinutes'));
+    if (!Number.isInteger(m) || m < 1 || m > 600) return (error = t('exam.export.badMinutes'));
     if (start === 'faults' && (!Number.isInteger(n) || n < 1 || n > 40 || !Number.isInteger(k) || k < 1 || k > 6)) return (error = t('exam.export.badSeats'));
     busy = true;
     try {
@@ -54,7 +54,7 @@
         const topology = start === 'current' ? editor.topology : start === 'devices' ? stripConfiguration(editor.topology) : emptyTopology();
         variants = [{ id: '1', tasks: base, topology, ...(start === 'current' ? { prebuilt: true } : {}) }];
       }
-      built = await prepareExam({ id: randomExamId(), title: title.trim(), ...(tasks.description ? { description: tasks.description } : {}), ...(m ? { minutes: m } : {}), code: code.trim().toUpperCase(), variants });
+      built = await prepareExam({ id: randomExamId(), title: title.trim(), ...(tasks.description ? { description: tasks.description } : {}), minutes: m, code: code.trim().toUpperCase(), variants });
     } finally {
       busy = false;
     }
@@ -65,7 +65,7 @@
   <p class="muted">{t('exam.export.intro')}</p>
   <div class="grid">
     <label class="wide">{t('exam.export.name')}<input bind:value={title} maxlength="120" /></label>
-    <label>{t('exam.export.minutes')}<input bind:value={minutes} inputmode="numeric" /></label>
+    <label>{t('exam.export.minutesRequired')}<input bind:value={minutes} inputmode="numeric" required /></label>
     <label>{t('exam.export.code')}<span class="code"><input bind:value={code} spellcheck="false" autocomplete="off" /><button type="button" onclick={() => (code = randomCode())} title={t('exam.export.newCode')}>🎲</button></span></label>
   </div>
   <fieldset>

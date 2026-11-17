@@ -12,6 +12,7 @@
     role: 'school' | 'teacher';
     school: string | null;
     created: number;
+    mfa?: boolean;
   }
   let { call, role, notify }: { call: <T>(method: string, path: string, body?: unknown) => Promise<T>; role: 'super' | 'school'; notify: (kind: 'ok' | 'error', text: string) => void } = $props();
 
@@ -47,6 +48,18 @@
     if (!confirm(t('admin.tenants.newKeyConfirm', { label: x.label }))) return;
     const made = await call<Tenant & { key: string }>('POST', `tenants/${x.id}/key`);
     shown = { label: made.label, key: made.key };
+  }
+
+  /** Zwei-Faktor zurücksetzen (Handy verloren); die Person richtet ihn danach neu ein. */
+  async function resetMfa(x: Tenant) {
+    if (!confirm(t('admin.tenants.mfaResetConfirm', { label: x.label }))) return;
+    try {
+      await call('DELETE', `tenants/${x.id}/mfa`);
+      notify('ok', t('admin.tenants.mfaResetOk', { label: x.label }));
+      await load();
+    } catch {
+      notify('error', t('admin.tenants.failed'));
+    }
   }
 
   async function rename(x: Tenant) {
@@ -107,14 +120,16 @@
   <p class="muted">{t('admin.tenants.none')}</p>
 {:else}
   <table>
-    <thead><tr><th>{t('admin.tenants.label')}</th><th>{t('admin.tenants.role')}</th><th>{t('admin.tenants.ofSchool')}</th><th></th></tr></thead>
+    <thead><tr><th>{t('admin.tenants.label')}</th><th>{t('admin.tenants.role')}</th><th>{t('admin.tenants.ofSchool')}</th><th>{t('admin.tenants.mfa')}</th><th></th></tr></thead>
     <tbody>
       {#each list as x (x.id)}
         <tr>
           <td>{x.label}</td>
           <td>{t(x.role === 'school' ? 'admin.tenants.school' : 'admin.tenants.teacher')}</td>
           <td>{nameOf(x.school)}</td>
+          <td>{#if x.mfa}<span class="on">✓ {t('admin.tenants.mfaOn')}</span>{:else}<span class="muted">–</span>{/if}</td>
           <td class="actions">
+            {#if x.mfa}<button onclick={() => resetMfa(x)} title={t('admin.tenants.mfaResetHint')}>{t('admin.tenants.mfaReset')}</button>{/if}
             <button onclick={() => rename(x)}>{t('admin.tenants.renameShort')}</button>
             <button onclick={() => newKey(x)}>🔑 {t('admin.tenants.newKey')}</button>
             <button class="danger" onclick={() => remove(x)}>{t('admin.tenants.remove')}</button>
@@ -129,6 +144,10 @@
   .muted {
     color: var(--muted);
     font-size: 0.82rem;
+  }
+  .on {
+    color: #15803d;
+    font-weight: 600;
   }
   .warn {
     color: #b45309;

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { dialogs } from '../state/dialogs.svelte';
   import AboutDialog from './AboutDialog.svelte';
-  import AdminDialog from './AdminDialog.svelte';
   import CatalogDialog from './CatalogDialog.svelte';
   import ExamAiDialog from './ExamAiDialog.svelte';
   import CommandPalette from './CommandPalette.svelte';
@@ -52,8 +51,6 @@
   <PrivacyDialog onclose={close} />
 {:else if dialogs.open === 'feedback'}
   <FeedbackDialog onclose={close} />
-{:else if dialogs.open === 'admin'}
-  <AdminDialog onclose={close} />
 {:else if dialogs.open === 'session'}
   <SessionDialog onclose={close} />
 {:else if dialogs.open === 'catalog'}

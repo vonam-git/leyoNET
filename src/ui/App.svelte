@@ -8,7 +8,7 @@
   import { verbund } from './state/verbund.svelte';
   import { parseProject, serializeProject } from '../core';
   import { locale, t } from '../i18n';
-  import { ensureProjectFeatures, saveProject } from './actions';
+  import { ensureProjectFeatures, saveProject, submitServerExam } from './actions';
   import { handleShortcut } from './commands.svelte';
   import Canvas from './components/Canvas.svelte';
   import CliWindow from './components/CliWindow.svelte';
@@ -26,6 +26,8 @@
   import StormBanner from './components/StormBanner.svelte';
   import TaskPanel from './components/TaskPanel.svelte';
   import ExamBanner from './components/ExamBanner.svelte';
+  import AdminConsole from './components/AdminConsole.svelte';
+  import { adminView, isAdminPage } from './adminPage.svelte';
   import SessionBanner from './components/SessionBanner.svelte';
   import { examMode } from './state/exam.svelte';
   import Toast from './components/Toast.svelte';
@@ -59,7 +61,11 @@
 
   // Prüfung: Ist die Zeit um, wird automatisch abgegeben. Webversion: letzter Stand sofort an den
   // Server, danach «Abgegeben». Prüfungsdatei: einmal den Stand als Datei speichern.
+  // Kommt die Abgabe nicht an (Netz), wird sie alle 10 Sekunden erneut versucht; die Arbeit bleibt
+  // so lange stehen.
+  const adminPage = isAdminPage();
   let autoSubmitted = $state<string | null>(null);
+  let autoTried = 0;
   $effect(() => {
     const a = examMode.active;
     if (!a) return;
@@ -67,11 +73,19 @@
     const left = s?.until ? s.until - (examMode.now + s.offset) : a.minutes ? a.started + a.minutes * 60_000 - examMode.now : null;
     const key = `${a.started}`;
     if (left === null || left > 0 || autoSubmitted === key || s?.state === 'closed' || s?.state === 'waiting') return;
-    autoSubmitted = key;
+    if (s && examMode.now - autoTried < 10_000) return;
     untrack(() => {
-      editor.notify(t('exam.mode.autoSubmit'));
-      if (s) void session.submitExam().finally(() => examMode.updateServer({ state: 'closed', until: s.until, now: Date.now() + s.offset, title: a.title, seat: a.variant ?? '' }));
-      else saveProject();
+      if (!s) {
+        autoSubmitted = key;
+        editor.notify(t('exam.mode.autoSubmit'));
+        saveProject();
+        return;
+      }
+      if (!autoTried) editor.notify(t('exam.mode.autoSubmit'));
+      autoTried = examMode.now;
+      void submitServerExam().then((ok) => {
+        if (ok) autoSubmitted = key;
+      });
     });
   });
 
@@ -81,7 +95,8 @@
     const title = editor.topology.title;
     const name = session.config?.channel === 'beta' ? `${t('beta.titlePrefix')} ${t('app.title')}` : t('app.title');
     // Ohne Projekttitel bleibt der beschreibende Titel aus dev.html (Suchmaschinen, Lesezeichen).
-    document.title = title ? `${title} – ${name}` : session.config?.channel === 'beta' ? `${t('beta.titlePrefix')} ${START_TITLE}` : START_TITLE;
+    if (adminPage) document.title = `${t('admin.page.title')} – leyoNET`;
+    else document.title = title ? `${title} – ${name}` : session.config?.channel === 'beta' ? `${t('beta.titlePrefix')} ${START_TITLE}` : START_TITLE;
   });
 
   // In der Simulation läuft die Zeit, im Entwurf pausiert sie (Zustände bleiben).
@@ -131,6 +146,14 @@
       restored = true;
       return;
     }
+    // Admin-Seite («/admin», eigener Tab): Regeln laden, aber keine Session fortsetzen und nichts
+    // speichern; sonst schrieben Editor-Tab und Admin-Tab in dieselbe Session.
+    if (adminPage) {
+      const config = await session.loadConfig();
+      if (config) ui.setPolicy(normalizePolicy(config.policy));
+      restored = true;
+      return;
+    }
     // Webversion: Regeln des Admins laden und eine laufende Session fortsetzen.
     // Ohne Session beginnt die Webversion leer (keine Reste aus dem Browser).
     if (ui.online) {
@@ -165,7 +188,7 @@
   let pendingSave: (() => void) | null = null;
   $effect(() => {
     const { topology, tasks, snapshots } = editor;
-    if (!restored) return;
+    if (!restored || adminPage) return;
     const flush = () => {
       clearTimeout(timer);
       pendingSave = null;
@@ -212,6 +235,8 @@
   }
 
   function onkeydown(event: KeyboardEvent) {
+    // Admin-Seite: Solange die Konsole zu sehen ist, gelten keine Tasten des Editors.
+    if (adminPage && adminView.view === 'console') return;
     // Offene Dialoge und Geräte-Fenster behandeln ihre Tasten selbst.
     if (document.querySelector('dialog[open]') || (event.target as Element | null)?.closest('.device-window')) return;
     if (handleShortcut(event)) {
@@ -231,9 +256,18 @@
 <svelte:window {onkeydown} {onpagehide} />
 <svelte:document {onvisibilitychange} onpointerdowncapture={onpointerdowncapture} />
 
-<div class="app" class:help-open={dialogs.help !== null} class:no-left={!ui.panels.left} class:no-right={!ui.panels.right}>
+{#if adminPage}
+  <AdminConsole hidden={adminView.view !== 'console'} oneditor={() => adminView.editor()} />
+{/if}
+<div class="app" class:gone={adminPage && adminView.view === 'console'} class:help-open={dialogs.help !== null} class:no-left={!ui.panels.left} class:no-right={!ui.panels.right}>
   {#if session.config?.channel === 'beta'}
     <div class="beta" role="note"><strong>{t('beta.label')}</strong> {t('beta.text')}</div>
+  {/if}
+  {#if adminPage}
+    <div class="admin-strip" role="note">
+      <span>🔒 {t('admin.page.editorNote')}</span>
+      <button onclick={() => adminView.show()}>← {t('admin.page.back')}</button>
+    </div>
   {/if}
   <MenuBar />
   <ToolBar />
@@ -281,6 +315,22 @@
 <Toast />
 
 <style>
+  .app.gone {
+    display: none;
+  }
+  .admin-strip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 12px;
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .admin-strip button {
+    margin-left: auto;
+    font-weight: 600;
+  }
   .app {
     display: flex;
     flex-direction: column;

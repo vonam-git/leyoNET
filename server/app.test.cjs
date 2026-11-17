@@ -317,10 +317,61 @@ test('Prüfung: Speichern nach Ablauf der Zeit wird abgewiesen', async () => {
   assert.equal((await call('GET', `/api/admin/exams/${exam.id}`, null, token)).data.state, 'ended');
 });
 
+test('Prüfung: Zeit ist Pflicht; Abgeben schliesst den Platz sofort, mit Zeitpunkt im Cockpit', async () => {
+  const { token } = (await call('POST', '/api/admin/login', { password: 'test-admin-passwort' })).data;
+  const learner = { ...project(0), tasks: { title: 'Abgabe', goals: [], exam: { id: 'P-ABG', variant: '1' } } };
+  const missing = await call('POST', '/api/admin/exams', { label: 'Ohne Zeit', learner, seats: 1 }, token);
+  assert.equal(missing.status, 400);
+  assert.equal(missing.data.error, 'badMinutes');
+  const exam = (await call('POST', '/api/admin/exams', { label: 'Abgabe', learner, seats: 2, minutes: 20 }, token)).data;
+  // Vor dem Start: Abgeben geht nicht (Session gibt es noch nicht).
+  await call('POST', `/api/admin/exams/${exam.id}/start`, {}, token);
+  const join = (await call('POST', '/api/exams/join', { seatCode: exam.seats[0].code })).data;
+  const work = { ...project(2), tasks: learner.tasks };
+  assert.equal((await call('PUT', `/api/sessions/${join.session}`, { project: work })).status, 200);
+  // Ein fremdes Gerät ohne Schreib-Token kann nicht für den Platz abgeben.
+  const foreign = await fetch(`${base}/api/sessions/${join.session}/submit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  assert.equal(foreign.status, 409);
+  // Abgeben mit dem letzten Stand.
+  const final = { ...project(4), tasks: learner.tasks };
+  const sub = await call('POST', `/api/sessions/${join.session}/submit`, { project: final });
+  assert.equal(sub.status, 200);
+  assert.equal(sub.data.exam.state, 'closed');
+  assert.ok(sub.data.exam.submitted > 0);
+  // Danach nimmt der Server nichts mehr an, auch nicht in der Gnadenfrist.
+  const put = await call('PUT', `/api/sessions/${join.session}`, { project: work });
+  assert.equal(put.status, 423);
+  // Zweites Abgeben ändert nichts (gleicher Zeitpunkt).
+  const again = await call('POST', `/api/sessions/${join.session}/submit`, { project: work });
+  assert.equal(again.data.exam.submitted, sub.data.exam.submitted);
+  // Mit dem Platz-Code kommt man nicht mehr an die Arbeit.
+  const rejoin = (await call('POST', '/api/exams/join', { seatCode: exam.seats[0].code })).data;
+  assert.equal(rejoin.exam.state, 'closed');
+  assert.equal(rejoin.project, undefined);
+  assert.equal(rejoin.session, undefined);
+  // Cockpit: abgegeben mit Zeitpunkt, der andere Platz arbeitet noch.
+  const detail = (await call('GET', `/api/admin/exams/${exam.id}`, null, token)).data;
+  assert.equal(detail.state, 'running');
+  assert.equal(detail.seats[0].state, 'closed');
+  assert.equal(detail.seats[0].submitted, sub.data.exam.submitted);
+  assert.equal(detail.seats[1].submitted, null);
+  const subs = (await call('GET', `/api/admin/exams/${exam.id}/submissions`, null, token)).data;
+  assert.equal(subs.submissions[0].project.topology.devices.length, 4);
+  assert.equal(subs.submissions[0].submitted, sub.data.exam.submitted);
+  // Mehr Zeit öffnet den Platz wieder (z.B. versehentlich abgegeben).
+  const reopened = (await call('POST', `/api/admin/exams/${exam.id}/seats/${exam.seats[0].id}/extra`, { minutes: 5 }, token)).data;
+  assert.equal(reopened.seats[0].state, 'open');
+  assert.equal(reopened.seats[0].submitted, null);
+  // Normale Sessions können nicht «abgeben».
+  const normal = (await call('POST', '/api/sessions', { project: project(1) })).data;
+  assert.equal((await call('POST', `/api/sessions/${normal.code}/submit`, {})).status, 400);
+  await call('DELETE', `/api/admin/exams/${exam.id}`, null, token);
+});
+
 test('Prüfung nur im Safe Exam Browser: Schlüssel, Kennung, gilt bis zum Ende', async () => {
   const { token } = (await call('POST', '/api/admin/login', { password: 'test-admin-passwort' })).data;
   const learner = { ...project(0), tasks: { title: 'SEB', goals: [], noSelfCheck: true, exam: { id: 'P-SEB', unlock: 'b'.repeat(64), minutes: 30 } } };
-  const exam = (await call('POST', '/api/admin/exams', { label: 'SEB-Test', learner, seats: 1, seb: true }, token)).data;
+  const exam = (await call('POST', '/api/admin/exams', { label: 'SEB-Test', learner, seats: 1, seb: true, minutes: 30 }, token)).data;
   assert.match(exam.seb.key, /^[0-9a-f]{64}$/);
   const seatCode = exam.seats[0].code;
   await call('POST', `/api/admin/exams/${exam.id}/start`, {}, token);

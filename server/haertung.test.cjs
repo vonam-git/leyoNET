@@ -163,7 +163,7 @@ test('Prüfungsplatz: anderes Gerät nur nach Freigabe, nach der Abgabe keine Ar
   assert.equal((await call('GET', `/api/admin/exams/${exam.id}/submissions`, null, adminHeaders)).data.submissions.length, 1);
 
   // SEB-Pflicht gilt auch beim Lesen der Session.
-  const sebExam = (await call('POST', '/api/admin/exams', { label: 'Härtung SEB', learner: { ...learner, tasks: { ...learner.tasks, exam: { id: 'P-HSEB', variant: '1' } } }, seats: 1, seb: true }, adminHeaders)).data;
+  const sebExam = (await call('POST', '/api/admin/exams', { label: 'Härtung SEB', learner: { ...learner, tasks: { ...learner.tasks, exam: { id: 'P-HSEB', variant: '1' } } }, seats: 1, seb: true, minutes: 30 }, adminHeaders)).data;
   await call('POST', `/api/admin/exams/${sebExam.id}/start`, {}, adminHeaders);
   const ua = { ...from('203.0.113.60'), 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 SEB/3.8' };
   const inSeb = (await call('POST', '/api/exams/join', { seatCode: sebExam.seats[0].code, sebKey: sebExam.seb.key }, ua)).data;
@@ -179,7 +179,7 @@ test('Platz-Codes: gelöschte Prüfung ist sofort unbekannt, neue sofort bekannt
   const token = (await login('test-admin-passwort', '192.0.2.3')).data.token;
   const adminHeaders = { ...from('192.0.2.3'), Authorization: `Bearer ${token}` };
   const learner = { ...project(0), tasks: { title: 'Verzeichnis', goals: [], exam: { id: 'P-VERZ', variant: '1' } } };
-  const exam = (await call('POST', '/api/admin/exams', { label: 'Verzeichnis', learner, seats: 1 }, adminHeaders)).data;
+  const exam = (await call('POST', '/api/admin/exams', { label: 'Verzeichnis', learner, seats: 1, minutes: 30 }, adminHeaders)).data;
   const seatCode = exam.seats[0].code;
   assert.equal((await call('POST', '/api/exams/join', { seatCode }, from('203.0.113.70'))).data.exam.state, 'waiting');
   // Zusatzminuten vor dem Start bleiben beim Start erhalten (Stand wird nicht aus einer alten Kopie überschrieben).

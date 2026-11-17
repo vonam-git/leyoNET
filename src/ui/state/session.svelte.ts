@@ -300,6 +300,8 @@ class SessionStore {
   schedule(projectJson: string, hasContent: boolean) {
     // Beim Ansehen oder nach Übernahme durch ein anderes Gerät nichts speichern.
     if (this.watching || this.takenOver) return;
+    // Nach der Abgabe: nichts mehr speichern, auch keine neue Session anlegen.
+    if (examMode.active?.server?.state === 'closed') return;
     if (!this.code && !hasContent) return;
     this.#pending = projectJson;
     if (examMode.active?.server && this.code) {
@@ -317,12 +319,33 @@ class SessionStore {
     this.#timer = setTimeout(() => void this.flush(), 1500);
   }
 
-  /** Prüfung: Zeit um, den letzten Stand sofort abgeben (ohne die Drosselung von 20 Sekunden). */
-  async submitExam() {
+  /**
+   * Prüfung abgeben (von Hand oder am Ende der Zeit): letzten Stand mitsenden, der Server schliesst
+   * den Platz sofort und hält den Zeitpunkt fest. Gibt den neuen Zustand zurück oder null, wenn die
+   * Abgabe nicht ankam (dann bleibt alles, wie es ist, und es kann erneut versucht werden).
+   */
+  async submitExam(projectJson?: string): Promise<SeatStatus | null> {
     clearTimeout(this.#timer);
     this.#timer = undefined;
-    if (!this.#pending && this.#last) this.#pending = this.#last;
-    await this.flush();
+    if (!this.code) return null;
+    const json = projectJson ?? this.#pending ?? this.#last;
+    try {
+      const data = await api<{ exam: SeatStatus }>('POST', `sessions/${this.code}/submit`, json ? { project: JSON.parse(json) } : {}, undefined, this.#headers());
+      this.#pending = null;
+      this.#last = null;
+      this.lastSaved = Date.now();
+      examMode.updateServer(data.exam);
+      return data.exam;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 423) {
+        const status = (error.data.exam as SeatStatus | undefined) ?? { state: 'closed', until: null, now: Date.now(), title: '', seat: '' };
+        this.#pending = null;
+        examMode.updateServer(status);
+        return status;
+      }
+      this.status = 'error';
+      return null;
+    }
   }
 
   async flush() {

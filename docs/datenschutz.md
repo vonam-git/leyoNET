@@ -74,7 +74,10 @@ Es wird nichts übertragen. Die Admin-Konsole, Sessions und Rückmeldungen sind 
 
 - Hauptadmin: ein Passwort aus der Umgebungsvariable `ADMIN_PASSWORD`; es wird nicht gespeichert.
 - **Zugänge** für Schulen und Lehrpersonen sind **keine Benutzerkonten**: gespeichert sind nur eine Bezeichnung ohne Personenbezug (z.B. «Schulhaus Nord» oder ein Kürzel), die Art (Schule/Lehrperson), die zugehörige Schule, das Erstellungsdatum und eine Prüfsumme (SHA-256) des Schlüssels. Kein Name, keine E-Mail-Adresse, kein Passwort im Klartext; der Schlüssel wird nur einmal angezeigt. Löschen in der Admin-Konsole entfernt den Zugang sofort samt laufenden Anmeldungen.
-- Die Anmeldung erzeugt ein Token, das nur im Arbeitsspeicher des Servers und der geöffneten Seite liegt (höchstens 8 Stunden gültig, endet mit dem Neuladen der Seite).
+- Die Anmeldung erzeugt ein Token. Auf dem Server liegt es nur im Arbeitsspeicher (höchstens 8 Stunden gültig, nach 60 Minuten ohne Anfrage ungültig). Im Browser liegt es nur auf der Seite `/admin` im `sessionStorage` dieses einen Tabs (übersteht ein Neuladen, endet mit dem Tab; kein Cookie, nie `localStorage`).
+- **Zwei-Faktor-Anmeldung** (freiwillig, oder vom Hauptadmin für alle verlangt): gespeichert sind je Zugang das Geheimnis der Authenticator-App (verschlüsselt), der zuletzt verwendete Zeitschritt, die Prüfsummen (SHA-256) von acht Wiederherstellungscodes und das Einrichtungsdatum. Die App rechnet die Codes auf dem Handy; leyoNET erhält weder Telefonnummer noch E-Mail noch Gerätedaten. Der Hauptadmin hat diese Angaben in `DATA_DIR/security.json`, Zugänge in ihrer Datei unter `DATA_DIR/tenants`.
+- Je Zugang werden die **Zeitpunkte der letzten und vorletzten Anmeldung** gespeichert (für «Letzte Anmeldung davor» unter Sicherheit), ohne Adresse und ohne Gerät.
+- Die **Statistik der Sessions** zeigt nur technische Angaben (Code, Art, Klasse bzw. Prüfung, Platz, Zeitpunkte, Grösse); sie wird nicht gespeichert, sondern bei jedem Aufruf aus dem Verzeichnis berechnet.
 
 ### Was der Server nicht speichert
 

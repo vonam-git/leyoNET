@@ -3,7 +3,7 @@
  * Modul 117): Aus einer Vorgabe (Firma, drei Standorte, Transitnetze,
  * Intranet mit Webserver) entstehen
  *   - die Aufgabe mit automatischer Prüfung und Punkten (je Standort 21,
- *     Netzwerkdienste 12, total 75; Note = 5 × Punkte / 75 + 1),
+ *     Transitnetze 9, Netzwerkdienste 12, total 84; Note = 5 × Punkte / 84 + 1),
  *   - die Musterlösung als fertiges Netz,
  *   - das Aufgabenblatt zum Drucken.
  * Varianten entstehen per Zufall (mit Startwert, wiederholbar) oder von Hand.
@@ -64,7 +64,7 @@ export interface ExamSpec {
   intranet: { network: string; web: string; domain: string; color: TagColor };
 }
 
-export const EXAM_POINTS = { site: 21, services: 12, total: 75 } as const;
+export const EXAM_POINTS = { site: 21, transit: 9, services: 12, total: 84 } as const;
 export const MAX_NOTEBOOKS = 8;
 
 // --- Berechnete Werte ------------------------------------------------------------
@@ -129,6 +129,18 @@ export const TRANSFER_ENDS: readonly [number, number][] = [
   [0, 2],
   [2, 1],
 ];
+
+/**
+ * Anschlüsse der Musterlösung (und Empfehlung auf dem Aufgabenblatt): eth0 = eigenes LAN, die
+ * Transitnetze der Reihe nach auf eth1 und eth2, das Intranet auf eth3. Die Auswertung prüft
+ * Adressen und Verbindungen, nicht die Nummer des Anschlusses: Wer eth1 und eth2 vertauscht, verliert
+ * keinen Punkt.
+ */
+export function transferPorts(): [number, number][] {
+  const next = [1, 1, 1];
+  return TRANSFER_ENDS.map(([a, b]) => [next[a]!++, next[b]!++]);
+}
+export const INTRANET_PORT = 3;
 
 // --- Prüfung der Vorgabe -----------------------------------------------------------
 
@@ -222,12 +234,22 @@ export function examDescription(spec: ExamSpec): string {
     '',
     t('exam.task'),
     t('exam.taskBuild'),
-    t('exam.taskTransfers', {
-      a: `${routers[0]} – ${routers[1]}: ${spec.transfers[0]}`,
-      b: `${routers[0]} – ${routers[2]}: ${spec.transfers[1]}`,
-      c: `${routers[2]} – ${routers[1]}: ${spec.transfers[2]}`,
+    t('exam.taskTransfers'),
+    ...TRANSFER_ENDS.map(([a, b], k) => {
+      const [pa, pb] = transferPorts()[k]!;
+      const prefix = cidr(spec.transfers[k])!.prefix;
+      return t('exam.transferLine', {
+        network: spec.transfers[k],
+        a: routers[a]!,
+        pa: `eth${pa}`,
+        ipa: `${transferIp(spec.transfers[k], 1)}/${prefix}`,
+        b: routers[b]!,
+        pb: `eth${pb}`,
+        ipb: `${transferIp(spec.transfers[k], 2)}/${prefix}`,
+      });
     }),
-    t('exam.taskIntranet', { site: spec.sites[2].name, router: s2.routerName, network: spec.intranet.network, web: spec.intranet.web }),
+    t('exam.taskPorts'),
+    t('exam.taskIntranet', { site: spec.sites[2].name, router: s2.routerName, network: spec.intranet.network, web: spec.intranet.web, port: `eth${INTRANET_PORT}` }),
     t('exam.taskDns', { domain: spec.intranet.domain }),
     t('exam.taskDocument', {
       colors: [...spec.sites.map((s) => `${s.name} = ${t(`color.${s.color}`)}`), `Intranet = ${t(`color.${spec.intranet.color}`)}`].join(', '),
@@ -239,7 +261,7 @@ export function examDescription(spec: ExamSpec): string {
 }
 
 /**
- * Aufgabe mit Punkten: je Standort 21, Netzwerkdienste 12. Teilpunkte bei
+ * Aufgabe mit Punkten: je Standort 21, Transitnetze 9, Netzwerkdienste 12. Teilpunkte bei
  * Geräten, Dokumentation und Pings; Gateways mit «@router», damit eine falsch
  * gewählte Router-Adresse nur einmal Punkte kostet (Folgefehler).
  */
@@ -281,6 +303,20 @@ export function buildExamTasks(spec: ExamSpec): TaskSet {
         [firstDynamic, prev.server],
       ],
     });
+  });
+  // Transitnetze: beide Router-Adressen und die Verbindung (Ping über das Transitnetz). Die
+  // Anschlussnummer zählt nicht, nur ob die richtigen Router miteinander verbunden sind.
+  section = t('exam.section.transit');
+  TRANSFER_ENDS.forEach(([a, b], k) => {
+    const net = spec.transfers[k];
+    const prefix = cidr(net)!.prefix;
+    const ra = facts[a]!.routerName;
+    const rb = facts[b]!.routerName;
+    const ipa = transferIp(net, 1);
+    const ipb = transferIp(net, 2);
+    add(`t${k + 1}-a`, 1, t('exam.goal.transitIp', { name: ra, address: `${ipa}/${prefix}`, network: net }), { type: 'address', device: ra, address: `${ipa}/${prefix}` });
+    add(`t${k + 1}-b`, 1, t('exam.goal.transitIp', { name: rb, address: `${ipb}/${prefix}`, network: net }), { type: 'address', device: rb, address: `${ipb}/${prefix}` });
+    add(`t${k + 1}-link`, 1, t('exam.goal.transitLink', { a: ra, b: rb, ip: ipb }), { type: 'ping', from: ra, to: ipb });
   });
   section = t('exam.services');
   const s2 = facts[2]!;
@@ -371,10 +407,9 @@ export function buildExamSolution(spec: ExamSpec): Topology {
     routers.push(router);
   });
   // Transitnetze: Anschluss 1 und 2 der Router, in der Reihenfolge der Vorgabe.
-  const nextPort = [1, 1, 1];
+  const ports = transferPorts();
   TRANSFER_ENDS.forEach(([a, b], k) => {
-    const pa = nextPort[a]!++;
-    const pb = nextPort[b]!++;
+    const [pa, pb] = ports[k]!;
     link(routers[a]!, routers[b]!, { a: pa, b: pb });
     const prefix = String(cidr(spec.transfers[k])!.prefix);
     apply(setInterfaceAddress(topo, routers[a]!, pa, transferIp(spec.transfers[k], 1), prefix), 'transfer');
@@ -385,8 +420,8 @@ export function buildExamSolution(spec: ExamSpec): Topology {
   const webPrefix = String(cidr(spec.intranet.network)!.prefix);
   const gateway = transferIp(spec.intranet.network, 1);
   const web = add('server', 'Webserver', ox + 900, oy + 120);
-  link(routers[2]!, web, { a: 3 });
-  apply(setInterfaceAddress(topo, routers[2]!, 3, gateway, webPrefix), 'intranet');
+  link(routers[2]!, web, { a: INTRANET_PORT });
+  apply(setInterfaceAddress(topo, routers[2]!, INTRANET_PORT, gateway, webPrefix), 'intranet');
   apply(configureHost(topo, web, { ip: spec.intranet.web, mask: webPrefix, gateway }), 'web');
   apply(setWebServerEnabled(topo, web, true), 'webserver');
   apply(saveWebFile(topo, web, { path: '/index.html', content: `<h1>${spec.company}</h1><p>Intranet</p>` }), 'page');

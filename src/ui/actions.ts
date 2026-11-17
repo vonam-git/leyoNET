@@ -1,4 +1,4 @@
-import { parseProject, serializeProject, toPcapng } from '../core';
+import { emptyTopology, parseProject, serializeProject, toPcapng } from '../core';
 import { t } from '../i18n';
 import { usedFeatures } from './features';
 import { errorText, featureName } from './labels';
@@ -9,6 +9,7 @@ import { editor } from './state/editor.svelte';
 import { simStore } from './state/sim.svelte';
 import { ui } from './state/ui.svelte';
 import { examMode } from './state/exam.svelte';
+import { session } from './state/session.svelte';
 
 /** Datei wählen lassen und als Text lesen (ohne Server, auch per file://). */
 export function pickFile(accept: string): Promise<{ name: string; text: string } | null> {
@@ -28,6 +29,22 @@ export function pickFile(accept: string): Promise<{ name: string; text: string }
     };
     input.click();
   });
+}
+
+/**
+ * Prüfung über den Server abgeben (von Hand oder am Ende der Zeit). Der Server schliesst den Platz
+ * und hält den Zeitpunkt fest. Danach beginnt hier eine neue, leere Arbeitsfläche ohne Verbindung
+ * zur abgegebenen Session: Was jetzt noch geändert wird, erreicht die Abgabe nicht mehr.
+ * false = die Abgabe kam nicht an (Arbeit bleibt stehen, erneut versuchen).
+ */
+export async function submitServerExam(): Promise<boolean> {
+  const json = serializeProject(editor.topology, editor.tasks, editor.snapshots);
+  const status = await session.submitExam(json);
+  if (!status || status.state !== 'closed') return false;
+  session.detach();
+  editor.replace(emptyTopology(), { undoable: false, tasks: null, snapshots: [] });
+  editor.notify(t('exam.mode.submittedNotice'));
+  return true;
 }
 
 /** Speichern: zuerst nach dem Projektnamen fragen (vorausgefüllt). */

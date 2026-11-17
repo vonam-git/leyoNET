@@ -3,12 +3,28 @@
   import { dialogs } from '../state/dialogs.svelte';
   import { examMode } from '../state/exam.svelte';
   import { session } from '../state/session.svelte';
+  import { submitServerExam } from '../actions';
+  import { locale } from '../../i18n';
 
   /** Leiste während einer Prüfung: Titel, Platz, Zeit und «Prüfung beenden» (Code der Lehrperson). */
   const exam = $derived(examMode.active);
   const clock = $derived(examMode.clock);
   const server = $derived(exam?.server ?? null);
   const savedAgo = $derived(session.lastSaved ? Math.max(0, Math.round((examMode.now - session.lastSaved) / 1000)) : null);
+  const submittedAt = $derived(server?.submitted ? new Date(server.submitted - (server.offset ?? 0)).toLocaleTimeString(locale() === 'en' ? 'en-GB' : 'de-CH', { hour: '2-digit', minute: '2-digit' }) : null);
+
+  /** Abgeben: Nachfrage, dann schliesst der Server den Platz; hier beginnt eine leere Fläche. */
+  let confirming = $state(false);
+  let busy = $state(false);
+  let failed = $state(false);
+  async function submit() {
+    busy = true;
+    failed = false;
+    const ok = await submitServerExam();
+    busy = false;
+    confirming = !ok;
+    failed = !ok;
+  }
 </script>
 
 {#if exam}
@@ -17,8 +33,8 @@
     <span class="title">{exam.title}</span>
     {#if exam.variant}<span>{t('exam.mode.seat', { seat: exam.variant })}</span>{/if}
     {#if server?.state === 'closed'}
-      <strong class="done">✓ {t('exam.mode.submitted')}</strong>
-      <span class="muted">{t('exam.mode.submittedHint')}</span>
+      <strong class="done">✓ {submittedAt ? t('exam.mode.submittedAt', { time: submittedAt }) : t('exam.mode.submitted')}</strong>
+      <span class="muted">{t(submittedAt ? 'exam.mode.submittedOwnHint' : 'exam.mode.submittedHint')}</span>
       <button onclick={() => (examMode.leaveClosed(), session.detach())}>{t('exam.mode.leave')}</button>
     {:else}
       <span class="clock" class:over={clock.over} title={t(exam.minutes || server?.until ? 'exam.mode.left' : 'exam.mode.elapsed')}>⏱ {clock.text}</span>
@@ -27,7 +43,17 @@
       {:else}
         <span class="muted">{t('exam.mode.locked')}</span>
       {/if}
-      <button onclick={() => dialogs.show('examEnd')}>{t('exam.mode.end')}</button>
+      {#if server && server.state === 'open'}
+        {#if confirming}
+          <span class="confirm" role="alert">{t('exam.mode.submitConfirm')}</span>
+          <button class="submit" onclick={submit} disabled={busy}>{t('exam.mode.submitYes')}</button>
+          <button class="plain" onclick={() => (confirming = false)} disabled={busy}>{t('exam.mode.submitNo')}</button>
+        {:else}
+          <button class="submit" onclick={() => (confirming = true)}>📤 {t('exam.mode.submit')}</button>
+        {/if}
+        {#if failed}<span class="error" role="alert">{t('exam.mode.submitFailed')}</span>{/if}
+      {/if}
+      <button class="end" onclick={() => dialogs.show('examEnd')}>{t('exam.mode.end')}</button>
     {/if}
   </div>
 {/if}
@@ -63,7 +89,16 @@
     color: var(--muted);
     font-size: 0.78rem;
   }
-  button {
+  button:first-of-type {
     margin-left: auto;
+  }
+  .submit {
+    background: #15803d;
+    border-color: #15803d;
+    color: #fff;
+    font-weight: 600;
+  }
+  .confirm {
+    font-weight: 600;
   }
 </style>

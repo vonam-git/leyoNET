@@ -20,13 +20,15 @@ export interface ActiveExam {
   /** Beginn (ms seit 1970). */
   started: number;
   /** Prüfung über den Server (Webversion): Platz-Code, Ende des Platzes, Zustand. */
-  server?: { seatCode: string; until: number | null; offset: number; state: SeatStatus['state'] };
+  server?: { seatCode: string; until: number | null; offset: number; state: SeatStatus['state']; submitted?: number | null };
 }
 
 /** Zustand eines Prüfungsplatzes laut Server. */
 export interface SeatStatus {
   state: 'waiting' | 'open' | 'closed';
   until: number | null;
+  /** Abgegeben um (ms seit 1970), sonst fehlt der Wert bzw. null. */
+  submitted?: number | null;
   /** Server-Zeit, um die Uhr abzugleichen. */
   now: number;
   title: string;
@@ -109,7 +111,7 @@ class ExamMode {
       variant: status.seat,
       ...(exam.unlock ? { unlock: exam.unlock } : {}),
       started: this.active?.id === exam.id ? this.active.started : Date.now(),
-      server: { seatCode, until: status.until, offset: status.now - Date.now(), state: status.state },
+      server: { seatCode, until: status.until, offset: status.now - Date.now(), state: status.state, submitted: status.submitted ?? null },
     });
   }
 
@@ -117,7 +119,7 @@ class ExamMode {
   updateServer(status: SeatStatus) {
     const a = this.active;
     if (!a?.server) return;
-    this.#store({ ...a, server: { ...a.server, until: status.until, offset: status.now - Date.now(), state: status.state } });
+    this.#store({ ...a, server: { ...a.server, until: status.until, offset: status.now - Date.now(), state: status.state, submitted: status.submitted ?? null } });
   }
 
   /** Nach der Abgabe (Server meldet «abgegeben») ohne Code verlassen. */

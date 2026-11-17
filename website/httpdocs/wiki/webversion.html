@@ -4,18 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Webversion: Sessions, Klassen und Ansehen – leyoNET Wiki</title>
-  <meta name="description" content="Arbeitsstand unter einem Code, Klassen-Sessions, Arbeiten der Lernenden live ansehen und die Admin-Konsole mit eigenen Zugängen.">
+  <meta name="description" content="Arbeitsstand unter einem Code, Klassen-Sessions, Arbeiten live ansehen, die Admin-Konsole unter /admin mit Statistik und Zwei-Faktor-Anmeldung.">
   <link rel="canonical" href="https://leyonet.ch/wiki/webversion.html">
   <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/webversion.html">
   <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/webversion.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.6.1">
-  <link rel="stylesheet" href="farben.css?v=1.6.1">
-  <link rel="stylesheet" href="aufbau.css?v=1.6.1">
-  <link rel="stylesheet" href="wiki.css?v=1.6.1">
-  <script src="../js/site.js?v=1.6.1" defer></script>
-  <script src="suche.js?v=1.6.1" defer></script>
-  <script src="wiki.js?v=1.6.1" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.7.0">
+  <link rel="stylesheet" href="farben.css?v=1.7.0">
+  <link rel="stylesheet" href="aufbau.css?v=1.7.0">
+  <link rel="stylesheet" href="wiki.css?v=1.7.0">
+  <script src="../js/site.js?v=1.7.0" defer></script>
+  <script src="suche.js?v=1.7.0" defer></script>
+  <script src="wiki.js?v=1.7.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -84,15 +84,20 @@
     <main id="inhalt" class="wiki-main">
       <p class="crumbs"><a href="index.html">Wiki</a> › <a href="index.html#lehrpersonen">Crashkurs für Lehrpersonen</a></p>
       <div class="page-head"><div><h1>Webversion: Sessions, Klassen und Ansehen</h1>
-      <p class="lead">Arbeitsstand unter einem Code, Klassen-Sessions, Arbeiten der Lernenden live ansehen und die Admin-Konsole mit eigenen Zugängen.</p></div></div>
+      <p class="lead">Arbeitsstand unter einem Code, Klassen-Sessions, Arbeiten live ansehen, die Admin-Konsole unter /admin mit Statistik und Zwei-Faktor-Anmeldung.</p></div></div>
       
-      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#sessions-statt-konten">Sessions statt Konten</a></li><li><a href="#klassen">Klassen</a></li><li><a href="#eigene-zugaenge">Eigene Zugänge</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#sessions-statt-konten">Sessions statt Konten</a></li><li><a href="#klassen">Klassen</a></li><li><a href="#die-admin-konsole">Die Admin-Konsole</a></li><li><a href="#zwei-faktor-anmeldung">Zwei-Faktor-Anmeldung</a></li><li><a href="#eigene-zugaenge">Eigene Zugänge</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
       <article class="prose">
 <h2 id="sessions-statt-konten">Sessions statt Konten</h2>
 <p>In der Webversion (<a href="https://app.leyonet.ch">app.leyonet.ch</a> oder auf dem Schulserver) speichert leyoNET den Arbeitsstand unter einem <strong>Session-Code</strong> wie <code>K7QX-3MPA</code>. Wer den Code kennt, arbeitet an einem anderen Gerät weiter. Gespeichert ist nur die Netzwerk-Konfiguration, keine Namen; nach einer einstellbaren Zeit wird die Session gelöscht.</p>
 <h2 id="klassen">Klassen</h2>
-<p>In der <strong>Admin-Konsole</strong> (Werkzeuge → Admin-Konsole) eröffnen Sie eine Klasse mit einer Bezeichnung wie «INF22a» und verteilen den <strong>Klassencode</strong>. Die Lernenden treten unter «Session» der Klasse bei. Sie sehen danach alle Sessions der Klasse mit Stand und Fortschritt und können jede <strong>ansehen</strong>: Das Netz erscheint bei Ihnen schreibgeschützt und wird alle paar Sekunden neu geladen. «Beenden» holt Ihr eigenes Projekt zurück.</p>
+<p>In der <strong>Admin-Konsole</strong> eröffnen Sie eine Klasse mit einer Bezeichnung wie «INF22a» und verteilen den <strong>Klassencode</strong>. Die Lernenden treten unter «Session» der Klasse bei. Sie sehen danach alle Sessions der Klasse mit Stand und Fortschritt und können jede <strong>ansehen</strong>: Das Netz erscheint bei Ihnen schreibgeschützt und wird alle paar Sekunden neu geladen. «Beenden» holt Ihr eigenes Projekt zurück.</p>
 <p>Bei jeder Klasse blenden Sie Übungen und ganze Module ein oder aus und geben den <a href="klassen-verbund.html">Klassen-Verbund im Unterricht</a> frei.</p>
+<h2 id="die-admin-konsole">Die Admin-Konsole</h2>
+<p>Die Admin-Konsole ist eine eigene Seite: <strong><code>/admin</code></strong> (z.B. <code>https://app.leyonet.ch/admin</code>). «Admin» bzw. Alt+A im Simulator öffnet sie in einem eigenen Tab, der neben dem Unterricht offen bleiben kann. Links stehen die Bereiche, die <strong>Übersicht</strong> zeigt laufende Prüfungen, Klassen, aktive Sessions und den Stand der Sicherheit. Solange eine Prüfung läuft, steht oben eine rote Leiste mit Fortschritt und Restzeit.</p>
+<p>Unter <strong>Sessions und Statistik</strong> stehen alle aktiven Sessions mit Kennzahlen; jede lässt sich live ansehen, im Editor öffnen, verlängern oder löschen. Gespeichert und angezeigt werden nur technische Angaben.</p>
+<h2 id="zwei-faktor-anmeldung">Zwei-Faktor-Anmeldung</h2>
+<p>Unter <strong>Sicherheit</strong> richten Sie eine Authenticator-App ein (z.B. Aegis, 2FAS, Google oder Microsoft Authenticator): QR-Code scannen, Code bestätigen, die acht Wiederherstellungscodes sicher aufbewahren. Danach braucht die Anmeldung Passwort bzw. Schlüssel <strong>und</strong> den Code aus der App. Die App rechnet nur auf dem Handy; leyoNET kennt weder Telefonnummer noch E-Mail. Der Hauptadmin kann Zwei-Faktor für alle Zugänge verlangen.</p>
 <h2 id="eigene-zugaenge">Eigene Zugänge</h2>
 <p>Arbeiten mehrere Lehrpersonen oder Schulen auf derselben Instanz, legt der Hauptadmin <strong>Zugänge</strong> an: eine Bezeichnung (ohne Personennamen) und einen Schlüssel <code>LN-…</code>, der nur einmal angezeigt wird. Jeder Zugang sieht nur seine Klassen und Prüfungen, eine Schule auch die ihrer Lehrpersonen.</p>
 <p>Eigenen Server einrichten: <a href="https://github.com/vonam-git/leyoNET/blob/main/docs/plesk.md">Plesk</a> oder <a href="https://github.com/vonam-git/leyoNET/blob/main/docs/installation.md">Installation mit Docker</a>.</p>
@@ -108,7 +113,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.6.1 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.7.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://patreon.com/leyonet">Patreon</a></li>

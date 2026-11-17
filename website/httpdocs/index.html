@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>leyoNET – Netzwerksimulator für den Informatik-Unterricht (M117, M129, M145)</title>
-  <meta name="description" content="Kostenloser Netzwerksimulator für den Informatik-Unterricht und die ICT-Module 117, 129 und 145: Netzwerke bauen, Pakete verfolgen, Übungen prüfen. Direkt im Browser testen, ohne Konto.">
+  <title>leyoNET – Netzwerksimulator für den Unterricht (M117, M129, M145)</title>
+  <meta name="description" content="Kostenloser Netzwerksimulator für den Unterricht und ICT-Module 117, 129 und 145: Netze bauen, Pakete verfolgen, Übungen prüfen. Im Browser, ohne Konto.">
   <link rel="canonical" href="https://leyonet.ch/">
   <link rel="alternate" hreflang="de" href="https://leyonet.ch/">
   <link rel="alternate" hreflang="en" href="https://leyonet.ch/en/">
@@ -20,8 +20,8 @@
   <meta property="og:locale:alternate" content="en_GB">
   <meta property="og:site_name" content="leyoNET">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="css/site.css?v=1.6.1">
-  <script src="js/site.js?v=1.6.1" defer></script>
+  <link rel="stylesheet" href="css/site.css?v=1.7.0">
+  <script src="js/site.js?v=1.7.0" defer></script>
   <script type="application/ld+json">
   [
     {
@@ -37,7 +37,7 @@
       "license": "https://www.gnu.org/licenses/agpl-3.0.html",
       "url": "https://leyonet.ch/",
       "downloadUrl": "https://github.com/vonam-git/leyoNET/releases/latest",
-      "softwareVersion": "1.6.1",
+      "softwareVersion": "1.7.0",
       "inLanguage": ["de", "en"],
       "isAccessibleForFree": true,
       "keywords": "Netzwerksimulator, Netzwerk-Simulator, network simulator, Modul 117, Modul 129, Modul 145, M117, M129, M145, Informatik EFZ, Subnetting, VLAN, OSI-Modell, Wireshark",
@@ -184,6 +184,7 @@
           <button role="tab" id="tab-geraet" aria-controls="panel-views" aria-selected="false" data-img="geraetefenster" data-caption="Gerätefenster: Routingtabelle, OSPF-Nachbarn und ARP-Tabelle eines Routers, während OSPF-Hellos durchs Netz laufen.">Gerätefenster</button>
           <button role="tab" id="tab-katalog" aria-controls="panel-views" aria-selected="false" data-img="katalog" data-caption="Aufgaben-Katalog: über 70 Übungen von einem bis fünf Sternen, mit Themen und Suche. Was gelöst ist, bleibt markiert.">Katalog</button>
           <button role="tab" id="tab-dashboard" aria-controls="panel-views" aria-selected="false" data-img="dashboard" data-dark="same" data-caption="Klassen-Verbund: Das Dashboard für den Beamer zeigt, welche Standorte der Klasse angeschlossen, online oder fertig sind – berechnet in der Simulation.">Dashboard</button>
+          <button role="tab" id="tab-admin" aria-controls="panel-views" aria-selected="false" data-img="admin" data-caption="Admin-Konsole unter /admin: Übersicht mit laufender Prüfung (wer arbeitet, wer abgegeben hat, Restzeit), Klassen, Sessions und Sicherheit mit Zwei-Faktor-Anmeldung.">Admin-Konsole</button>
         </div>
         <figure class="shot" id="panel-views" role="tabpanel" aria-labelledby="tab-rz">
           <div class="window">
@@ -236,7 +237,7 @@
 
           <article class="teach-item">
             <h3>Prüfungen ohne Korrekturstapel</h3>
-            <p>Jeder Platz bekommt einen eigenen Code und auf Wunsch eine eigene Variante. Gespeichert wird alle 20 Sekunden, abgegeben automatisch, wenn die Zeit um ist.</p>
+            <p>Jeder Platz bekommt einen eigenen Code, ein Prüfungsblatt zum Drucken und auf Wunsch eine eigene Variante. Gespeichert wird alle 20 Sekunden. Wer abgibt, kann danach nichts mehr ändern; die Admin-Konsole zeigt live, wer arbeitet und wer wann abgegeben hat.</p>
             <p>Nachteilsausgleich gibt es je Platz mit einem Klick. Die Auswertung rechnet Punkte und Note nach Schweizer Skala, mit Teilpunkten, Folgefehlern und Platz für die Nachkorrektur.</p>
           </article>
         </div>
@@ -416,7 +417,7 @@ Content-Security-Policy:
     <section id="download" class="download">
       <div class="wrap">
         <h2>Loslegen</h2>
-        <p class="section-lead">Überall dasselbe Programm. Version <span data-version>1.6.1</span>.</p>
+        <p class="section-lead">Überall dasselbe Programm. Version <span data-version>1.7.0</span>.</p>
         <ul class="dl-list">
           <li class="dl-main">
             <div><h3>Im Browser</h3><p>Sofort starten, Arbeitsstand unter einem Code speichern, Klassen und Prüfungen über den Server.</p></div>

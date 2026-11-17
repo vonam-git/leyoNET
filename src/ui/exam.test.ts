@@ -18,7 +18,7 @@ describe('Prüfungen «Firmennetz mit drei Standorten»', () => {
       const results = evaluateTasks(solution, tasks);
       const failed = results.filter((r) => !r.passed).map((r) => `${r.id}: ${JSON.stringify(r.reason)}`);
       expect(failed).toEqual([]);
-      expect(scoreOf(tasks, results)).toEqual({ points: 75, max: 75 });
+      expect(scoreOf(tasks, results)).toEqual({ points: EXAM_POINTS.total, max: EXAM_POINTS.total });
       // Projektdatei mit Aufgabe lässt sich wieder öffnen.
       const reopened = parseProject(serializeProject(solution, tasks));
       expect(reopened.ok && reopened.tasks?.goals.length).toBe(tasks.goals.length);
@@ -42,8 +42,34 @@ describe('Prüfungen «Firmennetz mit drei Standorten»', () => {
     const results = evaluateTasks(solution, tasks);
     expect(results.filter((r) => !r.passed).map((r) => r.id)).toEqual(['s3-area', 'd-dns-2', 'd-http-2']);
     const score = scoreOf(tasks, results);
-    expect(score.points).toBe(75 - 1 - 1 - 1);
-    expect(swissGrade(score.points, 75)).toBe(5.8);
+    expect(score.points).toBe(EXAM_POINTS.total - 1 - 1 - 1);
+    expect(swissGrade(score.points, EXAM_POINTS.total)).toBe(5.8);
+  });
+
+  it('Transitnetze: vertauschte Anschlüsse kosten nichts, falsch verbundene Router schon', () => {
+    const spec = randomExam(13, 'T');
+    const tasks = buildExamTasks(spec);
+    const solution = buildExamSolution(spec);
+    const router = solution.devices.find((d) => d.name === siteFacts(spec.sites[0]).routerName)!;
+    // eth1 und eth2 am Hauptsitz vertauschen: Adressen und Kabel wechseln den Anschluss.
+    const swap = (port: number) => (port === 1 ? 2 : port === 2 ? 1 : port);
+    const swapped = {
+      ...solution,
+      devices: solution.devices.map((d) => (d.id === router.id ? { ...d, interfaces: d.interfaces.map((x, i) => ({ ...x, ip: d.interfaces[swap(i)]!.ip, mask: d.interfaces[swap(i)]!.mask })) } : d)),
+      cables: solution.cables.map((c) => ({
+        ...c,
+        a: c.a.device === router.id ? { ...c.a, iface: swap(c.a.iface) } : c.a,
+        b: c.b.device === router.id ? { ...c.b, iface: swap(c.b.iface) } : c.b,
+      })),
+    };
+    const ok = evaluateTasks(swapped, tasks);
+    expect(ok.filter((r) => !r.passed).map((r) => r.id)).toEqual([]);
+    // Nur die Kabel vertauschen (Adressen bleiben): jetzt passen Adresse und Leitung nicht zusammen.
+    const crossed = { ...solution, cables: swapped.cables };
+    const bad = evaluateTasks(crossed, tasks).filter((r) => !r.passed).map((r) => r.id);
+    expect(bad).toContain('t1-link');
+    expect(bad).toContain('t2-link');
+    expect(tasks.goals.filter((g) => g.section === 'Transitnetze').reduce((s, g) => s + (g.points ?? 1), 0)).toBe(EXAM_POINTS.transit);
   });
 
   it('Folgefehler: Router mit falscher Adresse, Server und DHCP zeigen konsequent darauf', () => {
