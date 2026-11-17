@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
   import { parseBundle, serializeBundle } from '../../core';
   import { locale, t } from '../../i18n';
   import { pickFile } from '../actions';
@@ -252,11 +253,11 @@
 </script>
 
 <details class="create-box" open={exams.length === 0 || !!learner}>
-<summary>➕ {t('admin.exams.createTitle')}</summary>
+<summary><Icon name="plus" size={16} />{t('admin.exams.createTitle')}</summary>
 <form class="create" onsubmit={create}>
   <div class="row">
-    <button type="button" onclick={chooseLearner}>📄 {learner ? learner.name : t('admin.exams.learnerFile')}</button>
-    <button type="button" onclick={chooseKey}>🔑 {key ? key.name : t('admin.exams.keyFile')}</button>
+    <button type="button" onclick={chooseLearner}><Icon name="book" size={16} />{learner ? learner.name : t('admin.exams.learnerFile')}</button>
+    <button type="button" onclick={chooseKey}><Icon name="key" size={16} />{key ? key.name : t('admin.exams.keyFile')}</button>
   </div>
   {#if learner}
     <div class="row">
@@ -269,7 +270,7 @@
       <label class="short">{t('admin.exams.minutesRequired')}<input type="number" min="1" max="600" step="1" bind:value={minutes} required /></label>
       <button type="submit" class="primary" disabled={busy || !label.trim()}>{t('admin.exams.create')}</button>
     </div>
-    <label class="check"><input type="checkbox" bind:checked={seb} /> 🔒 {t('seb.create')}</label>
+    <label class="check"><input type="checkbox" bind:checked={seb} /> {t('seb.create')}</label>
     {#if !key}<p class="warn">{t('admin.exams.withoutKey')}</p>{/if}
   {/if}
   <p class="muted">{t('admin.exams.hint')}</p>
@@ -286,13 +287,13 @@
     <tbody>
       {#each exams as e (e.id)}
         <tr class:active={open?.id === e.id}>
-          <td>{e.label}{#if e.seb} <span title={t('seb.title')}>🔒</span>{/if}{#if !e.hasKey} <span class="warn" title={t('admin.exams.withoutKey')}>⚠</span>{/if}</td>
-          <td>{t(`admin.exams.state.${e.state}`)}</td>
+          <td><span class="name"><strong>{e.label}</strong>{#if e.seb}<span class="pill">{t('seb.short')}</span>{/if}{#if !e.hasKey}<span class="pill warn" title={t('admin.exams.withoutKey')}>{t('admin.exams.noKeyShort')}</span>{/if}</span></td>
+          <td><span class="pill {e.state === 'running' ? 'live' : e.state === 'ready' ? 'ok' : ''}">{#if e.state === 'running'}<span class="led live"></span>{/if}{t(`admin.exams.state.${e.state}`)}</span></td>
           <td>{Array.isArray(e.seats) ? e.seats.length : `${e.joined ?? 0}/${e.seats}`}</td>
           <td>{when(e.expires)}</td>
           <td class="actions">
             <button onclick={async () => (open = await call<Exam>('GET', `exams/${e.id}`))}>{t('admin.show')}</button>
-            <button class="danger" onclick={() => remove(e)}>{t('inspector.delete')}</button>
+            <button class="danger icon" title={t('inspector.delete')} aria-label={`${t('inspector.delete')}: ${e.label}`} onclick={() => remove(e)}><Icon name="trash" size={16} /></button>
           </td>
         </tr>
       {/each}
@@ -301,28 +302,36 @@
 {/if}
 
 {#if open}
-  <h3>{open.label}{open.title !== open.label ? ` · ${open.title}` : ''}</h3>
-  <div class="row">
-    {#if open.state === 'ready'}
-      <button onclick={printSheets}>🖨 {t('admin.exams.printSheets')}</button>
-      <button onclick={printCards}>✂ {t('admin.exams.print')}</button>
-      <button class="primary" onclick={() => act('start', undefined, t('admin.exams.confirmStart', { n: seatList.length, min: open!.minutes }))}>▶ {t('admin.exams.start')}</button>
-    {:else}
-      <span>{t('admin.exams.startedAt', { time: time(open.started) })}</span>
-      <strong class="count">{t('admin.exams.submittedCount', { n: seatList.filter((x) => x.submitted).length, total: seatList.length })}</strong>
-      {#if open.state === 'running'}
-        <button class="danger" onclick={() => act('end', undefined, t('admin.exams.confirmEnd'))}>■ {t('admin.exams.end')}</button>
-        <button onclick={printSheets}>🖨 {t('admin.exams.printSheets')}</button>
-      {/if}
+  <section class="cockpit">
+  <div class="cockpit-head">
+    <div>
+      <h3>{open.label} <span class="pill {open.state === 'running' ? 'live' : open.state === 'ready' ? 'ok' : ''}">{#if open.state === 'running'}<span class="led live"></span>{/if}{t(`admin.exams.state.${open.state}`)}</span></h3>
+      {#if open.title !== open.label}<p class="muted small">{open.title}</p>{/if}
+    </div>
+    {#if open.state !== 'ready'}
+      <div class="progress">
+        <strong>{t('admin.exams.submittedCount', { n: seatList.filter((x) => x.submitted).length, total: seatList.length })}</strong>
+        <span class="muted small">{t('admin.exams.startedAt', { time: time(open.started) })}</span>
+      </div>
     {/if}
-    <button onclick={showUnlock} title={t('admin.exams.unlockHint')}>🔑 {t('admin.exams.unlock')}</button>
-    <button onclick={evaluate} disabled={open.state === 'ready'}>✓ {t('admin.exams.evaluate')}</button>
-    <button onclick={download} disabled={open.state === 'ready'}>⬇ {t('admin.exams.download')}</button>
+  </div>
+  <div class="row toolbar">
+    {#if open.state === 'ready'}
+      <button class="primary" onclick={() => act('start', undefined, t('admin.exams.confirmStart', { n: seatList.length, min: open!.minutes }))}><Icon name="play" size={16} />{t('admin.exams.start')}</button>
+      <button onclick={printSheets}><Icon name="printer" size={16} />{t('admin.exams.printSheets')}</button>
+      <button onclick={printCards}><Icon name="tag" size={16} />{t('admin.exams.print')}</button>
+    {:else if open.state === 'running'}
+      <button onclick={printSheets}><Icon name="printer" size={16} />{t('admin.exams.printSheets')}</button>
+    {/if}
+    <button onclick={showUnlock} title={t('admin.exams.unlockHint')}><Icon name="key" size={16} />{t('admin.exams.unlock')}</button>
+    <button onclick={evaluate} disabled={open.state === 'ready'}><Icon name="checks" size={16} />{t('admin.exams.evaluate')}</button>
+    <button onclick={download} disabled={open.state === 'ready'}><Icon name="download" size={16} />{t('admin.exams.download')}</button>
+    {#if open.state === 'running'}<button class="danger push" onclick={() => act('end', undefined, t('admin.exams.confirmEnd'))}>{t('admin.exams.end')}</button>{/if}
   </div>
   {#if unlock && unlock.exam === open.id}
     <p class="unlock" role="status">
       {#if unlock.code}{t('admin.exams.unlockIs')} <code>{unlock.code}</code>{:else}{t('admin.exams.unlockMissing')}{/if}
-      <button class="ghost" onclick={() => (unlock = null)} aria-label={t('about.close')}>✕</button>
+      <button class="ghost" onclick={() => (unlock = null)} aria-label={t('about.close')}><Icon name="close" size={16} /></button>
     </p>
   {/if}
   <p class="muted">{t(`admin.exams.help.${open.state}`)}</p>
@@ -334,10 +343,13 @@
     <tbody>
       {#each seatList as s (s.id)}
         <tr>
-          <td>{s.id}</td>
-          <td class="code">{s.code}</td>
-          <td class={s.state} class:submitted={!!s.submitted}>
-            {#if s.submitted}✓ {t('admin.exams.seat.submittedAt', { time: time(s.submitted) })}{:else}{s.state === 'open' && !s.joined ? t('admin.exams.seat.absent') : t(`admin.exams.seat.${s.state}`)}{/if}
+          <td><strong>{s.id}</strong></td>
+          <td><code>{s.code}</code></td>
+          <td>
+            {#if s.submitted}<span class="pill ok">✓ {t('admin.exams.seat.submittedAt', { time: time(s.submitted) })}</span>
+            {:else if s.state === 'open' && !s.joined}<span class="pill warn">{t('admin.exams.seat.absent')}</span>
+            {:else if s.state === 'open'}<span class="pill live"><span class="led live"></span>{t('admin.exams.seat.open')}</span>
+            {:else}<span class="pill">{t(`admin.exams.seat.${s.state}`)}</span>{/if}
           </td>
           <td>{time(s.saved)}</td>
           <td>{time(s.until)} {#if s.state === 'open'}<span class="muted">({left(s)})</span>{/if}</td>
@@ -348,17 +360,89 @@
             <button title={t('admin.exams.extraRemove')} disabled={!s.extra} onclick={() => act(`seats/${s.id}/extra`, { minutes: -5 })}>−5′</button>
           </td>
           <td class="actions">
-            <span class="dot" class:on={s.online} title={s.online ? t('admin.exams.online') : t('admin.exams.offline')} aria-label={s.online ? t('admin.exams.online') : t('admin.exams.offline')}></span>
-            <button disabled={!s.session || !onwatch} title={t('admin.exams.watchHint')} onclick={() => s.session && onwatch?.(s.session, `${open?.label ?? ''} · ${t('exam.seatWord')} ${s.id}`)}>👁 {t('admin.exams.watch')}</button>
+            <span class="led" class:ok={s.online} title={s.online ? t('admin.exams.online') : t('admin.exams.offline')} aria-label={s.online ? t('admin.exams.online') : t('admin.exams.offline')} role="img"></span>
+            <button class="icon" disabled={!s.session || !onwatch} title={t('admin.exams.watchHint')} aria-label={`${t('admin.exams.watch')}: ${t('exam.seatWord')} ${s.id}`} onclick={() => s.session && onwatch?.(s.session, `${open?.label ?? ''} · ${t('exam.seatWord')} ${s.id}`)}><Icon name="eye" size={16} /></button>
             <button disabled={!s.joined} title={t('admin.exams.releaseHint')} onclick={() => act(`seats/${s.id}/release`, {}, t('admin.exams.releaseConfirm', { seat: s.id }))}>{t('admin.exams.release')}</button>
           </td>
         </tr>
       {/each}
     </tbody>
   </table>
+</section>
 {/if}
 
 <style>
+  .name {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .create-box summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .create {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .create .row {
+    align-items: flex-end;
+    margin: 0;
+  }
+  .create label:not(.check) {
+    display: grid;
+    gap: 6px;
+  }
+  .cockpit {
+    margin-top: 24px;
+    padding: 20px 22px 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--a-radius);
+  }
+  .cockpit table {
+    border-radius: var(--a-radius-s);
+  }
+  .cockpit-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+  .cockpit-head h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: 1.2rem;
+  }
+  .cockpit-head p {
+    margin: 2px 0 0;
+  }
+  .progress {
+    display: grid;
+    justify-items: end;
+    text-align: right;
+  }
+  .toolbar {
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--a-line);
+  }
+  .toolbar .push {
+    margin-left: auto;
+  }
+  .icon {
+    min-width: 32px;
+    padding: 0 8px;
+  }
+  td.actions .led {
+    vertical-align: middle;
+    margin-right: 4px;
+  }
   .create-box {
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -368,15 +452,6 @@
   }
   .create-box summary {
     cursor: pointer;
-    font-weight: 600;
-  }
-  .count {
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: color-mix(in srgb, #15803d 14%, var(--surface));
-  }
-  td.submitted {
-    color: #15803d;
     font-weight: 600;
   }
   .unlock {
@@ -398,86 +473,15 @@
     gap: 6px;
     font-size: 0.85rem;
   }
-  .create {
-    display: grid;
-    gap: 6px;
-    margin-bottom: 10px;
-  }
-  .row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    align-items: end;
-  }
-  label {
-    display: grid;
-    gap: 2px;
-    font-size: 0.8rem;
-  }
   .short input {
     width: 6em;
-  }
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 0.85rem;
-    margin: 6px 0;
-  }
-  th,
-  td {
-    text-align: left;
-    padding: 3px 6px;
-    border-bottom: 1px solid var(--border);
-  }
-  tr.active {
-    background: var(--surface-2);
-  }
-  .code {
-    font-family: ui-monospace, Consolas, monospace;
-    letter-spacing: 0.06em;
-  }
-  .actions {
-    white-space: nowrap;
-    text-align: right;
-  }
-  .actions button {
-    padding: 1px 6px;
-  }
-  .dot {
-    display: inline-block;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--border);
-    margin-right: 4px;
-  }
-  .dot.on {
-    background: #16a34a;
   }
   .extra {
     color: #b45309;
     font-weight: 600;
     margin-right: 4px;
   }
-  .open {
-    color: #15803d;
-  }
-  .closed {
-    color: var(--muted);
-  }
   .warn {
     color: #b45309;
-  }
-  .muted {
-    color: var(--muted);
-    font-size: 0.85rem;
-  }
-  .primary {
-    background: var(--accent);
-    color: var(--on-accent);
-    border-color: var(--accent);
-  }
-  .danger {
-    color: var(--danger);
   }
 </style>
