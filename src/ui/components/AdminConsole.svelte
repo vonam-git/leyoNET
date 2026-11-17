@@ -147,10 +147,23 @@
     adminToken.value = token;
   });
 
+  /**
+   * Letzte Eingabe in dieser Konsole. Abfragen ohne Eingabe in der letzten Minute (automatisches
+   * Nachführen) tragen «X-Leyonet-Auto»: Sie halten die Anmeldung nicht wach, nach 60 Minuten ohne
+   * Tätigkeit meldet der Server ab.
+   */
+  let lastInput = Date.now();
+  const touched = () => (lastInput = Date.now());
+
   async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
     try {
-      return await api<T>(method, `admin/${path}`, body, token ?? undefined);
+      return await api<T>(method, `admin/${path}`, body, token ?? undefined, Date.now() - lastInput > 60_000 ? { 'X-Leyonet-Auto': '1' } : {});
     } catch (error) {
+      // Zwei-Faktor inzwischen verlangt: nur noch der Bereich «Sicherheit».
+      if (error instanceof ApiError && error.code === 'mfaSetupRequired') {
+        mfaSetup = true;
+        section = 'security';
+      }
       if (error instanceof ApiError && error.status === 401) {
         token = null;
         overview = null;
@@ -177,6 +190,8 @@
         needCode = true;
         return;
       }
+      // Gesperrt wegen vieler Fehlversuche anderer: Mit Zwei-Faktor geht es trotzdem.
+      if (c === 'rateLimited' && !needCode) needCode = true;
       notify('error', t(`admin.error.${['wrongPassword', 'adminDisabled', 'rateLimited', 'wrongCode', 'mfaUnreadable'].includes(c) ? c : 'other'}`));
     }
   }
@@ -459,6 +474,7 @@
   );
 </script>
 
+<svelte:window onpointerdown={touched} onkeydown={touched} />
 <div class="admin-page" class:gone={hidden}>
   {#if examMode.active}
     <div class="login-wrap">

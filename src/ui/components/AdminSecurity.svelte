@@ -60,7 +60,7 @@
 
   const errorText = (error: unknown) => {
     const c = (error as { code?: string })?.code ?? '';
-    return t(`admin.mfa.error.${['wrongCode', 'rateLimited', 'mfaNoSetup', 'mfaRequired', 'mfaUnreadable', 'mfaOwnFirst'].includes(c) ? c : 'other'}`);
+    return t(`admin.mfa.error.${['wrongCode', 'rateLimited', 'mfaNoSetup', 'mfaRequired', 'mfaUnreadable', 'mfaOwnFirst', 'mfaOn'].includes(c) ? c : 'other'}`);
   };
 
   async function start() {

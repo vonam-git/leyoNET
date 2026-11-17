@@ -17,10 +17,10 @@ let server;
 let base;
 const project = (n = 1) => ({ meta: { format: 'netzwerk-simulator', version: 1 }, topology: { devices: Array.from({ length: n }, (_, i) => ({ id: `d${i + 1}` })), cables: [], nextId: n + 1 }, configuration: {} });
 
-async function call(method, url, body, token) {
+async function call(method, url, body, token, extra = {}) {
   const res = await fetch(base + url, {
     method,
-    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extra },
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
@@ -74,6 +74,9 @@ test('Zwei-Faktor: einrichten, anmelden nur mit Code, kein Code zweimal, Wiederh
   const enabled = (await call('POST', '/api/admin/mfa/enable', { code: totp(setup.secret, -1) }, teacher)).data;
   assert.equal(enabled.enabled, true);
   assert.equal(enabled.recovery.length, 8);
+  // Ein entwendetes Token kann Zwei-Faktor nicht durch eine eigene App ersetzen.
+  assert.equal((await call('POST', '/api/admin/mfa/setup', {}, teacher)).data.error, 'mfaOn');
+  assert.equal((await call('POST', '/api/admin/mfa/enable', { code: '123456' }, teacher)).data.error, 'mfaOn');
   // Das Geheimnis liegt nicht lesbar im Datenordner, die Wiederherstellungscodes nur als Hash.
   const stored = fs.readFileSync(path.join(dataDir, 'tenants', `${created.id}.json`), 'utf8');
   assert.ok(!stored.includes(setup.secret));
@@ -121,7 +124,13 @@ test('Zwei-Faktor für alle verlangen: erst selbst einrichten; Zugänge ohne Cod
   const setup = (await call('POST', '/api/admin/mfa/setup', {}, admin)).data;
   const enabled = (await call('POST', '/api/admin/mfa/enable', { code: totp(setup.secret, 0) }, admin)).data;
   assert.equal(enabled.enabled, true);
+  // Anmeldung von vorher ohne Zwei-Faktor: gilt nach dem Einschalten nur noch zum Einrichten.
+  const earlierTenant = (await call('POST', '/api/admin/tenants', { label: 'LP Vorher', role: 'teacher' }, admin)).data;
+  const earlier = (await call('POST', '/api/admin/login', { password: earlierTenant.key })).data.token;
+  assert.equal((await call('GET', '/api/admin/stats', null, earlier)).status, 200);
   assert.equal((await call('PUT', '/api/admin/settings', { ...settings, mfaRequired: true }, admin)).data.mfaRequired, true);
+  assert.equal((await call('GET', '/api/admin/stats', null, earlier)).data.error, 'mfaSetupRequired');
+  assert.equal((await call('GET', '/api/admin/me', null, earlier)).data.mfa.setupNeeded, true);
   // Ausschalten geht nicht, solange es für alle verlangt ist.
   assert.equal((await call('POST', '/api/admin/mfa/disable', { code: enabled.recovery[0] }, admin)).data.error, 'mfaRequired');
 
@@ -197,4 +206,38 @@ test('Prüfungsplätze lassen sich in der Statistik weder verlängern noch einze
   assert.equal(row.group, 'Statistik');
   assert.equal((await call('PATCH', `/api/admin/sessions/${join.session}`, { extendHours: 1 }, admin)).data.error, 'examSession');
   assert.equal((await call('DELETE', `/api/admin/sessions/${join.session}`, null, admin)).data.error, 'examSession');
+});
+
+test('Prüfungsplatz: nie über den Session-Code ansehen; nach der Abgabe kein Lebenszeichen mehr', async () => {
+  const admin = (await call('POST', '/api/admin/login', { password: 'test-admin-passwort' }, null, { 'X-Forwarded-For': '192.0.2.40' })).data.token;
+  const learner = { ...project(0), tasks: { title: 'P', goals: [], exam: { id: 'P-WATCH', variant: '1' } } };
+  const exam = (await call('POST', '/api/admin/exams', { label: 'Ansehen', learner, seats: 1, minutes: 10 }, admin)).data;
+  await call('POST', `/api/admin/exams/${exam.id}/start`, {}, admin);
+  const join = (await call('POST', '/api/exams/join', { seatCode: exam.seats[0].code })).data;
+  assert.equal((await call('GET', `/api/sessions/${join.session}?watch=1`)).data.error, 'examSession');
+  // Die Lehrperson sieht den Platz über die Admin-Konsole.
+  assert.equal((await call('GET', `/api/admin/sessions/${join.session}`, null, admin)).status, 200);
+  const w = { 'X-Leyonet-Writer': join.writer };
+  assert.equal((await call('POST', `/api/sessions/${join.session}/ping`, null, null, w)).status, 200);
+  assert.equal((await call('POST', `/api/sessions/${join.session}/submit`, {}, null, w)).status, 200);
+  assert.equal((await call('POST', `/api/sessions/${join.session}/ping`, null, null, w)).status, 423);
+  // Automatische Abfragen (X-Leyonet-Auto) funktionieren, halten die Anmeldung aber nicht wach.
+  assert.equal((await call('GET', '/api/admin/stats', null, admin, { 'X-Leyonet-Auto': '1' })).status, 200);
+});
+
+test('Viele falsche Passwörter von vielen Adressen: Hauptadmin kommt mit Zwei-Faktor trotzdem hinein, ohne Hinweis für Ratende', async () => {
+  const at = (n) => ({ 'X-Forwarded-For': `198.51.100.${n}` });
+  const admin = (await call('POST', '/api/admin/login', { password: 'test-admin-passwort' }, null, at(1))).data.token;
+  const setup = (await call('POST', '/api/admin/mfa/setup', {}, admin)).data;
+  await call('POST', '/api/admin/mfa/enable', { code: totp(setup.secret, -1) }, admin);
+  for (let ip = 10; ip < 14; ip++) for (let i = 0; i < 9; i++) await call('POST', '/api/admin/login', { password: 'falsch' }, null, at(ip));
+  // Grenze für alle erreicht: ohne Code auch mit richtigem Passwort 429.
+  assert.equal((await call('POST', '/api/admin/login', { password: 'test-admin-passwort' }, null, at(20))).status, 429);
+  // Falscher Code oder falsches Passwort: ebenfalls nur 429 (kein Hinweis, was falsch war).
+  assert.equal((await call('POST', '/api/admin/login', { password: 'test-admin-passwort', code: '000000' }, null, at(21))).status, 429);
+  assert.equal((await call('POST', '/api/admin/login', { password: 'falsch', code: totp(setup.secret, 0) }, null, at(22))).status, 429);
+  // Passwort und gültiger Code: hinein.
+  const ok = await call('POST', '/api/admin/login', { password: 'test-admin-passwort', code: totp(setup.secret, 0) }, null, at(23));
+  assert.equal(ok.status, 200);
+  assert.ok(ok.data.token);
 });

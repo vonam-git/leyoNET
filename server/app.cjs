@@ -532,6 +532,19 @@ function checkSecondFactor(who, data, given) {
   return 'ok';
 }
 
+/** Anmeldung abschliessen: Zeitpunkt merken, Token ausstellen. */
+function issueToken(res, who) {
+  const now = Date.now();
+  const fresh = accountData(who);
+  saveAccountData(who, { ...fresh, lastLogin: now, previousLogin: fresh.lastLogin || null });
+  // Zwei-Faktor verlangt, aber noch nicht eingerichtet: Anmeldung nur zum Einrichten.
+  const mfaSetup = !!settings().mfaRequired && !(fresh.mfa && fresh.mfa.enabled);
+  const token = crypto.randomBytes(32).toString('base64url');
+  for (const [k, e] of tokens) if (e.expires < now || now - (e.seen || 0) > ADMIN_IDLE_MS) tokens.delete(k);
+  tokens.set(token, { ...who, created: now, seen: now, expires: now + ADMIN_TOKEN_HOURS * 3_600_000, ...(mfaSetup ? { mfaSetup: true } : {}) });
+  return json(res, 200, { token, role: who.role, label: who.label, mfaSetup });
+}
+
 // --- Schreibrecht einer Session ------------------------------------------------------
 //
 // Nur ein Gerät schreibt: Wer eine Session öffnet, erhält ein zufälliges Schreib-Token
@@ -636,7 +649,8 @@ function principal(req) {
     tokens.delete(token);
     return null;
   }
-  entry.seen = now;
+  // Automatische Abfragen der offenen Konsole (ohne Eingabe) halten die Anmeldung nicht wach.
+  if (req.headers['x-leyonet-auto'] !== '1') entry.seen = now;
   // Gelöschter Zugang: sofort abgemeldet.
   if (entry.tenant && !loadTenant(entry.tenant)) {
     tokens.delete(token);
@@ -1145,6 +1159,8 @@ async function api(req, res, url) {
     // Lebenszeichen des schreibenden Geräts (alle 20 s), damit kein zweites übernimmt.
     if (parts[2] === 'ping' && method === 'POST') {
       if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
+      // Abgegebener Prüfungsplatz: nicht mehr belegen.
+      if (item.submitted) return json(res, 423, { error: 'examClosed' });
       leases.set(code, Date.now());
       return json(res, 200, { ok: true, ...about(item) });
     }
@@ -1220,7 +1236,11 @@ async function api(req, res, url) {
       }
       const base = { code, expires: item.expires, classCode: item.classCode, site: item.site || null, project: item.project };
       // Nur ansehen (z.B. Lehrperson): kein Schreibrecht, verdrängt niemanden.
-      if (url.searchParams.get('watch') === '1') return json(res, 200, { ...base, updated: item.updated, watch: true, ...about(item) });
+      // Prüfungsplätze nie über den Session-Code ansehen: Die Lehrperson sieht sie über die Admin-Konsole.
+      if (url.searchParams.get('watch') === '1') {
+        if (item.exam) return fail(res, 403, 'examSession');
+        return json(res, 200, { ...base, updated: item.updated, watch: true, ...about(item) });
+      }
       const pin = req.headers['x-leyonet-pin'];
       const claimed = await claimWriter(code, item, token, typeof pin === 'string' ? pin : '');
       if (claimed.error) return json(res, claimed.status, { error: claimed.error, ...about(item) });
@@ -1440,8 +1460,18 @@ async function admin(req, res, parts, method) {
       const t = tenantByKey(given);
       if (t) who = { role: t.role, tenant: t.id, label: t.label };
     } else {
-      // Passwort (von Menschen gewählt): je Adresse und insgesamt begrenzt.
-      if (limited(req, 'login', 10) || limitedGlobal('login', 30)) return fail(res, 429, 'rateLimited');
+      // Passwort (von Menschen gewählt): je Adresse und insgesamt begrenzt. Greift die Grenze für
+      // alle (viele Fehlversuche von vielen Adressen), kommt der Hauptadmin mit Zwei-Faktor trotzdem
+      // hinein: nur wenn Passwort und Code zusammen stimmen, sonst ohne jeden Hinweis 429 (kein
+      // Raten möglich, und die Fehlversuche sperren den Zugang nicht).
+      if (limited(req, 'login', 10)) return fail(res, 429, 'rateLimited');
+      if (limitedGlobal('login', 30)) {
+        const data = accountData({ role: 'super' });
+        const code = typeof body.code === 'string' ? body.code.slice(0, 40) : '';
+        if (!(data.mfa && data.mfa.enabled) || !code.trim() || !checkPassword(given)) return fail(res, 429, 'rateLimited');
+        if (checkSecondFactor({ role: 'super' }, data, code) !== 'ok') return fail(res, 429, 'rateLimited');
+        return issueToken(res, { role: 'super', tenant: null, label: null });
+      }
       if (checkPassword(given)) who = { role: 'super', tenant: null, label: null };
     }
     if (!who) return fail(res, 401, 'wrongPassword');
@@ -1459,15 +1489,7 @@ async function admin(req, res, parts, method) {
       }
       mfaFails.delete(id);
     }
-    const now = Date.now();
-    const fresh = accountData(who);
-    saveAccountData(who, { ...fresh, lastLogin: now, previousLogin: fresh.lastLogin || null });
-    // Zwei-Faktor verlangt, aber noch nicht eingerichtet: Anmeldung nur zum Einrichten.
-    const mfaSetup = !!settings().mfaRequired && !(fresh.mfa && fresh.mfa.enabled);
-    const token = crypto.randomBytes(32).toString('base64url');
-    for (const [k, e] of tokens) if (e.expires < now || now - (e.seen || 0) > ADMIN_IDLE_MS) tokens.delete(k);
-    tokens.set(token, { ...who, created: now, seen: now, expires: now + ADMIN_TOKEN_HOURS * 3_600_000, ...(mfaSetup ? { mfaSetup: true } : {}) });
-    return json(res, 200, { token, role: who.role, label: who.label, mfaSetup });
+    return issueToken(res, who);
   }
   const who = principal(req);
   if (!who) return fail(res, 401, 'notLoggedIn');
@@ -1499,7 +1521,7 @@ async function admin(req, res, parts, method) {
     return json(res, 200, {
       role: who.role,
       label: who.label,
-      mfa: { enabled: !!(data.mfa && data.mfa.enabled), recoveryLeft: data.mfa && Array.isArray(data.mfa.recovery) ? data.mfa.recovery.length : 0, required: !!settings().mfaRequired, setupNeeded: !!who.mfaSetup },
+      mfa: { enabled: !!(data.mfa && data.mfa.enabled), recoveryLeft: data.mfa && Array.isArray(data.mfa.recovery) ? data.mfa.recovery.length : 0, required: !!settings().mfaRequired, setupNeeded: !!who.mfaSetup || (!!settings().mfaRequired && !(data.mfa && data.mfa.enabled)) },
       previousLogin: data.previousLogin || null,
       logins,
       idleMinutes: ADMIN_IDLE_MS / 60_000,
@@ -1510,6 +1532,11 @@ async function admin(req, res, parts, method) {
     const id = accountId(who);
     const data = accountData(who);
     // Einrichten, Schritt 1: neues Geheimnis (noch nicht aktiv), für App bzw. QR-Code.
+    // Ist Zwei-Faktor schon an, lässt er sich nicht einfach ersetzen (sonst bände ein entwendetes
+    // Token den Zugang an eine fremde App): erst mit gültigem Code ausschalten, dann neu einrichten.
+    if ((parts[1] === 'setup' || parts[1] === 'enable') && data.mfa && data.mfa.enabled) return fail(res, 409, 'mfaOn');
+    // Fehlversuche mit einem Token zählen getrennt von der Anmeldung (sperren sie nicht).
+    const tokenId = `${id}:token`;
     if (parts[1] === 'setup') {
       const secret = base32(crypto.randomBytes(20));
       mfaPending.set(id, { secret, expires: Date.now() + 10 * 60_000 });
@@ -1519,12 +1546,12 @@ async function admin(req, res, parts, method) {
     }
     // Schritt 2: mit einem Code aus der App bestätigen, dann aktiv; Wiederherstellungscodes einmal anzeigen.
     if (parts[1] === 'enable') {
-      if (limited(req, 'mfa', 60) || mfaLocked(id)) return fail(res, 429, 'rateLimited');
+      if (limited(req, 'mfa', 60) || mfaLocked(tokenId)) return fail(res, 429, 'rateLimited');
       const pending = mfaPending.get(id);
       if (!pending || pending.expires < Date.now()) return fail(res, 409, 'mfaNoSetup');
       const step = totpStep(unbase32(pending.secret), String(body.code || '').replace(/\s/g, ''), 0);
       if (step === null) {
-        countMfaFail(id);
+        countMfaFail(tokenId);
         return fail(res, 401, 'wrongCode');
       }
       mfaPending.delete(id);
@@ -1532,16 +1559,18 @@ async function admin(req, res, parts, method) {
       saveAccountData(who, { ...data, mfa: { enabled: true, since: Date.now(), secret: encryptKey({ secret: pending.secret }), step, recovery: recovery.map(recoveryHash) } });
       const entry = tokens.get(current);
       if (entry) delete entry.mfaSetup;
+      // Andere Anmeldungen dieses Zugangs (ohne zweiten Faktor ausgestellt) beenden.
+      for (const [k, e] of tokens) if (k !== current && accountId(e) === id) tokens.delete(k);
       return json(res, 200, { enabled: true, recovery });
     }
     // Ausschalten oder neue Wiederherstellungscodes: nur mit gültigem Code (oder Wiederherstellungscode).
     if (parts[1] === 'disable' || parts[1] === 'recovery') {
       if (!data.mfa || !data.mfa.enabled) return fail(res, 409, 'mfaOff');
       if (parts[1] === 'disable' && settings().mfaRequired) return fail(res, 409, 'mfaRequired');
-      if (limited(req, 'mfa', 60) || mfaLocked(id)) return fail(res, 429, 'rateLimited');
+      if (limited(req, 'mfa', 60) || mfaLocked(tokenId)) return fail(res, 429, 'rateLimited');
       const result = checkSecondFactor(who, data, String(body.code || '').slice(0, 40));
       if (result !== 'ok') {
-        countMfaFail(id);
+        countMfaFail(tokenId);
         return fail(res, 401, result === 'unreadable' ? 'mfaUnreadable' : 'wrongCode');
       }
       const after = accountData(who);
@@ -1557,7 +1586,8 @@ async function admin(req, res, parts, method) {
     return fail(res, 404, 'notFound');
   }
   // Zwei-Faktor verlangt und noch nicht eingerichtet: nur Einrichten und Abmelden.
-  if (who.mfaSetup) return fail(res, 403, 'mfaSetupRequired');
+  // Auch Anmeldungen von vor dem Einschalten von «für alle verlangen» gelten nur noch zum Einrichten.
+  if (who.mfaSetup || (settings().mfaRequired && !(accountData(who).mfa && accountData(who).mfa.enabled))) return fail(res, 403, 'mfaSetupRequired');
 
   if (parts[0] === 'overview' && method === 'GET') {
     const sessions = entries('sessions');
