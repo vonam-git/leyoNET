@@ -17,6 +17,8 @@
     type SubmissionReview,
   } from '../../core';
   import { t } from '../../i18n';
+  import Icon from './Icon.svelte';
+  import '../admin.css';
   import { pickFile } from '../actions';
   import { errorText } from '../labels';
   import { downloadText } from '../persist/files';
@@ -59,6 +61,19 @@
 
   // Spalten: Schlüssel, geladene Aufgabe, sonst die der ersten lesbaren Datei.
   const columns = $derived(key?.variants[0]?.tasks ?? editor.tasks ?? reviews.find((r) => r.ok)?.tasks ?? null);
+  /** Kopf der Auswertung: Abgaben, Durchschnitt, genügend (Note ab 4), ungenügend. */
+  const summary = $derived.by(() => {
+    if (!columns) return null;
+    const ok = reviews.filter((r) => r.ok);
+    const grades = columns.grading ? ok.map((r) => correctedScore(r, corrections[r.name]).grade ?? 1) : [];
+    return {
+      total: reviews.length,
+      failed: reviews.length - ok.length,
+      average: grades.length ? grades.reduce((a, b) => a + b, 0) / grades.length : null,
+      pass: grades.filter((g) => g >= 4).length,
+      below: grades.filter((g) => g < 4).length,
+    };
+  });
   const withPoints = $derived(!!columns && (columns.grading || columns.goals.some((g) => g.points !== undefined)));
   const similar = $derived(similarPairs(reviews));
   const similarTo = (name: string) => similar.filter((p) => p.a === name || p.b === name).map((p) => `${p.a === name ? p.b : p.a} (${Math.round(p.score * 100)} %)`);
@@ -199,20 +214,26 @@
   const fmt = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',');
 </script>
 
-<dialog bind:this={dialog} aria-labelledby="review-title" onclose={onclose}>
-  <h2 id="review-title">{t('review.title')}</h2>
-  <p class="muted">
-    {#if key}{t('review.helpKey', { title: key.title, n: key.variants.length })}{:else if editor.tasks}{t('review.helpTask', { title: editor.tasks.title })}{/if}
-    {t('review.help')}
-  </p>
+<dialog bind:this={dialog} class="admin-look" aria-labelledby="review-title" onclose={onclose}>
+  <header class="head">
+    <div>
+      <h2 id="review-title">{t('review.title')}</h2>
+      <p class="muted">
+        {#if key}{t('review.helpKey', { title: key.title, n: key.variants.length })}{:else if editor.tasks}{t('review.helpTask', { title: editor.tasks.title })}{/if}
+        {t('review.help')}
+      </p>
+    </div>
+    <button class="quiet close" onclick={close} aria-label={t('review.close')}><Icon name="close" size={18} /></button>
+  </header>
+  <div class="body">
   <div class="toolbar">
     <label class="choose">
-      <span class="button">{t('review.choose')}</span>
+      <span class="button"><Icon name="plus" size={16} />{t('review.choose')}</span>
       <input type="file" accept=".json,application/json" multiple onchange={choose} class="visually-hidden" />
     </label>
-    <button onclick={loadKey}>🔑 {key ? t('review.keyOther') : t('review.loadKey')}</button>
-    {#if key}<button onclick={() => ((key = null), texts.length && evaluate())}>{t('review.keyRemove')}</button>{/if}
-    <button onclick={loadCorrections}>{t('review.loadCorrections')}</button>
+    <button onclick={loadKey}><Icon name="key" size={16} />{key ? t('review.keyOther') : t('review.loadKey')}</button>
+    {#if key}<button class="quiet" onclick={() => ((key = null), texts.length && evaluate())}>{t('review.keyRemove')}</button>{/if}
+    <button onclick={loadCorrections}><Icon name="download" size={16} />{t('review.loadCorrections')}</button>
   </div>
   <details class="names">
     <summary>{t('review.names')}{names.size ? ` (${names.size})` : ''}</summary>
@@ -227,8 +248,19 @@
   {:else if !columns}
     <p class="error">{t('error.noTasks')}</p>
   {:else}
+    {#if summary}
+      <section class="figures" aria-label={t('review.summary')}>
+        <div class="fig"><span class="fignum">{summary.total}</span><span class="lbl">{t('review.sumTotal')}</span></div>
+        {#if summary.average !== null}
+          <div class="fig"><span class="fignum">{summary.average.toFixed(2)}</span><span class="lbl">{t('review.sumAverage')}</span></div>
+          <div class="fig"><span class="fignum ok">{summary.pass}</span><span class="lbl">{t('review.sumPass')}</span></div>
+          <div class="fig"><span class="fignum bad">{summary.below}</span><span class="lbl">{t('review.sumBelow')}</span></div>
+        {/if}
+        {#if summary.failed}<div class="fig"><span class="fignum bad">{summary.failed}</span><span class="lbl">{t('review.sumError')}</span></div>{/if}
+      </section>
+    {/if}
     {#if similar.length}
-      <p class="warn" role="alert">⚠ {t('review.similar', { n: similar.length })}</p>
+      <p class="alert-box" role="alert">{t('review.similar', { n: similar.length })}</p>
     {/if}
     <div class="scroller">
       <table>
@@ -251,8 +283,8 @@
               <th scope="row">
                 <button class="link" onclick={() => (selected = { file: review.name, goal: null })} disabled={!review.ok} title={t('review.commentHint')}>{review.name}</button>
                 {#if person(review.name)}<span class="person">{person(review.name)}</span>{/if}
-                {#if c?.comment}<span title={c.comment}>💬</span>{/if}
-                {#if similarTo(review.name).length}<span class="warn" title={t('review.similarTo', { list: similarTo(review.name).join(', ') })}>⚠</span>{/if}
+                {#if c?.comment}<span class="pill" title={c.comment}>{t('review.hasComment')}</span>{/if}
+                {#if similarTo(review.name).length}<span class="pill warn" title={t('review.similarTo', { list: similarTo(review.name).join(', ') })}>{t('review.similarShort')}</span>{/if}
                 {#if review.ok && review.ownTasks && review.tasks.title !== columns.title}
                   <span class="muted">({t('review.ownTasks')})</span>
                 {/if}
@@ -262,7 +294,7 @@
                 {#if key}<td>{review.variant ?? ''}</td>{/if}
                 <td class="num">{review.passed}/{review.assessable}</td>
                 {#if withPoints}<td class="num">{fmt(score.points)}/{score.max}</td>{/if}
-                {#if columns.grading}<td class="num grade">{(score.grade ?? 1).toFixed(1)}</td>{/if}
+                {#if columns.grading}<td class="num"><span class="grade" class:low={(score.grade ?? 1) < 4}>{(score.grade ?? 1).toFixed(1)}</span></td>{/if}
                 {#each columns.goals as goal (goal.id)}
                   {@const m = mark(review, goal.id)}
                   {@const own = c?.points?.[goal.id] !== undefined}
@@ -314,151 +346,301 @@
 
     <ol class="legend muted" bind:this={legend}>
       {#each columns.goals as goal (goal.id)}
-        <li class:active={activeColumn === goal.id}>{goal.section ? `${goal.section}: ` : ''}{goal.text}{#if withPoints} ({t('tasks.points', { n: goal.points ?? 1 })}){/if}</li>
+        <li class:active={activeColumn === goal.id}><span>{goal.section ? `${goal.section}: ` : ''}{goal.text}{#if withPoints}<span class="pts">{t('tasks.points', { n: goal.points ?? 1 })}</span>{/if}</span></li>
       {/each}
     </ol>
   {/if}
 
-  <div class="actions">
-    <button class="primary" onclick={saveCsv} disabled={!columns || reviews.length === 0 || running > 0}>{t('review.csv')}</button>
-    <button onclick={saveReports} disabled={!columns || reviews.length === 0 || running > 0}>{t('review.reports')}</button>
-    <button onclick={saveCorrections} disabled={reviews.length === 0}>{t('review.saveCorrections')}</button>
-    <button onclick={close}>{t('review.close')}</button>
   </div>
+  <footer class="actions">
+    <button onclick={saveCorrections} disabled={reviews.length === 0}>{t('review.saveCorrections')}</button>
+    <span class="spacer"></span>
+    <button onclick={saveReports} disabled={!columns || reviews.length === 0 || running > 0}><Icon name="book" size={16} />{t('review.reports')}</button>
+    <button class="primary" onclick={saveCsv} disabled={!columns || reviews.length === 0 || running > 0}><Icon name="download" size={16} />{t('review.csv')}</button>
+  </footer>
 </dialog>
 
 <style>
   dialog {
-    width: min(1100px, calc(100vw - 32px));
-    max-height: calc(100vh - 64px);
-    padding: 16px;
+    width: min(1240px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
     border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--surface);
+    border-radius: 16px;
+    background: var(--bg);
     color: var(--text);
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.3);
+    box-shadow: 0 24px 60px -20px rgb(15 23 42 / 0.45);
+  }
+  dialog:not([open]) {
+    display: none;
   }
   dialog::backdrop {
-    background: rgba(15, 23, 42, 0.4);
+    background: rgb(15 23 42 / 0.45);
   }
-  h2 {
-    margin: 0 0 6px;
-    font-size: 1rem;
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px 24px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .head h2 {
+    margin: 0 0 4px;
+    font-size: 1.35rem;
+  }
+  .head p {
+    margin: 0;
+    max-width: 90ch;
+  }
+  .close {
+    min-width: 34px;
+    padding: 0 8px;
+  }
+  .body {
+    padding: 18px 24px;
+    overflow: auto;
+    flex: 1;
+  }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 12px;
   }
   .choose .button {
-    display: inline-block;
-    padding: 4px 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface-2);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: var(--a-radius-s);
+    background: var(--accent);
+    color: var(--on-accent);
+    font-size: 0.88rem;
+    font-weight: 520;
     cursor: pointer;
   }
   .choose:focus-within .button {
-    outline: 2px solid var(--focus);
+    outline: 3px solid var(--focus);
+  }
+  .names {
+    font-size: 0.9rem;
+  }
+  .names textarea {
+    width: 100%;
+    margin-top: 6px;
+    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  }
+  .figures {
+    display: flex;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--a-radius);
+    margin-bottom: 12px;
+  }
+  .fig {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 22px;
+    border-left: 1px solid var(--a-line);
+  }
+  .fig:first-child {
+    border-left: none;
+  }
+  .fignum {
+    font-size: 1.5rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .fignum.ok {
+    color: var(--a-ok);
+  }
+  .fignum.bad {
+    color: var(--a-alert);
+  }
+  .lbl {
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+  .alert-box {
+    padding: 10px 14px;
+    border-radius: var(--a-radius-s);
+    background: var(--a-warn-soft);
+    color: var(--a-warn);
+    font-weight: 550;
   }
   .scroller {
-    margin-top: 10px;
-    max-height: 50vh;
+    max-height: 52vh;
     overflow: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--a-radius);
   }
   table {
-    border-collapse: collapse;
-    font-size: 0.8rem;
+    border: none;
+    border-radius: 0;
+    margin: 0;
+    overflow: visible;
+    font-size: 0.86rem;
   }
   th,
   td {
-    padding: 3px 8px;
-    border-bottom: 1px solid var(--border);
-    text-align: left;
     white-space: nowrap;
+    padding: 8px 10px;
   }
   thead th {
     position: sticky;
     top: 0;
-    background: var(--surface-2);
+    z-index: 1;
   }
   tbody th {
-    font-weight: 500;
+    text-align: left;
+    font-weight: 550;
+    border-bottom: 1px solid var(--a-line);
+    background: var(--surface);
   }
-  .num,
-  .goal {
-    text-align: center;
+  tbody tr:hover th {
+    background: var(--hover);
+  }
+  .num {
+    text-align: right;
     font-variant-numeric: tabular-nums;
   }
-  .passed {
-    color: var(--distribution);
-    font-weight: 700;
+  th.goal {
+    text-align: center;
+    padding: 6px 4px;
   }
-  .failed,
-  .error {
-    color: var(--danger);
+  th.goal .link {
+    display: inline-grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    text-decoration: none;
+    font-weight: 600;
   }
-  .toolbar {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    align-items: center;
+  th.goal .link:hover {
+    background: var(--hover);
+  }
+  th.goal.col .link {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  th.goal.col {
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
+  }
+  td.goal {
+    padding: 4px 3px;
+    text-align: center;
   }
   .cell {
+    display: inline-grid;
+    place-items: center;
+    min-width: 30px;
+    min-height: 26px;
+    padding: 0 4px;
     border: 0;
-    background: none;
-    padding: 0 2px;
-    min-width: 1.6em;
-    color: inherit;
+    border-radius: 6px;
+    background: var(--surface-2);
+    color: var(--muted);
     font: inherit;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
     cursor: pointer;
+  }
+  .passed .cell {
+    background: var(--a-ok-soft);
+    color: var(--a-ok);
+  }
+  .partial .cell {
+    background: var(--a-warn-soft);
+    color: var(--a-warn);
+  }
+  .failed .cell {
+    background: var(--a-alert-soft);
+    color: var(--a-alert);
+  }
+  .manual .cell {
+    background: transparent;
+    border: 1px dashed var(--border);
+  }
+  .sel .cell {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+  td.col {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+  .grade {
+    display: inline-block;
+    min-width: 38px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-align: center;
+    font-weight: 650;
+    background: var(--a-ok-soft);
+    color: var(--a-ok);
+  }
+  .grade.low {
+    background: var(--a-alert-soft);
+    color: var(--a-alert);
+  }
+  .error {
+    color: var(--a-alert);
   }
   .link {
     border: 0;
     background: none;
     padding: 0;
+    min-height: 0;
     color: inherit;
     font: inherit;
     text-align: left;
     cursor: pointer;
     text-decoration: underline dotted;
   }
-  .partial {
-    color: #b45309;
-    font-weight: 600;
-  }
-  .manual {
-    color: var(--muted);
-  }
-  .sel {
-    outline: 2px solid var(--focus);
-  }
-  .warn {
-    color: #b45309;
-  }
   tr.similar th {
-    background: color-mix(in srgb, #f59e0b 12%, var(--surface));
+    background: var(--a-warn-soft);
+  }
+  .person {
+    margin-left: 6px;
+    font-weight: 650;
+  }
+  tbody th .pill {
+    margin-left: 6px;
   }
   .editor {
-    margin-top: 8px;
-    padding: 8px 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--surface-2);
-    font-size: 0.85rem;
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+    border-radius: var(--a-radius);
+    font-size: 0.9rem;
   }
   .editor p {
-    margin: 4px 0;
+    margin: 6px 0;
   }
   .fields {
     display: flex;
-    gap: 8px;
-    margin-top: 6px;
+    gap: 12px;
+    margin-top: 8px;
   }
   .fields label,
   .block {
     display: grid;
-    gap: 2px;
-    font-size: 0.78rem;
+    gap: 4px;
+    font-size: 0.82rem;
     color: var(--muted);
   }
   .fields input {
-    width: 7em;
+    width: 8em;
   }
   .fields .grow {
     flex: 1;
@@ -468,48 +650,60 @@
   }
   .block textarea {
     width: 100%;
-    min-height: 4em;
+    min-height: 5em;
   }
-  .names {
-    margin-top: 6px;
-    font-size: 0.85rem;
+  .legend {
+    margin: 14px 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: goal;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 4px 18px;
+    font-size: 0.84rem;
   }
-  .names textarea {
-    width: 100%;
-    font-family: ui-monospace, Consolas, monospace;
+  .legend li {
+    counter-increment: goal;
+    display: flex;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 6px;
   }
-  .person {
-    margin-left: 4px;
-    font-weight: 600;
+  .legend li::before {
+    content: counter(goal);
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 0.75rem;
+    font-weight: 650;
   }
-  th.col,
-  td.col {
-    background: color-mix(in srgb, var(--accent, #2563eb) 10%, transparent);
+  .pts {
+    margin-left: 6px;
+    color: var(--muted);
+    white-space: nowrap;
   }
   .legend li.active {
     color: var(--text);
-    font-weight: 600;
-    background: color-mix(in srgb, var(--accent, #2563eb) 14%, transparent);
-    border-radius: 4px;
-    outline: 2px solid color-mix(in srgb, var(--accent, #2563eb) 45%, transparent);
+    background: var(--selected-soft);
   }
-  .legend {
-    font-size: 0.75rem;
-    margin: 8px 0 0;
-    padding-left: 1.6em;
+  .legend li.active::before {
+    background: var(--accent);
+    color: var(--on-accent);
   }
   .actions {
     display: flex;
-    gap: 6px;
-    margin-top: 10px;
+    gap: 8px;
+    align-items: center;
+    padding: 14px 24px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
   }
-  .primary {
-    background: var(--accent);
-    color: var(--on-accent);
-    border-color: var(--accent);
-  }
-  .muted {
-    color: var(--muted);
-    font-size: 0.85rem;
+  .spacer {
+    flex: 1;
   }
 </style>

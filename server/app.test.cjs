@@ -358,6 +358,18 @@ test('Prüfung: Zeit ist Pflicht; Abgeben schliesst den Platz sofort, mit Zeitpu
   const subs = (await call('GET', `/api/admin/exams/${exam.id}/submissions`, null, token)).data;
   assert.equal(subs.submissions[0].project.topology.devices.length, 4);
   assert.equal(subs.submissions[0].submitted, sub.data.exam.submitted);
+  // Wieder öffnen (versehentlich abgegeben): mit der regulären Restzeit, der abgegebene Stand bleibt.
+  assert.equal((await call('POST', `/api/admin/exams/${exam.id}/seats/${exam.seats[1].id}/reopen`, {}, token)).data.error, 'notSubmitted');
+  const back = (await call('POST', `/api/admin/exams/${exam.id}/seats/${exam.seats[0].id}/reopen`, {}, token)).data;
+  assert.equal(back.seats[0].state, 'open');
+  assert.equal(back.seats[0].submitted, null);
+  assert.ok(back.seats[0].until > Date.now() + 18 * 60_000 && back.seats[0].until <= Date.now() + 20 * 60_000);
+  const resumed = (await call('POST', '/api/exams/join', { seatCode: exam.seats[0].code })).data;
+  assert.equal(resumed.exam.state, 'open');
+  assert.equal(resumed.project.topology.devices.length, 4);
+  assert.ok(resumed.writer);
+  // Nochmals abgeben, dann der bisherige Weg mit «+ Minuten».
+  assert.equal((await call('POST', `/api/sessions/${resumed.session}/submit`, {})).status, 200);
   // Mehr Zeit öffnet den Platz wieder (z.B. versehentlich abgegeben).
   const reopened = (await call('POST', `/api/admin/exams/${exam.id}/seats/${exam.seats[0].id}/extra`, { minutes: 5 }, token)).data;
   assert.equal(reopened.seats[0].state, 'open');

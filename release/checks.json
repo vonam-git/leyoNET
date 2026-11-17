@@ -1,6 +1,6 @@
 {
-  "version": "1.7.1",
-  "date": "2026-11-17T14:30:19.578Z",
+  "version": "1.7.2",
+  "date": "2026-11-17T15:19:59.357Z",
   "checks": [
     {
       "id": "privacy.noExternal",

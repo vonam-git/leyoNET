@@ -134,7 +134,7 @@
 
   function errorText(error: unknown): string {
     const code = (error as { code?: string }).code ?? 'other';
-    return t(`admin.exams.error.${['notAnExam', 'labelRequired', 'badSeats', 'badMinutes', 'keyMismatch', 'alreadyStarted', 'notStarted', 'unknownExam', 'tooLarge', 'examEnded'].includes(code) ? code : 'other'}`);
+    return t(`admin.exams.error.${['notAnExam', 'labelRequired', 'badSeats', 'badMinutes', 'keyMismatch', 'alreadyStarted', 'notStarted', 'unknownExam', 'tooLarge', 'examEnded', 'timeOver', 'notSubmitted'].includes(code) ? code : 'other'}`);
   }
 
   async function create(event: SubmitEvent) {
@@ -165,6 +165,18 @@
     } catch (error) {
       notify('error', errorText(error));
     }
+  }
+
+  /** Restzeit, die ein abgegebener Platz beim Wiederöffnen noch hat (Minuten, abgerundet). */
+  function regularLeft(s: Seat): number {
+    if (!open?.started) return 0;
+    return Math.floor((open.started + (open.minutes + (s.extra || 0)) * 60_000 - Date.now()) / 60_000);
+  }
+
+  function reopen(s: Seat) {
+    const min = regularLeft(s);
+    if (min < 1) return notify('error', t('admin.exams.error.timeOver'));
+    void act(`seats/${s.id}/reopen`, {}, t('admin.exams.reopenConfirm', { seat: s.id, min }));
   }
 
   async function remove(exam: Exam) {
@@ -361,6 +373,7 @@
           </td>
           <td class="actions">
             <span class="led" class:ok={s.online} title={s.online ? t('admin.exams.online') : t('admin.exams.offline')} aria-label={s.online ? t('admin.exams.online') : t('admin.exams.offline')} role="img"></span>
+            {#if s.submitted && open.state === 'running'}<button class="small" title={t('admin.exams.reopenHint')} onclick={() => reopen(s)}>{t('admin.exams.reopen')}</button>{/if}
             <button class="icon" disabled={!s.session || !onwatch} title={t('admin.exams.watchHint')} aria-label={`${t('admin.exams.watch')}: ${t('exam.seatWord')} ${s.id}`} onclick={() => s.session && onwatch?.(s.session, `${open?.label ?? ''} · ${t('exam.seatWord')} ${s.id}`)}><Icon name="eye" size={16} /></button>
             <button disabled={!s.joined} title={t('admin.exams.releaseHint')} onclick={() => act(`seats/${s.id}/release`, {}, t('admin.exams.releaseConfirm', { seat: s.id }))}>{t('admin.exams.release')}</button>
           </td>

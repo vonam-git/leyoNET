@@ -516,7 +516,7 @@
 </script>
 
 <svelte:window onpointerdown={touched} onkeydown={touched} />
-<div class="admin-page" class:gone={hidden}>
+<div class="admin-page admin-look" class:gone={hidden}>
   {#if examMode.active || !ui.online || !token}
     <div class="login-wrap">
       <div class="login-side" aria-hidden="true">

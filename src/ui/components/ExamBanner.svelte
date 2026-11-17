@@ -3,7 +3,7 @@
   import { dialogs } from '../state/dialogs.svelte';
   import { examMode } from '../state/exam.svelte';
   import { session } from '../state/session.svelte';
-  import { submitServerExam } from '../actions';
+  import { checkExamReopened, submitServerExam } from '../actions';
   import { locale } from '../../i18n';
 
   /** Leiste während einer Prüfung: Titel, Platz, Zeit und «Prüfung beenden» (Code der Lehrperson). */
@@ -12,6 +12,13 @@
   const server = $derived(exam?.server ?? null);
   const savedAgo = $derived(session.lastSaved ? Math.max(0, Math.round((examMode.now - session.lastSaved) / 1000)) : null);
   const submittedAt = $derived(server?.submitted ? new Date(server.submitted - (server.offset ?? 0)).toLocaleTimeString(locale() === 'en' ? 'en-GB' : 'de-CH', { hour: '2-digit', minute: '2-digit' }) : null);
+
+  // Abgegeben oder Zeit um: alle 15 Sekunden nachfragen, ob die Lehrperson den Platz wieder geöffnet hat.
+  $effect(() => {
+    if (server?.state !== 'closed') return;
+    const timer = setInterval(() => void checkExamReopened(), 15_000);
+    return () => clearInterval(timer);
+  });
 
   /** Abgeben: Nachfrage, dann schliesst der Server den Platz; hier beginnt eine leere Fläche. */
   let confirming = $state(false);
@@ -97,6 +104,9 @@
     border-color: #15803d;
     color: #fff;
     font-weight: 600;
+  }
+  .submit:hover:not(:disabled) {
+    background: #166534;
   }
   .confirm {
     font-weight: 600;
