@@ -1978,6 +1978,27 @@ async function adminExams(req, res, parts, method, who) {
     saveExam(exam);
     return json(res, 200, examSummary(exam, true));
   }
+  // Versehentlich abgegeben: Platz wieder öffnen, mit der Zeit, die ihm regulär noch bleibt
+  // (Prüfungszeit plus Nachteilsausgleich ab Start). Ist sie schon um, braucht es «+ Minuten».
+  // Das Gerät der Person lädt den abgegebenen Stand von selbst wieder (oder ein anderes mit dem Platz-Code).
+  if (parts[1] === 'seats' && parts[3] === 'reopen' && method === 'POST') {
+    const seat = exam.seats.find((s) => s.id === parts[2]);
+    if (!seat) return fail(res, 404, 'unknownSeat');
+    if (!exam.started || !seat.submitted) return fail(res, 409, 'notSubmitted');
+    const regular = exam.started + (exam.minutes + (seat.extra || 0)) * 60_000;
+    if (regular <= now + 30_000) return fail(res, 409, 'timeOver');
+    delete seat.submitted;
+    seat.until = regular;
+    const known = entries('sessions').find((x) => x.exam && x.exam.id === exam.id && x.exam.seat === seat.id);
+    const item = known && loadSession(known.code);
+    if (item) {
+      const { submitted: _s, writer: _w, ...rest } = item;
+      store('sessions', item.code, rest);
+      leases.delete(item.code);
+    }
+    saveExam(exam);
+    return json(res, 200, examSummary(exam, true));
+  }
   // Platz freigeben: z.B. Browser abgestürzt, die Person arbeitet an einem anderen Gerät weiter.
   if (parts[1] === 'seats' && parts[3] === 'release' && method === 'POST') {
     const seat = exam.seats.find((s) => s.id === parts[2]);

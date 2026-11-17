@@ -1,8 +1,7 @@
 <script lang="ts">
   import { codeInput } from '../codeInput';
-  import { chooseVariant, parseProject } from '../../core';
   import { t } from '../../i18n';
-  import { ensureProjectFeatures } from '../actions';
+  import { applyExamJoin, ensureProjectFeatures } from '../actions';
   import { editor } from '../state/editor.svelte';
   import { examMode } from '../state/exam.svelte';
   import { ApiError, session } from '../state/session.svelte';
@@ -36,27 +35,12 @@
         return;
       }
       waiting = null;
-      if (!data.session || !data.project) {
-        message = t('exam.join.closed');
+      const result = applyExamJoin(data, code);
+      if (result !== 'ok') {
+        message = t(result === 'closed' ? 'exam.join.closed' : 'exam.join.invalid');
         return;
       }
-      const parsed = parseProject(JSON.stringify(data.project));
-      if (!parsed.ok || !parsed.tasks?.exam) {
-        message = t('exam.join.invalid');
-        return;
-      }
-      let topology = parsed.topology;
-      let tasks = parsed.tasks;
-      if (tasks.exam?.variants && data.variant) {
-        const chosen = chooseVariant(tasks, data.variant);
-        if (chosen) {
-          tasks = chosen.tasks;
-          topology = chosen.topology ?? topology;
-        }
-      }
-      if (editor.acting) editor.setMode('design');
-      editor.replace(topology, { undoable: false, tasks, snapshots: parsed.snapshots ?? [] });
-      examMode.enterServer(tasks, code.trim().toUpperCase(), data.exam);
+      const tasks = editor.tasks!;
       ensureProjectFeatures(t(data.fresh ? 'exam.join.started' : 'exam.join.resumed', { title: tasks.title, seat: data.exam.seat }));
       onclose();
     } catch (error) {

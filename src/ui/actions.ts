@@ -1,4 +1,4 @@
-import { emptyTopology, parseProject, serializeProject, toPcapng } from '../core';
+import { chooseVariant, emptyTopology, parseProject, serializeProject, toPcapng } from '../core';
 import { t } from '../i18n';
 import { usedFeatures } from './features';
 import { errorText, featureName } from './labels';
@@ -9,7 +9,7 @@ import { editor } from './state/editor.svelte';
 import { simStore } from './state/sim.svelte';
 import { ui } from './state/ui.svelte';
 import { examMode } from './state/exam.svelte';
-import { session } from './state/session.svelte';
+import { session, type ExamJoin } from './state/session.svelte';
 
 /** Datei wählen lassen und als Text lesen (ohne Server, auch per file://). */
 export function pickFile(accept: string): Promise<{ name: string; text: string } | null> {
@@ -45,6 +45,47 @@ export async function submitServerExam(): Promise<boolean> {
   editor.replace(emptyTopology(), { undoable: false, tasks: null, snapshots: [] });
   editor.notify(t('exam.mode.submittedNotice'));
   return true;
+}
+
+/**
+ * Antwort auf «Prüfung beitreten» übernehmen: Aufgabe bzw. letzten Stand des Platzes laden und den
+ * Prüfungsmodus (Server) beginnen. 'invalid' = keine Prüfungsdatei, 'closed' = nichts zu laden.
+ */
+export function applyExamJoin(data: ExamJoin, seatCode: string): 'ok' | 'closed' | 'invalid' {
+  if (!data.session || !data.project) return 'closed';
+  const parsed = parseProject(JSON.stringify(data.project));
+  if (!parsed.ok || !parsed.tasks?.exam) return 'invalid';
+  let topology = parsed.topology;
+  let tasks = parsed.tasks;
+  if (tasks.exam?.variants && data.variant) {
+    const chosen = chooseVariant(tasks, data.variant);
+    if (chosen) {
+      tasks = chosen.tasks;
+      topology = chosen.topology ?? topology;
+    }
+  }
+  if (editor.acting) editor.setMode('design');
+  editor.replace(topology, { undoable: false, tasks, snapshots: parsed.snapshots ?? [] });
+  examMode.enterServer(tasks, seatCode.trim().toUpperCase(), data.exam);
+  return 'ok';
+}
+
+/**
+ * Nach der Abgabe bzw. am Ende der Zeit: nachfragen, ob die Lehrperson den Platz wieder geöffnet
+ * hat. Wenn ja, lädt der Platz den abgegebenen Stand und es geht mit der restlichen Zeit weiter.
+ */
+export async function checkExamReopened(): Promise<boolean> {
+  const server = examMode.active?.server;
+  if (!server || server.state !== 'closed') return false;
+  try {
+    const data = await session.joinExam(server.seatCode);
+    if (data.exam.state !== 'open') return false;
+    if (applyExamJoin(data, server.seatCode) !== 'ok') return false;
+    editor.notify(t('exam.mode.reopened'));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Speichern: zuerst nach dem Projektnamen fragen (vorausgefüllt). */

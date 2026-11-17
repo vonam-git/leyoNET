@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyTopology, evaluateTasks, parseProject, scoreOf, serializeProject, swissGrade } from '../core';
 import { setLocale } from '../i18n';
 import { HOLZER } from './catalogM117';
-import { EXAM_POINTS, buildExamSolution, buildExamTasks, checkExamSpec, randomExam, siteFacts, type ExamSpec } from './exam';
+import { EXAM_POINTS, buildExamSolution, buildExamTasks, checkExamSpec, examDescription, randomExam, siteFacts, type ExamSpec } from './exam';
 
 const SPECS: ExamSpec[] = [HOLZER, ...[1, 2, 3, 4].map((seed) => randomExam(seed, String(seed)))];
 
@@ -44,6 +44,21 @@ describe('Prüfungen «Firmennetz mit drei Standorten»', () => {
     const score = scoreOf(tasks, results);
     expect(score.points).toBe(EXAM_POINTS.total - 1 - 1 - 1);
     expect(swissGrade(score.points, EXAM_POINTS.total)).toBe(5.8);
+  });
+
+  it('Transitnetze: Aufgabe und Lernziele nennen nur Netz und Anschluss, die Hostadressen rechnen die Lernenden selbst', () => {
+    const spec = randomExam(21, 'H');
+    const text = [examDescription(spec), ...buildExamTasks(spec).goals.map((g) => g.text)].join('\n');
+    for (const net of spec.transfers) {
+      const [ip] = net.split('/');
+      const parts = ip!.split('.').map(Number);
+      const host = (n: number) => [...parts.slice(0, 3), parts[3]! + n].join('.');
+      expect(text).toContain(net);
+      expect(text).not.toContain(host(1) + '/');
+      expect(text).not.toContain(host(2) + '/');
+      expect(text).not.toMatch(new RegExp(`${host(1).replace(/\./g, '\\.')}(?!\\d)`));
+    }
+    expect(text).toContain('kleinsten Hostadresse');
   });
 
   it('Transitnetze: vertauschte Anschlüsse kosten nichts, falsch verbundene Router schon', () => {

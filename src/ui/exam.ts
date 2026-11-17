@@ -235,18 +235,11 @@ export function examDescription(spec: ExamSpec): string {
     t('exam.task'),
     t('exam.taskBuild'),
     t('exam.taskTransfers'),
+    // Nur beschrieben, keine Adressen: Die Lernenden rechnen die Hostadressen selbst aus
+    // (z.B. 10.10.10.4/30 → kleinste .5, zweitkleinste .6).
     ...TRANSFER_ENDS.map(([a, b], k) => {
       const [pa, pb] = transferPorts()[k]!;
-      const prefix = cidr(spec.transfers[k])!.prefix;
-      return t('exam.transferLine', {
-        network: spec.transfers[k],
-        a: routers[a]!,
-        pa: `eth${pa}`,
-        ipa: `${transferIp(spec.transfers[k], 1)}/${prefix}`,
-        b: routers[b]!,
-        pb: `eth${pb}`,
-        ipb: `${transferIp(spec.transfers[k], 2)}/${prefix}`,
-      });
+      return t('exam.transferLine', { network: spec.transfers[k], a: routers[a]!, pa: `eth${pa}`, b: routers[b]!, pb: `eth${pb}` });
     }),
     t('exam.taskPorts'),
     t('exam.taskIntranet', { site: spec.sites[2].name, router: s2.routerName, network: spec.intranet.network, web: spec.intranet.web, port: `eth${INTRANET_PORT}` }),
@@ -314,9 +307,9 @@ export function buildExamTasks(spec: ExamSpec): TaskSet {
     const rb = facts[b]!.routerName;
     const ipa = transferIp(net, 1);
     const ipb = transferIp(net, 2);
-    add(`t${k + 1}-a`, 1, t('exam.goal.transitIp', { name: ra, address: `${ipa}/${prefix}`, network: net }), { type: 'address', device: ra, address: `${ipa}/${prefix}` });
-    add(`t${k + 1}-b`, 1, t('exam.goal.transitIp', { name: rb, address: `${ipb}/${prefix}`, network: net }), { type: 'address', device: rb, address: `${ipb}/${prefix}` });
-    add(`t${k + 1}-link`, 1, t('exam.goal.transitLink', { a: ra, b: rb, ip: ipb }), { type: 'ping', from: ra, to: ipb });
+    add(`t${k + 1}-a`, 1, t('exam.goal.transitIp', { name: ra, network: net, which: t('exam.hostLowest') }), { type: 'address', device: ra, address: `${ipa}/${prefix}` });
+    add(`t${k + 1}-b`, 1, t('exam.goal.transitIp', { name: rb, network: net, which: t('exam.hostSecond') }), { type: 'address', device: rb, address: `${ipb}/${prefix}` });
+    add(`t${k + 1}-link`, 1, t('exam.goal.transitLink', { a: ra, b: rb }), { type: 'ping', from: ra, to: ipb });
   });
   section = t('exam.services');
   const s2 = facts[2]!;
