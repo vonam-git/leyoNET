@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>leyoNET – free network simulator for teaching computer networks</title>
-  <meta name="description" content="Free network simulator for teaching computer networks: build networks, follow every packet, check exercises automatically. Try it right in the browser, no account needed.">
+  <meta name="description" content="Free network simulator for teaching: build networks, follow every packet and check exercises automatically. Runs in the browser, no account needed.">
   <link rel="canonical" href="https://leyonet.ch/en/">
   <link rel="alternate" hreflang="de" href="https://leyonet.ch/">
   <link rel="alternate" hreflang="en" href="https://leyonet.ch/en/">
@@ -20,8 +20,8 @@
   <meta property="og:locale:alternate" content="de_CH">
   <meta property="og:site_name" content="leyoNET">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="../css/site.css?v=1.6.1">
-  <script src="../js/site.js?v=1.6.1" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.7.0">
+  <script src="../js/site.js?v=1.7.0" defer></script>
   <script type="application/ld+json">
   [
     {
@@ -37,7 +37,7 @@
       "license": "https://www.gnu.org/licenses/agpl-3.0.html",
       "url": "https://leyonet.ch/en/",
       "downloadUrl": "https://github.com/vonam-git/leyoNET/releases/latest",
-      "softwareVersion": "1.6.1",
+      "softwareVersion": "1.7.0",
       "inLanguage": ["de", "en"],
       "isAccessibleForFree": true,
       "keywords": "network simulator, network simulation, computer networks teaching, packet tracer alternative, subnetting, VLAN, OSI model, Wireshark, IPv6, OSPF",
@@ -184,6 +184,7 @@
           <button role="tab" id="tab-geraet" aria-controls="panel-views" aria-selected="false" data-img="geraetefenster" data-caption="Device window: routing table, OSPF neighbours and ARP table of a router while OSPF hellos travel through the network.">Device window</button>
           <button role="tab" id="tab-katalog" aria-controls="panel-views" aria-selected="false" data-img="katalog" data-caption="Exercise catalogue: over 70 exercises from one to five stars, with topics and search. Solved exercises stay marked.">Catalogue</button>
           <button role="tab" id="tab-dashboard" aria-controls="panel-views" aria-selected="false" data-img="dashboard" data-dark="same" data-caption="Class network: the dashboard for the projector shows which sites of the class are connected, online or done – computed in the simulation.">Dashboard</button>
+          <button role="tab" id="tab-admin" aria-controls="panel-views" aria-selected="false" data-img="admin" data-caption="Admin console at /admin: overview with the running exam (who is working, who has submitted, time left), classes, sessions and security with two-factor sign-in.">Admin console</button>
         </div>
         <figure class="shot" id="panel-views" role="tabpanel" aria-labelledby="tab-rz">
           <div class="window">
@@ -236,7 +237,7 @@
 
           <article class="teach-item">
             <h3>Exams without a pile of marking</h3>
-            <p>Every seat gets its own code and, if you like, its own variant. Work is saved every 20 seconds and handed in automatically when time is up.</p>
+            <p>Every seat gets its own code, an exam sheet to print and, if you like, its own variant. Work is saved every 20 seconds. Once submitted, nothing can be changed; the admin console shows live who is working and who submitted when.</p>
             <p>Extra time per seat with one click. The evaluation computes points and the grade on the Swiss scale, with partial points, follow-on errors and room for manual corrections.</p>
           </article>
         </div>
@@ -416,7 +417,7 @@ Content-Security-Policy:
     <section id="download" class="download">
       <div class="wrap">
         <h2>Get started</h2>
-        <p class="section-lead">The same program everywhere. Version <span data-version>1.6.1</span>.</p>
+        <p class="section-lead">The same program everywhere. Version <span data-version>1.7.0</span>.</p>
         <ul class="dl-list">
           <li class="dl-main">
             <div><h3>In the browser</h3><p>Start right away, save your work under a code, classes and exams via the server.</p></div>

@@ -1,4 +1,5 @@
 import { DEVICE_SPECS, hasCli, type Medium } from '../core';
+import { adminView, isAdminPage, openAdmin } from './adminPage.svelte';
 import { LOCALES, locale, setLocale, t, type Locale } from '../i18n';
 import { exportConfigText, exportNetDoc, exportPcap, loadFeatureFile, openProject, saveProject } from './actions';
 import { PROFILE_LEVELS } from './features';
@@ -154,7 +155,7 @@ const COMMANDS: Command[] = [
         if (ok) dialogs.show('examAi');
         else {
           editor.notify(t('examAi.needAdmin'), 'error');
-          dialogs.show('admin');
+          openAdmin();
         }
       }),
     visible: () => ui.online && ui.has('tool.taskEditor') && !!adminToken.value,
@@ -164,7 +165,8 @@ const COMMANDS: Command[] = [
   { id: 'tool.review', label: () => t('menu.tool.review'), run: () => dialogs.show('review'), visible: () => ui.has('tool.taskEditor') },
   { id: 'tool.features', label: () => t('menu.tool.features'), run: () => dialogs.show('features'), icon: 'layers' },
   { id: 'tool.loadFeatures', label: () => t('menu.tool.loadFeatures'), run: () => void loadFeatureFile(), enabled: () => !ui.locked },
-  { id: 'tool.admin', label: () => t('admin.menu'), keys: ['Alt+A'], run: () => dialogs.show('admin'), visible: () => ui.online, icon: 'lock' },
+  // Admin-Konsole: eigene Seite «/admin» in einem eigenen Tab (dort selbst: zurück zur Konsole).
+  { id: 'tool.admin', label: () => t('admin.menu'), keys: ['Alt+A'], run: () => (isAdminPage() ? adminView.show() : openAdmin()), visible: () => ui.online, icon: 'lock' },
 
   // Hilfe
   { id: 'help.help', label: () => t('menu.help.help'), keys: ['F1'], run: () => dialogs.showHelp(helpTopicFor()), icon: 'help' },

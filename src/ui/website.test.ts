@@ -73,6 +73,19 @@ describe('Website leyonet.ch', () => {
     expect(visible).not.toMatch(/[äöüÄÖÜ]|\b(und|der|die|das|nicht|mit|für)\b/);
   });
 
+  it('Suchmaschinen: Titel höchstens 65 und Beschreibung 50 bis 160 Zeichen auf allen Seiten', () => {
+    const files = readdirSync(join(root, 'website/httpdocs'), { recursive: true }).map(String).filter((f) => f.endsWith('.html'));
+    const bad: string[] = [];
+    for (const f of files) {
+      const html = readFileSync(join(root, 'website/httpdocs', f), 'utf8');
+      const unescape = (s: string) => s.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+      const title = unescape(/<title>([^<]*)<\/title>/.exec(html)?.[1] ?? '');
+      const desc = unescape(/<meta name="description" content="([^"]*)"/.exec(html)?.[1] ?? '');
+      if (title.length > 65 || desc.length > 160 || desc.length < 50) bad.push(`${f}: Titel ${title.length}, Beschreibung ${desc.length}`);
+    }
+    expect(bad).toEqual([]);
+  });
+
   it('Auffindbarkeit: Titel, Beschreibung und strukturierte Daten nennen Netzwerksimulator und die Module', () => {
     const de = read('index.html');
     expect(/<title>([^<]+)<\/title>/.exec(de)?.[1]).toMatch(/Netzwerksimulator.*M117.*M129.*M145/);

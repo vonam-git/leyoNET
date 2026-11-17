@@ -1,6 +1,6 @@
 {
-  "version": "1.6.1",
-  "date": "2026-11-16T17:27:34.335Z",
+  "version": "1.7.0",
+  "date": "2026-11-17T10:01:40.606Z",
   "checks": [
     {
       "id": "privacy.noExternal",
@@ -30,7 +30,7 @@
       "id": "privacy.storage",
       "category": "privacy",
       "status": "pass",
-      "detail": "Browser-Speicher nur für Technik: netzwerk-simulator.addresses, netzwerk-simulator.avatar, netzwerk-simulator.catalogDone, netzwerk-simulator.class, netzwerk-simulator.currency, netzwerk-simulator.exam, netzwerk-simulator.features, netzwerk-simulator.level, netzwerk-simulator.locale, netzwerk-simulator.panels, netzwerk-simulator.portChoice, netzwerk-simulator.portLabels, netzwerk-simulator.profile, netzwerk-simulator.session, netzwerk-simulator.sizes, netzwerk-simulator.theme, netzwerk-simulator.writer"
+      "detail": "Browser-Speicher nur für Technik: netzwerk-simulator.addresses, netzwerk-simulator.adminToken, netzwerk-simulator.avatar, netzwerk-simulator.catalogDone, netzwerk-simulator.class, netzwerk-simulator.currency, netzwerk-simulator.exam, netzwerk-simulator.features, netzwerk-simulator.level, netzwerk-simulator.locale, netzwerk-simulator.panels, netzwerk-simulator.portChoice, netzwerk-simulator.portLabels, netzwerk-simulator.profile, netzwerk-simulator.session, netzwerk-simulator.sizes, netzwerk-simulator.theme, netzwerk-simulator.writer"
     },
     {
       "id": "privacy.noIpLog",
@@ -60,7 +60,7 @@
       "id": "security.audit",
       "category": "security",
       "status": "pass",
-      "detail": "Build-Werkzeuge: 4 bekannte Schwachstellen (0 hoch/kritisch). Sie sind nicht in der ausgelieferten Datei."
+      "detail": "Keine bekannten Schwachstellen."
     },
     {
       "id": "security.headers",
@@ -108,7 +108,7 @@
       "id": "standards.registered",
       "category": "standards",
       "status": "pass",
-      "detail": "92 zitierte Normen, alle im Verzeichnis (72 RFCs, 17 IEEE/ITU-T/CableLabs)."
+      "detail": "94 zitierte Normen, alle im Verzeichnis (74 RFCs, 17 IEEE/ITU-T/CableLabs)."
     },
     {
       "id": "standards.reviewed",
