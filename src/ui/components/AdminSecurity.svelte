@@ -1,6 +1,7 @@
 <script lang="ts">
   import { locale, t } from '../../i18n';
   import { qrMatrix, qrPath } from '../qr';
+  import Icon from './Icon.svelte';
 
   /**
    * Admin-Konsole, Bereich «Sicherheit»: Zwei-Faktor-Anmeldung mit einer Authenticator-App
@@ -136,7 +137,7 @@
 
 {#if me}
   <section class="card" class:warn={!me.mfa.enabled}>
-    <h3>🔐 {t('admin.mfa.title')}</h3>
+    <h3 class="with-icon"><Icon name="shield" size={18} />{t('admin.mfa.title')}</h3>
     {#if me.mfa.setupNeeded}<p class="alert" role="alert">{t('admin.mfa.setupNeeded')}</p>{/if}
     <p class="status">
       {#if me.mfa.enabled}
@@ -153,7 +154,7 @@
         <p>{t('admin.mfa.recoveryHint')}</p>
         <ol>{#each recovery as r (r)}<li><code>{r}</code></li>{/each}</ol>
         <div class="row">
-          <button onclick={printCodes}>⬇ {t('admin.mfa.recoverySave')}</button>
+          <button onclick={printCodes}><Icon name="download" size={16} />{t('admin.mfa.recoverySave')}</button>
           <button onclick={() => (recovery = null)}>{t('admin.mfa.recoveryDone')}</button>
         </div>
       </div>
@@ -228,12 +229,17 @@
 {/if}
 
 <style>
-  .card {
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 16px;
-    margin-bottom: 12px;
+  .with-icon {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  section {
     background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--a-radius);
+    padding: 18px 20px;
+    margin: 0 0 var(--a-gap);
   }
   .card.warn {
     border-left: 4px solid #d97706;
@@ -313,20 +319,5 @@
     display: flex;
     gap: 6px;
     align-items: center;
-  }
-  .primary {
-    background: var(--accent);
-    color: var(--on-accent);
-    border-color: var(--accent);
-  }
-  .danger {
-    color: var(--danger);
-    border-color: var(--danger);
-  }
-  .muted {
-    color: var(--muted);
-  }
-  .small {
-    font-size: 0.78rem;
   }
 </style>

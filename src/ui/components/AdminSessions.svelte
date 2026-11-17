@@ -1,5 +1,6 @@
 <script lang="ts">
   import { locale, t } from '../../i18n';
+  import Icon from './Icon.svelte';
 
   /**
    * Admin-Konsole, Bereich «Sessions»: Kennzahlen und alle aktiven Sessions (ohne Inhalte).
@@ -101,69 +102,81 @@
   <p class="muted">{t('admin.loadFailed')}</p>
 {:else if stats}
   {@const c = stats.counts}
-  <div class="tiles">
-    <div class="tile"><span class="big">{stats.total}</span><span>{t('admin.stats.active')}</span></div>
-    <div class="tile live"><span class="big">{c.connected}</span><span>{t('admin.stats.connected')}</span></div>
-    <div class="tile"><span class="big">{c.changed24h}</span><span>{t('admin.stats.changed24h')}</span></div>
-    <div class="tile"><span class="big">{c.created24h}</span><span>{t('admin.stats.created24h', { week: c.created7d })}</span></div>
-    <div class="tile"><span class="big">{kb(c.bytes)}</span><span>{t('admin.stats.size')}</span></div>
-  </div>
-  <div class="split" aria-label={t('admin.stats.byKind')}>
-    {#each [['single', c.single], ['class', c.class], ['exam', c.exam]] as const as [k, n] (k)}
-      {#if n > 0}<span class="part {k}" style:flex={n}>{t(`admin.stats.kind.${k}`)} {n}</span>{/if}
-    {/each}
-  </div>
+  {@const kinds = [['single', c.single], ['class', c.class], ['exam', c.exam]] as const}
+  <section class="figures" aria-label={t('admin.stats.active')}>
+    <div class="fig main">
+      <span class="num">{stats.total}</span>
+      <span class="lbl">{t('admin.stats.active')}</span>
+      <div class="split" role="img" aria-label={`${t('admin.stats.byKind')}: ${kinds.map(([k, n]) => `${t(`admin.stats.kind.${k}`)} ${n}`).join(', ')}`}>
+        {#each kinds as [k, n] (k)}
+          {#if n > 0}<span class="part {k}" style:flex={n}></span>{/if}
+        {/each}
+      </div>
+      <div class="legend">
+        {#each kinds as [k, n] (k)}<span><i class="sw {k}"></i>{t(`admin.stats.kind.${k}`)} {n}</span>{/each}
+      </div>
+    </div>
+    <div class="fig"><span class="num"><span class="led" class:ok={c.connected > 0}></span>{c.connected}</span><span class="lbl">{t('admin.stats.connected')}</span></div>
+    <div class="fig"><span class="num">{c.changed24h}</span><span class="lbl">{t('admin.stats.changed24h')}</span></div>
+    <div class="fig"><span class="num">{c.created24h}</span><span class="lbl">{t('admin.stats.created24h', { week: c.created7d })}</span></div>
+    <div class="fig"><span class="num">{kb(c.bytes)}</span><span class="lbl">{t('admin.stats.size')}</span></div>
+  </section>
   {#if stats.storage}
     {@const st = stats.storage}
-    <p class="muted">{t('admin.storage', { mb: (st.bytes / 1048576).toFixed(1), max: Math.round(st.maxBytes / 1048576), n: st.sessions, maxN: st.maxSessions })}</p>
+    <p class="muted small">{t('admin.storage', { mb: (st.bytes / 1048576).toFixed(1), max: Math.round(st.maxBytes / 1048576), n: st.sessions, maxN: st.maxSessions })}</p>
   {/if}
 
   <div class="tools">
-    <div class="chips" role="radiogroup" aria-label={t('admin.stats.filter')}>
+    <div class="seg" role="radiogroup" aria-label={t('admin.stats.filter')}>
       {#each ['all', 'connected', 'single', 'class', 'exam'] as const as f (f)}
         <button role="radio" aria-checked={filter === f} class:on={filter === f} onclick={() => (filter = f)}>{t(`admin.stats.filter.${f}`)}</button>
       {/each}
     </div>
-    <input type="search" bind:value={search} placeholder={t('admin.stats.search')} aria-label={t('admin.stats.search')} />
-    <button class="ghost" onclick={() => void load()}>↻ {t('admin.refresh')}</button>
+    <label class="search">
+      <Icon name="search" size={16} />
+      <input type="search" bind:value={search} placeholder={t('admin.stats.search')} aria-label={t('admin.stats.search')} />
+    </label>
   </div>
 
   {#if rows.length === 0}
-    <p class="muted">{t('admin.stats.none')}</p>
+    <p class="empty">{t('admin.stats.none')}</p>
   {:else}
     <div class="scroll">
       <table>
         <thead>
           <tr>
-            <th>{t('admin.sessionCode')}</th><th>{t('admin.stats.kindCol')}</th><th>{t('admin.stats.group')}</th><th>{t('admin.stats.created')}</th><th>{t('admin.changed')}</th><th>{t('admin.until')}</th><th>{t('admin.stats.sizeCol')}</th><th></th>
+            <th>{t('admin.sessionCode')}</th><th>{t('admin.stats.group')}</th><th>{t('admin.changed')}</th><th>{t('admin.until')}</th><th class="num-col">{t('admin.stats.sizeCol')}</th><th><span class="visually-hidden">{t('admin.stats.actions')}</span></th>
           </tr>
         </thead>
         <tbody>
           {#each rows as r (r.code)}
             <tr>
-              <td class="code">
-                {#if r.connected}<span class="dot" title={t('admin.stats.connectedNow')} aria-label={t('admin.stats.connectedNow')}>●</span>{/if}
-                {r.code}
-                {#if r.locked}<span title={t('admin.stats.locked')} aria-label={t('admin.stats.locked')}>🔒</span>{/if}
-              </td>
-              <td><span class="kind {r.kind}">{t(`admin.stats.kind.${r.kind}`)}</span></td>
               <td>
-                {r.group ?? ''}{#if r.seat !== null}<span class="muted"> · {t('exam.seatWord')} {r.seat}</span>{/if}
-                {#if r.submitted}<span class="ok"> ✓ {t('admin.exams.seat.submittedAt', { time: fmt(r.submitted) })}</span>{/if}
+                <div class="who">
+                  <span class="led" class:ok={r.connected} title={r.connected ? t('admin.stats.connectedNow') : undefined}></span>
+                  <code>{r.code}</code>
+                  {#if r.locked}<span class="lock" title={t('admin.stats.locked')}><Icon name="lock" size={14} title={t('admin.stats.locked')} /></span>{/if}
+                </div>
               </td>
-              <td>{fmt(r.created)}</td>
-              <td>{fmt(r.updated)}</td>
-              <td>{fmt(r.expires)}</td>
-              <td>{kb(r.size)}</td>
+              <td>
+                <div class="group">
+                  <span class="pill kind {r.kind}">{t(`admin.stats.kind.${r.kind}`)}</span>
+                  <span>{r.group ?? ''}{#if r.seat !== null}<span class="muted"> · {t('exam.seatWord')} {r.seat}</span>{/if}</span>
+                  {#if r.submitted}<span class="pill ok">✓ {t('admin.exams.seat.submittedAt', { time: fmt(r.submitted) })}</span>{/if}
+                </div>
+              </td>
+              <td class="muted nowrap">{fmt(r.updated)}</td>
+              <td class="muted nowrap">{fmt(r.expires)}</td>
+              <td class="num-col muted">{kb(r.size)}</td>
               <td class="actions">
-                <button title={t('admin.exams.watchHint')} onclick={() => onwatch(r.code, label(r))}>👁 {t('admin.exams.watch')}</button>
+                <button class="icon" title={t('admin.exams.watchHint')} aria-label={`${t('admin.exams.watch')} ${r.code}`} onclick={() => onwatch(r.code, label(r))}><Icon name="eye" size={16} /></button>
                 {#if r.kind !== 'exam'}
-                  <button title={t('admin.stats.openHint')} onclick={() => onopen(r.code)}>{t('admin.open')}</button>
-                  <button title={t('admin.stats.extendHint', { n: 1 })} onclick={() => extend(r, 24)}>+1 {t('admin.stats.day')}</button>
-                  <button title={t('admin.stats.extendHint', { n: 7 })} onclick={() => extend(r, 24 * 7)}>+7</button>
-                  <button class="danger" title={t('admin.stats.deleteHint')} onclick={() => remove(r)}>{t('inspector.delete')}</button>
+                  <button class="icon" title={t('admin.stats.openHint')} aria-label={`${t('admin.open')} ${r.code}`} onclick={() => onopen(r.code)}><Icon name="external" size={16} /></button>
+                  <button class="small" title={t('admin.stats.extendHint', { n: 1 })} onclick={() => extend(r, 24)}>+1 {t('admin.stats.day')}</button>
+                  <button class="small" title={t('admin.stats.extendHint', { n: 7 })} onclick={() => extend(r, 24 * 7)}>+7</button>
+                  <button class="icon danger" title={t('admin.stats.deleteHint')} aria-label={`${t('inspector.delete')} ${r.code}`} onclick={() => remove(r)}><Icon name="trash" size={16} /></button>
                 {:else}
-                  <span class="muted small">{t('admin.stats.examOnly')}</span>
+                  <span class="muted small hint">{t('admin.stats.examOnly')}</span>
                 {/if}
               </td>
             </tr>
@@ -171,7 +184,7 @@
         </tbody>
       </table>
     </div>
-    {#if stats.total > stats.sessions.length}<p class="muted">{t('admin.stats.limited', { n: stats.sessions.length, total: stats.total })}</p>{/if}
+    {#if stats.total > stats.sessions.length}<p class="muted small">{t('admin.stats.limited', { n: stats.sessions.length, total: stats.total })}</p>{/if}
   {/if}
   <p class="muted small">{t('admin.stats.privacy')}</p>
 {:else}
@@ -179,142 +192,191 @@
 {/if}
 
 <style>
-  .tiles {
+  .figures {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px;
+    grid-template-columns: minmax(260px, 2fr) repeat(4, minmax(120px, 1fr));
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--a-radius);
     margin-bottom: 10px;
   }
-  .tile {
-    display: grid;
+  .fig {
+    display: flex;
+    flex-direction: column;
     gap: 2px;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--surface);
-    font-size: 0.8rem;
+    padding: 16px 20px;
+    border-left: 1px solid var(--a-line);
+  }
+  .fig.main {
+    border-left: none;
+  }
+  .num {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.7rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+  }
+  .lbl {
+    font-size: 0.82rem;
     color: var(--muted);
-  }
-  .tile .big {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text);
-    font-variant-numeric: tabular-nums;
-  }
-  .tile.live .big {
-    color: #15803d;
   }
   .split {
     display: flex;
     gap: 2px;
-    height: 22px;
-    border-radius: 6px;
+    height: 8px;
+    margin-top: 10px;
+    border-radius: 999px;
     overflow: hidden;
-    font-size: 0.72rem;
-    margin-bottom: 6px;
-  }
-  .part {
-    display: flex;
-    align-items: center;
-    padding: 0 6px;
-    white-space: nowrap;
-    overflow: hidden;
-    color: #fff;
+    background: var(--surface-2);
   }
   .part.single,
-  .kind.single {
-    background: #64748b;
+  .sw.single {
+    background: var(--a-idle);
   }
   .part.class,
-  .kind.class {
-    background: #2563eb;
+  .sw.class {
+    background: var(--accent);
   }
   .part.exam,
-  .kind.exam {
-    background: #7c3aed;
+  .sw.exam {
+    background: #7c4dcc;
   }
-  .kind {
-    color: #fff;
-    border-radius: 999px;
-    padding: 1px 8px;
-    font-size: 0.72rem;
-    white-space: nowrap;
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sw {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
   }
   .tools {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     align-items: center;
     flex-wrap: wrap;
-    margin: 10px 0;
+    margin: 18px 0 12px;
   }
-  .tools input {
+  .seg {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    background: var(--surface-2);
+    border-radius: 10px;
+  }
+  .seg button {
+    min-height: 30px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+  }
+  .seg button.on {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.12);
+  }
+  .search {
     flex: 1;
-    min-width: 160px;
-  }
-  .chips {
+    min-width: 200px;
     display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding-left: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--a-radius-s);
+    color: var(--muted);
   }
-  .chips button {
-    border-radius: 999px;
-    font-size: 0.8rem;
-    padding: 3px 10px;
+  .search input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding-left: 0;
   }
-  .chips .on {
-    background: var(--selected-soft);
+  .search:focus-within {
+    outline: 2px solid var(--accent);
     border-color: var(--accent);
+  }
+  .search input:focus-visible {
+    outline: none;
   }
   .scroll {
     overflow: auto;
-    max-height: 60vh;
+    max-height: 62vh;
+    border-radius: var(--a-radius);
   }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.82rem;
+  .scroll table {
+    margin: 0;
   }
-  th {
+  .scroll th {
     position: sticky;
     top: 0;
-    background: var(--surface);
-    text-align: left;
+    z-index: 1;
   }
-  th,
-  td {
-    padding: 4px 6px;
-    border-bottom: 1px solid var(--border);
+  .who,
+  .group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
-  .code {
-    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  .who {
     white-space: nowrap;
   }
-  .dot {
-    color: #16a34a;
+  .group {
+    flex-wrap: wrap;
   }
-  .ok {
-    color: #15803d;
-    font-weight: 600;
-  }
-  .actions {
+  .nowrap,
+  .num-col {
     white-space: nowrap;
-    text-align: right;
   }
-  .actions button {
-    font-size: 0.75rem;
-    padding: 2px 7px;
-  }
-  .danger {
-    color: var(--danger);
-    border-color: var(--danger);
-  }
-  .ghost {
-    border-style: dashed;
-  }
-  .muted {
+  .lock {
     color: var(--muted);
   }
-  .small {
-    font-size: 0.75rem;
+  .pill.kind.class {
+    background: var(--a-live-soft);
+    color: var(--a-live);
+  }
+  .pill.kind.exam {
+    background: color-mix(in srgb, #7c4dcc 14%, var(--surface));
+    color: #7c4dcc;
+  }
+  .num-col {
+    text-align: right;
+  }
+  .icon {
+    min-width: 32px;
+    padding: 0 8px;
+  }
+  .hint {
+    padding-right: 4px;
+  }
+  .empty {
+    padding: 28px;
+    text-align: center;
+    color: var(--muted);
+    border: 1px dashed var(--border);
+    border-radius: var(--a-radius);
+  }
+  @media (max-width: 900px) {
+    .figures {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .fig.main {
+      grid-column: 1 / -1;
+    }
+    .fig:nth-child(2) {
+      border-left: none;
+    }
   }
 </style>

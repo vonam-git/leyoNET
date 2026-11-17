@@ -86,7 +86,7 @@
 </script>
 
 <p class="muted">{t(role === 'super' ? 'admin.tenants.hintSuper' : 'admin.tenants.hintSchool')}</p>
-<form class="row" onsubmit={create}>
+<form class="row create" onsubmit={create}>
   <input bind:value={label} maxlength="40" required placeholder={t('admin.tenants.labelPlaceholder')} aria-label={t('admin.tenants.label')} />
   {#if role === 'super'}
     <select bind:value={kind} aria-label={t('admin.tenants.role')}>
@@ -102,7 +102,7 @@
   {/if}
   <button type="submit">{t('admin.tenants.create')}</button>
 </form>
-<p class="warn">⚠ {t('admin.tenants.noNames')}</p>
+<p class="warn">{t('admin.tenants.noNames')}</p>
 
 {#if shown}
   <div class="key" role="status">
@@ -141,10 +141,6 @@
 {/if}
 
 <style>
-  .muted {
-    color: var(--muted);
-    font-size: 0.82rem;
-  }
   .on {
     color: #15803d;
     font-weight: 600;
@@ -153,17 +149,26 @@
     color: #b45309;
     font-size: 0.8rem;
   }
-  .row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
+  .create {
+    padding: 14px 16px;
+    margin-bottom: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--a-radius);
+  }
+  .create input {
+    flex: 1;
+    min-width: 220px;
+  }
+  .warn {
+    margin-bottom: 18px;
   }
   .key {
-    margin: 10px 0;
-    padding: 10px 12px;
-    border: 2px solid var(--accent);
-    border-radius: 8px;
+    margin: 0 0 18px;
+    padding: 14px 16px;
+    background: var(--a-live-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+    border-radius: var(--a-radius);
   }
   code {
     display: block;
@@ -171,22 +176,5 @@
     font-size: 1rem;
     word-break: break-all;
     user-select: all;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-    margin-top: 8px;
-  }
-  th,
-  td {
-    text-align: left;
-    padding: 4px 6px;
-    border-bottom: 1px solid var(--border);
-  }
-  .actions {
-    display: flex;
-    gap: 4px;
-    justify-content: flex-end;
   }
 </style>

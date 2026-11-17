@@ -1,0 +1,279 @@
+/*
+ * Admin-Konsole (/admin): gemeinsames Aussehen aller Bereiche. Gleiche Farben wie der Editor
+ * (app.css), dazu Zustandsfarben wie bei Netzwerkgeräten: grün = Verbindung bzw. fertig,
+ * blau = Aktivität, bernstein = Achtung, grau = ruhend. Regeln mit :where(), damit einzelne
+ * Bereiche sie gezielt anpassen können.
+ */
+.admin-page {
+  --a-ok: #17803d;
+  --a-ok-soft: color-mix(in srgb, #17803d 12%, var(--surface));
+  --a-live: var(--accent);
+  --a-live-soft: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  --a-warn: #a85a08;
+  --a-warn-soft: color-mix(in srgb, #d98a14 16%, var(--surface));
+  --a-alert: #c62828;
+  --a-alert-soft: color-mix(in srgb, #c62828 10%, var(--surface));
+  --a-idle: #8a96a6;
+  --a-line: color-mix(in srgb, var(--border) 70%, transparent);
+  --a-radius: 12px;
+  --a-radius-s: 8px;
+  --a-gap: 16px;
+  font-size: 15px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .admin-page {
+    --a-ok: #4ade80;
+    --a-warn: #fbbf24;
+    --a-alert: #f87171;
+    --a-idle: #64748b;
+  }
+}
+:root[data-theme='dark'] .admin-page {
+  --a-ok: #4ade80;
+  --a-warn: #fbbf24;
+  --a-alert: #f87171;
+  --a-idle: #64748b;
+}
+
+/* --- Schrift ------------------------------------------------------------------------- */
+.admin-page :where(h2) {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+.admin-page :where(h3) {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  font-weight: 620;
+  letter-spacing: -0.005em;
+}
+.admin-page :where(p) {
+  margin: 0 0 10px;
+}
+.admin-page :where(.muted) {
+  color: var(--muted);
+}
+.admin-page :where(.small) {
+  font-size: 0.82rem;
+}
+.admin-page :where(code, .code) {
+  font-family: ui-monospace, 'Cascadia Mono', 'SF Mono', Consolas, monospace;
+  font-size: 0.88em;
+  letter-spacing: 0.02em;
+}
+
+/* --- Schaltflächen ------------------------------------------------------------------- */
+.admin-page :where(button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: var(--a-radius-s);
+  font-size: 0.88rem;
+  font-weight: 520;
+  white-space: nowrap;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+.admin-page :where(button.primary) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.admin-page :where(button.primary:hover:not(:disabled)) {
+  background: color-mix(in srgb, var(--accent) 86%, black);
+}
+.admin-page :where(button.danger) {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+.admin-page :where(button.danger:hover:not(:disabled)) {
+  background: color-mix(in srgb, var(--danger) 9%, var(--surface));
+}
+.admin-page :where(button.quiet, button.ghost) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+.admin-page :where(button.quiet:hover:not(:disabled), button.ghost:hover:not(:disabled)) {
+  background: var(--hover);
+  color: var(--text);
+}
+.admin-page :where(button.small, .actions button) {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 0.82rem;
+}
+
+/* --- Eingaben ------------------------------------------------------------------------ */
+.admin-page :where(input:not([type='checkbox'], [type='radio']), select, textarea) {
+  font: inherit;
+  font-size: 0.92rem;
+  min-height: 36px;
+  padding: 6px 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--a-radius-s);
+}
+.admin-page :where(input:not([type='checkbox'], [type='radio']), select) {
+  height: 36px;
+}
+.admin-page :where(input:not([type='checkbox'], [type='radio']), select, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+  border-color: var(--accent);
+}
+.admin-page :where(input[type='checkbox'], input[type='radio']) {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+.admin-page :where(label) {
+  font-size: 0.9rem;
+}
+
+/* --- Tabellen ------------------------------------------------------------------------ */
+.admin-page :where(table) {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--a-radius);
+  overflow: hidden;
+  margin: 0 0 var(--a-gap);
+}
+.admin-page :where(th) {
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.admin-page :where(td) {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--a-line);
+  vertical-align: middle;
+}
+.admin-page :where(tbody tr:last-child td) {
+  border-bottom: none;
+}
+.admin-page :where(tbody tr:hover td) {
+  background: var(--hover);
+}
+.admin-page :where(tr.active td) {
+  background: var(--selected-soft);
+}
+.admin-page :where(td.actions) {
+  text-align: right;
+  white-space: nowrap;
+}
+.admin-page :where(td.actions) > :where(*) {
+  vertical-align: middle;
+}
+.admin-page :where(td.actions) > :where(* + *) {
+  margin-left: 6px;
+}
+
+/* --- Flächen, Reihen, Hinweise -------------------------------------------------------- */
+.admin-page :where(.panel, .card) {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--a-radius);
+  padding: 18px 20px;
+  margin: 0 0 var(--a-gap);
+}
+.admin-page :where(.row) {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+}
+.admin-page :where(details) {
+  margin: 0 0 var(--a-gap);
+}
+.admin-page :where(summary) {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 4px 0;
+}
+.admin-page :where(fieldset) {
+  border: 1px solid var(--border);
+  border-radius: var(--a-radius-s);
+  padding: 10px 12px;
+}
+.admin-page :where(.pill) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.admin-page :where(.pill.ok) {
+  background: var(--a-ok-soft);
+  color: var(--a-ok);
+}
+.admin-page :where(.pill.live) {
+  background: var(--a-live-soft);
+  color: var(--a-live);
+}
+.admin-page :where(.pill.warn) {
+  background: var(--a-warn-soft);
+  color: var(--a-warn);
+}
+.admin-page :where(.pill.alert) {
+  background: var(--a-alert-soft);
+  color: var(--a-alert);
+}
+/* Leuchtdiode wie am Switch-Port: an, blinkend (Aktivität), aus. */
+.admin-page :where(.led) {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--a-idle);
+  flex: none;
+}
+.admin-page :where(.led.ok) {
+  background: var(--a-ok);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--a-ok) 22%, transparent);
+}
+.admin-page :where(.led.live) {
+  background: var(--a-live);
+  animation: admin-blink 1.6s steps(2, start) infinite;
+}
+.admin-page :where(.led.warn) {
+  background: var(--a-warn);
+}
+.admin-page :where(.led.alert) {
+  background: var(--a-alert);
+}
+@keyframes admin-blink {
+  to {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-page :where(.led.live) {
+    animation: none;
+  }
+}

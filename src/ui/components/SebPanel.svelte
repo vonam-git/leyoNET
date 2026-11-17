@@ -53,7 +53,7 @@
 </script>
 
 <section class="seb" data-help="exam">
-  <h4>🔒 {t('seb.title')}</h4>
+  <h4>{t('seb.title')}</h4>
   {#if !exam.seb}
     <p class="muted">{t('seb.off')}</p>
     <button disabled={exam.state === 'ended'} onclick={() => onchange(true)}>{t('seb.enable')}</button>
@@ -68,7 +68,7 @@
     </div>
     <div class="row">
       <button onclick={regenerate} title={t('seb.regenerateHint')}>🎲 {t('seb.regenerate')}</button>
-      <button class="primary" disabled={busy} onclick={download}>⬇ {t('seb.download')}</button>
+      <button class="primary" disabled={busy} onclick={download}>{t('seb.download')}</button>
       <button onclick={notes}>📝 {t('seb.notes')}</button>
       <button disabled={exam.state === 'ended'} onclick={() => onchange(true, t('seb.newKeyConfirm'))} title={t('seb.newKeyHint')}>{t('seb.newKey')}</button>
       <button disabled={exam.state !== 'ready'} onclick={() => onchange(false, t('seb.disableConfirm'))}>{t('seb.disable')}</button>

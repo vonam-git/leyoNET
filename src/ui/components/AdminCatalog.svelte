@@ -58,10 +58,6 @@
 {/each}
 
 <style>
-  .muted {
-    color: var(--muted);
-    font-size: 0.82rem;
-  }
   .verbund {
     display: flex;
     gap: 6px;
@@ -103,9 +99,5 @@
   .row {
     display: flex;
     gap: 6px;
-  }
-  .small {
-    font-size: 0.75rem;
-    padding: 1px 8px;
   }
 </style>
