@@ -58,10 +58,13 @@ Im Aufgabenkatalog erscheinen Verbund-Übungen nur in einer Klasse mit freigegeb
 - **Standort an die Zentrale anschliessen** (★★): Anschluss markieren, Adressen eintragen, NAT; PC erreicht die Zentrale.
 - **Standort mit DHCP und Namen der Zentrale** (★★★): DHCP-Pool am Standort-Router mit DNS der Zentrale; das Notebook ruft http://zentrale.verbund.example/ auf. Die Vorlage der Infrastruktur macht die Zentrale dafür zum DNS-Server.
 - **Eigenen Webserver im Verbund veröffentlichen** (★★★): Portweiterleitung, damit die Zentrale die Webseite des Standorts abruft.
+- **Fehlersuche im Verbund-Standort** (★★★★): Ein fertig eingerichteter Standort (Standort-Router mit Anschluss, NAT und Portweiterleitung, Webserver 192.168.50.80, Server «Dienste» 192.168.50.53 mit DHCP für das Notebook und DNS) mit **5 eingebauten Fehlern, an jedem Platz andere**. Der Startwert hängt von Platznummer und Klassencode ab: Nachbarn haben andere Fehler, beim erneuten Öffnen bleiben sie gleich, eine andere Klasse bekommt eine andere Verteilung. Mögliche Fehler: Maske oder Gateway eines Endgeräts, LAN-Adresse des Routers, abgeschalteter Switch-Port, fehlendes Kabel, DHCP mit falschem Gateway oder DNS, falscher DNS-Eintrag, Portweiterleitung auf den falschen Rechner, fehlende Standardroute. Die Fehlerziele heissen nur «Fehler 1 von 5 behoben»; der Tipp (💡) nennt das Gerät, nicht die Lösung. Jeder Fehler wird einzeln an der Konfiguration geprüft, unabhängig von den anderen. Vorher dem Verbund beitreten, dann die Übung öffnen (die Adressen des Platzes sind schon eingetragen).
+
+Auf dem **Dashboard** zeigt jede Kachel einer Fehlersuche statt der Lernziele **«Fehler behoben n/5»** als fünf Felder: gelb = behoben, alle grün = fertig. Der Standort wird erst grün («fertig»), wenn alle Ziele erfüllt sind. Die Zahlen meldet der Browser der Lernenden beim Prüfen (wie die Lernziele, zwei kleine Zahlen); Platz und Stufe rechnet das Dashboard selbst.
 
 Jede Verbund-Übung zeigt im Aufgabenfenster den Kasten **«Dein Platz im Klassen-Verbund»**: Platznummer und Gruppe, Transitnetz, WAN-Adresse, Provider und Zentrale für genau diesen Platz, dazu das Ziel in einem Satz. Wer noch keiner Klasse beigetreten ist oder wessen Lehrperson noch keine Infrastruktur geladen hat, liest dort, was fehlt. Der Auftrag selbst ist gegliedert in «Worum es geht», «Dein Auftrag» und «Fertig bist du, wenn».
 
-Die Musterlösungen im Arbeitsblatt zeigen die Adressen von Platz 1.
+Die Musterlösungen im Arbeitsblatt zeigen die Adressen von Platz 1 (bei der Fehlersuche auch die Fehler von Platz 1 ohne Klassencode).
 
 ## Aufgaben ein- und ausblenden
 

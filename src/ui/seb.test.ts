@@ -1,7 +1,7 @@
 import { createDecipheriv, createHmac, pbkdf2Sync, timingSafeEqual } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { SEB_KEY, randomPassword, sebFile, sha256Hex } from './seb';
+import { SEB_KEY, cleanSebSettings, isSebHash, randomPassword, sebFile, sebPlist, sha256Hex, validSebHost } from './seb';
 
 /** Unabhängig nachgebaute Entschlüsselung nach der SEB-Dokumentation (Node statt Web Crypto). */
 function decrypt(block: Buffer, password: string): Buffer {
@@ -60,5 +60,36 @@ describe('Safe Exam Browser', () => {
     expect(plist).toContain('?a=1&amp;b=%3C2%3E');
     expect(SEB_KEY.test('a'.repeat(64))).toBe(true);
     expect(SEB_KEY.test('A'.repeat(64))).toBe(false);
+  });
+
+  it('fertigen SHA-256-Hash übernimmt die Datei unverändert (Kleinbuchstaben), Klartext wird gehasht', async () => {
+    const hash = (await sha256Hex('geheim')).toUpperCase();
+    expect(isSebHash(hash)).toBe(true);
+    expect(isSebHash('geheim')).toBe(false);
+    const plist = await sebPlist({ startUrl: url, adminPassword: hash, quitPassword: 'ende' });
+    expect(plist).toContain(`<key>hashedAdminPassword</key>\n\t<string>${hash.toLowerCase()}</string>`);
+    expect(plist).toContain(`<key>hashedQuitPassword</key>\n\t<string>${await sha256Hex('ende')}</string>`);
+  });
+
+  it('Einstellungen landen unter den SEB-Schlüsseln, Beenden-Link nur mit allowQuit', async () => {
+    const plist = await sebPlist({ startUrl: url, settings: { reload: false, displays: 2, video: true, extraHosts: ['formeln.example/m117'], quitLink: true } });
+    expect(plist).toContain('<key>browserWindowAllowReload</key>\n\t<false/>');
+    expect(plist).toContain('<key>showReloadButton</key>\n\t<false/>');
+    expect(plist).toContain('<key>allowedDisplaysMaxNumber</key>\n\t<integer>2</integer>');
+    expect(plist).toContain('<key>allowVideoCapture</key>\n\t<true/>');
+    expect(plist).toContain('<string>formeln.example/m117</string>');
+    expect(plist).toContain('<key>quitURL</key>\n\t<string>https://app.leyonet.example/?seb-ende=1</string>');
+    const closed = await sebPlist({ startUrl: url, settings: { allowQuit: false } });
+    expect(closed).toContain('<key>allowQuit</key>\n\t<false/>');
+    expect(closed).toContain('<key>quitURL</key>\n\t<string></string>');
+  });
+
+  it('gespeicherte Einstellungen werden bereinigt: nur gültige Adressen, 1 bis 4 Bildschirme', () => {
+    const c = cleanSebSettings({ displays: 9, reload: 'ja', extraHosts: ['javascript:alert(1)', 'x', 'ok.example', '*.example', 'a.example/<b>'], zoom: false });
+    expect(c.displays).toBe(1);
+    expect(c.reload).toBe(true);
+    expect(c.zoom).toBe(false);
+    expect(c.extraHosts).toEqual(['ok.example']);
+    expect(validSebHost('schule.example:8443/pfad')).toBe(true);
   });
 });

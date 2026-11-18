@@ -44,8 +44,9 @@ import { M129 } from './catalogM129';
 import { M145 } from './catalogM145';
 import { ADVANCED } from './catalogAdvanced';
 import { VERBUND_HUB_IP, VERBUND_HUB_NAME } from './verbundTemplate';
+import { VERBUND_FAULT_ENTRIES } from './catalogVerbundFaults';
 
-export type { CatalogEntry } from './catalogKit';
+export type { CatalogContext, CatalogEntry } from './catalogKit';
 
 const ENTRIES: CatalogEntry[] = [
   {
@@ -1149,6 +1150,7 @@ const ENTRIES: CatalogEntry[] = [
       };
     },
   },
+  ...VERBUND_FAULT_ENTRIES,
   ...ADVANCED,
   ...M117,
   ...M129,

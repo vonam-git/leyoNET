@@ -53,6 +53,8 @@ const BY_CHECK: Record<string, string> = {
   vlanDocumented: 'vlan',
   noStorm: 'stp',
   seenAs: 'nat',
+  portForward: 'nat',
+  defaultRoute: 'routing',
   areaNote: 'subnetting',
   inNetwork: 'subnetting',
   budget: 'planung',

@@ -47,7 +47,15 @@ export interface CatalogEntry {
   sheet?: string;
   /** Verbund-Aufgabe: nur in einer Klasse mit freigegebenem Klassen-Verbund sinnvoll. */
   verbund?: boolean;
-  build(): { topology: Topology; tasks: TaskSet };
+  /** `ctx`: Platz im Klassen-Verbund und Klassencode (für Übungen, die pro Platz anders sind). */
+  build(ctx?: CatalogContext): { topology: Topology; tasks: TaskSet };
+}
+
+export interface CatalogContext {
+  /** Platz im Klassen-Verbund (1–62). */
+  seat?: number;
+  /** Zusätzlicher Startwert, z.B. der Klassencode: jede Klasse bekommt andere Fehler. */
+  salt?: string;
 }
 
 /** Name des automatisch erzeugten Arbeitsblatts einer Übung ohne Modulreihe. */

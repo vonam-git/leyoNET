@@ -72,6 +72,10 @@ export type Check =
   | { type: 'dhcpServer'; device: string; start: string; end: string; gateway?: string; dns?: string }
   /** DNS-Server hat einen A-Eintrag (Name → Adresse). */
   | { type: 'dnsRecord'; device: string; name: string; value: string }
+  /** Portweiterleitung am Router: TCP-Port an die interne Adresse `to` (Konfiguration). */
+  | { type: 'portForward'; device: string; port: number; to: string }
+  /** Standardroute 0.0.0.0/0 über `gateway` (Konfiguration). */
+  | { type: 'defaultRoute'; device: string; gateway: string }
   /** Bereich auf der Zeichenfläche: Titel enthält den Text, optional Farbe und Netz. */
   | { type: 'area'; title: string; color?: TagColor; network?: string }
   /** Mehrere Pings auf einmal; Teilpunkte je erfolgreichem Paar. */
@@ -123,6 +127,8 @@ export const CHECK_TYPES = [
   'address',
   'dhcpServer',
   'dnsRecord',
+  'portForward',
+  'defaultRoute',
   'area',
   'pings',
   'areaNote',
@@ -685,6 +691,18 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       const found = device.dnsServer.records.some((r) => r.type === 'A' && r.name === name && sameIp(r.value, check.value));
       return found ? { id, passed: true } : fail(id, 'dnsRecordMissing', { name: device.name, record: `${name} → ${check.value}` });
     }
+    case 'portForward': {
+      const device = need(check.device);
+      if (!device) return missing(check.device);
+      const found = (device.portForwards ?? []).some((f) => f.protocol === 'tcp' && f.port === check.port && sameIp(f.to, check.to));
+      return found ? { id, passed: true } : fail(id, 'portForwardMissing', { name: device.name, port: check.port, to: check.to });
+    }
+    case 'defaultRoute': {
+      const device = need(check.device);
+      if (!device) return missing(check.device);
+      const found = (device.routes ?? []).some((r) => sameIp(r.network, '0.0.0.0') && sameIp(r.mask, '0.0.0.0') && sameIp(r.gateway, check.gateway));
+      return found ? { id, passed: true } : fail(id, 'defaultRouteMissing', { name: device.name, gateway: check.gateway });
+    }
     case 'area': {
       const wanted = check.title.trim().toLowerCase();
       const areas = (topology.areas ?? []).filter((a) => a.kind !== 'rack' && a.title.toLowerCase().includes(wanted));
@@ -913,6 +931,15 @@ export function readTasks(value: unknown, invalid: (path: string) => never, read
         }
         case 'dnsRecord':
           check = { type, device: str(c.device, `${cp}.device`), name: str(c.name, `${cp}.name`), value: str(c.value, `${cp}.value`) };
+          break;
+        case 'portForward': {
+          const port = optNum(c.port, `${cp}.port`);
+          if (port === undefined || !Number.isInteger(port) || port < 1 || port > 65535) invalid(`${cp}.port`);
+          check = { type, device: str(c.device, `${cp}.device`), port: port!, to: str(c.to, `${cp}.to`) };
+          break;
+        }
+        case 'defaultRoute':
+          check = { type, device: str(c.device, `${cp}.device`), gateway: str(c.gateway, `${cp}.gateway`) };
           break;
         case 'area': {
           if (c.color !== undefined && !(TAG_COLOR_NAMES as readonly unknown[]).includes(c.color)) invalid(`${cp}.color`);

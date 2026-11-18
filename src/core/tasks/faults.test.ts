@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDnsRecord, createVlan, setDhcpServer, setDnsServerEnabled, setPortTrunk, setPortVlan, setRoutingMode } from '../model/topology';
+import { addDnsRecord, addPortForward, addStaticRoute, createVlan, setDhcpServer, setDnsServerEnabled, setPortTrunk, setPortVlan, setRoutingMode } from '../model/topology';
 import { NetBuilder, unwrap } from '../sim/testing';
 import { FAULT_KINDS, injectFaults } from './faults';
 import { evaluateGoal } from './tasks';
@@ -55,7 +55,29 @@ describe('Fehlersuche: Fehler einbauen', () => {
     const original = sites();
     const seen = new Set<string>();
     for (let seed = 1; seed <= 40; seed++) for (const f of injectFaults(original, { seed, count: 5 }).faults) seen.add(f.kind);
-    expect([...seen].sort()).toEqual(FAULT_KINDS.filter((k) => k !== 'accessVlan' && k !== 'trunkVlan').sort());
+    expect([...seen].sort()).toEqual(FAULT_KINDS.filter((k) => !['accessVlan', 'trunkVlan', 'portForward', 'defaultRoute'].includes(k)).sort());
+  });
+
+  it('Router mit Internet: Portweiterleitung zeigt falsch, Standardroute fehlt', () => {
+    const n = new NetBuilder();
+    const r = n.router('Router', ['192.168.1.1/24', '203.0.113.2/30']);
+    const sw = n.add('switch', 'SW');
+    const web = n.host('Web', '192.168.1.80', '24', '192.168.1.1');
+    n.link(r, sw);
+    n.link(web, sw);
+    n.apply((t) => addStaticRoute(t, r, { network: '0.0.0.0', mask: '0.0.0.0', gateway: '203.0.113.1' }));
+    n.apply((t) => addPortForward(t, r, { protocol: 'tcp', port: 80, to: '192.168.1.80', toPort: 80 }));
+    const original = n.topology;
+    const { topology, faults } = injectFaults(original, { seed: 3, count: 1, kinds: ['portForward'] });
+    expect(faults[0]!.check).toEqual({ type: 'portForward', device: 'Router', port: 80, to: '192.168.1.80' });
+    expect(topology.devices.find((d) => d.name === 'Router')!.portForwards![0]!.to).not.toBe('192.168.1.80');
+    const route = injectFaults(original, { seed: 3, count: 1, kinds: ['defaultRoute'] });
+    expect(route.faults[0]!.check).toEqual({ type: 'defaultRoute', device: 'Router', gateway: '203.0.113.1' });
+    for (const [broken, fault] of [[topology, faults[0]!], [route.topology, route.faults[0]!]] as const) {
+      const goal = { id: 'f', text: '', check: fault.check };
+      expect(evaluateGoal(broken, goal).passed).toBe(false);
+      expect(evaluateGoal(original, goal).passed).toBe(true);
+    }
   });
 
   it('VLAN-Fehler: Access-Port im falschen VLAN, Trunk lässt ein VLAN nicht durch', () => {

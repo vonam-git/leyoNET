@@ -182,6 +182,12 @@ test('Admin: Anmeldung, Einstellungen, Klassen, Rückmeldungen', async () => {
   assert.equal(sessions.length, 1);
   assert.equal(sessions[0].devices, 4);
   assert.equal((await call('GET', `/api/admin/sessions/${s1.code}`, null, token)).data.project.topology.devices.length, 4);
+  // Fortschritt mit Fehlersuche: nur gültige kleine Zahlen werden übernommen.
+  await call('PUT', `/api/sessions/${s1.code}`, { project: project(4), progress: { goals: 3, total: 9, faults: { fixed: 2, total: 5 } } });
+  assert.deepEqual((await call('GET', `/api/admin/classes/${cls.code}/sessions`, null, token)).data[0].progress, { goals: 3, total: 9, faults: { fixed: 2, total: 5 } });
+  await call('PUT', `/api/sessions/${s1.code}`, { project: project(4), progress: { goals: 3, total: 9, faults: { fixed: 7, total: 5, x: '<b>' } } });
+  assert.deepEqual((await call('GET', `/api/admin/classes/${cls.code}/sessions`, null, token)).data[0].progress, { goals: 3, total: 9 });
+  await call('POST', `/api/admin/classes/${cls.code}/status`, { sites: { 1: { level: 'done', goals: 9, total: 9, faults: { fixed: 5, total: 5 } }, 2: { level: 'x', faults: { fixed: -1, total: 5 } } } }, token);
 
   // Klasse schliessen löscht auch ihre Sessions.
   await call('DELETE', `/api/admin/classes/${cls.code}`, null, token);
@@ -529,4 +535,48 @@ test('Klasse: Gültigkeit beim Anlegen wählen und später verlängern (höchste
   assert.equal((await call('PATCH', `/api/admin/classes/${created.code}`, { extendDays: '7' }, token)).data.error, 'badDays');
   // Ohne Anmeldung nicht möglich.
   assert.equal((await call('PATCH', `/api/admin/classes/${created.code}`, { extendDays: 7 })).status, 401);
+});
+
+test('Prüfung: Code zum Beenden wird auf dem Server geprüft, mit begrenzten Versuchen und Sperre', async () => {
+  const { token } = (await call('POST', '/api/admin/login', { password: 'test-admin-passwort' })).data;
+  const crypto = require('node:crypto');
+  const unlock = crypto.createHash('sha256').update('leyonet-pruefung:AB12CD').digest('hex');
+  const learner = { ...project(0), tasks: { title: 'Code', goals: [], exam: { id: 'P-CODE', variant: '1', unlock } } };
+  assert.equal((await call('POST', '/api/admin/exams', { label: 'X', learner, seats: 1, minutes: 20, unlock: { attempts: 0, lockMinutes: 5 } }, token)).data.unlock.attempts, 5);
+  const exam = (await call('POST', '/api/admin/exams', { label: 'Code', learner, seats: 2, minutes: 20, unlock: { attempts: 2, lockMinutes: 0 }, seb: true, sebQuitLink: true }, token)).data;
+  assert.deepEqual(exam.unlock, { attempts: 2, lockMinutes: 0 });
+  assert.equal(exam.seb.quitLink, true);
+  await call('POST', `/api/admin/exams/${exam.id}/start`, {}, token);
+  // Ohne SEB kein Beitritt; SEB-Pflicht wieder aus, um den Ablauf ohne SEB zu testen.
+  await call('POST', `/api/admin/exams/${exam.id}/seb`, { on: false }, token);
+  const join = (await call('POST', '/api/exams/join', { seatCode: exam.seats[0].code })).data;
+  assert.equal(join.exam.unlock.left, 2);
+  assert.equal(join.exam.sebQuit, undefined);
+  // Fremdes Gerät (ohne Schreib-Token) darf nicht raten.
+  const foreign = await fetch(`${base}/api/sessions/${join.session}/unlock`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"code":"AB12CD"}' });
+  assert.equal(foreign.status, 409);
+  const w1 = await call('POST', `/api/sessions/${join.session}/unlock`, { code: 'falsch' });
+  assert.equal(w1.status, 403);
+  assert.equal(w1.data.exam.unlock.left, 1);
+  await call('POST', `/api/sessions/${join.session}/unlock`, { code: 'auch falsch' });
+  // Gesperrt (0 Minuten = bis zur Freigabe): auch der richtige Code geht nicht mehr.
+  const locked = await call('POST', `/api/sessions/${join.session}/unlock`, { code: 'ab12 cd' });
+  assert.equal(locked.status, 423);
+  assert.equal(locked.data.exam.unlock.lockedUntil, -1);
+  const seats = (await call('GET', `/api/admin/exams/${exam.id}`, null, token)).data.seats;
+  assert.equal(seats[0].unlockLocked, true);
+  assert.equal(seats[0].unlockFails, 2);
+  await call('POST', `/api/admin/exams/${exam.id}/seats/${seats[0].id}/unlock-reset`, {}, token);
+  const ok = await call('POST', `/api/sessions/${join.session}/unlock`, { code: 'ab12 cd' });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.data.ok, true);
+  // Regel ändern; ungültige Werte abgewiesen.
+  assert.equal((await call('POST', `/api/admin/exams/${exam.id}/unlock`, { attempts: 99, lockMinutes: 1 }, token)).status, 400);
+  assert.deepEqual((await call('POST', `/api/admin/exams/${exam.id}/unlock`, { attempts: 3, lockMinutes: 15 }, token)).data.unlock, { attempts: 3, lockMinutes: 15 });
+  // Beenden-Link nur mit SEB; Schlüssel bleibt beim Umschalten.
+  assert.equal((await call('POST', `/api/admin/exams/${exam.id}/seb`, { quitLink: true }, token)).status, 409);
+  const on = (await call('POST', `/api/admin/exams/${exam.id}/seb`, { on: true }, token)).data;
+  const toggled = (await call('POST', `/api/admin/exams/${exam.id}/seb`, { quitLink: true }, token)).data;
+  assert.equal(toggled.seb.key, on.seb.key);
+  assert.equal(toggled.seb.quitLink, true);
 });

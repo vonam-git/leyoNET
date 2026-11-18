@@ -128,7 +128,8 @@ class SessionStore {
   /** Platz und Gruppe im Klassen-Verbund (vom Server vergeben). */
   site = $state<{ seat: number; label: string } | null>(null);
   /** Erreichte Lernziele (nach «Prüfen»), wird mit dem Projekt gespeichert. */
-  progress: { goals: number; total: number } | null = null;
+  /** Erreichte Lernziele; `faults`: davon behobene Fehler (Fehlersuche, für das Dashboard). */
+  progress: { goals: number; total: number; faults?: { fixed: number; total: number } } | null = null;
   /** Einstellungen der Klasse: ausgeblendete Aufgaben, Verbund freigegeben. */
   classSettings = $state.raw<ClassSettings | null>(null);
   expires = $state<number | null>(null);
@@ -345,6 +346,22 @@ class SessionStore {
       }
       this.status = 'error';
       return null;
+    }
+  }
+
+  /** Code zum Beenden des Prüfungsmodus auf dem Server prüfen (begrenzte Versuche). */
+  async unlockExam(code: string): Promise<'ok' | 'wrong' | 'locked' | 'error'> {
+    if (!this.code) return 'error';
+    try {
+      const data = await api<{ ok: boolean; exam: SeatStatus }>('POST', `sessions/${this.code}/unlock`, { code }, undefined, this.#headers());
+      examMode.updateServer(data.exam);
+      return 'ok';
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 403 || error.status === 423) && error.data.exam) {
+        examMode.updateServer(error.data.exam as SeatStatus);
+        return error.status === 423 ? 'locked' : 'wrong';
+      }
+      return 'error';
     }
   }
 

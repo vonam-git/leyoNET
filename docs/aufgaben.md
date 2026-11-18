@@ -82,6 +82,8 @@ Statische Prüfungen schauen nur auf das gebaute Netz. **Dynamische** Prüfungen
 | `address` | `device`, `address` (z.B. `"10.33.0.1/22"`) | ein Anschluss des Geräts genau diese Adresse mit diesem Präfix hat |
 | `dhcpServer` | `device`, `start`, `end`, `gateway`?, `dns`? | der DHCP-Server mit diesem Bereich (und optional diesen Optionen) eingerichtet ist |
 | `dnsRecord` | `device`, `name`, `value` | der DNS-Server einen A-Eintrag Name → Adresse hat |
+| `portForward` | `device`, `port`, `to` | der Router den TCP-Port an die interne Adresse weiterleitet (Konfiguration) |
+| `defaultRoute` | `device`, `gateway` | der Router eine Standardroute 0.0.0.0/0 über das Gateway hat (Konfiguration) |
 | `area` | `title`, `color`?, `network`? | ein Bereich auf der Zeichenfläche existiert, dessen Titel den Text enthält (optional mit Farbe und Netz) |
 | `pings` ⚡ | `pairs` (Liste von Paaren `["PC 1", "PC 2"]`) | alle Pings ankommen; Teilpunkte je erfolgreichem Paar |
 | `areaNote` | `title`, `values` (Liste) | die Notiz eines Bereichs (Titel enthält den Text) alle Werte enthält, z.B. Netz, Maske, Broadcast; Teilpunkte je Wert |

@@ -4,7 +4,7 @@ kurz: Jede Gruppe baut einen Standort und schliesst ihn an Ihre Infrastruktur an
 reihenfolge: 10
 hilfe: [verbund]
 demos: [verbund]
-uebungen: [verbund-anschluss, verbund-dhcp-dns, verbund-webserver]
+uebungen: [verbund-anschluss, verbund-dhcp-dns, verbund-webserver, verbund-fehlersuche]
 verwandt: [webversion, nat, statisches-routing]
 ---
 ## Die Idee
@@ -20,6 +20,7 @@ Ein **Platz** ist ein Standort im Klassen-Netz, wie eine Filiale einer Firma, ge
 | Standort an die Zentrale anschliessen | Anschluss, WAN-Adresse, Standardroute, NAT; der PC ruft die Webseite der Zentrale ab | online |
 | Standort mit DHCP und Namen der Zentrale | zusätzlich DHCP am Router mit DNS der Zentrale; Abruf von zentrale.verbund.example | online |
 | Eigenen Webserver im Verbund veröffentlichen | zusätzlich Portweiterleitung, die Zentrale ruft die Webseite des Standorts ab | Dienste erreichbar |
+| Fehlersuche im Verbund-Standort | fertiger Standort mit 5 Fehlern, an jedem Platz andere; alle finden und beheben | Fehler behoben n/5, dann fertig |
 
 | Platz n | Transitnetz | WAN-Adresse | Provider (Gateway) |
 |---|---|---|---|
@@ -44,5 +45,6 @@ Das Dashboard rechnet in Ihrem Browser alle 20 Sekunden den ganzen Verbund durch
 - Die erste Viertelstunde gehört dem Anschluss: Die Klasse sieht live, wie ein Standort nach dem anderen grün wird. Das motiviert.
 - Danach die Verbund-Übungen im Katalog, z.B. den eigenen Webserver per Portweiterleitung veröffentlichen ([[nat]]). Jede Verbund-Übung zeigt im Aufgabenfenster den Kasten «Dein Platz im Klassen-Verbund» mit Platznummer, Transitnetz, WAN-Adresse, Provider und Zentrale für genau diesen Platz und nennt das Ziel in einem Satz.
 - Fehlersuche gemeinsam: Ein Klick auf einen Standort im Dashboard zeigt sein Netz, die Klasse sucht den Fehler mit.
+- **Wettbewerb Fehlersuche:** Alle öffnen «Fehlersuche im Verbund-Standort». Jeder Platz hat 5 andere Fehler, abschreiben hilft also nicht. Auf dem Beamer füllen sich pro Standort fünf Felder («Fehler behoben n/5»); wer alle hat, wird grün.
 
 Ausführlich: [Klassen-Verbund](https://github.com/vonam-git/leyoNET/blob/main/docs/verbund.md).

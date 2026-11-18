@@ -14,7 +14,7 @@
     code: string;
     updated: number;
     site: { seat: number; label: string } | null;
-    progress: { goals: number; total: number } | null;
+    progress: { goals: number; total: number; faults?: { fixed: number; total: number } } | null;
     connected: boolean;
     project?: unknown;
   }
@@ -92,7 +92,8 @@
           const total = m.progress?.total ?? 0;
           let level: MapSite['level'] = p?.level ?? (fed?.sites.find((s) => s.seat === m.site.seat)?.uplink ? 'connected' : 'offline');
           if ((level === 'online' || level === 'services') && total > 0 && goals === total) level = 'done';
-          return { seat: m.site.seat, code: m.code, name: siteName(m.site.seat, m.site.label), level, goals, total, present: m.connected };
+          const faults = m.progress?.faults;
+          return { seat: m.site.seat, code: m.code, name: siteName(m.site.seat, m.site.label), level, goals, total, present: m.connected, ...(faults ? { faults } : {}) };
         })
         .sort((a, b) => a.seat - b.seat);
       const first = previous.size === 0;
@@ -105,7 +106,7 @@
       sites = next;
       lastRun = Date.now();
       // Für die Karte der Lernenden (falls die Lehrperson sie zeigt).
-      await call('POST', `classes/${classCode}/status`, { sites: Object.fromEntries(next.map((s) => [s.seat, { level: s.level, goals: s.goals, total: s.total }])) }).catch(() => undefined);
+      await call('POST', `classes/${classCode}/status`, { sites: Object.fromEntries(next.map((s) => [s.seat, { level: s.level, goals: s.goals, total: s.total, ...(s.faults ? { faults: s.faults } : {}) }])) }).catch(() => undefined);
     } catch {
       problem = t('verbund.dash.loadFailed');
     } finally {
@@ -211,7 +212,13 @@
             <span class="tile-seat">{s.seat}</span>
             <span class="tile-name">{s.name}</span>
             <span class="tile-state"><i></i>{t(`verbund.level.${s.level}`)}</span>
-            {#if s.total}<span class="tile-goals">{t('verbund.goals', { n: s.goals ?? 0, total: s.total })}</span>{/if}
+            {#if s.faults}
+              <span class="tile-faults" class:all={s.faults.fixed === s.faults.total} title={t('verbund.faults', { n: s.faults.fixed, total: s.faults.total })}>
+                <span class="sr">{t('verbund.faults', { n: s.faults.fixed, total: s.faults.total })}</span>
+                {#each Array.from({ length: s.faults.total }, (_, k) => k < s.faults!.fixed) as fixed, k (k)}<span class="box" class:fixed aria-hidden="true"></span>{/each}
+                <b aria-hidden="true">{s.faults.fixed}/{s.faults.total}</b>
+              </span>
+            {:else if s.total}<span class="tile-goals">{t('verbund.goals', { n: s.goals ?? 0, total: s.total })}</span>{/if}
             {#if s.present}<span class="tile-present" title={t('verbund.dash.present')}>●</span>{/if}
           </button>
         {:else}
@@ -432,6 +439,41 @@
   .tile-goals {
     font-size: 0.8rem;
     color: #facc15;
+  }
+  /* Fehlersuche: ein Feld pro Fehler, gefüllt = behoben (auf dem Beamer von weitem lesbar). */
+  .tile-faults {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .tile-faults .box {
+    display: block;
+    width: 14px;
+    height: 8px;
+    border-radius: 2px;
+    background: #334155;
+    box-shadow: inset 0 0 0 1px #475569;
+  }
+  .tile-faults .box.fixed {
+    background: #facc15;
+    box-shadow: none;
+  }
+  .tile-faults.all .box.fixed {
+    background: #22c55e;
+  }
+  .tile-faults b {
+    margin-left: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
   .tile-present {
     position: absolute;

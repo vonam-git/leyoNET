@@ -64,6 +64,18 @@ function chooseMedium(medium: Medium) {
   editor.setTool('cable');
 }
 
+/** Dialog nur für Admins öffnen (Webversion: Anmeldung prüfen, sonst zur Admin-Konsole). */
+function adminOnly(dialog: 'exam' | 'examExport') {
+  if (!ui.online) return dialogs.show(dialog);
+  void adminVerified().then((ok) => {
+    if (ok) dialogs.show(dialog);
+    else {
+      editor.notify(t('exam.needAdmin'), 'error');
+      openAdmin();
+    }
+  });
+}
+
 const COMMANDS: Command[] = [
   // Datei
   { id: 'file.new', label: () => t('menu.file.new'), keys: ['Alt+N'], run: () => editor.clear(), icon: 'plus' },
@@ -145,7 +157,9 @@ const COMMANDS: Command[] = [
   { id: 'tool.catalog', label: () => t('catalog.open'), run: () => dialogs.show('catalog'), icon: 'star' },
   { id: 'tool.verbund', label: () => t('verbund.openMap'), run: () => dialogs.show('verbundMap'), visible: () => verbund.active, icon: 'globe' },
   { id: 'tool.taskEditor', label: () => t('menu.tool.taskEditor'), run: () => dialogs.show('taskEditor'), visible: () => ui.has('tool.taskEditor'), enabled: design },
-  { id: 'tool.exam', label: () => t('menu.tool.exam'), run: () => dialogs.show('exam'), visible: () => ui.has('tool.taskEditor'), enabled: design },
+  // Prüfungen erstellen: in der Webversion nur nach der Admin-Anmeldung (Lernende sollen keine
+  // Musterlösungen und Schlüssel erzeugen); in der Einzeldatei und der Desktop-App wie bisher.
+  { id: 'tool.exam', label: () => t('menu.tool.exam'), run: () => adminOnly('exam'), visible: () => ui.has('tool.taskEditor') && (!ui.online || !!adminToken.value), enabled: design },
   // Aufgaben mit KI: nur in der Webversion nach der Admin-Anmeldung (der Server prüft das Token).
   {
     id: 'tool.examAi',
@@ -161,7 +175,13 @@ const COMMANDS: Command[] = [
     visible: () => ui.online && ui.has('tool.taskEditor') && !!adminToken.value,
     enabled: design,
   },
-  { id: 'tool.examExport', label: () => t('menu.tool.examExport'), run: () => dialogs.show('examExport'), visible: () => ui.has('tool.taskEditor'), enabled: () => design() && !!editor.tasks?.goals.length },
+  {
+    id: 'tool.examExport',
+    label: () => t('menu.tool.examExport'),
+    run: () => adminOnly('examExport'),
+    visible: () => ui.has('tool.taskEditor') && (!ui.online || !!adminToken.value),
+    enabled: () => design() && !!editor.tasks?.goals.length,
+  },
   { id: 'tool.review', label: () => t('menu.tool.review'), run: () => dialogs.show('review'), visible: () => ui.has('tool.taskEditor') },
   { id: 'tool.features', label: () => t('menu.tool.features'), run: () => dialogs.show('features'), icon: 'layers' },
   { id: 'tool.loadFeatures', label: () => t('menu.tool.loadFeatures'), run: () => void loadFeatureFile(), enabled: () => !ui.locked },

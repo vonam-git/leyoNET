@@ -8,6 +8,7 @@
   import { reviewInbox } from '../state/reviewInbox';
   import { examSheetsHtml, seatCardsHtml, type SheetSeat } from '../seatCards';
   import SebPanel from './SebPanel.svelte';
+  import AdminExamBuilder from './AdminExamBuilder.svelte';
 
   /**
    * Admin-Konsole, Reiter «Prüfungen»: Prüfung auf den Server laden, Platz-Codes
@@ -43,6 +44,9 @@
     /** Gerät hat sich in der letzten Minute gemeldet. */
     online?: boolean;
     session?: string | null;
+    /** Code zum Beenden: Fehlversuche und gesperrt (bis Ablauf bzw. Freigabe). */
+    unlockFails?: number;
+    unlockLocked?: boolean;
   }
   interface Exam {
     id: string;
@@ -55,7 +59,9 @@
     expires: number;
     hasKey: boolean;
     /** Nur im Safe Exam Browser; key fehlt, sobald die Prüfung beendet ist. */
-    seb: { key: string | null } | null;
+    seb: { key: string | null; quitLink?: boolean } | null;
+    /** Code zum Beenden: erlaubte Versuche und Sperre in Minuten (0 = bis zur Freigabe). */
+    unlock?: { attempts: number; lockMinutes: number };
     seats: Seat[] | number;
     joined?: number;
   }
@@ -77,6 +83,12 @@
   let minutes = $state(60);
   let busy = $state(false);
   let now = $state(Date.now());
+  /** Neue Prüfung: hier erstellen (Vorlage) oder Prüfungsdatei hochladen. */
+  let createMode = $state<'build' | 'upload'>('build');
+  let policy = $state({ attempts: 5, lockMinutes: 10 });
+  $effect(() => {
+    if (open?.unlock) policy = { ...open.unlock };
+  });
 
   const when = (ms: number | null) => (ms ? new Date(ms).toLocaleString(locale() === 'en' ? 'en-GB' : 'de-CH', { dateStyle: 'short', timeStyle: 'short' }) : '–');
   const time = (ms: number | null) => (ms ? new Date(ms).toLocaleTimeString(locale() === 'en' ? 'en-GB' : 'de-CH', { hour: '2-digit', minute: '2-digit' }) : '–');
@@ -134,7 +146,7 @@
 
   function errorText(error: unknown): string {
     const code = (error as { code?: string }).code ?? 'other';
-    return t(`admin.exams.error.${['notAnExam', 'labelRequired', 'badSeats', 'badMinutes', 'keyMismatch', 'alreadyStarted', 'notStarted', 'unknownExam', 'tooLarge', 'examEnded', 'timeOver', 'notSubmitted'].includes(code) ? code : 'other'}`);
+    return t(`admin.exams.error.${['notAnExam', 'labelRequired', 'badSeats', 'badMinutes', 'keyMismatch', 'alreadyStarted', 'notStarted', 'unknownExam', 'tooLarge', 'examEnded', 'timeOver', 'notSubmitted', 'badUnlockPolicy', 'sebOff'].includes(code) ? code : 'other'}`);
   }
 
   async function create(event: SubmitEvent) {
@@ -157,13 +169,15 @@
     }
   }
 
-  async function act(path: string, body?: unknown, confirmText?: string) {
-    if (!open || (confirmText && !confirm(confirmText))) return;
+  async function act(path: string, body?: unknown, confirmText?: string): Promise<boolean> {
+    if (!open || (confirmText && !confirm(confirmText))) return false;
     try {
       open = await call<Exam>('POST', `exams/${open.id}/${path}`, body);
       await load();
+      return true;
     } catch (error) {
       notify('error', errorText(error));
+      return false;
     }
   }
 
@@ -266,6 +280,13 @@
 
 <details class="create-box" open={exams.length === 0 || !!learner}>
 <summary><Icon name="plus" size={16} />{t('admin.exams.createTitle')}</summary>
+<div class="modes" role="tablist">
+  <button type="button" role="tab" aria-selected={createMode === 'build'} class:on={createMode === 'build'} onclick={() => (createMode = 'build')}>{t('admin.build.tabBuild')}</button>
+  <button type="button" role="tab" aria-selected={createMode === 'upload'} class:on={createMode === 'upload'} onclick={() => (createMode = 'upload')}>{t('admin.build.tabUpload')}</button>
+</div>
+{#if createMode === 'build'}
+  <AdminExamBuilder {call} {notify} oncreated={async (exam) => ((open = exam as Exam), await load())} />
+{:else}
 <form class="create" onsubmit={create}>
   <div class="row">
     <button type="button" onclick={chooseLearner}><Icon name="book" size={16} />{learner ? learner.name : t('admin.exams.learnerFile')}</button>
@@ -287,6 +308,7 @@
   {/if}
   <p class="muted">{t('admin.exams.hint')}</p>
 </form>
+{/if}
 </details>
 
 {#if exams.length === 0}
@@ -347,7 +369,14 @@
     </p>
   {/if}
   <p class="muted">{t(`admin.exams.help.${open.state}`)}</p>
-  <SebPanel exam={open} onchange={(on, text) => act('seb', { on }, text)} />
+  <SebPanel exam={open} onchange={(on, text) => act('seb', { on }, text)} onquitlink={(on) => act('seb', { quitLink: on })} />
+  <form class="unlock-rule" onsubmit={(e) => (e.preventDefault(), void act('unlock', $state.snapshot(policy)).then((ok) => ok && notify('ok', t('admin.unlock.saved'))))}>
+    <strong>{t('admin.unlock.title')}</strong>
+    <label>{t('admin.unlock.attempts')}<input type="number" min="1" max="20" bind:value={policy.attempts} /></label>
+    <label>{t('admin.unlock.lockMinutes')}<input type="number" min="0" max="240" bind:value={policy.lockMinutes} /></label>
+    <button type="submit" disabled={open.state === 'ended' || (policy.attempts === open.unlock?.attempts && policy.lockMinutes === open.unlock?.lockMinutes)}>{t('admin.unlock.save')}</button>
+    <p class="muted small">{t('admin.unlock.hint')}</p>
+  </form>
   <table>
     <thead>
       <tr><th>{t('exam.seatWord')}</th><th>{t('admin.exams.code')}</th><th>{t('admin.exams.state')}</th><th>{t('admin.exams.saved')}</th><th>{t('admin.exams.until')}</th><th>{t('admin.exams.extra')}</th><th>{t('admin.exams.live')}</th></tr>
@@ -362,6 +391,10 @@
             {:else if s.state === 'open' && !s.joined}<span class="pill warn">{t('admin.exams.seat.absent')}</span>
             {:else if s.state === 'open'}<span class="pill live"><span class="led live"></span>{t('admin.exams.seat.open')}</span>
             {:else}<span class="pill">{t(`admin.exams.seat.${s.state}`)}</span>{/if}
+            {#if s.unlockLocked}
+              <span class="pill alert"><Icon name="lock" size={12} />{t('admin.unlock.locked')}</span>
+              <button class="small" title={t('admin.unlock.resetHint')} onclick={() => act(`seats/${s.id}/unlock-reset`, {})}>{t('admin.unlock.reset')}</button>
+            {:else if s.unlockFails}<span class="pill warn">{t('admin.unlock.fails', { n: s.unlockFails })}</span>{/if}
           </td>
           <td>{time(s.saved)}</td>
           <td>{time(s.until)} {#if s.state === 'open'}<span class="muted">({left(s)})</span>{/if}</td>
@@ -390,6 +423,48 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+  }
+  .modes {
+    display: inline-flex;
+    gap: 2px;
+    margin-top: 14px;
+    padding: 3px;
+    background: var(--surface-2);
+    border-radius: var(--a-radius-s);
+  }
+  .modes button {
+    border: none;
+    background: transparent;
+    min-height: 30px;
+  }
+  .modes button.on {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 0 0 1px var(--border);
+  }
+  .unlock-rule {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px 14px;
+    margin: 10px 0 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--a-radius-s);
+  }
+  .unlock-rule strong {
+    width: 100%;
+  }
+  .unlock-rule label {
+    display: grid;
+    gap: 4px;
+  }
+  .unlock-rule input {
+    width: 7rem;
+  }
+  .unlock-rule p {
+    width: 100%;
+    margin: 0;
   }
   .create-box summary {
     display: flex;

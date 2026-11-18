@@ -55,6 +55,7 @@ import { LAB_ANSWERS, solveLab2, solveOspf, solveRip, solveRouting1Saved, solveR
 import { ADVANCED_ANSWERS, solveDatacenter, solveGuest, solveLoopback, solveVrf } from './catalogAdvanced';
 import { M145_ANSWERS, solveFaults, solveLag, solveMgmt, solveUe02, solveUe03, solveUe04, solveUe06, solveUe07, solveUe07b, solveUe08, solveUe09, solveUe10, solveUe11 } from './catalogM145';
 import { readdressUe03, solveHolzer, solveUe03a1, solveUe04a1, solveUe04a2, solveUe05, solveWatch1, solveWatch2 } from './catalogM117';
+import { verbundFaultSite } from './catalogVerbundFaults';
 
 
 function unwrap<T>(r: Result<T>): T {
@@ -214,6 +215,8 @@ export const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
     t = unwrap(applyVerbundAddresses(t, r, 1));
     return unwrap(setDhcpPool(t, r, 'LAN', { name: 'LAN', network: '192.168.50.0', mask: '255.255.255.0', gateway: '192.168.50.1', dns: '198.51.100.10' }));
   },
+  // Musterlösung: der Standort ohne eingebaute Fehler (Platz 1 wie im Test).
+  'verbund-fehlersuche': () => verbundFaultSite(1),
   'port-forward': (t) => unwrap(addPortForward(t, byName(t, 'Heimrouter'), { protocol: 'tcp', port: 8080, to: '192.168.1.20', toPort: 80 })),
   'snat-mail': (t) => unwrap(addStaticNat(t, byName(t, 'Firmenrouter'), { inside: '192.168.0.25', outside: '203.0.113.5', kind: 'snat' })),
   'firewall-dmz': (t) =>
