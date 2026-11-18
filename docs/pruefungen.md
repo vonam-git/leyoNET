@@ -73,7 +73,7 @@ Grenzen: 300 000 Zeichen, 150 Geräte, 300 Kabel, 100 Ziele. Das Startnetz kennt
 
 - Beim Öffnen der Prüfungsdatei wählen die Lernenden ihren **Platz** (bei mehreren Varianten).
 - Danach ist leyoNET im **Prüfungsmodus**: Katalog, Demos, Aufgabeneditor, Prüfungsgenerator, Auswertung, Funktionsumfang, «Neu» und das Öffnen anderer Dateien sind gesperrt. Eine Leiste zeigt Titel, Platz und Zeit. «Prüfen» gibt es nicht.
-- Der Modus übersteht ein Neuladen. Er endet nur mit dem **Code der Lehrperson** (steht im Schlüssel und im Dialog beim Erstellen). In der Datei steht nur ein Prüfwert (SHA-256) des Codes. Bei einer **Prüfung über den Server** prüft der Server den Code, mit **begrenzten Versuchen** pro Platz (Vorgabe 5, danach 10 Minuten gesperrt; einstellbar, siehe unten).
+- Der Modus übersteht ein Neuladen. Er endet nur mit dem **Code der Lehrperson** (steht im Schlüssel und im Dialog beim Erstellen). In der Datei steht nur ein Prüfwert (SHA-256) des Codes. Bei einer **Prüfung über den Server** prüft der Server den Code, mit **begrenzten Versuchen** pro Platz (Vorgabe 5, danach 10 Minuten gesperrt; einstellbar, siehe unten). Den Prüfwert bekommen die Lernenden dann nicht, und jeder Platz erhält nur seine eigene Variante (nicht die Startnetze der anderen).
 - **Abgeben** heisst: Projekt speichern (Strg+S) und die Datei wie vereinbart abgeben (Prüfungsordner, Teams, Moodle, USB-Stick).
 
 ## Prüfung in der Webversion (Server)

@@ -4526,6 +4526,8 @@
   "catalog.verbundFaults.goal3": "«Notebook» opens http://{name}/.",
   "catalog.verbundFaults.goal4": "«PC 1» opens http://{name}/.",
   "catalog.verbundFaults.fault": "Fault {n} of {total} fixed",
+  "tasks.hintShow": "Show hint",
+  "catalog.verbundFaults.faultHint": "Take a closer look at «{device}».",
   "catalog.verbundFaults.area": "My site",
   "catalog.verbundFaults.page": "<h1>Site intranet</h1><p>If you can read this, port forwarding works.</p>",
   "catalog.verbundFaults.hint1": "Does a ping from the federation come back? The site router needs a way back to the provider.",

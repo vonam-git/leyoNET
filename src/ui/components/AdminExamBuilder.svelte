@@ -28,7 +28,7 @@
   let label = $state('');
   let seats = $state(20);
   let minutes = $state(45);
-  let code = $state(randomCode());
+  let code = $state(randomCode(8));
   let count = $state(5);
   let kinds = $state<FaultKind[]>([...KINDS]);
   let hideHints = $state(true);
@@ -45,7 +45,7 @@
       seats <= 60 &&
       minutes >= 1 &&
       minutes <= 600 &&
-      /^[A-Za-z0-9]{4,12}$/.test(code.trim()) &&
+      /^[A-Za-z0-9]{6,12}$/.test(code.trim()) &&
       attempts >= 1 &&
       attempts <= 20 &&
       lockMinutes >= 0 &&
@@ -79,7 +79,7 @@
       created = { code: code.trim().toUpperCase(), notes: result.variants.length };
       notify('ok', t('admin.exams.created', { label: title }));
       label = '';
-      code = randomCode();
+      code = randomCode(8);
       oncreated(exam);
     } catch (error) {
       const c = (error as { code?: string }).code ?? '';
@@ -110,7 +110,7 @@
     <label>{t('admin.exams.minutesRequired')}<input type="number" min="1" max="600" bind:value={minutes} required /></label>
     <label>
       {t('exam.export.code')}
-      <span class="code"><input bind:value={code} maxlength="12" spellcheck="false" autocomplete="off" required /><button type="button" class="quiet" onclick={() => (code = randomCode())} title={t('exam.export.newCode')} aria-label={t('exam.export.newCode')}><Icon name="refresh" size={16} /></button></span>
+      <span class="code"><input bind:value={code} maxlength="12" spellcheck="false" autocomplete="off" required /><button type="button" class="quiet" onclick={() => (code = randomCode(8))} title={t('exam.export.newCode')} aria-label={t('exam.export.newCode')}><Icon name="refresh" size={16} /></button></span>
     </label>
   </div>
 

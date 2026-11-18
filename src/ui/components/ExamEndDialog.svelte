@@ -23,7 +23,7 @@
 
   async function end(event: SubmitEvent) {
     event.preventDefault();
-    if (busy || lockedUntil) return;
+    if (busy || lockedUntil || !code.trim()) return;
     busy = true;
     let result: typeof problem | 'ok' = null;
     const done = await examMode.end(code, async (c) => {

@@ -551,6 +551,10 @@ test('Prüfung: Code zum Beenden wird auf dem Server geprüft, mit begrenzten Ve
   await call('POST', `/api/admin/exams/${exam.id}/seb`, { on: false }, token);
   const join = (await call('POST', '/api/exams/join', { seatCode: exam.seats[0].code })).data;
   assert.equal(join.exam.unlock.left, 2);
+  // Der Prüfwert des Codes bleibt auf dem Server (sonst liesse sich der Code offline erraten).
+  assert.equal(join.project.tasks.exam.unlock, undefined);
+  assert.equal((await call('GET', `/api/sessions/${join.session}`)).data.project.tasks.exam.unlock, undefined);
+  assert.equal((await call('POST', `/api/sessions/${join.session}/unlock`, { code: '  ' })).status, 400);
   assert.equal(join.exam.sebQuit, undefined);
   // Fremdes Gerät (ohne Schreib-Token) darf nicht raten.
   const foreign = await fetch(`${base}/api/sessions/${join.session}/unlock`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"code":"AB12CD"}' });
@@ -575,8 +579,30 @@ test('Prüfung: Code zum Beenden wird auf dem Server geprüft, mit begrenzten Ve
   assert.deepEqual((await call('POST', `/api/admin/exams/${exam.id}/unlock`, { attempts: 3, lockMinutes: 15 }, token)).data.unlock, { attempts: 3, lockMinutes: 15 });
   // Beenden-Link nur mit SEB; Schlüssel bleibt beim Umschalten.
   assert.equal((await call('POST', `/api/admin/exams/${exam.id}/seb`, { quitLink: true }, token)).status, 409);
+  // Ungültige Anfrage erzeugt keinen neuen SEB-Schlüssel.
+  assert.equal((await call('POST', `/api/admin/exams/${exam.id}/seb`, {}, token)).status, 400);
+  assert.equal((await call('POST', `/api/admin/exams/${exam.id}/seb`, { on: 'ja' }, token)).status, 400);
   const on = (await call('POST', `/api/admin/exams/${exam.id}/seb`, { on: true }, token)).data;
   const toggled = (await call('POST', `/api/admin/exams/${exam.id}/seb`, { quitLink: true }, token)).data;
   assert.equal(toggled.seb.key, on.seb.key);
   assert.equal(toggled.seb.quitLink, true);
+});
+
+test('Prüfung mit Varianten: Ein Platz bekommt nur seine Variante, nie die der anderen', async () => {
+  const { token } = (await call('POST', '/api/admin/login', { password: 'test-admin-passwort' })).data;
+  const topo = (n) => ({ devices: Array.from({ length: n }, (_, i) => ({ id: `d${i + 1}` })), cables: [], nextId: n + 1 });
+  const variants = ['01', '02', '03'].map((id, i) => ({ id, title: `Platz ${id}`, goals: [{ id: 'fehler-1', text: `Fehler ${id}`, points: 2 }], topology: topo(i + 2), raster: [] }));
+  const learner = { ...project(0), tasks: { title: 'Varianten', goals: [], exam: { id: 'P-VAR', unlock: 'a'.repeat(64), variants } } };
+  const exam = (await call('POST', '/api/admin/exams', { label: 'Var', learner, minutes: 20 }, token)).data;
+  assert.equal(exam.seats.length, 3);
+  await call('POST', `/api/admin/exams/${exam.id}/start`, {}, token);
+  const join = (await call('POST', '/api/exams/join', { seatCode: exam.seats[1].code })).data;
+  const text = JSON.stringify(join.project);
+  assert.equal(join.project.tasks.exam.variants, undefined);
+  assert.equal(join.project.tasks.exam.variant, '02');
+  assert.equal(join.project.tasks.title, 'Platz 02');
+  assert.equal(join.project.topology.devices.length, 3);
+  assert.doesNotMatch(text, /Fehler 01|Fehler 03|"unlock"/);
+  const again = (await call('GET', `/api/sessions/${join.session}`)).data;
+  assert.doesNotMatch(JSON.stringify(again.project), /Fehler 01|Fehler 03|"unlock"|"variants"/);
 });

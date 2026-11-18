@@ -1011,6 +1011,31 @@ function unlockState(exam, seat, now = Date.now()) {
   return { left: Math.max(0, policy.attempts - fails), lockedUntil, fails };
 }
 
+/**
+ * Prüfungsdatei, wie sie ein Platz bekommt: nur seine Variante (nicht die Startnetze und Ziele
+ * der anderen Plätze, aus denen sich bei einer Fehlersuche die Lösung ablesen liesse) und ohne
+ * Prüfwert des Codes zum Beenden (den prüft der Server, sonst liesse er sich offline erraten).
+ * Wie chooseVariant im Kern (src/core/tasks/exam.ts).
+ */
+function learnerProject(project, seat) {
+  if (!project || typeof project !== 'object' || !project.tasks || !project.tasks.exam) return project;
+  const out = { ...project, tasks: { ...project.tasks } };
+  const { variants, unlock: _u, ...exam } = project.tasks.exam;
+  if (Array.isArray(variants)) {
+    const v = variants.find((x) => x && String(x.id) === String(seat && (seat.variant || seat.id)));
+    if (v) {
+      out.tasks.title = v.title;
+      if (v.description) out.tasks.description = v.description;
+      out.tasks.goals = Array.isArray(v.goals) ? v.goals : [];
+      if (v.topology) out.topology = v.topology;
+      out.tasks.exam = { ...exam, variant: v.id, ...(v.raster ? { raster: v.raster } : {}) };
+      return out;
+    }
+  }
+  out.tasks.exam = exam;
+  return out;
+}
+
 function seatStatus(exam, seat) {
   const now = Date.now();
   const lock = unlockState(exam, seat, now);
@@ -1278,8 +1303,10 @@ async function api(req, res, url) {
     // Code zum Beenden des Prüfungsmodus prüfen: auf dem Server, mit begrenzten Versuchen pro Platz.
     if (parts[2] === 'unlock' && method === 'POST') {
       if (!item.exam) return fail(res, 400, 'notAnExam');
-      if (limited(req, 'unlock', 30)) return fail(res, 429, 'rateLimited');
+      // Zuerst das Schreib-Token: Ein fremdes Gerät (gleiche Schul-Adresse) verbraucht so kein Kontingent.
       if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
+      if (limited(req, `unlock:${code}`, 10)) return fail(res, 429, 'rateLimited');
+      if (typeof body.code !== 'string' || !body.code.replace(/\s+/g, '')) return fail(res, 400, 'codeRequired');
       const exam = loadExam(item.exam.id);
       const seat = exam && exam.seats.find((s) => s.id === item.exam.seat);
       if (!exam || !seat) return fail(res, 404, 'unknownSession');
@@ -1311,12 +1338,15 @@ async function api(req, res, url) {
     if (method === 'GET') {
       // Prüfungsplatz mit SEB-Pflicht: auch Lesen nur aus dem Safe Exam Browser (die Lehrperson
       // sieht Plätze über die Admin-Konsole an).
+      let examSeat = null;
       if (item.exam) {
         const exam = loadExam(item.exam.id);
         if (!exam) return fail(res, 404, 'unknownSession');
         if (!sebAllowed(req, exam, req.headers['x-leyonet-seb'])) return fail(res, 403, 'sebRequired');
+        examSeat = exam.seats.find((s) => s.id === item.exam.seat) || { id: item.exam.seat };
       }
-      const base = { code, expires: item.expires, classCode: item.classCode, site: item.site || null, project: item.project };
+      const forLearner = (project) => (examSeat ? learnerProject(project, examSeat) : project);
+      const base = { code, expires: item.expires, classCode: item.classCode, site: item.site || null, project: forLearner(item.project) };
       // Nur ansehen (z.B. Lehrperson): kein Schreibrecht, verdrängt niemanden.
       // Prüfungsplätze nie über den Session-Code ansehen: Die Lehrperson sieht sie über die Admin-Konsole.
       if (url.searchParams.get('watch') === '1') {
@@ -1326,7 +1356,7 @@ async function api(req, res, url) {
       const pin = req.headers['x-leyonet-pin'];
       const claimed = await claimWriter(code, item, token, typeof pin === 'string' ? pin : '');
       if (claimed.error) return json(res, claimed.status, { error: claimed.error, ...about(item) });
-      return json(res, 200, { ...base, project: claimed.item.project, writer: claimed.token, ...about(claimed.item) });
+      return json(res, 200, { ...base, project: forLearner(claimed.item.project), writer: claimed.token, ...about(claimed.item) });
     }
     if (method === 'PUT') {
       if (!validProject(body.project)) return fail(res, 400, 'invalidProject');
@@ -1400,7 +1430,7 @@ async function api(req, res, url) {
       let code = newCode();
       while (indexes.sessions.has(code) || fs.existsSync(fileFor(dirs.sessions, code))) code = newCode();
       const now = Date.now();
-      session = { code, created: now, updated: now, expires: exam.expires, classCode: null, exam: { id: exam.id, seat: seat.id }, project: exam.learner };
+      session = { code, created: now, updated: now, expires: exam.expires, classCode: null, exam: { id: exam.id, seat: seat.id }, project: learnerProject(exam.learner, seat) };
       // Prüfungsplätze zählen nicht zur Grenze: Eine Prüfung darf nie an vollem Speicher scheitern.
       store('sessions', code, session);
       fresh = true;
@@ -1408,7 +1438,7 @@ async function api(req, res, url) {
     // Ein Platz ist nur an einem Gerät offen; ein zweiter Browser wartet, bis die Lehrperson freigibt.
     const claimed = await claimWriter(session.code, session, typeof body.writer === 'string' ? body.writer : '', '');
     if (claimed.error) return json(res, 409, { error: 'seatInUse', exam: status });
-    return json(res, 200, { exam: status, session: session.code, fresh, variant: seat.variant || null, project: claimed.item.project, writer: claimed.token });
+    return json(res, 200, { exam: status, session: session.code, fresh, variant: seat.variant || null, project: learnerProject(claimed.item.project, seat), writer: claimed.token });
   }
 
   // --- Klassen beitreten ---
@@ -2025,7 +2055,9 @@ async function adminExams(req, res, parts, method, who) {
   if (parts[1] === 'seb' && parts.length === 2 && method === 'POST') {
     if (examState(exam, now) === 'ended') return fail(res, 409, 'examEnded');
     // Nur den Beenden-Link (quitURL in der SEB-Datei) ein- oder ausschalten, Schlüssel bleibt.
-    if (body.on === undefined && typeof body.quitLink === 'boolean') {
+    if (body.on !== undefined && typeof body.on !== 'boolean') return fail(res, 400, 'badRequest');
+    if (body.on === undefined && typeof body.quitLink !== 'boolean') return fail(res, 400, 'badRequest');
+    if (body.on === undefined) {
       if (!exam.seb || !exam.seb.key) return fail(res, 409, 'sebOff');
       exam.seb = { key: exam.seb.key, ...(body.quitLink ? { quitLink: true } : {}) };
     } else if (body.on === false) delete exam.seb;

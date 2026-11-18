@@ -157,8 +157,9 @@ class ExamMode {
   async end(code: string, verify?: (code: string) => Promise<boolean>): Promise<boolean> {
     const active = this.active;
     if (!active) return true;
-    if (active.server && verify) {
-      if (!(await verify(code))) return false;
+    if (active.server) {
+      // Prüfung über den Server: Nur der Server kennt den Prüfwert des Codes.
+      if (!verify || !(await verify(code))) return false;
     } else if (active.unlock && (await hashCode(code)) !== active.unlock) return false;
     this.#store(null);
     return true;

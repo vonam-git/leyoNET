@@ -4587,6 +4587,8 @@
   "catalog.verbundFaults.goal3": "«Notebook» ruft http://{name}/ auf.",
   "catalog.verbundFaults.goal4": "«PC 1» ruft http://{name}/ auf.",
   "catalog.verbundFaults.fault": "Fehler {n} von {total} behoben",
+  "tasks.hintShow": "Tipp zeigen",
+  "catalog.verbundFaults.faultHint": "Schau dir «{device}» genauer an.",
   "catalog.verbundFaults.area": "Mein Standort",
   "catalog.verbundFaults.page": "<h1>Intranet des Standorts</h1><p>Wenn du das liest, funktioniert die Portweiterleitung.</p>",
   "catalog.verbundFaults.hint1": "Kommt ein Ping aus dem Verbund zurück? Der Standort-Router braucht einen Weg zurück zum Provider.",

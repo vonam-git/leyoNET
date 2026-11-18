@@ -66,11 +66,12 @@ export function buildVerbundFaults(ctx: CatalogContext = {}): { topology: Topolo
     count: VERBUND_FAULTS,
     kinds: ['hostMask', 'hostGateway', 'routerIp', 'portShutdown', 'cable', 'dhcpGateway', 'dhcpDns', 'dnsRecord', 'portForward', 'defaultRoute'],
   });
-  // Fehlerziele mit neutralem Text: Welcher Fehler wo steckt, verrät erst der Tipp.
+  // Fehlerziele mit neutralem Text; der Tipp (auf Klick) nennt nur das Gerät.
   const faultGoals: Goal[] = faults.map((f, i) => ({
     id: `${FAULT_GOAL_PREFIX}${i + 1}`,
     text: t('catalog.verbundFaults.fault', { n: i + 1, total: faults.length }),
-    hint: t(`fault.goal.${f.kind}`, { device: f.device, ...f.params }),
+    // Nur das Gerät, nicht die Art des Fehlers und nie den richtigen Wert.
+    hint: t('catalog.verbundFaults.faultHint', { device: f.device }),
     check: f.check,
   }));
   const tasks = task(KEY, 4, [
