@@ -1,6 +1,6 @@
 # leyoNET – Hinweise für die Arbeit am Projekt
 
-leyoNET ist ein Netzwerk-Simulator für den Informatik-Unterricht (1. Lehrjahr bis Fachhochschule) der Brüder Mark und Mika. Er läuft als einzelne HTML-Datei im Browser, als Webversion mit Node-Server (Plesk) und als Desktop-App (Tauri). Überblick: [README.md](README.md), Doku in [docs/](docs/).
+leyoNET ist ein Netzwerk-Simulator für den Informatik-Unterricht (1. Lehrjahr bis Fachhochschule) der Brüder Mark und Mika. Er läuft als einzelne HTML-Datei im Browser, als Webversion mit Node-Server (Plesk) und als Desktop-App (Tauri). Überblick: [README.md](README.md), Doku in [docs/](docs/). Übergabe, offene Punkte und Abläufe (Plesk, Impressum/Datenschutz der Website): [docs/uebergabe.md](docs/uebergabe.md).
 
 ## Arbeitsweise
 
