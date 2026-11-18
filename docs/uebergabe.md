@@ -2,11 +2,11 @@
 
 Diese Seite ist der Einstieg, wenn die Arbeit an leyoNET in einem neuen Chat oder mit einem neuen Konto weitergeht. Sie fasst zusammen, was Claude bisher über das Projekt, die Arbeitsweise und die offenen Punkte weiss. Die festen Regeln stehen in [`CLAUDE.md`](../CLAUDE.md) im Hauptordner; diese Seite ergänzt sie.
 
-**So startest du den neuen Chat:** Repository `vonam-git/leyoNET` freigeben (siehe unten), dann schreiben: «Lies `CLAUDE.md` und `docs/uebergabe.md` und mach dort weiter.» Für das Prüfungstool M122 gilt dasselbe mit dem Repository `vonam-git/M122-Pruefungstool` und dessen `CLAUDE.md`.
+**So startest du den neuen Chat:** Repository `vonam-git/leyoNET` freigeben (siehe unten), dann schreiben: «Lies `CLAUDE.md` und `docs/uebergabe.md` und mach dort weiter.»
 
 ## Zugang einrichten (neues Konto)
 
-1. Auf GitHub (Konto `vonam-git`): *Settings → Applications → Installed GitHub Apps → Claude → Configure* → unter *Repository access* die Repositories freigeben (mindestens `leyoNET` und `M122-Pruefungstool`).
+1. Auf GitHub (Konto `vonam-git`): *Settings → Applications → Installed GitHub Apps → Claude → Configure* → unter *Repository access* das Repository `leyoNET` freigeben.
 2. Im Chat das Repository hinzufügen lassen («Füge vonam-git/leyoNET hinzu»). Claude klont es dann selbst.
 3. Für die Webversion braucht es keine weiteren Zugangsdaten. Plesk bedient Mark selbst.
 
@@ -54,8 +54,7 @@ Die Vorlagen enthalten den Platzhalter `[PLZ Ort]` (als `<span class="platzhalte
 
 ## Plesk
 
-- leyoNET: Einrichtung, Umgebungsvariablen und Updates in [plesk.md](plesk.md) (Branch `develop`, Anwendungsstamm `<repo>/server`, Startdatei `start.cjs`, Dokumentstamm `<repo>/server/public`).
-- Prüfungstool M122: eigene Plesk-App, Branch **`main`** (siehe README im Repository `M122-Pruefungstool`).
+Einrichtung, Umgebungsvariablen und Updates in [plesk.md](plesk.md) (Branch `develop`, Anwendungsstamm `<repo>/server`, Startdatei `start.cjs`, Dokumentstamm `<repo>/server/public`).
 
 ## Offene Punkte
 
