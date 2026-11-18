@@ -4,6 +4,7 @@
 
 import {
   DEVICE_SPECS,
+  FAULT_GOAL_PREFIX,
   addDevice,
   buildExam,
   emptyTopology,
@@ -74,7 +75,7 @@ export function faultVariants(solution: Topology, tasks: TaskSet, options: { sea
     const id = String(i + 1).padStart(2, '0');
     const { topology, faults } = injectFaults(solution, { seed: options.seed + i * 7919, count: options.count, ...(options.kinds ? { kinds: options.kinds } : {}) });
     const section = t('exam.export.faultSection');
-    const faultGoals: Goal[] = faults.map((f, k) => ({ id: `fehler-${k + 1}`, text: t(`fault.goal.${f.kind}`, { device: f.device, ...f.params }), check: f.check, points: 2, section }));
+    const faultGoals: Goal[] = faults.map((f, k) => ({ id: `${FAULT_GOAL_PREFIX}${k + 1}`, text: t(`fault.goal.${f.kind}`, { device: f.device, ...f.params }), check: f.check, points: 2, section }));
     return {
       id,
       tasks: { ...tasks, title: `${tasks.title} – ${t('exam.mode.seat', { seat: id })}`, grading: true, goals: [...tasks.goals, ...faultGoals] },

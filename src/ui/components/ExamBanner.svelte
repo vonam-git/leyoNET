@@ -5,6 +5,7 @@
   import { session } from '../state/session.svelte';
   import { checkExamReopened, submitServerExam } from '../actions';
   import { locale } from '../../i18n';
+  import { SEB_QUIT_PARAM, inSeb } from '../seb';
 
   /** Leiste während einer Prüfung: Titel, Platz, Zeit und «Prüfung beenden» (Code der Lehrperson). */
   const exam = $derived(examMode.active);
@@ -42,7 +43,12 @@
     {#if server?.state === 'closed'}
       <strong class="done">✓ {submittedAt ? t('exam.mode.submittedAt', { time: submittedAt }) : t('exam.mode.submitted')}</strong>
       <span class="muted">{t(submittedAt ? 'exam.mode.submittedOwnHint' : 'exam.mode.submittedHint')}</span>
-      <button onclick={() => (examMode.leaveClosed(), session.detach())}>{t('exam.mode.leave')}</button>
+      {#if server.sebQuit && inSeb()}
+        <!-- Beenden-Link der SEB-Datei (quitURL): SEB fängt die Adresse ab und schliesst sich. -->
+        <a class="seb-quit" href={`${location.pathname}?${SEB_QUIT_PARAM}=1`}>{t('exam.mode.sebQuit')}</a>
+      {:else}
+        <button onclick={() => (examMode.leaveClosed(), session.detach())}>{t('exam.mode.leave')}</button>
+      {/if}
     {:else}
       <span class="clock" class:over={clock.over} title={t(exam.minutes || server?.until ? 'exam.mode.left' : 'exam.mode.elapsed')}>⏱ {clock.text}</span>
       {#if server}
@@ -109,6 +115,14 @@
     background: #166534;
   }
   .confirm {
+    font-weight: 600;
+  }
+  .seb-quit {
+    padding: 2px 10px;
+    border-radius: 6px;
+    background: var(--accent);
+    color: var(--on-accent);
+    text-decoration: none;
     font-weight: 600;
   }
 </style>

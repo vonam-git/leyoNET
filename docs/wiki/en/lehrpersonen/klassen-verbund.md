@@ -15,6 +15,7 @@ A **seat** is a site in the class network, like a branch office of a company, bu
 | Connect the site to the hub | uplink, WAN address, default route, NAT; the PC opens the hub's web page | online |
 | Site with DHCP and the hub's name | additionally DHCP on the router with the hub's DNS; opens zentrale.verbund.example | online |
 | Publish your own web server in the class network | additionally port forwarding, the hub opens the site's web page | services reachable |
+| Troubleshooting a federation site | finished site with 5 faults, different at every seat; find and fix them all | faults fixed n/5, then done |
 
 | Seat n | Transit network | WAN address | Provider (gateway) |
 |---|---|---|---|
@@ -39,5 +40,6 @@ Every 20 seconds the dashboard computes the whole network in your browser and ch
 - The first quarter of an hour belongs to connecting: the class sees live how one site after another turns green. That motivates.
 - Then the class network exercises in the catalog, e.g. publishing your own web server via port forwarding ([[nat]]). Every class network exercise shows the box “Your seat in the class network” in the task window, with seat number, transit network, WAN address, provider and hub for exactly this seat, and states the goal in one sentence.
 - Troubleshooting together: clicking a site in the dashboard shows its network, the class helps find the mistake.
+- **Troubleshooting race:** Everyone opens «Troubleshooting a federation site». Each seat has 5 different faults, so copying does not help. On the projector five boxes fill up per site («faults fixed n/5»); whoever has them all turns green.
 
 In detail: [class network](https://github.com/vonam-git/leyoNET/blob/main/docs/verbund.md) (in German).

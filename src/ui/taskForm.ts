@@ -132,6 +132,15 @@ export const CHECK_FIELDS: Record<Check['type'], FieldSpec[]> = {
     { key: 'name', kind: 'text', label: 'dnsName' },
     { key: 'value', kind: 'text', label: 'dnsValue' },
   ],
+  portForward: [
+    { key: 'device', kind: 'device' },
+    { key: 'port', kind: 'number' },
+    { key: 'to', kind: 'text', label: 'forwardTo' },
+  ],
+  defaultRoute: [
+    { key: 'device', kind: 'device' },
+    { key: 'gateway', kind: 'text', label: 'nextHop' },
+  ],
   area: [
     { key: 'title', kind: 'text', label: 'areaTitle' },
     { key: 'color', kind: 'choice', optional: true, label: 'areaColor', options: ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'gray'] },

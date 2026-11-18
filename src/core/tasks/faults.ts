@@ -7,9 +7,12 @@
 import { routingModeOf } from '../model/devices';
 import {
   addDnsRecord,
+  addPortForward,
   configureHost,
   removeCable,
   removeDnsRecord,
+  removePortForward,
+  removeStaticRoute,
   setDhcpServer,
   setInterfaceAddress,
   setInterfaceShutdown,
@@ -23,8 +26,24 @@ import type { Device, Topology } from '../model/types';
 import { formatIp, networkOf, parseIp, parseMask } from '../net/ipv4';
 import type { Check } from './tasks';
 
-export type FaultKind = 'hostMask' | 'hostGateway' | 'routerIp' | 'routing' | 'portShutdown' | 'cable' | 'dhcpGateway' | 'dhcpDns' | 'dnsRecord' | 'accessVlan' | 'trunkVlan';
-export const FAULT_KINDS: readonly FaultKind[] = ['hostMask', 'hostGateway', 'routerIp', 'routing', 'portShutdown', 'cable', 'dhcpGateway', 'dhcpDns', 'dnsRecord', 'accessVlan', 'trunkVlan'];
+export type FaultKind =
+  | 'hostMask'
+  | 'hostGateway'
+  | 'routerIp'
+  | 'routing'
+  | 'portShutdown'
+  | 'cable'
+  | 'dhcpGateway'
+  | 'dhcpDns'
+  | 'dnsRecord'
+  | 'accessVlan'
+  | 'trunkVlan'
+  | 'portForward'
+  | 'defaultRoute';
+export const FAULT_KINDS: readonly FaultKind[] = ['hostMask', 'hostGateway', 'routerIp', 'routing', 'portShutdown', 'cable', 'dhcpGateway', 'dhcpDns', 'dnsRecord', 'accessVlan', 'trunkVlan', 'portForward', 'defaultRoute'];
+
+/** Kennung der Fehlerziele («fehler-1» …): Dashboard und Prüfung zählen sie als «Fehler behoben». */
+export const FAULT_GOAL_PREFIX = 'fehler-';
 
 export interface Fault {
   kind: FaultKind;
@@ -133,6 +152,37 @@ function candidates(topology: Topology): Candidate[] {
           },
         });
       });
+      // Portweiterleitung zeigt auf einen falschen internen Rechner.
+      (d.portForwards ?? []).forEach((forward, index) => {
+        const target = parseIp(forward.to);
+        const lan = d.interfaces.map((i) => cidrOf(i.ip, i.mask)).find((x) => x && target !== null && networkOf(x.ip, x.prefix) === networkOf(target, x.prefix));
+        if (!lan || target === null) return;
+        out.push({
+          kind: 'portForward',
+          device: name(d),
+          apply: (t) => {
+            const wrong = freeAddress(t, lan.ip, lan.prefix);
+            if (!wrong) return null;
+            const removed = removePortForward(t, d.id, index);
+            if (!removed.ok) return null;
+            const r = addPortForward(removed.value, d.id, { ...forward, to: wrong });
+            return r.ok ? { topology: r.value, params: { port: String(forward.port), wrong, right: forward.to }, check: { type: 'portForward', device: d.name, port: forward.port, to: forward.to } } : null;
+          },
+        });
+      });
+      // Standardroute fehlt.
+      const defaultIndex = (d.routes ?? []).findIndex((r) => r.network === '0.0.0.0' && r.mask === '0.0.0.0' && r.gateway);
+      if (defaultIndex >= 0) {
+        const gateway = d.routes![defaultIndex]!.gateway!;
+        out.push({
+          kind: 'defaultRoute',
+          device: name(d),
+          apply: (t) => {
+            const r = removeStaticRoute(t, d.id, defaultIndex);
+            return r.ok ? { topology: r.value, params: { right: gateway }, check: { type: 'defaultRoute', device: d.name, gateway } } : null;
+          },
+        });
+      }
       const remote = remoteNetwork(topology, d);
       if (routingModeOf(d) === 'auto' && remote) {
         out.push({

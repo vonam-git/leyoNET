@@ -12,6 +12,8 @@
     level: 'offline' | 'connected' | 'online' | 'services' | 'done';
     goals?: number;
     total?: number;
+    /** Fehlersuche: behobene von eingebauten Fehlern. */
+    faults?: { fixed: number; total: number };
     /** Browser der Person gerade offen (Lebenszeichen). */
     present?: boolean;
     own?: boolean;

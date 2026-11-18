@@ -16,16 +16,24 @@
 /** Schlüssel einer Prüfung im SEB: 256 Bit als Hex (vom Server erzeugt). */
 export const SEB_KEY = /^[0-9a-f]{64}$/;
 
-/** «?seb=<Schlüssel>» aus der Adresse lesen und aus der Adresszeile entfernen. */
+/** Adresse, bei der SEB sich beendet (quitURL), z.B. nach der Abgabe: «?seb-ende». */
+export const SEB_QUIT_PARAM = 'seb-ende';
+
+/** Läuft die Seite im Safe Exam Browser? (SEB meldet sich im User-Agent mit «SEB/x.y».) */
+export const inSeb = () => typeof navigator !== 'undefined' && /\bSEB\/\d/.test(navigator.userAgent);
+
+/** «?seb=<Schlüssel>» aus der Adresse lesen und aus der Adresszeile entfernen (auch «?seb-ende»). */
 export function takeSebKey(): string | null {
   if (typeof window === 'undefined') return null;
   try {
     const url = new URL(window.location.href);
     const key = url.searchParams.get('seb');
-    if (key === null) return null;
+    const quit = url.searchParams.has(SEB_QUIT_PARAM);
+    if (key === null && !quit) return null;
     url.searchParams.delete('seb');
+    url.searchParams.delete(SEB_QUIT_PARAM);
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
-    return SEB_KEY.test(key) ? key : null;
+    return key !== null && SEB_KEY.test(key) ? key : null;
   } catch {
     return null;
   }
@@ -66,6 +74,94 @@ function plistValue(v: Value, indent: string): string {
   return `${indent}<dict>\n${keys.map((k) => `${indent}\t<key>${xml(k)}</key>\n${plistValue(v[k]!, `${indent}\t`)}`).join('\n')}\n${indent}</dict>`;
 }
 
+/** Ein Passwort oder ein schon berechneter SHA-256-Hash (64 Hex-Zeichen, wie SEB ihn speichert)? */
+export const isSebHash = (value: string) => /^[0-9a-fA-F]{64}$/.test(value.trim());
+
+/** Hash für hashedAdminPassword/hashedQuitPassword: einen fertigen Hash übernehmen, sonst berechnen. */
+export async function sebPasswordHash(value: string | undefined): Promise<string> {
+  const v = value?.trim() ?? '';
+  if (!v) return '';
+  return isSebHash(v) ? v.toLowerCase() : sha256Hex(v);
+}
+
+/**
+ * Einstellbare Schlüssel (Namen wie in der SEB-Spezifikation). Eine Grenze für Passwort-Versuche
+ * kennt SEB nicht; leyoNET begrenzt dafür die Versuche beim eigenen Code zum Beenden.
+ */
+export interface SebSettings {
+  /** SEB darf beendet werden (mit Beenden-Passwort, falls gesetzt): allowQuit. */
+  allowQuit: boolean;
+  /** Nach der Abgabe ein Knopf «Safe Exam Browser beenden» (quitURL). */
+  quitLink: boolean;
+  /** Vor dem Beenden über den Knopf nachfragen: quitURLConfirm. */
+  quitConfirm: boolean;
+  /** Tastenkürzel zum Beenden (Alt+F4, Cmd+Q) sperren: ignoreExitKeys. */
+  ignoreExitKeys: boolean;
+  /** Neu laden erlaubt und Knopf dafür: browserWindowAllowReload, showReloadButton. */
+  reload: boolean;
+  /** Taskleiste und Uhr: showTaskBar, showTime. */
+  taskbar: boolean;
+  clock: boolean;
+  /** Zoom (Seite und Text): enableZoomPage, enableZoomText. */
+  zoom: boolean;
+  /** Rechtschreibprüfung und Wörterbuch: allowSpellCheck, allowDictionaryLookup. */
+  spellCheck: boolean;
+  /** Eigene Zwischenablage nur in SEB: enablePrivateClipboard. */
+  privateClipboard: boolean;
+  /** Prüft, ob andere Programme nach vorne kommen (Windows): enableAppSwitcherCheck. */
+  appSwitcherCheck: boolean;
+  /** Start in einer virtuellen Maschine erlauben: allowVirtualMachine. */
+  virtualMachine: boolean;
+  /** Bildschirm teilen (macOS): allowScreenSharing. */
+  screenSharing: boolean;
+  /** Höchstzahl Bildschirme: allowedDisplaysMaxNumber. */
+  displays: number;
+  /** WLAN-Steuerung in der Taskleiste: allowWlan. */
+  wlan: boolean;
+  /** Mikrofon und Kamera: allowAudioCapture, allowVideoCapture. */
+  audio: boolean;
+  video: boolean;
+  /** Weitere erlaubte Adressen (Host oder Host/Pfad), z.B. eine Formelsammlung. */
+  extraHosts: string[];
+}
+
+export const SEB_DEFAULTS: SebSettings = {
+  allowQuit: true,
+  quitLink: true,
+  quitConfirm: true,
+  ignoreExitKeys: true,
+  reload: true,
+  taskbar: true,
+  clock: true,
+  zoom: true,
+  spellCheck: false,
+  privateClipboard: true,
+  appSwitcherCheck: true,
+  virtualMachine: false,
+  screenSharing: false,
+  displays: 1,
+  wlan: false,
+  audio: false,
+  video: false,
+  extraHosts: [],
+};
+
+/** Erlaubte Zusatzadresse: Host mit optionalem Port und Pfad, ohne Schema, Leerzeichen oder Platzhalter. */
+export const validSebHost = (value: string) => /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(:\d{1,5})?(\/[\w\-./%]*)?$/i.test(value.trim()) && value.trim().length <= 200;
+
+/** Gespeicherte Einstellungen bereinigen (fehlende Werte aus den Vorgaben). */
+export function cleanSebSettings(raw: unknown): SebSettings {
+  const r = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const out = { ...SEB_DEFAULTS };
+  for (const key of Object.keys(SEB_DEFAULTS) as (keyof SebSettings)[]) {
+    const v = r[key];
+    if (typeof SEB_DEFAULTS[key] === 'boolean' && typeof v === 'boolean') (out as Record<string, unknown>)[key] = v;
+  }
+  out.displays = Number.isInteger(r.displays) && (r.displays as number) >= 1 && (r.displays as number) <= 4 ? (r.displays as number) : SEB_DEFAULTS.displays;
+  out.extraHosts = Array.isArray(r.extraHosts) ? r.extraHosts.filter((h): h is string => typeof h === 'string' && validSebHost(h)).map((h) => h.trim()).slice(0, 10) : [];
+  return out;
+}
+
 export interface SebOptions {
   /** Adresse, die SEB öffnet, z.B. https://app.leyonet.ch/?seb=… */
   startUrl: string;
@@ -75,34 +171,55 @@ export interface SebOptions {
   adminPassword?: string;
   /** Beenden-Passwort: SEB vor Ende der Prüfung verlassen. */
   quitPassword?: string;
+  /** Weitere Einstellungen; fehlt: Vorgaben (SEB_DEFAULTS). */
+  settings?: Partial<SebSettings>;
 }
 
 /** Einstellungen als Property-List: nur die Webversion erlaubt, keine Downloads, kein Zurück. */
 export async function sebPlist(o: SebOptions): Promise<string> {
   const url = new URL(o.startUrl);
+  const c = cleanSebSettings({ ...SEB_DEFAULTS, ...o.settings });
+  // Beenden-Link: dieselbe Seite mit «?seb-ende» (gehört zum eigenen Server, der Filter lässt ihn zu).
+  const quit = new URL(url.origin + url.pathname);
+  quit.searchParams.set(SEB_QUIT_PARAM, '1');
+  const rules = [url.host, ...c.extraHosts].map((expression) => ({ action: 1, active: true, expression, regex: false }));
   const settings: Record<string, Value> = {
     originatorVersion: 'leyoNET',
     sebConfigPurpose: 0,
     startURL: url.href,
-    hashedAdminPassword: o.adminPassword ? await sha256Hex(o.adminPassword) : '',
-    hashedQuitPassword: o.quitPassword ? await sha256Hex(o.quitPassword) : '',
-    allowQuit: true,
+    hashedAdminPassword: await sebPasswordHash(o.adminPassword),
+    hashedQuitPassword: await sebPasswordHash(o.quitPassword),
+    allowQuit: c.allowQuit,
+    ignoreExitKeys: c.ignoreExitKeys,
+    quitURL: c.allowQuit && c.quitLink ? quit.href : '',
+    quitURLConfirm: c.quitConfirm,
     // Zufälliges Salz: jede erzeugte Datei hat einen eigenen Browser Exam Key.
     examKeySalt: crypto.getRandomValues(new Uint8Array(32)),
     sendBrowserExamKey: false,
     URLFilterEnable: true,
     URLFilterEnableContentFilter: false,
-    // Nur der eigene Server (ohne Pfad = alle Seiten darauf); alles andere sperrt SEB.
-    URLFilterRules: [{ action: 1, active: true, expression: url.host, regex: false }],
+    // Nur der eigene Server (ohne Pfad = alle Seiten darauf) und die freigegebenen Adressen; alles andere sperrt SEB.
+    URLFilterRules: rules,
     allowDownUploads: false,
     allowBrowsingBackForward: false,
-    browserWindowAllowReload: true,
-    showReloadButton: true,
+    browserWindowAllowReload: c.reload,
+    newBrowserWindowAllowReload: c.reload,
+    showReloadButton: c.reload,
     showReloadWarning: true,
-    enableAppSwitcherCheck: true,
-    allowSpellCheck: false,
-    allowDictionaryLookup: false,
-    enablePrivateClipboard: true,
+    showTaskBar: c.taskbar,
+    showTime: c.taskbar && c.clock,
+    enableZoomPage: c.zoom,
+    enableZoomText: c.zoom,
+    enableAppSwitcherCheck: c.appSwitcherCheck,
+    allowSpellCheck: c.spellCheck,
+    allowDictionaryLookup: c.spellCheck,
+    enablePrivateClipboard: c.privateClipboard,
+    allowVirtualMachine: c.virtualMachine,
+    allowScreenSharing: c.screenSharing,
+    allowedDisplaysMaxNumber: c.displays,
+    allowWlan: c.wlan,
+    allowAudioCapture: c.audio,
+    allowVideoCapture: c.video,
     newBrowserWindowByLinkPolicy: 0,
     newBrowserWindowByScriptPolicy: 0,
   };

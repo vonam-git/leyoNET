@@ -1,4 +1,4 @@
-import { evaluateTasks, type GoalResult, type TaskSet } from '../../core';
+import { FAULT_GOAL_PREFIX, evaluateTasks, type GoalResult, type TaskSet } from '../../core';
 import { t } from '../../i18n';
 import { editor } from './editor.svelte';
 import { catalogIdOf, progress } from './progress.svelte';
@@ -27,7 +27,12 @@ class TaskView {
       this.results = results;
       this.checking = false;
       // Für das Dashboard der Lehrperson: erreichte Lernziele dieser Session.
-      session.progress = { goals: results.filter((r) => r.passed).length, total: results.length };
+      const faults = results.filter((r) => r.id.startsWith(FAULT_GOAL_PREFIX));
+      session.progress = {
+        goals: results.filter((r) => r.passed).length,
+        total: results.length,
+        ...(faults.length ? { faults: { fixed: faults.filter((r) => r.passed).length, total: faults.length } } : {}),
+      };
       // Übung aus dem Katalog vollständig gelöst: im Katalog als erledigt zeigen.
       const id = catalogIdOf(tasks);
       if (id && results.length > 0 && results.every((r) => r.passed || r.manual) && progress.mark(id)) editor.notify(t('catalog.doneNotice'));

@@ -20,7 +20,7 @@ export interface ActiveExam {
   /** Beginn (ms seit 1970). */
   started: number;
   /** Prüfung über den Server (Webversion): Platz-Code, Ende des Platzes, Zustand. */
-  server?: { seatCode: string; until: number | null; offset: number; state: SeatStatus['state']; submitted?: number | null };
+  server?: { seatCode: string; until: number | null; offset: number; state: SeatStatus['state']; submitted?: number | null; sebQuit?: boolean; unlock?: SeatStatus['unlock'] };
 }
 
 /** Zustand eines Prüfungsplatzes laut Server. */
@@ -33,7 +33,21 @@ export interface SeatStatus {
   now: number;
   title: string;
   seat: string;
+  /** SEB-Datei mit Beenden-Link: nach der Abgabe «Safe Exam Browser beenden» zeigen. */
+  sebQuit?: boolean;
+  /** Code zum Beenden: noch erlaubte Versuche; gesperrt bis (0 = nicht gesperrt, -1 = bis zur Freigabe). */
+  unlock?: { left: number; lockedUntil: number };
 }
+
+/** Teil des Server-Stands, den der Prüfungsmodus sich merkt. */
+const serverPart = (status: SeatStatus) => ({
+  until: status.until,
+  offset: status.now - Date.now(),
+  state: status.state,
+  submitted: status.submitted ?? null,
+  ...(status.sebQuit ? { sebQuit: true } : {}),
+  ...(status.unlock ? { unlock: status.unlock } : {}),
+});
 
 const KEY = 'netzwerk-simulator.exam';
 
@@ -111,7 +125,7 @@ class ExamMode {
       variant: status.seat,
       ...(exam.unlock ? { unlock: exam.unlock } : {}),
       started: this.active?.id === exam.id ? this.active.started : Date.now(),
-      server: { seatCode, until: status.until, offset: status.now - Date.now(), state: status.state, submitted: status.submitted ?? null },
+      server: { seatCode, ...serverPart(status) },
     });
   }
 
@@ -119,7 +133,7 @@ class ExamMode {
   updateServer(status: SeatStatus) {
     const a = this.active;
     if (!a?.server) return;
-    this.#store({ ...a, server: { ...a.server, until: status.until, offset: status.now - Date.now(), state: status.state, submitted: status.submitted ?? null } });
+    this.#store({ ...a, server: { seatCode: a.server.seatCode, ...serverPart(status) } });
   }
 
   /** Nach der Abgabe (Server meldet «abgegeben») ohne Code verlassen. */
@@ -136,11 +150,17 @@ class ExamMode {
     return !!this.active && EXAM_BLOCKED_DIALOGS.has(name);
   }
 
-  /** Mit dem Code der Lehrperson beenden; true = beendet. */
-  async end(code: string): Promise<boolean> {
+  /**
+   * Mit dem Code der Lehrperson beenden; true = beendet. Bei einer Prüfung über den Server prüft
+   * der Server den Code (`verify`), mit begrenzten Versuchen pro Platz.
+   */
+  async end(code: string, verify?: (code: string) => Promise<boolean>): Promise<boolean> {
     const active = this.active;
     if (!active) return true;
-    if (active.unlock && (await hashCode(code)) !== active.unlock) return false;
+    if (active.server) {
+      // Prüfung über den Server: Nur der Server kennt den Prüfwert des Codes.
+      if (!verify || !(await verify(code))) return false;
+    } else if (active.unlock && (await hashCode(code)) !== active.unlock) return false;
     this.#store(null);
     return true;
   }

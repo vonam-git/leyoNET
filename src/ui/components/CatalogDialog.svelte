@@ -7,6 +7,7 @@
   import { catalogVisible } from '../catalogVisibility';
   import { editor } from '../state/editor.svelte';
   import { progress } from '../state/progress.svelte';
+  import { session } from '../state/session.svelte';
   import { ui } from '../state/ui.svelte';
   import Modal from './Modal.svelte';
   import Stars from './Stars.svelte';
@@ -14,10 +15,12 @@
   /** Aufgaben-Katalog: vorbereitete Aufgaben mit 1 bis 5 Sternen. */
   let { onclose }: { onclose: () => void } = $props();
 
+  // Platz im Klassen-Verbund und Klassencode: Übungen wie die Verbund-Fehlersuche sind pro Platz anders.
+  const ctx = $derived({ ...(session.site ? { seat: session.site.seat } : {}), ...(session.classCode ? { salt: session.classCode } : {}) });
   // Texte erst beim Öffnen erzeugen (aktuelle Sprache).
   const entries = $derived(
     CATALOG.filter(catalogVisible).map((entry) => {
-      const preview = entry.build();
+      const preview = entry.build(ctx);
       const tags = tagsOf(entry, preview.topology, preview.tasks.goals.map((g) => g.check.type));
       return { entry, preview, tags, text: [preview.tasks.title, preview.tasks.description, entry.sheet ?? '', ...tags.map((x) => t(`catalog.tag.${x}`))].join(' ') };
     }),
@@ -73,7 +76,7 @@
   }
 
   function open(entry: CatalogEntry) {
-    const { topology, tasks } = entry.build();
+    const { topology, tasks } = entry.build(ctx);
     editor.setMode('design');
     // Nicht rückgängig: Der alte Aufbau soll nicht versehentlich in die Aufgabe zurückkommen.
     editor.replace(topology, { undoable: false, tasks, snapshots: [] });
@@ -87,7 +90,7 @@
   <p class="muted">{t('catalog.intro')}</p>
   {#if pending}
     <div class="replace" role="alertdialog" aria-labelledby="catalog-replace-title">
-      <strong id="catalog-replace-title">{t('catalog.replace.title', { title: pending.build().tasks.title })}</strong>
+      <strong id="catalog-replace-title">{t('catalog.replace.title', { title: pending.build(ctx).tasks.title })}</strong>
       <p>{t('catalog.replace.text', { devices: editor.topology.devices.length })}</p>
       <div class="replace-actions">
         <button class="primary" onclick={() => confirmStart(true)}>{t('catalog.replace.save')}</button>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pointsOf, scoreOf, siteName, swissGrade, verbundAddresses, type TaskSet } from '../../core';
+  import { FAULT_GOAL_PREFIX, pointsOf, scoreOf, siteName, swissGrade, verbundAddresses, type TaskSet } from '../../core';
   import { t } from '../../i18n';
   import { editor } from '../state/editor.svelte';
   import { session } from '../state/session.svelte';
@@ -96,11 +96,16 @@
             <span class="visually-hidden">{t(result.passed ? 'tasks.passed' : 'tasks.failed')}</span>
           {/if}
           {#if result && !result.passed}
-            {#if result.reason}
-              <span class="reason">{t(`tasks.reason.${result.reason.code}`, result.reason.params)}</span>
-            {/if}
-            {#if goal.hint}
-              <span class="hint">💡 {goal.hint}</span>
+            {#if goal.id.startsWith(FAULT_GOAL_PREFIX)}
+              <!-- Fehlersuche: Der Grund nennt den richtigen Wert, darum hier nicht; den Tipp erst auf Klick. -->
+              {#if goal.hint}<details class="hint"><summary>💡 {t('tasks.hintShow')}</summary>{goal.hint}</details>{/if}
+            {:else}
+              {#if result.reason}
+                <span class="reason">{t(`tasks.reason.${result.reason.code}`, result.reason.params)}</span>
+              {/if}
+              {#if goal.hint}
+                <span class="hint">💡 {goal.hint}</span>
+              {/if}
             {/if}
           {/if}
         </span>
@@ -227,6 +232,9 @@
     display: block;
     margin-top: 2px;
     color: var(--muted);
+  }
+  details.hint summary {
+    cursor: pointer;
   }
   .raster {
     width: 100%;
