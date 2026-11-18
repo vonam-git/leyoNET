@@ -87,7 +87,7 @@ npm run dev       # http://localhost:5173/dev.html
 npm run release   # Typprüfung, Tests, Build, release/leyonet.html (vor jedem Commit)
 ```
 
-Aufbau, Regeln und alle Befehle: [docs/entwicklung.md](docs/entwicklung.md). Gearbeitet wird auf `develop`, `main` ist die stabile Version. Weiterarbeit in einem neuen Chat mit Claude: [docs/uebergabe.md](docs/uebergabe.md).
+Aufbau, Regeln und alle Befehle: [docs/entwicklung.md](docs/entwicklung.md). Gearbeitet wird auf `develop`, `main` ist die stabile Version. Abläufe (Release, Website, Plesk): [docs/ablaeufe.md](docs/ablaeufe.md).
 
 ## Geschichte
 
