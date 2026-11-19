@@ -1,6 +1,6 @@
 {
   "version": "1.8.0",
-  "date": "2026-11-18T09:04:50.773Z",
+  "date": "2026-11-19T10:09:36.710Z",
   "checks": [
     {
       "id": "privacy.noExternal",
@@ -59,8 +59,8 @@
     {
       "id": "security.audit",
       "category": "security",
-      "status": "warn",
-      "detail": "Build-Werkzeuge: 16 bekannte Schwachstellen (8 hoch/kritisch). Sie sind nicht in der ausgelieferten Datei."
+      "status": "pass",
+      "detail": "Keine bekannten Schwachstellen."
     },
     {
       "id": "security.headers",

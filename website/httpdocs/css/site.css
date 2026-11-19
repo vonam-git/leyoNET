@@ -670,7 +670,7 @@ code {
 /* --- ICT-Module -------------------------------------------------------------------- */
 
 .modules {
-  padding: clamp(56px, 7vw, 96px) 0 0;
+  padding: clamp(56px, 7vw, 96px) 0;
 }
 .module-grid {
   display: grid;
