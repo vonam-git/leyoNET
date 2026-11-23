@@ -17,6 +17,8 @@
     /** Browser der Person gerade offen (Lebenszeichen). */
     present?: boolean;
     own?: boolean;
+    /** Hilfe bei der Lehrperson angefordert. */
+    help?: boolean;
   }
   export interface Flight {
     id: number;
@@ -121,6 +123,7 @@
     <g
       class="site {s.level}"
       class:own={s.own}
+      class:help={!!s.help}
       class:clickable={!!onselect}
       transform="translate({s.x - 78} {s.y - 30})"
       role={onselect ? 'button' : undefined}
@@ -133,7 +136,7 @@
       <circle class="led" cx="16" cy="18" r="6" />
       <text class="seat" x="148" y="20">{s.seat}</text>
       <text class="name" x="30" y="23">{s.name.length > 15 ? `${s.name.slice(0, 14)}…` : s.name}</text>
-      <text class="state" x="14" y="42">{t(`verbund.level.${s.level}`)}{#if s.present} · ●{/if}</text>
+      <text class="state" x="14" y="42">{#if s.help}🙋 {t('classLive.help.pill')}{:else}{t(`verbund.level.${s.level}`)}{/if}{#if s.present} · ●{/if}</text>
       {#if s.total}
         <rect class="bar" x="14" y="48" width="128" height="5" rx="2.5" />
         <rect class="bar-fill" x="14" y="48" width={128 * pct} height="5" rx="2.5" />
@@ -254,6 +257,10 @@
   .site.done .card {
     stroke: #eab308;
     fill: #1c1a0e;
+  }
+  .site.help .card {
+    stroke: #e879f9;
+    stroke-width: 3;
   }
   .site.own .card {
     stroke-width: 3.5;

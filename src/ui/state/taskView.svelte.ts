@@ -6,6 +6,16 @@ import { verbund } from './verbund.svelte';
 import { session } from './session.svelte';
 import { simStore } from './sim.svelte';
 
+/** Fortschritt aus den Ergebnissen (nur Zahlen, kein Inhalt). */
+export function progressOf(results: readonly GoalResult[]): { goals: number; total: number; faults?: { fixed: number; total: number } } {
+  const faults = results.filter((r) => r.id.startsWith(FAULT_GOAL_PREFIX));
+  return {
+    goals: results.filter((r) => r.passed).length,
+    total: results.length,
+    ...(faults.length ? { faults: { fixed: faults.filter((r) => r.passed).length, total: faults.length } } : {}),
+  };
+}
+
 /**
  * Ergebnisse von «Prüfen» und das grosse Aufgabenfenster. Seitenleiste und
  * Fenster zeigen dieselbe Aufgabe mit denselben Ergebnissen.
@@ -26,13 +36,10 @@ class TaskView {
       const results = evaluateTasks(verbund.simTopology(editor.topology), tasks, simStore.sim?.getPacketLog() ?? []);
       this.results = results;
       this.checking = false;
+      // Beim Ansehen einer fremden Session nichts am eigenen Stand ändern.
+      if (session.watching) return;
       // Für das Dashboard der Lehrperson: erreichte Lernziele dieser Session.
-      const faults = results.filter((r) => r.id.startsWith(FAULT_GOAL_PREFIX));
-      session.progress = {
-        goals: results.filter((r) => r.passed).length,
-        total: results.length,
-        ...(faults.length ? { faults: { fixed: faults.filter((r) => r.passed).length, total: faults.length } } : {}),
-      };
+      if (!tasks.noSelfCheck) session.progress = progressOf(results);
       // Übung aus dem Katalog vollständig gelöst: im Katalog als erledigt zeigen.
       const id = catalogIdOf(tasks);
       if (id && results.length > 0 && results.every((r) => r.passed || r.manual) && progress.mark(id)) editor.notify(t('catalog.doneNotice'));

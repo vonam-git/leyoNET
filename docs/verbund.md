@@ -10,7 +10,7 @@ Im Klassen-Verbund (nur Webversion) baut jede Person oder Gruppe ihren eigenen *
    - Optional «Standorte untereinander sichtbar» (die Lernenden bekommen die Netze der anderen Standorte, z.B. für VPN zwischen Standorten oder Webseiten der Nachbarn) und «Karte für Lernende zeigen».
 2. **Lernende treten bei**: «Session» → Klassencode, **Platznummer** (1–62) und optional eine **Gruppe** (z.B. «Team Rot»). Ohne Platznummer vergibt der Server den nächsten freien Platz. Platz und Gruppe lassen sich später am Anschlussgerät ändern.
 3. **Standort anschliessen**: Modem, Internet-Box, Router oder Firewall auswählen → Abschnitt «Klassen-Verbund» → «Anschluss an die Klassen-Infrastruktur». Beim Router oder bei der Firewall den WAN-Anschluss wählen und «Adressen eintragen».
-4. **Dashboard** (Admin-Konsole → Klasse → «Dashboard»): Karte, Kacheln oder beides, Vollbild für den Beamer. Ein Klick auf einen Standort schaut ihm zu (wie «Ansehen»).
+4. **Dashboard** (Admin-Konsole → Klasse → «Dashboard»): Karte, Kacheln oder beides, Vollbild für den Beamer. Ein Klick auf einen Standort schaut ihm zu (wie «Ansehen»), mit dem Verbund und den Lernzielen dieses Platzes. Standorte, die **Hilfe angefordert** haben, leuchten magenta; «Code gross zeigen» blendet den Klassencode für den Beamer ein.
 
 ## Adressplan
 
@@ -41,7 +41,7 @@ Das Dashboard holt alle 20 Sekunden die Netze aller Standorte der Klasse und sim
 | angeschlossen | Anschluss markiert, aber die Zentrale erreicht den Standort nicht (Adresse, Route, NAT prüfen) |
 | online | die Zentrale erreicht die WAN-Adresse (Ping) |
 | Dienste erreichbar | unter http://WAN-Adresse/ antwortet eine Webseite (Portweiterleitung) |
-| fertig | online und alle Lernziele der geladenen Aufgabe erfüllt (Fortschritt meldet der Browser der Lernenden) |
+| fertig | online und alle Lernziele der geladenen Aufgabe erfüllt (den Fortschritt bestimmt der Browser der Lernenden von selbst kurz nach jeder Änderung; niemand muss abgeben) |
 
 Unten läuft ein Ticker mit Statuswechseln, neu dazugekommenen Standorten und Nachrichten. Das Ergebnis schickt das Dashboard an den Server, damit die Karte der Lernenden (falls freigegeben) dieselben Farben zeigt.
 

@@ -138,7 +138,14 @@ Ideen für die neuen Funktionen:
 
 ## Webversion mit Klassen
 
-In der Webversion eröffnet die Lehrperson in der Admin-Konsole eine Klasse mit einer Bezeichnung ohne Personenbezug (z.B. «INF22a»). Lernende treten mit dem Klassencode bei. Die Lehrperson sieht Session-Codes, aber keine Namen. Wer welchen Code hat, klärt die Klasse selbst. Einrichtung: [plesk.md](plesk.md).
+In der Webversion eröffnet die Lehrperson in der Admin-Konsole eine Klasse mit einer Bezeichnung ohne Personenbezug (z.B. «INF22a»). **Code gross zeigen** stellt den Klassencode bildschirmfüllend für den Beamer dar, mit den Schritten zum Beitreten. Lernende wählen unter «Session» den Knopf **Klasse beitreten**; ihr eigener Code steht getrennt davon. Die Lehrperson sieht Session-Codes, aber keine Namen. Einrichtung: [plesk.md](plesk.md).
+
+In der Liste der Klasse (aktualisiert sich von selbst):
+
+- **Fortschritt** und **Zustand**: erfüllte Lernziele der geladenen Aufgabe. Der Browser der Lernenden prüft das von selbst kurz nach jeder Änderung, «Abgeben» braucht es nicht. Orange heisst mindestens die Hälfte, grün alles erfüllt, magenta «braucht Hilfe» (Knopf **Hilfe anfordern** der Lernenden, quittiert mit «Hilfe erledigt»). Die Maus über «Fortschritt» erklärt die Zahl.
+- **Erkennen**: Der Bildschirm dieser Session blinkt einige Sekunden rot und zeigt Platz und Code. So findet man heraus, wer an welcher Session arbeitet.
+- **Ansehen**: nur lesen, alle 5 Sekunden neu geladen, Lernziele gleich grün oder rot geprüft (Fehlersuche am Beamer). Im Klassen-Verbund gilt dabei der Platz der angesehenen Session.
+- **Öffnen**: Die Lehrperson bearbeitet die Session; die Änderungen gehen direkt an die Lernenden, die solange nur zusehen und danach mit dem neuen Stand weiterarbeiten. Nach 10 Minuten ohne Änderung wird wieder nur angesehen.
 
 Mit dem **Klassen-Verbund** baut jede Gruppe einen eigenen Standort und schliesst ihn an Ihre Klassen-Infrastruktur an; das **Dashboard** auf dem Beamer zeigt live, wer wirklich online ist, und Nachrichten fliegen zwischen den Standorten. Bei der Klasse blenden Sie ausserdem Übungen und ganze Module für die Klasse ein oder aus. Ablauf, Adressplan und Verbund-Übungen: [verbund.md](verbund.md).
 

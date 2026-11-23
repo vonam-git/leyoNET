@@ -34,7 +34,7 @@ export type { ArpEntry } from './sim/ip';
 export type { AddressState } from './sim/host';
 export { rateCall, RTP_PORT, DEFAULT_CALL_SECONDS, type CallState, type CallStats, type CallQuality, type VoipState } from './sim/voip';
 export type { LeaseRecord } from './sim/dhcp';
-export { COMMANDS } from './sim/commands';
+export { COMMANDS, parseInterfaceCommand } from './sim/commands';
 export { MAC_TTL, type MacEntry, type StpState } from './sim/switch';
 export * from './cli/cli';
 export * from './cli/names';

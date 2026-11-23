@@ -196,7 +196,7 @@ export const M129_SHEETS = [
     entries: ['m129-routing-a1', 'm129-routing-a2', 'm129-routing-a3'],
     projects: ['M129_Routing_A1', 'M129_Routing_A2', 'M129_Routing_A3'],
     intro: [
-      { p: 'Drei Router verbinden vier Netze und führen ins Internet. Du richtest sie in leyoNET ein, im Fenster des Routers oder auf seiner **Befehlszeile** (Doppelklick auf den Router). Wichtig: **Router-Adressen werden immer fest eingetragen**, nie per DHCP, damit sie stets unter derselben Adresse erreichbar sind. Üblich ist die erste oder letzte Adresse des Netzes.' },
+      { p: 'Drei Router verbinden vier Netze und führen ins Internet. Du richtest sie in leyoNET im **Fenster des Routers** ein: Router anklicken, «Erweitert …» (Taste E). Die **Befehlszeile** ist eine freiwillige Zusatzaufgabe. Wichtig: **Router-Adressen werden immer fest eingetragen**, nie per DHCP, damit sie stets unter derselben Adresse erreichbar sind. Üblich ist die erste oder letzte Adresse des Netzes.' },
       {
         table: [
           ['Netz', 'Adressbereich', 'Router', 'Adresse'],
@@ -210,9 +210,23 @@ export const M129_SHEETS = [
         widths: [1.3, 1.4, 1.9, 1.4],
       },
       { tip: 'Ein **Transitnetz** verbindet nur Router miteinander, es stehen keine PCs darin. Darum genügt ein kleines Netz wie /30 mit zwei Adressen. Der Provider steht auf 203.0.113.2, der Webserver im Internet auf 198.51.100.10 (Adressen für Dokumentation, RFC 5737).' },
-      { h: 'Theorie: die Befehlszeile eines Routers' },
+      { h: 'Theorie: Routen' },
       { p: 'Ein Router kennt von sich aus nur die Netze, an denen er direkt hängt. Für jedes andere Ziel braucht er eine **Route**: «Netz X erreichst du über den Nachbarn Y (Next Hop)». Eine **Standardroute** 0.0.0.0/0 gilt für alles, wofür es keine genauere Route gibt. Und: Jedes Paket braucht auch einen **Rückweg**.' },
-      { p: 'Die Befehle unten zeigen den Aufbau mit **anderen Beispieladressen** (10.0.0.0/8). Die Befehle für dein Netz überlegst du selbst. Hilfe gibt es jederzeit mit `?` oder der Taste Tab auf der Befehlszeile und mit **F1** in leyoNET.' },
+      { h: 'So geht es im Fenster des Routers' },
+      {
+        table: [
+          ['Zweck', 'Wo in leyoNET'],
+          ['Anschluss einrichten', 'Reiter «Adressen»: Adresse und Präfix je Anschluss (eth0, eth1 …)'],
+          ['Statische Route', 'Reiter «Routing»: Zielnetz mit Präfix und Next Hop eintragen'],
+          ['Standardroute', 'Reiter «Routing»: Ziel 0.0.0.0/0 und Next Hop'],
+          ['NAT', 'Reiter «NAT»: Source-NAT (Masquerade) auf dem Anschluss nach aussen'],
+          ['Kontrolle', 'Reiter «Zustand» (Routingtabelle), in der Simulation Ping'],
+          ['Speichern', 'Reiter «Allgemein»: «Konfiguration speichern»'],
+        ],
+        widths: [1.6, 4],
+      },
+      { h: 'Zusatz (freiwillig): die Befehlszeile eines Routers' },
+      { p: 'Echte Router werden oft auf der Befehlszeile eingerichtet (Doppelklick auf den Router). Die Befehle unten zeigen den Aufbau mit **anderen Beispieladressen** (10.0.0.0/8). Hilfe gibt es mit `?` oder der Taste Tab und mit **F1** in leyoNET. Befehle lassen sich abkürzen, z.B. `conf t`, `sh ip ro`, `int e0`, `wr`.' },
       {
         table: [
           ['Zweck', 'Beispiel (nicht dein Netz)'],
@@ -227,7 +241,7 @@ export const M129_SHEETS = [
         ],
         widths: [1.6, 4],
       },
-      { tip: 'Echte Router unterscheiden die **running-config** (im Arbeitsspeicher, sofort wirksam) und die **startup-config** (gespeichert, wird beim Start geladen). Wer nicht speichert, verliert nach einem Neustart alle Änderungen. In leyoNET zeigt das Fenster der Befehlszeile oben an, ob die Konfiguration gespeichert ist.' },
+      { tip: 'Echte Router unterscheiden die **running-config** (im Arbeitsspeicher, sofort wirksam) und die **startup-config** (gespeichert, wird beim Start geladen). Wer nicht speichert, verliert nach einem Neustart alle Änderungen. In leyoNET zeigen das Fenster des Routers (Reiter «Allgemein») und die Befehlszeile an, ob die Konfiguration gespeichert ist.' },
     ],
     sections: [
       {
@@ -236,7 +250,7 @@ export const M129_SHEETS = [
         stars: 3,
         catalog: 'Statisches Routing – Auftrag 1: Drei Router statisch verbinden',
         blocks: [
-          { p: 'Richte die Anschlüsse aller drei Router und die beiden PCs (PC LAN1 192.168.1.10, PC LAN3 192.168.3.10) ein. Trage danach **statische Routen** ein, kein automatisches Routing. Speichere zum Schluss die Konfiguration jedes Routers.' },
+          { p: 'Richte die Anschlüsse aller drei Router und die beiden PCs (PC LAN1 192.168.1.10, PC LAN3 192.168.3.10) im Fenster der Geräte ein. Trage danach **statische Routen** ein (Reiter «Routing»), kein automatisches Routing. Speichere zum Schluss die Konfiguration jedes Routers (Reiter «Allgemein»).' },
           { h: 'Transitnetze berechnen' },
           {
             fields: [
@@ -255,7 +269,7 @@ export const M129_SHEETS = [
               { label: 'Router3', name: 'r3_route', answer: '192.168.1.0/24, 192.168.2.0/30 und 192.168.3.0/24 über 172.16.12.94', wide: true },
             ],
           },
-          { h: 'Deine Befehle (selbst erarbeitet)' },
+          { h: 'Zusatz (freiwillig): dieselbe Konfiguration als Befehle' },
           {
             question: {
               name: 'cmd_r1',
@@ -292,10 +306,10 @@ export const M129_SHEETS = [
             question: {
               name: 'speichern',
               text: 'Was passiert mit deinen Routen, wenn der Router neu startet und du nicht gespeichert hast?',
-              answer: 'Sie sind weg: Der Router lädt beim Start die startup-config. Nur was mit «copy running-config startup-config» gespeichert wurde, bleibt erhalten.',
+              answer: 'Sie sind weg: Der Router lädt beim Start die startup-config. Nur was gespeichert wurde («Konfiguration speichern» bzw. «copy running-config startup-config»), bleibt erhalten.',
             },
           },
-          { h: 'Abnahme: Pings von den Routern (Befehlszeile «ping …»)' },
+          { h: 'Abnahme: Pings von den Routern (Simulation: Ping vom Router aus; freiwillig auf der Befehlszeile «ping …»)' },
           {
             fields: [
               { label: 'Router1: ping 192.168.2.2', name: 'ab_r1a', answer: 'Antwort' },
@@ -315,7 +329,14 @@ export const M129_SHEETS = [
         stars: 4,
         catalog: 'Statisches Routing – Auftrag 2: Ins Internet mit NAT',
         blocks: [
-          { p: 'Die LANs sollen ins Internet. Router3 braucht dafür eine **Standardroute zum Provider** (203.0.113.2) und muss die privaten Absenderadressen übersetzen: **Source-NAT mit Masquerade**, das heisst «nimm die Adresse des ausgehenden Anschlusses».' },
+          { p: 'Die LANs sollen ins Internet. Router3 braucht dafür eine **Standardroute zum Provider** (203.0.113.2, Reiter «Routing») und muss die privaten Absenderadressen übersetzen: **Source-NAT mit Masquerade** (Reiter «NAT»), das heisst «nimm die Adresse des ausgehenden Anschlusses».' },
+          {
+            fields: [
+              { label: 'Router3: Ziel und Next Hop der Standardroute', name: 'nat_route', answer: '0.0.0.0/0 über 203.0.113.2', wide: true },
+              { label: 'Router3: Anschluss mit NAT (Masquerade)', name: 'nat_if', answer: 'eth1 (zum Provider)', wide: true },
+            ],
+          },
+          { h: 'Zusatz (freiwillig): Befehlszeile' },
           {
             table: [
               ['Zweck', 'Beispiel (nicht dein Netz)'],
@@ -370,7 +391,9 @@ export const M129_SHEETS = [
         stars: 3,
         catalog: 'Statisches Routing – Auftrag 3: Verwaltungsnetz und SSH',
         blocks: [
-          { p: 'Router werden selten an der Konsole eingerichtet, sondern über das Netz. Dafür bekommen sie einen eigenen Anschluss in einem **Verwaltungsnetz** 192.168.56.0/24. Das Admin-Notebook (192.168.56.10/24) meldet sich per **SSH** an.' },
+          { p: 'Router werden selten an der Konsole eingerichtet, sondern über das Netz. Dafür bekommen sie einen eigenen Anschluss in einem **Verwaltungsnetz** 192.168.56.0/24. Verbinde die neuen Anschlüsse mit dem Switch Verwaltung und trage die Adressen im Reiter «Adressen» ein (Router1 eth2 .101, Router2 eth3 .102, Router3 eth2 .103, Admin-Notebook .10/24).' },
+          { h: 'Zusatz (freiwillig): Anmeldung per SSH' },
+          { p: 'Das Admin-Notebook kann sich per **SSH** auf der Befehlszeile der Router anmelden. Dafür braucht der Router einen Benutzer und eingeschaltetes SSH, beides auf der Befehlszeile.' },
           {
             table: [
               ['Zweck', 'Beispiel (nicht dein Netz)'],
@@ -384,7 +407,7 @@ export const M129_SHEETS = [
             question: {
               name: 'cmd_ssh',
               lines: 4,
-              text: 'Deine Befehle für Router1: Anschluss ins Verwaltungsnetz, Benutzer admin, SSH, Speichern, und die Anmeldung vom Admin-Notebook.',
+              text: 'Freiwillig – deine Befehle für Router1: Anschluss ins Verwaltungsnetz, Benutzer admin, SSH, Speichern, und die Anmeldung vom Admin-Notebook.',
               answer: 'interface eth2, ip address 192.168.56.101/24; username admin password …; ip ssh; line vty, transport input ssh, login local; copy running-config startup-config; Admin-Notebook: ssh admin@192.168.56.101 (Router2: eth3 .102, Router3: eth2 .103)',
             },
           },
@@ -405,7 +428,7 @@ export const M129_SHEETS = [
           },
           {
             fields: [
-              { label: 'Befehl für die Routingtabelle', name: 'befehl', answer: 'show ip route' },
+              { label: 'Route für alle übrigen Ziele', name: 'befehl', answer: '0.0.0.0/0 (Standardroute)' },
               { label: 'Next Hop Standardroute Router1', name: 'nexthop', answer: '192.168.2.2' },
             ],
           },

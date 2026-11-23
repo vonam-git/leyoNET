@@ -70,7 +70,8 @@ export function parseIfaceName(device: Device, raw: string): ParsedIface | null 
     const slot = device.interfaces.filter((i) => i.serial)[Number(serial[1])];
     return slot ? { kind: 'port', port: slot.index } : null;
   }
-  const m = /^(?:eth|ethernet|e|gi(?:gabitethernet)?0\/|g0\/)(\d+)(?:\.(\d+))?$/.exec(text);
+  // Wie gewohnt abkürzbar: eth0, e0, ethernet0, auch Cisco-Namen gi0/0, g0, fa0/1, f1 (= eth0, eth0, eth1, eth1).
+  const m = /^(?:eth|ethernet|e|(?:gigabitethernet|gi|g|fastethernet|fa|f)(?:0\/)?)(\d+)(?:\.(\d+))?$/.exec(text);
   if (!m) return null;
   const n = port(Number(m[1]));
   if (n === null || device.interfaces[n]?.serial) return null;

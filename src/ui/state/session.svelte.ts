@@ -14,6 +14,12 @@ const CLASS_KEY = 'netzwerk-simulator.class';
 const WRITER_KEY = 'netzwerk-simulator.writer';
 /** Lebenszeichen an den Server, damit kein zweites Gerät die Session übernimmt. */
 export const PING_MS = 20_000;
+/** In einer Klasse öfter: Hilfe-Anfrage, «Erkennen» und Bearbeiten durch die Lehrperson kommen so rasch an. */
+export const CLASS_PING_MS = 6_000;
+/** Lehrperson bearbeitet eine Session: so oft «ich bin noch da» melden. */
+export const EDIT_BEAT_MS = 10_000;
+/** Bearbeitet die Lehrperson so lange nichts, wird wieder nur angesehen (Lernende nicht ewig gesperrt). */
+export const EDIT_IDLE_MS = 10 * 60_000;
 /** Beim Ansehen einer fremden Session so oft neu laden. */
 export const WATCH_MS = 5_000;
 
@@ -101,6 +107,13 @@ export interface Watching {
   updated: number | null;
   connected: boolean;
   error?: string;
+  /** Klasse und Platz der angesehenen Session (für den Klassen-Verbund). */
+  classCode?: string | null;
+  site?: { seat: number; label: string } | null;
+  /** Lehrperson bearbeitet die Session (Änderungen gehen an die Lernenden), statt nur anzusehen. */
+  edit?: boolean;
+  /** Lernende haben Hilfe angefordert (Zeitpunkt). */
+  help?: number | null;
 }
 
 /** Vom Server: Sichtbarkeit der Aufgaben (global oder je Klasse). */
@@ -114,7 +127,7 @@ export interface ClassSettings {
   verbund: { enabled: boolean; shareSites: boolean; showMap: boolean };
 }
 
-class SessionStore {
+export class SessionStore {
   code = $state<string | null>(read(CODE_KEY));
   #writer: string | null = read(WRITER_KEY);
   /** Ein anderes Gerät hat die Session übernommen: hier wird nicht mehr gespeichert. */
@@ -130,6 +143,17 @@ class SessionStore {
   /** Erreichte Lernziele (nach «Prüfen»), wird mit dem Projekt gespeichert. */
   /** Erreichte Lernziele; `faults`: davon behobene Fehler (Fehlersuche, für das Dashboard). */
   progress: { goals: number; total: number; faults?: { fixed: number; total: number } } | null = null;
+  /** Hilfe bei der Lehrperson angefordert (Klasse). */
+  help = $state(false);
+  /** Lehrperson hat «Erkennen» gedrückt: Zeitpunkt, an dem der Bildschirm aufblinkt. */
+  identify = $state<number | null>(null);
+  /** Lehrperson bearbeitet diese Session gerade: hier nur zusehen. */
+  teacherEditing = $state(false);
+  /** Neuer Stand vom Server übernehmen (nach Änderungen der Lehrperson), von App.svelte gesetzt. */
+  onRemote: ((p: LoadedProject) => void) | null = null;
+  #known = 0;
+  /** Hilfe-Anfrage geändert, aber noch nicht gemeldet (sonst gilt der Stand vom Server). */
+  #helpChange: boolean | null = null;
   /** Einstellungen der Klasse: ausgeblendete Aufgaben, Verbund freigegeben. */
   classSettings = $state.raw<ClassSettings | null>(null);
   expires = $state<number | null>(null);
@@ -148,7 +172,16 @@ class SessionStore {
   constructor() {
     // Prüfung: alle 20 Sekunden speichern bzw. den Stand des Platzes abfragen (Zeit, Verlängerung, Ende).
     if (typeof window !== 'undefined') {
-      setInterval(() => void this.#ping(), PING_MS);
+      // Alle 2 s nachsehen, ob ein Lebenszeichen fällig ist: in einer Klasse alle 6 s, sonst alle 20 s
+      // (auch gleich nach dem Beitreten, nicht erst nach dem alten Takt).
+      let last = Date.now();
+      let running = false;
+      setInterval(() => {
+        if (running || Date.now() - last < (this.classCode ? CLASS_PING_MS : PING_MS)) return;
+        running = true;
+        last = Date.now();
+        void this.#ping().finally(() => (running = false));
+      }, 2000);
       setInterval(() => {
         if (!examMode.active?.server || !this.code || examMode.active.server.state === 'closed') return;
         if (!this.#pending && this.#last) this.#pending = this.#last;
@@ -176,12 +209,50 @@ class SessionStore {
   /** Lebenszeichen: Solange es kommt, kann kein anderes Gerät die Session übernehmen. */
   async #ping() {
     if (!this.code || !this.#writer || this.takenOver || this.watching) return;
+    const code = this.code;
+    const change = this.#helpChange;
+    this.#helpChange = null;
     try {
-      const data = await api<{ locked: boolean }>('POST', `sessions/${this.code}/ping`, undefined, undefined, this.#headers());
+      // In einer Klasse: Fortschritt und Hilfe-Anfrage mitschicken; zurück kommen «Erkennen» und ob die Lehrperson bearbeitet.
+      const body = this.classCode ? { ...(this.progress ? { progress: this.progress } : {}), ...(change !== null ? { help: change } : {}) } : undefined;
+      const data = await api<{ locked: boolean; help?: boolean; identify?: boolean; teacher?: boolean; updated?: number }>('POST', `sessions/${code}/ping`, body, undefined, this.#headers());
+      if (code !== this.code) return;
       this.locked = data.locked;
+      if (!this.classCode) return;
+      // Die Lehrperson kann die Hilfe-Anfrage erledigen: Stand vom Server übernehmen (ausser es wurde inzwischen neu geklickt).
+      if (data.help !== undefined && this.#helpChange === null) this.help = data.help;
+      if (data.identify && (!this.identify || Date.now() - this.identify > 8000)) this.identify = Date.now();
+      const was = this.teacherEditing;
+      this.teacherEditing = !!data.teacher;
+      // Die Lehrperson hat geändert (oder bearbeitet noch): neuen Stand holen und zeigen.
+      if (data.updated && data.updated > this.#known && (this.teacherEditing || was)) await this.#pullRemote();
+      else if (data.updated) this.#known = Math.max(this.#known, data.updated);
     } catch (error) {
+      if (change !== null && this.#helpChange === null) this.#helpChange = change;
       if (error instanceof ApiError && error.code === 'sessionTakenOver') this.takenOver = true;
     }
+  }
+
+  async #pullRemote() {
+    if (!this.code) return;
+    try {
+      const data = await api<{ project: unknown; updated?: number }>('GET', `sessions/${encodeURIComponent(this.code)}?watch=1`);
+      const parsed = parseProject(JSON.stringify(data.project));
+      if (!parsed.ok) return;
+      this.#known = data.updated ?? Date.now();
+      this.#pending = null;
+      clearTimeout(this.#timer);
+      this.onRemote?.(parsed);
+    } catch {
+      /* beim nächsten Lebenszeichen wieder */
+    }
+  }
+
+  /** Hilfe bei der Lehrperson anfordern oder zurückziehen (gleich melden, nicht erst beim nächsten Lebenszeichen). */
+  async requestHelp(on: boolean) {
+    this.help = on;
+    this.#helpChange = on;
+    await this.#ping();
   }
 
   /** Prüfung mit Platz-Code beitreten; bei laufender Prüfung wird die Session des Platzes übernommen. */
@@ -299,8 +370,16 @@ class SessionStore {
 
   /** Änderungen gesammelt nach kurzer Pause hochladen; leere Projekte legen keine Session an. */
   schedule(projectJson: string, hasContent: boolean) {
-    // Beim Ansehen oder nach Übernahme durch ein anderes Gerät nichts speichern.
-    if (this.watching || this.takenOver) return;
+    // Lehrperson bearbeitet eine Session ihrer Klasse: dorthin speichern.
+    if (this.watching?.edit) {
+      this.#editAt = Date.now();
+      this.#editPending = projectJson;
+      clearTimeout(this.#editTimer);
+      this.#editTimer = setTimeout(() => void this.#flushEdit(), 1200);
+      return;
+    }
+    // Beim Ansehen, nach Übernahme durch ein anderes Gerät oder solange die Lehrperson bearbeitet nichts speichern.
+    if (this.watching || this.takenOver || this.teacherEditing) return;
     // Nach der Abgabe: nichts mehr speichern, auch keine neue Session anlegen.
     if (examMode.active?.server?.state === 'closed') return;
     if (!this.code && !hasContent) return;
@@ -379,6 +458,7 @@ class SessionStore {
         this.expires = data.expires;
         this.#lastSave = Date.now();
         this.lastSaved = this.#lastSave;
+        this.#known = Math.max(this.#known, this.#lastSave);
         if (data.exam) examMode.updateServer(data.exam);
       } else {
         await this.create(json);
@@ -386,6 +466,14 @@ class SessionStore {
       this.status = 'saved';
       this.problem = null;
     } catch (error) {
+      // Die Lehrperson bearbeitet gerade: nichts überschreiben, ihren Stand übernehmen.
+      if (error instanceof ApiError && error.code === 'teacherEditing') {
+        this.#pending = null;
+        this.teacherEditing = true;
+        this.status = 'saved';
+        void this.#pullRemote();
+        return;
+      }
       // Prüfung beendet: nicht mehr speichern, den Lernenden «abgegeben» zeigen.
       if (error instanceof ApiError && error.status === 423) {
         this.#pending = null;
@@ -447,12 +535,82 @@ class SessionStore {
    * Fremde Session nur ansehen und laufend neu laden. Mit Admin-Token über die Admin-Schnittstelle
    * (Prüfungsplatz), sonst mit dem Session-Code. Schreibt nie und verdrängt niemanden.
    */
-  async watch(code: string, onLoad: (p: LoadedProject) => void, admin?: string, label?: string) {
-    this.stopWatch();
+  async watch(code: string, onLoad: (p: LoadedProject) => void, admin?: string, label?: string, edit = false) {
+    await this.stopWatch();
     this.#onWatch = onLoad;
-    this.watching = { code, updated: null, connected: false, ...(admin ? { admin } : {}), ...(label ? { label } : {}) };
+    this.watching = { code, updated: null, connected: false, ...(admin ? { admin } : {}), ...(label ? { label } : {}), ...(edit && admin ? { edit: true } : {}) };
     await this.#refreshWatch();
+    if (this.watching?.edit) {
+      if (this.watching.updated === null) return;
+      // Bearbeiten: Lernende sehen nur zu, solange die Lehrperson sich meldet.
+      this.#editAt = Date.now();
+      await this.#beat(true);
+      this.#watchTimer = setInterval(() => {
+        // Lange nichts geändert (z.B. Tab am Beamer vergessen): zurück zu «nur ansehen».
+        if (Date.now() - this.#editAt > EDIT_IDLE_MS) {
+          void this.#beat(false);
+          if (this.watching) this.watching = { ...this.watching, edit: false };
+          this.#editIdle?.();
+          clearInterval(this.#watchTimer);
+          this.#watchTimer = setInterval(() => void this.#refreshWatch(), WATCH_MS);
+          return;
+        }
+        void this.#beat(true);
+        void this.#refreshWatch();
+      }, EDIT_BEAT_MS);
+      return;
+    }
     this.#watchTimer = setInterval(() => void this.#refreshWatch(), WATCH_MS);
+  }
+
+  #editPending: string | null = null;
+  #editAt = 0;
+  #editIdle: (() => void) | null = null;
+  set onEditIdle(fn: (() => void) | null) {
+    this.#editIdle = fn;
+  }
+  /** Meldung, wenn eine Änderung der Lehrperson verworfen wurde (von watch.ts gesetzt). */
+  #editConflict: (() => void) | null = null;
+  set onEditConflict(fn: (() => void) | null) {
+    this.#editConflict = fn;
+  }
+  #editTimer: ReturnType<typeof setTimeout> | undefined;
+
+  async #beat(active: boolean) {
+    const w = this.watching;
+    if (!w?.edit || !w.admin) return;
+    await api('POST', `admin/sessions/${encodeURIComponent(w.code)}/edit`, { active }, w.admin).catch(() => undefined);
+  }
+
+  /** Änderungen der Lehrperson an der Session der Lernenden speichern. */
+  async #flushEdit() {
+    const w = this.watching;
+    const json = this.#editPending;
+    if (!w?.edit || !w.admin || !json) return;
+    this.#editPending = null;
+    this.status = 'saving';
+    try {
+      const data = await api<{ updated: number }>('PUT', `admin/sessions/${encodeURIComponent(w.code)}`, { project: JSON.parse(json), ...(w.updated !== null ? { base: w.updated } : {}) }, w.admin);
+      if (this.watching?.code === w.code) this.watching = { ...this.watching, updated: data.updated };
+      this.status = 'saved';
+    } catch (error) {
+      // Die Lernenden haben inzwischen gespeichert (z.B. Tab der Lehrperson lange im Hintergrund):
+      // nichts überschreiben, ihren Stand neu laden und Bescheid geben.
+      if (error instanceof ApiError && error.code === 'sessionChanged' && this.watching?.code === w.code) {
+        this.status = 'saved';
+        this.watching = { ...this.watching, updated: null };
+        this.#editConflict?.();
+        await this.#refreshWatch();
+        return;
+      }
+      this.status = 'error';
+      if (this.watching?.code === w.code) this.watching = { ...this.watching, error: error instanceof ApiError ? error.code : 'error' };
+    }
+  }
+
+  /** Lehrperson: Lernende einer Klasse erkennen (Bildschirm blinkt) oder ihre Hilfe-Anfrage erledigen. */
+  static async signal(admin: string, code: string, kind: 'identify' | 'help'): Promise<void> {
+    await api('POST', `admin/sessions/${encodeURIComponent(code)}/${kind}`, {}, admin);
   }
 
   async #refreshWatch() {
@@ -460,11 +618,13 @@ class SessionStore {
     if (!w) return;
     try {
       const path = w.admin ? `admin/sessions/${encodeURIComponent(w.code)}` : `sessions/${encodeURIComponent(w.code)}?watch=1`;
-      const data = await api<{ project: unknown; updated?: number; connected?: boolean }>('GET', path, undefined, w.admin);
+      const data = await api<{ project: unknown; updated?: number; connected?: boolean; classCode?: string | null; site?: { seat: number; label: string } | null; help?: number | null }>('GET', path, undefined, w.admin);
       if (!this.watching || this.watching.code !== w.code) return;
-      const changed = data.updated !== w.updated;
-      this.watching = { ...w, updated: data.updated ?? null, connected: !!data.connected, error: undefined };
-      if (!changed) return;
+      const cur = this.watching;
+      const changed = data.updated !== cur.updated;
+      this.watching = { ...cur, updated: data.updated ?? null, connected: !!data.connected, error: undefined, classCode: data.classCode ?? null, site: data.site ?? null, help: data.help ?? null };
+      // Beim Bearbeiten nur den ersten Stand laden: Danach ist die Lehrperson massgebend.
+      if (!changed || (cur.edit && cur.updated !== null)) return;
       const parsed = parseProject(JSON.stringify(data.project));
       if (parsed.ok) this.#onWatch?.(parsed);
     } catch (error) {
@@ -472,11 +632,28 @@ class SessionStore {
     }
   }
 
-  stopWatch() {
+  async stopWatch() {
     clearInterval(this.#watchTimer);
     this.#watchTimer = undefined;
+    if (this.watching?.edit) {
+      clearTimeout(this.#editTimer);
+      await this.#flushEdit();
+      await this.#beat(false);
+    }
     this.watching = null;
     this.#onWatch = null;
+  }
+
+  /** Klasse und Platz, die gerade angezeigt werden (beim Ansehen die der angesehenen Session). */
+  get viewClass(): string | null {
+    return this.watching ? (this.watching.classCode ?? null) : this.classCode;
+  }
+  get viewSite(): { seat: number; label: string } | null {
+    return this.watching ? (this.watching.site ?? null) : this.site;
+  }
+  /** Verbund für die angezeigte Session abfragen (beim Ansehen entscheidet der Server, ob er freigegeben ist). */
+  get viewVerbund(): boolean {
+    return this.watching ? !!this.watching.classCode : !!this.classSettings?.verbund.enabled;
   }
 
   /** Neue, leere Session beginnen; die alte bleibt bis zum Ablauf unter ihrem Code erreichbar. */
@@ -494,6 +671,9 @@ class SessionStore {
     this.classLabel = null;
     this.site = null;
     this.classSettings = null;
+    this.help = false;
+    this.identify = null;
+    this.teacherEditing = false;
     this.status = 'idle';
     write(CODE_KEY, null);
     write(CLASS_KEY, null);

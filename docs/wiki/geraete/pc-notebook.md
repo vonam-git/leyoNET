@@ -4,7 +4,7 @@ kurz: Endgeräte mit Desktop: Befehlszeile, Webbrowser, E-Mail und Netzwerkeinst
 symbol: pc
 reihenfolge: 1
 schicht: 1 bis 7 (Endgerät)
-hilfe: [device.pc, device.notebook]
+hilfe: [device.pc, device.notebook, hostConsole]
 uebungen: [two-pcs, duplicate-ip, dhcp]
 verwandt: [ipv4, dhcp, server]
 ---
@@ -24,9 +24,9 @@ PC und Notebook sind die Geräte, an denen Menschen arbeiten. Sie senden und emp
 
 ## Der Desktop
 
-In der Simulation öffnet ein Doppelklick den **Desktop** des Geräts:
+In der Simulation öffnet ein Doppelklick den **Desktop** des Geräts. Die Konsole allein öffnet die Taste **T** (auch aus dem Entwurf) oder «Konsole öffnen» im Fenster des Geräts:
 
-- **Befehlszeile:** `ping`, `tracert`, `ipconfig /all`, `ipconfig /release` und `/renew`, `arp -a`, `nslookup`, `netstat`, `ssh`.
+- **Befehlszeile:** `ping`, `tracert`, `ipconfig /all`, `ipconfig /release` und `/renew`, `ifdown eth0` und `ifup eth0` (Anschluss ab- und einschalten, auch `ip link set eth0 down|up` oder `netsh interface set interface Ethernet disable|enable`), `arp -a`, `nslookup`, `netstat`, `ssh`. Linux-Schreibweisen wie `ip addr`, `ifconfig`, `dhclient -r` gehen auch.
 - **Webbrowser:** zeigt jeden Schritt (DNS, TCP, HTTP) und die Seite.
 - **E-Mail:** Senden per SMTP, Abholen per POP3 oder IMAP.
 - **Netzwerk:** Adressen und Tabellen auf einen Blick.

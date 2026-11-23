@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { DEVICE_SPECS, canQos, canBePowered, canSupplyPoe, needsPoe, canAccessList, canAutoRoute, canFirewall, canVrf, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterLike, isRouterType, isSwitchType } from '../../core';
+  import { DEVICE_SPECS, configSaved, hasCli, runningConfig, setStartupConfig, canQos, canBePowered, canSupplyPoe, needsPoe, canAccessList, canAutoRoute, canFirewall, canVrf, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterLike, isRouterType, isSwitchType } from '../../core';
   import { t } from '../../i18n';
   import { typeLabel } from '../labels';
   import { dialogs, type DeviceWindowState } from '../state/dialogs.svelte';
   import { editor } from '../state/editor.svelte';
+  import { openDesktop } from '../state/desktop.svelte';
   import { ui } from '../state/ui.svelte';
   import CpeConfig from './CpeConfig.svelte';
   import DeviceBasics from './DeviceBasics.svelte';
@@ -240,6 +241,15 @@
               <div class="actions">
                 <button onclick={() => editor.duplicateSelection()} disabled={editor.selection?.kind !== 'device' || editor.selection.id !== device.id}><Icon name="copy" size={15} /> {t('menu.edit.duplicate')}</button>
                 <button class="danger" onclick={() => (editor.select({ kind: 'device', id: device.id }), editor.deleteSelection())}><Icon name="trash" size={15} /> {t('inspector.delete')}</button>
+                {#if DEVICE_SPECS[device.type].role === 'endpoint'}
+                  <button onclick={() => (editor.acting || editor.setMode('simulation'), openDesktop(device.id, 'terminal'))} title={t('deviceDialog.openConsoleHint')}><Icon name="terminal" size={15} /> {t('deviceDialog.openConsole')}</button>
+                {/if}
+                {#if hasCli(device.type)}
+                  <!-- Wie «copy running-config startup-config» auf der Befehlszeile, ohne Befehlszeile. -->
+                  {@const saved = configSaved(device)}
+                  <button onclick={() => editor.apply(setStartupConfig(editor.topology, device.id, runningConfig(device).join('\n')))} disabled={saved} title={t('deviceDialog.saveConfigHint')}>💾 {t('deviceDialog.saveConfig')}</button>
+                  <span class="muted small" class:dirty={!saved}>{saved ? t('cli.saved') : device.startupConfig ? t('cli.changed') : t('cli.notSaved')}</span>
+                {/if}
               </div>
             {/if}
           </div>
@@ -428,6 +438,9 @@
   .actions {
     display: grid;
     gap: 6px;
+  }
+  .actions .dirty {
+    color: var(--warn, #b45309);
   }
   .actions button {
     display: flex;

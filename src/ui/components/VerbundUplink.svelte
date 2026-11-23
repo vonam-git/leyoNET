@@ -14,9 +14,9 @@
   let { device }: { device: Device } = $props();
 
   const uplinkType = $derived(['modem', 'cpe', 'router', 'firewall'].includes(device.type));
-  const inClass = $derived(!!session.classCode && !!session.classSettings?.verbund.enabled);
+  const inClass = $derived(session.watching ? !!session.watching.classCode && verbund.enabled : !!session.classCode && !!session.classSettings?.verbund.enabled);
   const fixedWan = $derived(device.type === 'modem' ? MODEM_WAN : device.type === 'cpe' ? CPE_WAN : null);
-  const seat = $derived(session.site?.seat ?? null);
+  const seat = $derived(session.viewSite?.seat ?? null);
   const addr = $derived(seat ? verbundAddresses(seat) : null);
   const status = $derived(seat ? verbund.status[String(seat)] : undefined);
   let error = $state<string | null>(null);
@@ -34,7 +34,7 @@
 
   function startEdit() {
     seatInput = String(seat ?? '');
-    labelInput = session.site?.label ?? '';
+    labelInput = session.viewSite?.label ?? '';
     editing = true;
   }
 
@@ -63,8 +63,8 @@
   <section class="verbund" data-help="verbund">
     <h3>🌐 {t('verbund.title')}</h3>
     <p class="site">
-      {#if seat}<strong>{siteName(seat, session.site?.label)}</strong> · {t('verbund.seatN', { seat })}{/if}
-      <button type="button" class="link" onclick={startEdit}>{t('verbund.changeSite')}</button>
+      {#if seat}<strong>{siteName(seat, session.viewSite?.label)}</strong> · {t('verbund.seatN', { seat })}{/if}
+      {#if !session.watching}<button type="button" class="link" onclick={startEdit}>{t('verbund.changeSite')}</button>{/if}
     </p>
     {#if editing}
       <form class="row" onsubmit={saveSite}>

@@ -14,7 +14,7 @@
   let { onclose }: { onclose: () => void } = $props();
   verbund.unread = 0;
 
-  const own = $derived(session.site?.seat ?? 0);
+  const own = $derived(session.viewSite?.seat ?? 0);
   const sites = $derived<MapSite[]>(
     verbund.sites
       .map((s) => {

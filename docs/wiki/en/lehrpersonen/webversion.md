@@ -8,7 +8,15 @@ In the web version ([app.leyonet.ch](https://app.leyonet.ch) or on the school se
 
 ## Classes
 
-In the **admin console** you open a class with a label such as “INF22a” and hand out the **class code**. Learners join the class under “Session”. You then see all sessions of the class with their state and progress and can **watch** each one: the network appears read-only on your screen and is reloaded every few seconds. “End” brings back your own project.
+In the **admin console** you open a class with a label such as “INF22a” and show the **class code** on the projector with “Show code large”. Learners choose the **Join a class** button under “Session”. You then see all sessions of the class; the list refreshes by itself:
+
+- **Progress**: goals met in the loaded task, checked by the learner's browser by itself (nobody needs to submit). Orange: at least half, green: all met.
+- **Ask for help**: learners press “🙋 Ask for help”, the row turns magenta; “Help done” acknowledges it.
+- **Identify**: the session's screen flashes red and shows seat and code, so you can see who is sitting at which session.
+- **View**: read-only, reloaded every 5 seconds, the goals checked green or red right away. Useful for troubleshooting with the class on the projector.
+- **Open**: you edit the session yourself. The changes go straight to the learners, who can only watch meanwhile.
+
+“End” brings back your own project.
 
 For each class you show or hide exercises and whole modules and enable the [[klassen-verbund]].
 

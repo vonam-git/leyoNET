@@ -6,7 +6,46 @@ import { parseDscp } from '../net/qos';
 import type { HostNode } from './host';
 
 /** Befehle der simulierten Befehlszeile, angelehnt an Windows ("ipconfig", "tracert"). */
-export const COMMANDS = ['ping', 'tracert', 'nslookup', 'ipconfig', 'arp', 'netsh', 'netstat', 'ssh', 'call', 'hangup', 'iperf', 'cls', 'help'] as const;
+export const COMMANDS = ['ping', 'tracert', 'nslookup', 'ipconfig', 'ifdown', 'arp', 'netsh', 'netstat', 'ssh', 'call', 'hangup', 'iperf', 'cls', 'help'] as const;
+
+/**
+ * Anschluss eines Endgeräts ab- oder einschalten, wie unter Windows oder Linux:
+ * «netsh interface set interface Ethernet disable|enable» (auch «admin=disabled»),
+ * «ip link set eth0 down|up», «ifdown eth0», «ifup eth0». Ohne Namen der erste Anschluss.
+ * Gibt den Anschluss (Index) zurück; die Oberfläche ändert damit die Topologie, die Simulation meldet es.
+ */
+export function parseInterfaceCommand(line: string, ports: number): { index: number; up: boolean } | { error: 'usage' | 'unknown'; name?: string } | null {
+  const words = line.trim().replace(/"/g, ' ').split(/\s+/).filter(Boolean);
+  const lower = words.map((w) => w.toLowerCase());
+  let name: string | undefined;
+  let up: boolean | undefined;
+  if (lower[0] === 'ifdown' || lower[0] === 'ifup') {
+    up = lower[0] === 'ifup';
+    name = words[1];
+  } else if (lower[0] === 'ip' && /^l(i(nk?)?)?$/.test(lower[1] ?? '') && lower[2] === 'set') {
+    name = lower[3] === 'dev' ? words[4] : words[3];
+    const state = lower.slice(4).find((w) => w === 'up' || w === 'down');
+    if (!state) return { error: 'usage' };
+    up = state === 'up';
+  } else if (lower[0] === 'netsh' && /^int/.test(lower[1] ?? '') && lower[2] === 'set' && /^int/.test(lower[3] ?? '')) {
+    const rest = words.slice(4);
+    const state = rest.map((w) => w.toLowerCase().replace(/^admin=/, '')).find((w) => /^(en|dis)abled?$/.test(w));
+    if (!state) return { error: 'usage' };
+    up = state.startsWith('en');
+    name = rest
+      .filter((w) => !/^(admin=)?(en|dis)abled?$/i.test(w))
+      .map((w) => w.replace(/^name=/i, ''))
+      .join(' ');
+  } else return null;
+  // Name: eth0, eth1 …, Ethernet (= erster), Ethernet 2 (= zweiter), Zahl, oder leer (= erster).
+  const n = (name ?? '').trim().toLowerCase();
+  let index: number | null = null;
+  if (!n || n === 'ethernet' || n === 'lan' || n === 'wlan' || n === 'wi-fi') index = 0;
+  else if (/^(?:eth|en|e|wlan)(\d+)$/.test(n)) index = Number(/(\d+)$/.exec(n)![1]);
+  else if (/^ethernet\s*(\d+)$/.test(n)) index = Number(/(\d+)$/.exec(n)![1]) - 1;
+  if (index === null || index < 0 || index >= ports) return { error: 'unknown', name: name ?? '' };
+  return { index, up: up === true };
+}
 
 export function runCommand(host: HostNode, line: string) {
   const ctx = host.ctx;
@@ -15,6 +54,13 @@ export function runCommand(host: HostNode, line: string) {
   if (!trimmed) return;
   const [command = '', ...args] = trimmed.split(/\s+/);
   const arg = args[0]?.toLowerCase();
+
+  // Anschluss ab-/einschalten: Die Topologie ändert die Oberfläche (sie ruft parseInterfaceCommand auf), hier nur die Meldung.
+  const iface = parseInterfaceCommand(trimmed, ctx.device()?.interfaces.length ?? 0);
+  if (iface) {
+    if ('error' in iface) return ctx.print(iface.error === 'usage' ? 'cmd.usage.ifdown' : 'iface.unknown', { name: iface.name ?? '' });
+    return ctx.print(iface.up ? 'iface.up' : 'iface.down', { name: `eth${iface.index}` });
+  }
 
   switch (command.toLowerCase()) {
     case 'ping':
@@ -28,6 +74,18 @@ export function runCommand(host: HostNode, line: string) {
       return;
     case 'nslookup':
       nslookup(host, args);
+      return;
+    // Linux-Schreibweisen: «ifconfig», «ip a», «dhclient -r» (abgeben), «dhclient» (neu holen).
+    case 'ifconfig':
+      printIpconfig(host);
+      return;
+    case 'ip':
+      if (!arg || /^a(d(dr?)?)?$|^address$/.test(arg)) printIpconfig(host);
+      else ctx.print('cmd.usage.ifdown');
+      return;
+    case 'dhclient':
+      if (arg === '-r') host.releaseDhcp();
+      else host.renewDhcp();
       return;
     case 'ipconfig':
       if (!arg || arg === '/all') printIpconfig(host);

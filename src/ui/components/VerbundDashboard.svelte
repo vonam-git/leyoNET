@@ -4,11 +4,13 @@
   import { api } from '../state/session.svelte';
   import type { VerbundMessage } from '../state/verbund.svelte';
   import VerbundMap, { type Flight, type MapSite } from './VerbundMap.svelte';
+  import ClassCodeBig from './ClassCodeBig.svelte';
 
   /**
    * Dashboard für den Beamer: Alle Standorte der Klasse mit ihrem Zustand, berechnet hier im
    * Browser der Lehrperson in EINER Simulation des ganzen Verbunds (Ping und Webseite von der
-   * Zentrale aus). Niemand kann «fertig» melden: grün wird nur, was wirklich funktioniert.
+   * Zentrale aus). Niemand kann «fertig» melden: grün wird nur, was wirklich funktioniert. Den Fortschritt
+   * bestimmt der Browser der Lernenden von selbst; Hilfe-Anfragen erscheinen magenta.
    */
   interface ClassSession {
     code: string;
@@ -16,6 +18,7 @@
     site: { seat: number; label: string } | null;
     progress: { goals: number; total: number; faults?: { fixed: number; total: number } } | null;
     connected: boolean;
+    help?: number | null;
     project?: unknown;
   }
   let {
@@ -48,8 +51,10 @@
   let problem = $state<string | null>(null);
   let now = $state(Date.now());
   let root: HTMLDivElement | undefined = $state();
+  let bigCode = $state(false);
   let eventSeq = 0;
   const previous = new Map<number, MapSite['level']>();
+  const helpSeen = new Set<number>();
 
   const time = (ms: number) => new Date(ms).toLocaleTimeString(locale() === 'en' ? 'en-GB' : 'de-CH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const rank: Record<MapSite['level'], number> = { offline: 0, connected: 1, online: 2, services: 3, done: 4 };
@@ -93,11 +98,14 @@
           let level: MapSite['level'] = p?.level ?? (fed?.sites.find((s) => s.seat === m.site.seat)?.uplink ? 'connected' : 'offline');
           if ((level === 'online' || level === 'services') && total > 0 && goals === total) level = 'done';
           const faults = m.progress?.faults;
-          return { seat: m.site.seat, code: m.code, name: siteName(m.site.seat, m.site.label), level, goals, total, present: m.connected, ...(faults ? { faults } : {}) };
+          return { seat: m.site.seat, code: m.code, name: siteName(m.site.seat, m.site.label), level, goals, total, present: m.connected, help: !!m.help, ...(faults ? { faults } : {}) };
         })
         .sort((a, b) => a.seat - b.seat);
       const first = previous.size === 0;
       for (const s of next) {
+        if (s.help && !helpSeen.has(s.seat)) event(t('classLive.help.event', { name: s.name }), 'help');
+        if (s.help) helpSeen.add(s.seat);
+        else helpSeen.delete(s.seat);
         const before = previous.get(s.seat);
         if (before !== undefined && before !== s.level) event(t(rank[s.level] > rank[before] ? 'verbund.dash.up' : 'verbund.dash.down', { name: s.name, level: t(`verbund.level.${s.level}`) }), rank[s.level] > rank[before] ? 'up' : 'down');
         if (before === undefined && !first) event(t('verbund.dash.joined', { name: s.name }), 'join');
@@ -142,7 +150,7 @@
     const a = setInterval(() => void probe(), PROBE_MS);
     const b = setInterval(() => void pollMessages(), MESSAGES_MS);
     const c = setInterval(() => (now = Date.now()), 1000);
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && !document.fullscreenElement && onclose();
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && !document.fullscreenElement && !bigCode && onclose();
     window.addEventListener('keydown', key);
     return () => {
       clearInterval(a);
@@ -158,6 +166,7 @@
     online: sites.filter((s) => rank[s.level] >= 2).length,
     services: sites.filter((s) => rank[s.level] >= 3).length,
     done: sites.filter((s) => s.level === 'done').length,
+    help: sites.filter((s) => s.help).length,
   });
 
   function fullscreen() {
@@ -185,6 +194,7 @@
       <div class="counter on"><strong>{counts.online}</strong><span>{t('verbund.level.online')}</span></div>
       <div class="counter svc"><strong>{counts.services}</strong><span>{t('verbund.level.services')}</span></div>
       <div class="counter gold"><strong>{counts.done}</strong><span>{t('verbund.level.done')}</span></div>
+      <div class="counter helpc" class:active={counts.help > 0}><strong>{counts.help}</strong><span>{t('classLive.help.pill')}</span></div>
       <div class="counter"><strong>{counts.total}</strong><span>{t('verbund.dash.sites')}</span></div>
     </div>
     <div class="tools">
@@ -194,6 +204,7 @@
         {/each}
       </div>
       <button onclick={() => void probe()} disabled={busy} title={t('verbund.dash.refreshHint')} aria-label={t('verbund.dash.refreshHint')}><span class:spin={busy}>⟳</span></button>
+      <button onclick={() => (bigCode = true)} title={t('classLive.big.hint')}>{t('classLive.big.button')}</button>
       <button onclick={fullscreen} title={t('verbund.dash.fullscreen')}>⛶</button>
       <button onclick={onclose} aria-label={t('about.close')}>✕</button>
     </div>
@@ -208,10 +219,10 @@
     {#if view !== 'map'}
       <section class="tiles" aria-label={t('verbund.dash.sites')}>
         {#each sites as s (s.seat)}
-          <button class="tile {s.level}" onclick={() => watch(s.seat)} title={t('verbund.dash.watchHint')}>
+          <button class="tile {s.level}" class:help={s.help} onclick={() => watch(s.seat)} title={t('verbund.dash.watchHint')}>
             <span class="tile-seat">{s.seat}</span>
             <span class="tile-name">{s.name}</span>
-            <span class="tile-state"><i></i>{t(`verbund.level.${s.level}`)}</span>
+            <span class="tile-state"><i></i>{#if s.help}🙋 {t('classLive.help.pill')}{:else}{t(`verbund.level.${s.level}`)}{/if}</span>
             {#if s.faults}
               <span class="tile-faults" class:all={s.faults.fixed === s.faults.total} title={t('verbund.faults', { n: s.faults.fixed, total: s.faults.total })}>
                 <span class="sr">{t('verbund.faults', { n: s.faults.fixed, total: s.faults.total })}</span>
@@ -236,6 +247,7 @@
     </ol>
     <span class="meta">{lastRun ? t('verbund.dash.lastRun', { time: time(lastRun), ms: duration }) : t('verbund.dash.checking')}</span>
   </footer>
+  {#if bigCode}<ClassCodeBig code={classCode} {label} onclose={() => (bigCode = false)} />{/if}
 </div>
 
 <style>
@@ -306,6 +318,16 @@
   }
   .counter.gold strong {
     color: #facc15;
+  }
+  .counter.helpc.active {
+    border-color: #e879f9;
+  }
+  .counter.helpc.active strong {
+    color: #e879f9;
+  }
+  .tile.help {
+    border-color: #e879f9 !important;
+    box-shadow: 0 0 0 2px #e879f9, 0 0 18px #e879f966;
   }
   .tools {
     display: flex;
@@ -539,6 +561,10 @@
   }
   .ticker li.message {
     border-color: #86198f;
+  }
+  .ticker li.help {
+    border-color: #e879f9;
+    color: #f5d0fe;
   }
   .ticker time {
     color: #64748b;

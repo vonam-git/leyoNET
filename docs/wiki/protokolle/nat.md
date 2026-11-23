@@ -6,7 +6,7 @@ schicht: 3 und 4
 hilfe: [nat, staticNat, portForward, cgnat]
 demos: [nat, snat, dnat]
 uebungen: [internet-nat, port-forward, static-nat-dmz, snat-mail, dnat-web, m129-routing-a2]
-normen: [RFC 3022, RFC 6598, RFC 1918]
+normen: [RFC 3022, RFC 5508, RFC 6598, RFC 1918]
 protokolle: [NAT: PAT, statisches SNAT, DNAT (Portweiterleitung, statisch), 1:1-NAT, CGNAT]
 verwandt: [provider, internet-box, paketfilter, ipv4]
 ---
@@ -24,6 +24,8 @@ Bei **PAT** (Port Address Translation, auch NAT-Overload) teilen sich alle Gerä
 | 192.168.1.11:49152 | 203.0.113.2:1025 |
 
 Die **NAT-Tabelle** (`show ip nat translations` oder in der Simulation beim Router) zeigt diese Einträge.
+
+**Und bei Ping?** ICMP liegt auf Schicht 3 und hat keine Ports. Ein Echo Request trägt aber eine **Kennung** (Identifier), und die Antwort trägt dieselbe. PAT nimmt diese Kennung als Ersatz für den Port: Der Router ersetzt sie ausgehend durch eine eigene Nummer und weiss so, an welchen Rechner die Antwort zurück muss. In der NAT-Tabelle steht dann z.B. `192.168.1.10 · ID 1` innen und `203.0.113.2 · ID 50000` aussen. Auch Fehlermeldungen wie «Time Exceeded» (bei `tracert`) übersetzt der Router zurück, samt dem darin eingebetteten Paket (RFC 5508).
 
 ![NAT in der Simulation: Der Router ersetzt die private Absenderadresse](nat)
 

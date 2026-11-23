@@ -17,6 +17,8 @@ With **PAT** (port address translation, also NAT overload) all devices share the
 
 The **NAT table** (`show ip nat translations` or at the router in the simulation) shows these entries.
 
+**And for ping?** ICMP sits on layer 3 and has no ports. An echo request does carry an **identifier**, though, and the reply carries the same one. PAT uses this identifier instead of a port: outgoing, the router replaces it with its own number and so knows which computer the reply must go back to. The NAT table then shows e.g. `192.168.1.10 · ID 1` inside and `203.0.113.2 · ID 50000` outside. Error messages such as “Time Exceeded” (with `tracert`) are translated back too, including the packet embedded in them (RFC 5508).
+
 ![NAT in the simulation: the router replaces the private source address](nat)
 
 ## From outside in

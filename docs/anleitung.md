@@ -148,6 +148,8 @@ Das erste Paket ins entfernte Netz startet den Aufbau (IKEv2), danach laufen die
 
 Für den Einstieg setzt du beim Router rechts das Häkchen **Automatisches Routing**. Er findet dann alle Netze im Plan selbst, ohne dass du Routen eintragen musst. Jeder Router auf dem Weg braucht das Häkchen. Ohne Häkchen wählst du **statisch** (Routen von Hand) oder **dynamisch** (OSPF, RIP, BGP; mit IPv6 OSPFv3 und RIPng), im Fenster **Erweitert … → Routing**. OSPFv3 und RIPng nehmen Anschlüsse auf statt Netze; siehe Demos «OSPFv3 für IPv6» und «RIPng für IPv6».
 
+Wie auf einem echten Gerät gilt eine Änderung sofort, übersteht einen Neustart aber nur, wenn sie gespeichert ist: **Erweitert … → Allgemein → Konfiguration speichern** (auf der Befehlszeile `copy running-config startup-config`). Daneben steht, ob seit dem letzten Speichern etwas geändert wurde.
+
 ## Mehrere Geräte auf einmal
 
 - **Auswahlrahmen:** Im Entwurf auf freier Fläche ziehen. Gewählt werden alle Geräte, deren Mitte im Rahmen liegt, und Bereiche, die ganz darin liegen. Mit **Umschalt** kommt der Rahmen zur Auswahl dazu (auch innerhalb eines Bereichs), **Umschalt+Klick** nimmt einzelne Geräte dazu oder heraus, **Strg+A** wählt alles.
@@ -199,6 +201,7 @@ Zwei Kabel zwischen denselben Switches oder ein Ring bilden eine Schleife. Ohne 
 
 ## In der Simulation
 
+- **Konsole der Endgeräte:** Gerät wählen und **T** (oder «Konsole öffnen» im Fenster des Geräts) öffnet die Eingabeaufforderung, auch aus dem Entwurf. Dort gehen u.a. `ipconfig`, `ipconfig /release` und `/renew`, `ifdown eth0`/`ifup eth0` (auch `ip link set eth0 down|up` oder `netsh interface set interface Ethernet disable|enable`), `ping`, `tracert`, `nslookup`, `arp -a`; `help` zeigt alle.
 - **Desktops:** Doppelklick auf ein Endgerät öffnet seinen Desktop (Eingabeaufforderung, Browser, Mail). Mehrere können offen sein. Mit **—** minimieren; «Offene Desktops» in der Simulationsleiste holt sie zurück. Inhalte bleiben erhalten. Desktops lassen sich am Kopf verschieben und unten rechts in der Grösse ändern.
 - **Maus darüber:** Geräte zeigen Adressen, MAC, Gateway und die Grösse ihrer Tabellen; Kabel ihren Zustand und den Verkehr; Pakete Protokoll, Quelle, Ziel und OSI-Schichten.
 - **Leuchten an den Kabeln:** grün verbunden, orange Daten unterwegs, rot keine Verbindung.

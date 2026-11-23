@@ -222,6 +222,10 @@
       "titel": "OSPF for IPv6",
       "verwendung": "OSPFv3: Hellos über Link-Local, Intra-Area-Prefix-LSA"
     },
+    "5508": {
+      "titel": "NAT Behavioral Requirements for ICMP",
+      "verwendung": "NAT: ICMP-Echo-Kennung statt Port, Fehlermeldungen (Time Exceeded) samt eingebettetem Paket zurückübersetzen"
+    },
     "5737": {
       "titel": "IPv4 Address Blocks Reserved for Documentation",
       "verwendung": "Beispieladressen"

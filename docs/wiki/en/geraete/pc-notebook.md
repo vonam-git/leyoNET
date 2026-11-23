@@ -20,7 +20,7 @@ PCs and notebooks are the devices people work on. They send and receive but do n
 
 In the simulation a double-click opens the device’s **desktop**:
 
-- **Command line:** `ping`, `tracert`, `ipconfig /all`, `ipconfig /release` and `/renew`, `arp -a`, `nslookup`, `netstat`, `ssh`.
+- **Command line** (also on its own with the **T** key, even from design mode, or “Open console” in the device window): `ping`, `tracert`, `ipconfig /all`, `ipconfig /release` and `/renew`, `ifdown eth0` and `ifup eth0` (switch the port off and on, also `ip link set eth0 down|up` or `netsh interface set interface Ethernet disable|enable`), `arp -a`, `nslookup`, `netstat`, `ssh`. Linux spellings such as `ip addr`, `ifconfig`, `dhclient -r` work too.
 - **Web browser:** shows every step (DNS, TCP, HTTP) and the page.
 - **E-mail:** sending via SMTP, fetching via POP3 or IMAP.
 - **Network:** addresses and tables at a glance.

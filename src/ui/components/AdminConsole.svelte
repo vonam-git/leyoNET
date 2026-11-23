@@ -22,6 +22,7 @@
   import AdminSessions from './AdminSessions.svelte';
   import AdminSecurity from './AdminSecurity.svelte';
   import VerbundDashboard from './VerbundDashboard.svelte';
+  import ClassCodeBig from './ClassCodeBig.svelte';
   import Icon from './Icon.svelte';
   import Logo from './Logo.svelte';
   import '../admin.css';
@@ -91,6 +92,8 @@
     site?: { seat: number; label: string } | null;
     progress?: { goals: number; total: number } | null;
     connected?: boolean;
+    help?: number | null;
+    teacher?: boolean;
   }
   interface CheckResult {
     id: string;
@@ -300,9 +303,31 @@
   }
 
   // --- Editor (in diesem Tab) --------------------------------------------------------------
-  async function watch(code: string, label: string) {
-    if (token && (await startWatch(code, token, label))) oneditor();
+  async function watch(code: string, label: string, edit = false) {
+    if (token && (await startWatch(code, token, label, edit))) oneditor();
   }
+
+  /** Klassen-Session: Lernende erkennen (Bildschirm blinkt) oder Hilfe-Anfrage erledigen. */
+  async function signal(s: ClassSession, kind: 'identify' | 'help') {
+    try {
+      await call('POST', `sessions/${s.code}/${kind}`, {});
+      if (kind === 'help') classSessions = classSessions.map((x) => (x.code === s.code ? { ...x, help: null } : x));
+      notify('ok', t(kind === 'identify' ? 'classLive.identify.sent' : 'classLive.help.cleared'));
+    } catch {
+      notify('error', t('admin.loadFailed'));
+    }
+  }
+  const nameOf = (s: ClassSession) => (s.site ? siteName(s.site.seat, s.site.label) : s.code);
+  /** Zustand einer Klassen-Session für Farbe und Text: Hilfe vor fertig vor in Arbeit. */
+  function stateOf(s: ClassSession): 'help' | 'done' | 'half' | 'work' | 'idle' | 'away' {
+    if (s.help) return 'help';
+    const p = s.progress;
+    if (p && p.total > 0 && p.goals === p.total) return 'done';
+    if (p && p.total > 0 && p.goals * 2 >= p.total) return 'half';
+    if (p && p.total > 0) return 'work';
+    return s.connected ? 'idle' : 'away';
+  }
+  let bigCode = $state<ClassInfo | null>(null);
 
   async function loadSession(code: string) {
     try {
@@ -352,10 +377,24 @@
   }
 
   async function showClass(c: ClassInfo) {
+    if (openClass?.code !== c.code) reviews = {};
     openClass = c;
-    reviews = {};
     classSessions = await call<ClassSession[]>('GET', `classes/${c.code}/sessions`);
   }
+  // Offene Klasse: Liste von selbst aktuell halten (Fortschritt, Hilfe, verbunden).
+  $effect(() => {
+    const c = openClass;
+    if (!c || section !== 'classes' || !token) return;
+    const timer = setInterval(() => {
+      if (hidden || openClass?.code !== c.code) return;
+      void call<ClassSession[]>('GET', `classes/${c.code}/sessions`)
+        .then((list) => {
+          if (openClass?.code === c.code) classSessions = list;
+        })
+        .catch(() => undefined);
+    }, 6000);
+    return () => clearInterval(timer);
+  });
 
   async function patchClass(c: ClassInfo, change: { catalog?: CatalogVisibility; verbund?: Partial<ClassVerbund> }) {
     try {
@@ -839,6 +878,7 @@
                   <td>{when(c.expires)}</td>
                   <td class="actions">
                     <button onclick={() => showClass(c)}>{t('admin.show')}</button>
+                    <button onclick={() => (bigCode = c)} title={t('classLive.big.hint')}><Icon name="desktop" size={16} />{t('classLive.big.button')}</button>
                     {#each [7, 30] as days (days)}
                       <button onclick={() => extendClass(c, days)} title={t('admin.extendHint', { days })}>{t('admin.extend', { days })}</button>
                     {/each}
@@ -887,20 +927,29 @@
             </div>
             <table>
               <thead>
-                <tr><th>{t('admin.sessionCode')}</th><th>{t('verbund.site')}</th><th>{t('admin.changed')}</th><th>{t('admin.devices')}</th><th>{t('admin.progress')}</th><th>{t('review.score')}</th><th></th></tr>
+                <tr><th>{t('verbund.site')}</th><th>{t('admin.sessionCode')}</th><th>{t('classLive.state')}</th><th title={t('classLive.progressHint')}><span class="th-hint">{t('admin.progress')} ⓘ</span></th><th>{t('admin.changed')}</th><th>{t('admin.devices')}</th><th>{t('review.score')}</th><th></th></tr>
               </thead>
               <tbody>
                 {#each classSessions as s (s.code)}
-                  <tr>
-                    <td><span class="who-cell"><span class="led" class:ok={s.connected} title={s.connected ? t('verbund.dash.present') : undefined}></span><code>{s.code}</code></span></td>
-                    <td>{s.site ? siteName(s.site.seat, s.site.label) : ''}</td>
+                  {@const st = stateOf(s)}
+                  <tr class="cs cs-{st}">
+                    <td><strong>{s.site ? siteName(s.site.seat, s.site.label) : '–'}</strong></td>
+                    <td><span class="who-cell"><span class="led" class:ok={s.connected} title={t(s.connected ? 'verbund.dash.present' : 'classLive.away')}></span><code>{s.code}</code></span></td>
+                    <td><span class="state-pill sp-{st}" title={t(`classLive.stateHint.${st}`)}>{t(`classLive.stateName.${st}`)}</span>{#if s.teacher} <span class="pill warn" title={t('classLive.edit.title', { code: '' })}>✏️</span>{/if}</td>
+                    <td title={t('classLive.progressHint')}>
+                      {#if s.progress?.total}
+                        <span class="bar" aria-hidden="true"><span class="fill sp-{st}" style:width="{Math.round((100 * s.progress.goals) / s.progress.total)}%"></span></span>
+                        {s.progress.goals}/{s.progress.total}
+                      {:else}<span class="muted">{t('classLive.noTask')}</span>{/if}
+                    </td>
                     <td>{when(s.updated)}</td>
                     <td>{s.devices} / {s.cables}</td>
-                    <td>{s.progress?.total ? `${s.progress.goals}/${s.progress.total}` : ''}</td>
                     <td>{score(reviews[s.code])}</td>
                     <td class="actions">
-                      <button onclick={() => loadSession(s.code)}>{t('admin.open')}</button>
-                      <button title={t('admin.exams.watchHint')} onclick={() => watch(s.code, s.site ? siteName(s.site.seat, s.site.label) : s.code)}><Icon name="eye" size={16} />{t('admin.exams.watch')}</button>
+                      {#if s.help}<button class="primary" onclick={() => signal(s, 'help')}>{t('classLive.help.done')}</button>{/if}
+                      <button onclick={() => watch(s.code, nameOf(s), true)} title={t('classLive.openHint')}><Icon name="edit" size={16} />{t('admin.open')}</button>
+                      <button title={t('classLive.watchHint')} onclick={() => watch(s.code, nameOf(s))}><Icon name="eye" size={16} />{t('admin.exams.watch')}</button>
+                      <button onclick={() => signal(s, 'identify')} title={t('classLive.identify.hint2')} disabled={!s.connected}>🔴 {t('classLive.identify.button')}</button>
                     </td>
                   </tr>
                 {/each}
@@ -938,6 +987,10 @@
     </main>
   {/if}
 </div>
+
+{#if bigCode}
+  <ClassCodeBig code={bigCode.code} label={bigCode.label} onclose={() => (bigCode = null)} />
+{/if}
 
 {#if dashboard}
   {@const d = dashboard}
@@ -1457,6 +1510,66 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+  .th-hint {
+    cursor: help;
+    text-decoration: underline dotted;
+  }
+  .state-pill {
+    display: inline-block;
+    padding: 1px 9px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .sp-help {
+    background: #c026d3;
+    border-color: #c026d3;
+    color: #fff;
+  }
+  .sp-done {
+    background: #15803d;
+    border-color: #15803d;
+    color: #fff;
+  }
+  .sp-half {
+    background: #d97706;
+    border-color: #d97706;
+    color: #fff;
+  }
+  .sp-work {
+    color: var(--text);
+  }
+  .bar {
+    display: inline-block;
+    width: 56px;
+    height: 8px;
+    margin-right: 6px;
+    vertical-align: middle;
+    border-radius: 999px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .bar .fill {
+    display: block;
+    height: 100%;
+    background: var(--muted);
+    border: 0;
+  }
+  .bar .fill.sp-done {
+    background: #15803d;
+  }
+  .bar .fill.sp-half {
+    background: #d97706;
+  }
+  tr.cs-help td {
+    background: color-mix(in srgb, #c026d3 10%, transparent);
+  }
+  tr.cs-done td {
+    background: color-mix(in srgb, #15803d 8%, transparent);
   }
   .who-cell {
     display: inline-flex;

@@ -6,6 +6,8 @@
   import { takeSebKey } from './seb';
   import { showcase } from './state/showcase.svelte';
   import { verbund } from './state/verbund.svelte';
+  import { setupClassLive } from './classLive.svelte';
+  import IdentifyFlash from './components/IdentifyFlash.svelte';
   import { parseProject, serializeProject } from '../core';
   import { locale, t } from '../i18n';
   import { ensureProjectFeatures, saveProject, submitServerExam } from './actions';
@@ -101,11 +103,13 @@
 
   // In der Simulation läuft die Zeit, im Entwurf pausiert sie (Zustände bleiben).
   // Klassen-Verbund: Infrastruktur und andere Standorte regelmässig holen.
+  // Beim Ansehen einer Klassen-Session: Verbund dieser Klasse und dieses Platzes.
   $effect(() => {
-    const code = session.classCode;
-    const enabled = !!session.classSettings?.verbund.enabled;
+    const code = session.viewClass;
+    const enabled = session.viewVerbund;
     untrack(() => verbund.follow(code, enabled));
   });
+  setupClassLive();
 
   $effect(() => {
     const { mode, topology, generation } = editor;
@@ -188,7 +192,8 @@
   let pendingSave: (() => void) | null = null;
   $effect(() => {
     const { topology, tasks, snapshots } = editor;
-    if (!restored || adminPage) return;
+    // Im Admin-Tab nur speichern, wenn die Lehrperson eine Session ihrer Klasse bearbeitet (geht an diese Session).
+    if (!restored || (adminPage && !session.watching?.edit)) return;
     const flush = () => {
       clearTimeout(timer);
       pendingSave = null;
@@ -265,7 +270,7 @@
   {/if}
   {#if adminPage}
     <div class="admin-strip" role="note">
-      <span>🔒 {t('admin.page.editorNote')}</span>
+      <span>{session.watching?.edit ? '✏️' : '🔒'} {t(session.watching?.edit ? 'admin.page.editorNoteEdit' : 'admin.page.editorNote')}</span>
       <button onclick={() => adminView.show()}>← {t('admin.page.back')}</button>
     </div>
   {/if}
@@ -283,6 +288,7 @@
     <main>
       <ExamBanner />
       <SessionBanner />
+      <IdentifyFlash />
       {#if editor.acting}
         <SimControls />
         <StormBanner />
