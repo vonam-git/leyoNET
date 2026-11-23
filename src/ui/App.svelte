@@ -192,7 +192,8 @@
   let pendingSave: (() => void) | null = null;
   $effect(() => {
     const { topology, tasks, snapshots } = editor;
-    if (!restored || adminPage) return;
+    // Im Admin-Tab nur speichern, wenn die Lehrperson eine Session ihrer Klasse bearbeitet (geht an diese Session).
+    if (!restored || (adminPage && !session.watching?.edit)) return;
     const flush = () => {
       clearTimeout(timer);
       pendingSave = null;

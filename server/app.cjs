@@ -582,6 +582,9 @@ function signalOf(code) {
   return s;
 }
 const helpOf = (code) => signals.get(code)?.help || null;
+/** Fortschritt: der neueste aus dem Lebenszeichen, sonst der gespeicherte. */
+const progressOf = (code, stored) => signals.get(code)?.progress || stored || null;
+const PROGRESS_STORE_MS = 30_000;
 const teacherEditing = (code, now = Date.now()) => now - (signals.get(code)?.teacher || 0) < TEACHER_EDIT_MS;
 
 const digest = (value) => crypto.createHash('sha256').update(String(value)).digest();
@@ -1255,7 +1258,10 @@ async function api(req, res, url) {
     // Erst den Inhalt der Anfrage lesen (kann bei langsamer Leitung dauern), dann den Stand laden:
     // sonst überschriebe ein laufendes Speichern eine inzwischen gesetzte Sperre, eine Freigabe
     // oder brächte eine gelöschte Session zurück.
-    const body = code && (method === 'PUT' || method === 'POST') ? await readBody(req) : {};
+    // Lebenszeichen sind klein (Fortschritt, Hilfe): enge Grösse und eine Grenze je Session.
+    const isPing = parts[2] === 'ping' && method === 'POST';
+    if (isPing && code && count(`ping:${code}`, 40)) return fail(res, 429, 'rateLimited');
+    const body = code && (method === 'PUT' || method === 'POST') ? await readBody(req, isPing ? 2048 : MAX_BODY) : {};
     const item = code && parts.length <= 3 ? loadSession(code) : null;
     if (!item) {
       countMiss(req, 'session');
@@ -1273,9 +1279,16 @@ async function api(req, res, url) {
       leases.set(code, now);
       if (!item.classCode) return json(res, 200, { ok: true, ...about(item) });
       // Klasse: Fortschritt (zwei kleine Zahlen) und Hilfe-Anfrage mitschicken.
+      // Den Fortschritt hält der Server im Arbeitsspeicher und schreibt ihn höchstens alle 30 s in die Datei.
       const progress = readProgress(body.progress);
-      if (progress && JSON.stringify(progress) !== JSON.stringify(item.progress || null)) store('sessions', code, { ...item, progress });
       const sig = signalOf(code);
+      if (progress) {
+        sig.progress = progress;
+        if (JSON.stringify(progress) !== JSON.stringify(item.progress || null) && now - (sig.stored || 0) >= PROGRESS_STORE_MS) {
+          sig.stored = now;
+          store('sessions', code, { ...item, progress });
+        }
+      }
       if (body.help === true && !sig.help) sig.help = now;
       if (body.help === false) sig.help = 0;
       return json(res, 200, { ok: true, ...about(item), updated: item.updated, help: !!sig.help, identify: sig.identify > now, teacher: teacherEditing(code, now) });
@@ -1900,7 +1913,7 @@ async function admin(req, res, parts, method) {
         .sort((a, b) => a.created - b.created)
         .map((m) => loadSession(m.code))
         .filter(Boolean)
-        .map((s) => ({ code: s.code, created: s.created, updated: s.updated, expires: s.expires, site: s.site || null, progress: s.progress || null, connected: connected(s.code), help: helpOf(s.code), teacher: teacherEditing(s.code), ...summary(s.project), ...(withProjects ? { project: s.project } : {}) }));
+        .map((s) => ({ code: s.code, created: s.created, updated: s.updated, expires: s.expires, site: s.site || null, progress: progressOf(s.code, s.progress), connected: connected(s.code), help: helpOf(s.code), teacher: teacherEditing(s.code), ...summary(s.project), ...(withProjects ? { project: s.project } : {}) }));
       return json(res, 200, sessions);
     }
     if (parts.length === 2 && method === 'PATCH') {
@@ -2019,7 +2032,11 @@ async function admin(req, res, parts, method) {
       if (item.exam || !item.classCode) return fail(res, 409, 'notInClass');
       const body = await readBody(req);
       if (!validProject(body.project)) return fail(res, 400, 'invalidProject');
-      const latest = loadSession(code) || item;
+      const latest = loadSession(code);
+      if (!latest) return fail(res, 404, 'unknownSession');
+      // Nur auf den Stand, den die Lehrperson geladen hat: Haben die Lernenden inzwischen gespeichert
+      // (z.B. weil der Tab der Lehrperson im Hintergrund war), nichts überschreiben.
+      if (body.base !== undefined && body.base !== latest.updated) return json(res, 409, { error: 'sessionChanged', updated: latest.updated });
       const before = indexes.sessions.get(code);
       if (!fits(projectSize(body.project) - (before ? before.size : 0))) return fail(res, 507, 'storageFull');
       const now = Date.now();

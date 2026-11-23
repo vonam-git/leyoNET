@@ -607,8 +607,10 @@ test('Prüfung mit Varianten: Ein Platz bekommt nur seine Variante, nie die der 
   assert.doesNotMatch(JSON.stringify(again.project), /Fehler 01|Fehler 03|"unlock"|"variants"/);
 });
 
+let liveToken = null;
 test('Klasse: Fortschritt per Lebenszeichen, Hilfe, Erkennen, Bearbeiten durch die Lehrperson', async () => {
   const { token } = (await call('POST', '/api/admin/login', { password: 'test-admin-passwort' })).data;
+  liveToken = token;
   const cls = (await call('POST', '/api/admin/classes', { label: 'Live' }, token)).data;
   const s = (await call('POST', '/api/sessions', { project: project(2), classCode: cls.code, site: { seat: 3, label: 'Bern' } })).data;
   const solo = (await call('POST', '/api/sessions', { project: project(1) })).data;
@@ -659,5 +661,30 @@ test('Klasse: Fortschritt per Lebenszeichen, Hilfe, Erkennen, Bearbeiten durch d
   await call('POST', `/api/admin/sessions/${s.code}/edit`, { active: false }, token);
   assert.equal((await call('POST', `/api/sessions/${s.code}/ping`, {})).data.teacher, false);
   assert.equal((await call('PUT', `/api/sessions/${s.code}`, { project: project(6) })).status, 200);
+  await call('DELETE', `/api/admin/classes/${cls.code}`, null, token);
+});
+
+test('Klasse: Bearbeiten überschreibt keinen neueren Stand, Lebenszeichen klein und begrenzt', async () => {
+  // Gleiche Anmeldung wie oben (die Anmeldung ist pro Minute begrenzt).
+  const token = liveToken;
+  assert.ok(token);
+  const cls = (await call('POST', '/api/admin/classes', { label: 'Stand' }, token)).data;
+  const s = (await call('POST', '/api/sessions', { project: project(2), classCode: cls.code })).data;
+  const loaded = (await call('GET', `/api/admin/sessions/${s.code}`, null, token)).data.updated;
+  // Lernende speichern, ohne dass die Lehrperson schon bearbeitet: Ihr alter Stand darf nichts überschreiben.
+  const saved = await call('PUT', `/api/sessions/${s.code}`, { project: project(8) });
+  assert.equal(saved.status, 200);
+  const stale = await call('PUT', `/api/admin/sessions/${s.code}`, { project: project(3), base: loaded }, token);
+  assert.equal(stale.status, 409);
+  assert.equal(stale.data.error, 'sessionChanged');
+  assert.equal((await call('GET', `/api/sessions/${s.code}?watch=1`)).data.project.topology.devices.length, 8);
+  const fresh = await call('PUT', `/api/admin/sessions/${s.code}`, { project: project(3), base: stale.data.updated }, token);
+  assert.equal(fresh.status, 200);
+  await call('POST', `/api/admin/sessions/${s.code}/edit`, { active: false }, token);
+  // Lebenszeichen: grosser Inhalt abgewiesen, höchstens 40 pro Minute und Session.
+  assert.equal((await call('POST', `/api/sessions/${s.code}/ping`, { progress: { goals: 1, total: 2 }, pad: 'x'.repeat(5000) })).status, 413);
+  let last = 200;
+  for (let i = 0; i < 45 && last !== 429; i++) last = (await call('POST', `/api/sessions/${s.code}/ping`, {})).status;
+  assert.equal(last, 429);
   await call('DELETE', `/api/admin/classes/${cls.code}`, null, token);
 });

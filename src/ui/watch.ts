@@ -16,6 +16,11 @@ export async function startWatch(code: string, admin?: string, label?: string, e
   if (!session.watching) own = serializeProject(editor.topology, editor.tasks, editor.snapshots);
   editor.setMode('design');
   editor.viewOnly = !edit;
+  session.onEditConflict = () => editor.notify(t('classLive.edit.conflict'), 'error');
+  session.onEditIdle = () => {
+    editor.viewOnly = true;
+    editor.notify(t('classLive.edit.idle'));
+  };
   await session.watch(code, (p) => editor.replace(p.topology, { undoable: edit, tasks: p.tasks ?? null, snapshots: p.snapshots ?? [] }), admin, label, edit);
   const error = session.watching?.error;
   if (error && session.watching?.updated === null) {

@@ -75,7 +75,8 @@ export function setupClassLive() {
   $effect(() => {
     const { topology, tasks } = editor;
     const w = session.watching;
-    if (!w || !w.classCode || !tasks || tasks.goals.length === 0) return;
+    // Nur die angemeldete Lehrperson, und nie bei Aufgaben ohne Selbstkontrolle (sonst sähen Lernende über «Ansehen» die Gründe).
+    if (!w || !w.admin || !w.classCode || !tasks || tasks.noSelfCheck || tasks.goals.length === 0) return;
     void topology;
     const timer = setTimeout(() => untrack(() => taskView.check(tasks)), 600);
     return () => clearTimeout(timer);

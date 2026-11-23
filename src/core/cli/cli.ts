@@ -1530,12 +1530,14 @@ function restOfLine(raw: string, skip: number): string {
   return rest;
 }
 
-/** Anschlussname mit Leerzeichen wie «int eth 0» oder «interface gi 0/1»: zu einem Wort zusammenfassen. */
-const IFACE_WORD = /^(?:eth|ethernet|e|gigabitethernet|gi|g|fastethernet|fa|f|port|p|vlan|vl|loopback|lo|serial|se|sfp|te)$/i;
-function mergeIfaceTokens(tokens: string[]): string[] | null {
-  const at = tokens.findIndex((tok, i) => i > 0 && 'interface'.startsWith(tokens[i - 1]!.toLowerCase()) && tokens[i - 1]!.length >= 2 && IFACE_WORD.test(tok) && /^\d+(?:\/\d+)*(?:\.\d+)?(?:-\d+)?$/.test(tokens[i + 1] ?? ''));
-  if (at < 0) return null;
-  return [...tokens.slice(0, at), tokens[at]! + tokens[at + 1]!, ...tokens.slice(at + 2)];
+/**
+ * Anschlussname mit Leerzeichen wie «int eth 0» oder «no interface gi 0/1» zusammenfassen,
+ * nur direkt nach dem Befehlswort «interface» (abgekürzt ab «in») am Anfang der Zeile, einmal,
+ * ohne Rest der Zeile anzufassen (z.B. eine Beschreibung bleibt, wie sie ist).
+ */
+const IFACE_SPLIT = /^((?:no\s+|default\s+)?in(?:t(?:e(?:r(?:f(?:a(?:c(?:e)?)?)?)?)?)?)?\s+)(eth|ethernet|e|gigabitethernet|gi|g|fastethernet|fa|f|port|p|vlan|vl|loopback|lo|serial|se|sfp|te)\s+(\d+(?:\/\d+)*(?:\.\d+)?)(?=\s|$)/i;
+function mergeIfaceName(line: string): string {
+  return line.replace(IFACE_SPLIT, '$1$2$3');
 }
 
 function tokenize(line: string): string[] {
@@ -1569,8 +1571,8 @@ export function execute(session: CliSession, line: string, env: CliEnv): CliOutp
   if (!trimmed || trimmed.startsWith('!')) return { session, lines: [] };
   if (trimmed.endsWith('?')) return { session, lines: help(device, session, trimmed.slice(0, -1), line.slice(0, line.lastIndexOf('?'))) };
 
-  const merged = mergeIfaceTokens(tokenize(trimmed));
-  if (merged) return execute(session, merged.join(' '), env);
+  const merged = mergeIfaceName(trimmed);
+  if (merged !== trimmed) return execute(session, merged, env);
   const tokens = tokenize(trimmed);
   // «do show …» im Konfigurationsmodus.
   if (CONFIG_ALL.includes(session.mode) && tokens[0]?.toLowerCase() === 'do' && tokens.length > 1) {

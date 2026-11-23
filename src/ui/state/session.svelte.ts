@@ -18,6 +18,8 @@ export const PING_MS = 20_000;
 export const CLASS_PING_MS = 6_000;
 /** Lehrperson bearbeitet eine Session: so oft «ich bin noch da» melden. */
 export const EDIT_BEAT_MS = 10_000;
+/** Bearbeitet die Lehrperson so lange nichts, wird wieder nur angesehen (Lernende nicht ewig gesperrt). */
+export const EDIT_IDLE_MS = 10 * 60_000;
 /** Beim Ansehen einer fremden Session so oft neu laden. */
 export const WATCH_MS = 5_000;
 
@@ -370,6 +372,7 @@ export class SessionStore {
   schedule(projectJson: string, hasContent: boolean) {
     // Lehrperson bearbeitet eine Session ihrer Klasse: dorthin speichern.
     if (this.watching?.edit) {
+      this.#editAt = Date.now();
       this.#editPending = projectJson;
       clearTimeout(this.#editTimer);
       this.#editTimer = setTimeout(() => void this.#flushEdit(), 1200);
@@ -540,8 +543,18 @@ export class SessionStore {
     if (this.watching?.edit) {
       if (this.watching.updated === null) return;
       // Bearbeiten: Lernende sehen nur zu, solange die Lehrperson sich meldet.
+      this.#editAt = Date.now();
       await this.#beat(true);
       this.#watchTimer = setInterval(() => {
+        // Lange nichts geändert (z.B. Tab am Beamer vergessen): zurück zu «nur ansehen».
+        if (Date.now() - this.#editAt > EDIT_IDLE_MS) {
+          void this.#beat(false);
+          if (this.watching) this.watching = { ...this.watching, edit: false };
+          this.#editIdle?.();
+          clearInterval(this.#watchTimer);
+          this.#watchTimer = setInterval(() => void this.#refreshWatch(), WATCH_MS);
+          return;
+        }
         void this.#beat(true);
         void this.#refreshWatch();
       }, EDIT_BEAT_MS);
@@ -551,6 +564,16 @@ export class SessionStore {
   }
 
   #editPending: string | null = null;
+  #editAt = 0;
+  #editIdle: (() => void) | null = null;
+  set onEditIdle(fn: (() => void) | null) {
+    this.#editIdle = fn;
+  }
+  /** Meldung, wenn eine Änderung der Lehrperson verworfen wurde (von watch.ts gesetzt). */
+  #editConflict: (() => void) | null = null;
+  set onEditConflict(fn: (() => void) | null) {
+    this.#editConflict = fn;
+  }
   #editTimer: ReturnType<typeof setTimeout> | undefined;
 
   async #beat(active: boolean) {
@@ -567,10 +590,19 @@ export class SessionStore {
     this.#editPending = null;
     this.status = 'saving';
     try {
-      const data = await api<{ updated: number }>('PUT', `admin/sessions/${encodeURIComponent(w.code)}`, { project: JSON.parse(json) }, w.admin);
+      const data = await api<{ updated: number }>('PUT', `admin/sessions/${encodeURIComponent(w.code)}`, { project: JSON.parse(json), ...(w.updated !== null ? { base: w.updated } : {}) }, w.admin);
       if (this.watching?.code === w.code) this.watching = { ...this.watching, updated: data.updated };
       this.status = 'saved';
     } catch (error) {
+      // Die Lernenden haben inzwischen gespeichert (z.B. Tab der Lehrperson lange im Hintergrund):
+      // nichts überschreiben, ihren Stand neu laden und Bescheid geben.
+      if (error instanceof ApiError && error.code === 'sessionChanged' && this.watching?.code === w.code) {
+        this.status = 'saved';
+        this.watching = { ...this.watching, updated: null };
+        this.#editConflict?.();
+        await this.#refreshWatch();
+        return;
+      }
       this.status = 'error';
       if (this.watching?.code === w.code) this.watching = { ...this.watching, error: error instanceof ApiError ? error.code : 'error' };
     }

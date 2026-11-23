@@ -325,3 +325,13 @@ group('CLI: Abkürzungen und Vereinfachungen', () => {
     expect(dev.startupConfig).toBeTruthy();
   });
 });
+
+group('CLI: Zusammenfassen von Anschlussnamen lässt den Rest der Zeile in Ruhe', () => {
+  it('ändert keine Beschreibung und keine anderen Befehle', () => {
+    const net = new NetBuilder();
+    const r = net.add('router', 'R1');
+    const { topology, output } = run(net.topology, r, ['en', 'conf t', 'int e 1', 'description int e 0   uplink', 'end']);
+    expect(output.filter((l) => l.startsWith('%'))).toEqual([]);
+    expect(getDevice(topology, r)!.interfaces[1]!.description).toBe('int e 0   uplink');
+  });
+});

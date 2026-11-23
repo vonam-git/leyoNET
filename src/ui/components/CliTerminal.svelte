@@ -182,7 +182,11 @@
         lines = [...lines, { text: '% Ping needs the running simulation (action mode)', kind: 'out' }];
       }
     }
-    if (result.topology) editor.applyConfig(result.topology);
+    if (result.topology) {
+      // Nur ansehen (Lehrperson sieht zu, oder sie bearbeitet gerade die Session der Lernenden): nichts ändern.
+      if (editor.viewOnly) lines = [...lines, { text: `% ${t('palette.viewOnlyHint')}`, kind: 'out' }];
+      else editor.applyConfig(result.topology);
+    }
     session = result.session;
     if (result.close) {
       closed = true;
@@ -255,6 +259,7 @@
       bind:value={line}
       {onkeydown}
       {onpaste}
+      maxlength="1000"
       type={secret ? 'password' : 'text'}
       disabled={closed}
       autocomplete="off"

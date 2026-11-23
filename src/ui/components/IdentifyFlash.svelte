@@ -24,7 +24,6 @@
     <span class="card">
       <strong>{t('classLive.identify.title')}</strong>
       {#if site}<span class="seat">{siteName(site.seat, site.label)}</span>{/if}
-      {#if session.code}<code>{session.code}</code>{/if}
       <span class="hint">{t('classLive.identify.hint')}</span>
     </span>
   </button>
@@ -61,13 +60,6 @@
   .seat {
     font-size: clamp(2rem, 6vw, 4rem);
     font-weight: 800;
-  }
-  code {
-    font-size: 1.4rem;
-    background: rgb(255 255 255 / 0.18);
-    color: #fff;
-    padding: 2px 10px;
-    border-radius: 6px;
   }
   .hint {
     font-size: 0.9rem;

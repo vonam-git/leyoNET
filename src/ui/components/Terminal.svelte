@@ -142,6 +142,7 @@
       bind:this={input}
       bind:value={line}
       {onkeydown}
+      maxlength="1000"
       type={passwordFor ? 'password' : 'text'}
       autocomplete="off"
       spellcheck="false"
