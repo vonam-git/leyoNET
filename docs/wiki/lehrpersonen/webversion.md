@@ -3,6 +3,7 @@ titel: Webversion: Sessions, Klassen und Ansehen
 kurz: Arbeitsstand unter einem Code, Klassen-Sessions, Arbeiten live ansehen, die Admin-Konsole unter /admin mit Statistik und Zwei-Faktor-Anmeldung.
 reihenfolge: 9
 verwandt: [klassen-verbund, pruefungen, faq]
+hilfe: [classLive]
 ---
 ## Sessions statt Konten
 
@@ -10,7 +11,15 @@ In der Webversion ([app.leyonet.ch](https://app.leyonet.ch) oder auf dem Schulse
 
 ## Klassen
 
-In der **Admin-Konsole** eröffnen Sie eine Klasse mit einer Bezeichnung wie «INF22a» und verteilen den **Klassencode**. Die Lernenden treten unter «Session» der Klasse bei. Sie sehen danach alle Sessions der Klasse mit Stand und Fortschritt und können jede **ansehen**: Das Netz erscheint bei Ihnen schreibgeschützt und wird alle paar Sekunden neu geladen. «Beenden» holt Ihr eigenes Projekt zurück.
+In der **Admin-Konsole** eröffnen Sie eine Klasse mit einer Bezeichnung wie «INF22a» und zeigen den **Klassencode** mit «Code gross zeigen» am Beamer. Die Lernenden wählen unter «Session» den Knopf **Klasse beitreten**. Danach sehen Sie alle Sessions der Klasse; die Liste aktualisiert sich von selbst:
+
+- **Fortschritt**: erfüllte Lernziele der geladenen Aufgabe, vom Browser der Lernenden von selbst geprüft (niemand muss abgeben). Orange: mindestens die Hälfte, grün: alles erfüllt.
+- **Hilfe anfordern**: Lernende drücken «🙋 Hilfe anfordern», die Zeile wird magenta; «Hilfe erledigt» quittiert.
+- **Erkennen**: Der Bildschirm der Session blinkt rot und zeigt Platz und Code. So sehen Sie, wer an welcher Session sitzt.
+- **Ansehen**: schreibgeschützt, alle 5 Sekunden neu geladen, die Lernziele gleich grün oder rot geprüft. Gut für die Fehlersuche mit der Klasse am Beamer.
+- **Öffnen**: Sie bearbeiten die Session selbst. Die Änderungen gehen direkt an die Lernenden, die solange nur zusehen.
+
+«Beenden» holt Ihr eigenes Projekt zurück.
 
 Bei jeder Klasse blenden Sie Übungen und ganze Module ein oder aus und geben den [[klassen-verbund]] frei.
 

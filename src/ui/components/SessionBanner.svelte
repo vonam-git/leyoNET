@@ -2,7 +2,7 @@
   import { serializeProject } from '../../core';
   import { t } from '../../i18n';
   import { editor } from '../state/editor.svelte';
-  import { session } from '../state/session.svelte';
+  import { session, SessionStore } from '../state/session.svelte';
   import { startWatch, stopWatch } from '../watch';
   import { showcase } from '../state/showcase.svelte';
   import { tour } from '../state/tour.svelte';
@@ -42,6 +42,29 @@
     }
   }
 
+  /** Lehrperson: Lernende erkennen (Bildschirm blinkt), Hilfe erledigen, zwischen Ansehen und Bearbeiten wechseln. */
+  async function signal(kind: 'identify' | 'help') {
+    const w = session.watching;
+    if (!w?.admin) return;
+    try {
+      await SessionStore.signal(w.admin, w.code, kind);
+      editor.notify(t(kind === 'identify' ? 'classLive.identify.sent' : 'classLive.help.cleared'));
+      if (kind === 'help' && session.watching) session.watching = { ...session.watching, help: null };
+    } catch {
+      editor.notify(t('session.error.other'), 'error');
+    }
+  }
+  async function switchMode(edit: boolean) {
+    const w = session.watching;
+    if (!w?.admin) return;
+    busy = true;
+    try {
+      await startWatch(w.code, w.admin, w.label, edit);
+    } finally {
+      busy = false;
+    }
+  }
+
   async function watchOwn() {
     if (session.code) await startWatch(session.code);
   }
@@ -56,13 +79,24 @@
     <button class="primary" onclick={() => showcase.leave()}>{t('showcase.leave')}</button>
   </div>
 {:else if session.watching}
-  <div class="banner watch" role="status">
-    <strong>👁 {t('watch.title', { code: session.watching.label ?? session.watching.code })}</strong>
-    <span>{t('watch.readOnly')}</span>
+  {@const w = session.watching}
+  <div class="banner watch" class:edit={w.edit} role="status">
+    <strong>{w.edit ? '✏️' : '👁'} {t(w.edit ? 'classLive.edit.title' : 'watch.title', { code: w.label ?? w.code })}</strong>
+    <span>{t(w.edit ? 'classLive.edit.text' : 'watch.readOnly')}</span>
+    {#if w.help}<span class="help-pill">🙋 {t('classLive.help.pill')}</span><button onclick={() => signal('help')}>{t('classLive.help.done')}</button>{/if}
+    {#if w.admin && w.classCode}
+      <button onclick={() => signal('identify')} title={t('classLive.identify.hint2')}>🔴 {t('classLive.identify.button')}</button>
+      <button onclick={() => switchMode(!w.edit)} disabled={busy} title={t(w.edit ? 'classLive.edit.toViewHint' : 'classLive.edit.toEditHint')}>{t(w.edit ? 'classLive.edit.toView' : 'classLive.edit.toEdit')}</button>
+    {/if}
     {#if fresh}<span class="fresh">⟳ {t('watch.fresh')}</span>{/if}
     <span class="muted">{t('watch.updated', { time: time(session.watching.updated) })} · {session.watching.connected ? t('watch.online') : t('watch.offline')}</span>
     {#if session.watching.error}<span class="error">{t('watch.error')}</span>{/if}
     <button onclick={stopWatch}>{t('watch.stop')}</button>
+  </div>
+{:else if session.teacherEditing}
+  <div class="banner teacher" role="alert">
+    <strong>✏️ {t('classLive.teacher.title')}</strong>
+    <span>{t('classLive.teacher.text')}</span>
   </div>
 {:else if session.takenOver}
   <div class="banner taken" role="alert">
@@ -85,6 +119,19 @@
   }
   .watch {
     background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  }
+  .watch.edit {
+    background: color-mix(in srgb, #d97706 16%, var(--surface));
+  }
+  .teacher {
+    background: color-mix(in srgb, #d97706 16%, var(--surface));
+  }
+  .help-pill {
+    padding: 1px 8px;
+    border-radius: 999px;
+    color: #fff;
+    background: #c026d3;
+    font-weight: 600;
   }
   .fresh {
     padding: 1px 8px;

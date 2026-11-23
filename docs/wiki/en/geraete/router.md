@@ -23,7 +23,7 @@ Two interfaces of the same router may not be in the same network; leyoNET reject
 
 ## Command line
 
-In the simulation, double-clicking the router opens the **console**. The commands follow the style of FRRouting and Cisco IOS, with abbreviations, `?` and Tab:
+In the simulation, double-clicking the router opens the **console**. The commands follow the style of FRRouting and Cisco IOS, with abbreviations (`conf t`, `int e0` or `int eth 0`, `sh ip int br`, `wr`), `?` and Tab. Everything also works in the router's window, including saving (“Save configuration” on the General tab):
 
 ```
 Router> enable

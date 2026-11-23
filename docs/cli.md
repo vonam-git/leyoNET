@@ -13,7 +13,7 @@ Router, Firewalls, Switches und Layer-3-Switches lassen sich zusätzlich zu den 
 
 ## Bedienung
 
-- **Abkürzen**: Jedes Wort darf abgekürzt werden, solange es eindeutig ist: `conf t`, `int eth0`, `sh ip ro`.
+- **Abkürzen**: Jedes Wort darf abgekürzt werden, solange es eindeutig ist: `conf t`, `int e0`, `sh ip ro`, `sh ip int br`, `ip add`, `no sh`, `wr`, `copy run start`. Anschlussnamen dürfen ein Leerzeichen haben (`int eth 0`, `int gi 0/1`, `int lo 0`), und auf Routern gelten auch die Cisco-Namen `g0`, `gi0/0`, `fa0/1`. `show interfaces` zeigt die Übersicht der Anschlüsse.
 - **`?`** zeigt die möglichen nächsten Wörter mit Erklärung (`show ?`, `ip ?`).
 - **Tab** ergänzt das angefangene Wort.
 - **↑ / ↓** blättern durch frühere Befehle.
@@ -40,7 +40,7 @@ Switch(config-ext-nacl)#
 | Gerät | Namen |
 |---|---|
 | Firewall | wie Router; in Firewall-Regeln nach `in` auch die Zone: `wan`, `lan`, `dmz`, `opt1` … |
-| Router | `loopback0` … `loopback99` (auch `lo0`); `eth0`, `eth1` …; Subinterfaces `eth0.10` (VLAN 10); serielle Ports `serial0`, `serial1` … (auch `se0`, `s0/0/0`) |
+| Router | `loopback0` … `loopback99` (auch `lo0`); `eth0`, `eth1` … (auch `e0`, `g0`, `gi0/0`, `fa0/1`, mit oder ohne Leerzeichen vor der Nummer); Subinterfaces `eth0.10` (VLAN 10); serielle Ports `serial0`, `serial1` … (auch `se0`, `s0/0/0`) |
 | Switch | `port1`, `port2` … (wie auf der Frontplatte); auch `gi0/1` oder `fa0/1`. SFP-Einschübe für Glasfaser zählen separat: `sfp1`, `sfp2` … (auch `te0/1`) |
 | Layer-3-Switch | wie Switch, dazu `vlan10` bzw. `interface vlan 10` |
 | Switch (Verwaltung) | `interface vlan 1` (oder ein anderes VLAN) als Verwaltungsadresse |

@@ -46,6 +46,21 @@ group('Internet und NAT', () => {
     expect(sim.getDeviceState(home).nat).toMatchObject([{ protocol: 'icmp', inside: '192.168.0.10', outside: '203.0.113.2', outsidePort: 50000 }]);
   });
 
+  it('übersetzt ICMP über die Echo-Kennung und bringt Fehlermeldungen zurück (traceroute, RFC 5508)', () => {
+    const { net, pc } = network();
+    const sim = new Simulation(net.topology);
+    sim.traceroute(pc, '198.51.100.10');
+    sim.runUntilIdle();
+    const hops = sim.getDeviceState(pc).console.filter((l) => l.code === 'tracert.hop');
+    // Hop 1 Heimrouter (innen), Hop 2 Internet-Router: dessen «Time Exceeded» geht an die öffentliche
+    // Adresse und muss samt eingebettetem Paket zurückübersetzt werden.
+    expect(hops.map((l) => [l.params?.hop, l.params?.from])).toEqual([
+      [1, '192.168.0.1'],
+      [2, '203.0.113.1'],
+      [3, '198.51.100.10'],
+    ]);
+  });
+
   it('übersetzt bei TCP auch den Port', () => {
     const { net, pc } = network();
     const sim = new Simulation(net.topology);

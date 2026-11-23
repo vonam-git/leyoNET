@@ -750,10 +750,12 @@ export class PatTable {
         const [inside, b4] = splitTunnel(entry.inside);
         this.ctx.print('dslite.new', { protocol: flow.protocol.toUpperCase(), inside: `${inside}:${entry.insidePort}`, b4, outside: `${outside}:${entry.outsidePort}` });
       } else {
+        // ICMP kennt keine Ports: NAT unterscheidet Pings an der Echo-Kennung (RFC 5508).
+        const at = (ip: string, port: number) => (flow.protocol === 'icmp' ? `${ip} (ID ${port})` : `${ip}:${port}`);
         this.ctx.print(this.kind === 'cgnat' ? 'cgnat.new' : 'nat.new', {
           protocol: flow.protocol.toUpperCase(),
-          inside: `${entry.inside}:${entry.insidePort}`,
-          outside: `${outside}:${entry.outsidePort}`,
+          inside: at(entry.inside, entry.insidePort),
+          outside: at(outside, entry.outsidePort),
         });
       }
     }
@@ -763,6 +765,16 @@ export class PatTable {
 
   /** Eingehend an `outside`: bekannte Verbindung → interne Adresse, sonst null. */
   inbound(packet: Ipv4Packet): Ipv4Packet | null {
+    const icmp = packet.payload;
+    // ICMP-Fehlermeldung (z.B. Time Exceeded bei traceroute) zu einem übersetzten Ping: Ziel und das
+    // eingebettete Paket zurückübersetzen, sonst erreicht sie den Absender nie (RFC 5508, Abschnitt 4).
+    if (icmp.kind === 'icmp' && isIcmpError(icmp) && icmp.original) {
+      const o = icmp.original;
+      if (o.src !== packet.dst) return null;
+      const entry = this.#byOutside.get(`icmp:${o.src}:${o.id}`);
+      if (!entry || entry.expires <= this.ctx.now) return null;
+      return { ...packet, dst: entry.inside, payload: { ...icmp, original: { ...o, src: entry.inside, id: entry.insidePort } } };
+    }
     const flow = flowOf(packet.payload, 'dst');
     if (!flow) return null;
     const entry = this.#byOutside.get(`${flow.protocol}:${packet.dst}:${flow.port}`);

@@ -30,7 +30,7 @@ Zwei Anschlüsse desselben Routers dürfen nicht im selben Netz liegen; leyoNET 
 
 ## Befehlszeile
 
-Ein Doppelklick auf den Router öffnet in der Simulation die **Konsole**. Die Befehle folgen dem Stil von FRRouting und Cisco IOS, mit Abkürzungen, `?` und Tab:
+Ein Doppelklick auf den Router öffnet in der Simulation die **Konsole**. Die Befehle folgen dem Stil von FRRouting und Cisco IOS, mit Abkürzungen (`conf t`, `int e0` oder `int eth 0`, `sh ip int br`, `wr`), `?` und Tab. Alles geht auch im Fenster des Routers, auch das Speichern («Konfiguration speichern» im Reiter Allgemein):
 
 ```
 Router> enable

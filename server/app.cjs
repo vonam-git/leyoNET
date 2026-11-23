@@ -560,6 +560,30 @@ function issueToken(res, who) {
 const leases = new Map();
 const pinFails = new Map();
 
+// --- Klassen: Signale je Session (nur im Arbeitsspeicher, keine Personendaten) ---
+// help: Zeitpunkt der Hilfe-Anfrage der Lernenden; identify: bis wann der Bildschirm der
+// Lernenden aufblinkt («Erkennen»); teacher: letzte Meldung der Lehrperson, die die Session
+// gerade bearbeitet (solange ist die Session für die Lernenden nur lesbar).
+const signals = new Map();
+const IDENTIFY_MS = 12_000;
+const TEACHER_EDIT_MS = 30_000;
+const MAX_SIGNALS = 20_000;
+function signalOf(code) {
+  let s = signals.get(code);
+  if (!s) {
+    if (signals.size >= MAX_SIGNALS) {
+      const now = Date.now();
+      for (const [k, v] of signals) if (!v.help && v.identify < now && now - v.teacher > TEACHER_EDIT_MS) signals.delete(k);
+      if (signals.size >= MAX_SIGNALS) return { help: 0, identify: 0, teacher: 0 };
+    }
+    s = { help: 0, identify: 0, teacher: 0 };
+    signals.set(code, s);
+  }
+  return s;
+}
+const helpOf = (code) => signals.get(code)?.help || null;
+const teacherEditing = (code, now = Date.now()) => now - (signals.get(code)?.teacher || 0) < TEACHER_EDIT_MS;
+
 const digest = (value) => crypto.createHash('sha256').update(String(value)).digest();
 const sameHash = (a, b) => typeof a === 'string' && typeof b === 'string' && a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
@@ -583,6 +607,13 @@ function writerOf(req) {
 
 function isWriter(item, token) {
   return !!token && sameHash(item.writer, writerHash(token));
+}
+
+/** Fortschritt der Lernziele aus einer Anfrage: nur ganze Zahlen 0–99, sonst null. */
+function readProgress(p) {
+  const count = (x, y) => Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x <= y && y <= 99;
+  if (!p || typeof p !== 'object' || !count(p.goals, p.total)) return null;
+  return { goals: p.goals, total: p.total, ...(p.faults && count(p.faults.fixed, p.faults.total) && p.faults.total > 0 ? { faults: { fixed: p.faults.fixed, total: p.faults.total } } : {}) };
 }
 
 function connected(code, now = Date.now()) {
@@ -1187,7 +1218,8 @@ async function api(req, res, url) {
   // --- Sessions ---
   if (parts[0] === 'sessions') {
     // Ganze Klassen hinter einer Schul-Adresse (NAT) speichern laufend: grosszügige Grenze.
-    if (limited(req, 'sessions', 600)) return fail(res, 429, 'rateLimited');
+    // Lebenszeichen kommen in Klassen alle paar Sekunden und kosten fast nichts: eigene Grenze.
+    if (parts[2] === 'ping' && method === 'POST' ? limited(req, 'ping', 2400) : limited(req, 'sessions', 600)) return fail(res, 429, 'rateLimited');
     // Neue Sessions legen Dateien an: eigene, engere Grenze.
     if (parts.length === 1 && method === 'POST' && (limited(req, 'newSession', NEW_SESSIONS_PER_MINUTE) || limitedGlobal('newSession', 1200))) return fail(res, 429, 'rateLimited');
     const s = settings();
@@ -1237,8 +1269,16 @@ async function api(req, res, url) {
       if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
       // Abgegebener Prüfungsplatz: nicht mehr belegen.
       if (item.submitted) return json(res, 423, { error: 'examClosed' });
-      leases.set(code, Date.now());
-      return json(res, 200, { ok: true, ...about(item) });
+      const now = Date.now();
+      leases.set(code, now);
+      if (!item.classCode) return json(res, 200, { ok: true, ...about(item) });
+      // Klasse: Fortschritt (zwei kleine Zahlen) und Hilfe-Anfrage mitschicken.
+      const progress = readProgress(body.progress);
+      if (progress && JSON.stringify(progress) !== JSON.stringify(item.progress || null)) store('sessions', code, { ...item, progress });
+      const sig = signalOf(code);
+      if (body.help === true && !sig.help) sig.help = now;
+      if (body.help === false) sig.help = 0;
+      return json(res, 200, { ok: true, ...about(item), updated: item.updated, help: !!sig.help, identify: sig.identify > now, teacher: teacherEditing(code, now) });
     }
     // Platz und Gruppe im Klassen-Verbund ändern (nur das schreibende Gerät).
     if (parts[2] === 'site' && method === 'PUT') {
@@ -1379,16 +1419,13 @@ async function api(req, res, url) {
         store('sessions', code, { ...item, project: body.project, updated: now });
         return json(res, 200, { code, expires: item.expires, exam: seatStatus(exam, seat), ...(writer ? { writer } : {}) });
       }
+      // Die Lehrperson bearbeitet die Session gerade: Lernende sehen nur zu.
+      if (teacherEditing(code, now)) return json(res, 423, { error: 'teacherEditing', ...about(item) });
       // Die Frist läuft ab der letzten Änderung (Arbeit geht nicht mitten in der Lektion verloren).
       const before = indexes.sessions.get(code);
       if (!fits(projectSize(body.project) - (before ? before.size : 0))) return fail(res, 507, 'storageFull');
       // Fortschritt der Lernziele (für das Dashboard), nur zwei kleine Zahlen.
-      const p = body.progress;
-      const count = (x, y) => Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x <= y && y <= 99;
-      const progress =
-        p && count(p.goals, p.total)
-          ? { goals: p.goals, total: p.total, ...(p.faults && count(p.faults.fixed, p.faults.total) && p.faults.total > 0 ? { faults: { fixed: p.faults.fixed, total: p.faults.total } } : {}) }
-          : item.progress;
+      const progress = readProgress(body.progress) || item.progress;
       const next = { ...item, project: body.project, updated: now, expires: now + ttl, ...(progress ? { progress } : {}) };
       store('sessions', code, next);
       return json(res, 200, { code, expires: next.expires, ...(writer ? { writer } : {}), ...about(next) });
@@ -1863,7 +1900,7 @@ async function admin(req, res, parts, method) {
         .sort((a, b) => a.created - b.created)
         .map((m) => loadSession(m.code))
         .filter(Boolean)
-        .map((s) => ({ code: s.code, created: s.created, updated: s.updated, expires: s.expires, site: s.site || null, progress: s.progress || null, connected: connected(s.code), ...summary(s.project), ...(withProjects ? { project: s.project } : {}) }));
+        .map((s) => ({ code: s.code, created: s.created, updated: s.updated, expires: s.expires, site: s.site || null, progress: s.progress || null, connected: connected(s.code), help: helpOf(s.code), teacher: teacherEditing(s.code), ...summary(s.project), ...(withProjects ? { project: s.project } : {}) }));
       return json(res, 200, sessions);
     }
     if (parts.length === 2 && method === 'PATCH') {
@@ -1965,7 +2002,33 @@ async function admin(req, res, parts, method) {
     // Zugänge sehen nur Sessions ihrer Klassen und Prüfungen, der Hauptadmin alle.
     const visible = item && (who.role === 'super' || (item.classCode && canSee(who, loadClass(item.classCode)?.owner)) || (item.exam && canSee(who, loadExam(item.exam.id)?.owner)));
     if (!visible) return fail(res, 404, 'unknownSession');
-    if (method === 'GET') return json(res, 200, { code, project: item.project, classCode: item.classCode, updated: item.updated, connected: connected(code), locked: !!item.lock });
+    if (method === 'GET' && parts.length === 2) return json(res, 200, { code, project: item.project, classCode: item.classCode, site: item.site || null, updated: item.updated, connected: connected(code), locked: !!item.lock, help: helpOf(code) });
+    // Klassen: Bildschirm der Lernenden kurz aufblinken lassen, Hilfe-Anfrage erledigen,
+    // Session bearbeiten (solange sehen die Lernenden nur zu). Nie für Prüfungsplätze.
+    if (parts.length === 3 && method === 'POST' && ['identify', 'help', 'edit'].includes(parts[2])) {
+      if (item.exam || !item.classCode) return fail(res, 409, 'notInClass');
+      const body = await readBody(req, 1024);
+      const sig = signalOf(code);
+      const now = Date.now();
+      if (parts[2] === 'identify') sig.identify = now + IDENTIFY_MS;
+      if (parts[2] === 'help') sig.help = 0;
+      if (parts[2] === 'edit') sig.teacher = body.active === false ? 0 : now;
+      return json(res, 200, { ok: true, help: !!sig.help, teacher: teacherEditing(code, now) });
+    }
+    if (method === 'PUT' && parts.length === 2) {
+      if (item.exam || !item.classCode) return fail(res, 409, 'notInClass');
+      const body = await readBody(req);
+      if (!validProject(body.project)) return fail(res, 400, 'invalidProject');
+      const latest = loadSession(code) || item;
+      const before = indexes.sessions.get(code);
+      if (!fits(projectSize(body.project) - (before ? before.size : 0))) return fail(res, 507, 'storageFull');
+      const now = Date.now();
+      signalOf(code).teacher = now;
+      const ttl = settings().sessionHours * 3_600_000;
+      store('sessions', code, { ...latest, project: body.project, updated: now, expires: Math.max(latest.expires, now + ttl) });
+      return json(res, 200, { code, updated: now });
+    }
+    if (method === 'GET') return fail(res, 404, 'notFound');
     // Verlängern (nicht für Prüfungsplätze: die gelten so lange wie die Prüfung).
     if (method === 'PATCH') {
       const body = await readBody(req, 1024);

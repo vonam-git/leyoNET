@@ -26,7 +26,7 @@
   const raster = $derived(tasks.exam?.raster ?? null);
   /** Verbund-Aufgabe: Platz, Adressen und Ziel dieses Platzes zeigen (sonst weiss niemand, was «sein» Auftrag ist). */
   const isVerbundTask = $derived(tasks.goals.some((g) => g.check.type === 'verbundSite'));
-  const place = $derived(isVerbundTask && verbund.active && session.site ? { seat: session.site.seat, name: siteName(session.site.seat, session.site.label), ...verbundAddresses(session.site.seat) } : null);
+  const place = $derived(isVerbundTask && verbund.active && session.viewSite ? { seat: session.viewSite.seat, name: siteName(session.viewSite.seat, session.viewSite.label), ...verbundAddresses(session.viewSite.seat) } : null);
   const rasterTotal = $derived(raster?.reduce((s, r) => s + r.points, 0) ?? 0);
 </script>
 

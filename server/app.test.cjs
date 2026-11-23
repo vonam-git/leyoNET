@@ -606,3 +606,58 @@ test('Prüfung mit Varianten: Ein Platz bekommt nur seine Variante, nie die der 
   const again = (await call('GET', `/api/sessions/${join.session}`)).data;
   assert.doesNotMatch(JSON.stringify(again.project), /Fehler 01|Fehler 03|"unlock"|"variants"/);
 });
+
+test('Klasse: Fortschritt per Lebenszeichen, Hilfe, Erkennen, Bearbeiten durch die Lehrperson', async () => {
+  const { token } = (await call('POST', '/api/admin/login', { password: 'test-admin-passwort' })).data;
+  const cls = (await call('POST', '/api/admin/classes', { label: 'Live' }, token)).data;
+  const s = (await call('POST', '/api/sessions', { project: project(2), classCode: cls.code, site: { seat: 3, label: 'Bern' } })).data;
+  const solo = (await call('POST', '/api/sessions', { project: project(1) })).data;
+  const row = async () => (await call('GET', `/api/admin/classes/${cls.code}/sessions`, null, token)).data.find((x) => x.code === s.code);
+
+  // Fortschritt und Hilfe kommen mit dem Lebenszeichen, ohne Speichern; Unsinn wird verworfen.
+  let ping = (await call('POST', `/api/sessions/${s.code}/ping`, { progress: { goals: 2, total: 4 }, help: true })).data;
+  assert.equal(ping.help, true);
+  assert.equal(ping.identify, false);
+  assert.equal(ping.teacher, false);
+  let r = await row();
+  assert.deepEqual(r.progress, { goals: 2, total: 4 });
+  assert.ok(r.help > 0);
+  await call('POST', `/api/sessions/${s.code}/ping`, { progress: { goals: 9, total: 4 }, help: 'ja' });
+  r = await row();
+  assert.deepEqual(r.progress, { goals: 2, total: 4 });
+  assert.ok(r.help > 0, 'nur true/false ändert die Hilfe-Anfrage');
+  // Einzel-Session ausserhalb einer Klasse: keine Signale, nichts gespeichert.
+  const soloPing = (await call('POST', `/api/sessions/${solo.code}/ping`, { progress: { goals: 1, total: 1 }, help: true })).data;
+  assert.equal(soloPing.help, undefined);
+  assert.equal((await call('POST', `/api/admin/sessions/${solo.code}/identify`, {}, token)).status, 409);
+
+  // Lehrperson: Hilfe erledigen, Erkennen.
+  assert.equal((await call('POST', `/api/admin/sessions/${s.code}/help`, {})).status, 401);
+  assert.equal((await call('POST', `/api/admin/sessions/${s.code}/help`, {}, token)).data.help, false);
+  assert.equal((await row()).help, null);
+  await call('POST', `/api/admin/sessions/${s.code}/identify`, {}, token);
+  ping = (await call('POST', `/api/sessions/${s.code}/ping`, {})).data;
+  assert.equal(ping.identify, true);
+  assert.equal(ping.help, false);
+  const watched = (await call('GET', `/api/admin/sessions/${s.code}`, null, token)).data;
+  assert.deepEqual(watched.site, { seat: 3, label: 'Bern' });
+  assert.equal(watched.classCode, cls.code);
+
+  // Bearbeiten: Lernende können solange nicht speichern und sehen den Stand der Lehrperson.
+  assert.equal((await call('PUT', `/api/admin/sessions/${s.code}`, { project: project(5) })).status, 401);
+  assert.equal((await call('PUT', `/api/admin/sessions/${s.code}`, { project: { kaputt: true } }, token)).status, 400);
+  const edited = await call('PUT', `/api/admin/sessions/${s.code}`, { project: project(5) }, token);
+  assert.equal(edited.status, 200);
+  ping = (await call('POST', `/api/sessions/${s.code}/ping`, {})).data;
+  assert.equal(ping.teacher, true);
+  assert.equal(ping.updated, edited.data.updated);
+  const blocked = await call('PUT', `/api/sessions/${s.code}`, { project: project(1) });
+  assert.equal(blocked.status, 423);
+  assert.equal(blocked.data.error, 'teacherEditing');
+  assert.equal((await call('GET', `/api/sessions/${s.code}?watch=1`)).data.project.topology.devices.length, 5);
+  assert.equal((await row()).teacher, true);
+  await call('POST', `/api/admin/sessions/${s.code}/edit`, { active: false }, token);
+  assert.equal((await call('POST', `/api/sessions/${s.code}/ping`, {})).data.teacher, false);
+  assert.equal((await call('PUT', `/api/sessions/${s.code}`, { project: project(6) })).status, 200);
+  await call('DELETE', `/api/admin/classes/${cls.code}`, null, token);
+});

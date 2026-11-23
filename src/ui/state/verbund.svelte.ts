@@ -75,7 +75,7 @@ class VerbundStore {
 
   /** Im Verbund (Klasse mit freigegebenem Verbund, keine Prüfung). */
   get active(): boolean {
-    return this.enabled && !!session.classCode && !!session.site && !examMode.active;
+    return this.enabled && !!session.viewClass && !!session.viewSite && !examMode.active;
   }
 
   /** Polling an die Klasse anpassen (von App.svelte aufgerufen, wenn sich die Klasse ändert). */
@@ -128,7 +128,7 @@ class VerbundStore {
       const fresh = (await api<VerbundMessage[]>('GET', `classes/${encodeURIComponent(code)}/messages?after=${after}`)).filter((m) => m.id > (this.messages.at(-1)?.id ?? 0));
       if (fresh.length) {
         // Beim ersten Laden nicht melden, nur danach neu eingetroffene an mich oder an alle.
-        const seat = session.site?.seat;
+        const seat = session.viewSite?.seat;
         if (this.#loaded && seat) {
           const mine = fresh.filter((m) => m.from !== seat && (m.to === seat || m.to === -1));
           if (mine.length) this.unread += mine.length;
@@ -149,9 +149,9 @@ class VerbundStore {
     if (!this.active || !this.infra) return null;
     const c = this.#cache;
     if (c && c.own === own && c.version === this.version) return c.result;
-    const seat = session.site!.seat;
+    const seat = session.viewSite!.seat;
     const others = this.sites.filter((s) => s.seat !== seat && s.topology).map((s) => ({ seat: s.seat, label: s.label, topology: s.topology! }));
-    const result = federate(this.infra, [{ seat, label: session.site!.label, topology: own, own: true }, ...others]);
+    const result = federate(this.infra, [{ seat, label: session.viewSite!.label, topology: own, own: true }, ...others]);
     this.#cache = { own, version: this.version, result };
     return result;
   }
@@ -162,11 +162,11 @@ class VerbundStore {
 
   /** Eigener Name im Verbund. */
   get ownName(): string {
-    return session.site ? siteName(session.site.seat, session.site.label) : '';
+    return session.viewSite ? siteName(session.viewSite.seat, session.viewSite.label) : '';
   }
 
   async send(to: number, subject: string, text: string) {
-    if (!this.#class || !session.code) return;
+    if (!this.#class || !session.code || session.watching) return;
     await api('POST', `classes/${encodeURIComponent(this.#class)}/messages`, { session: session.code, to, subject, text }, undefined, session.writerHeaders());
     await this.refresh();
   }

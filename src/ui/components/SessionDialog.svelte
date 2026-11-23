@@ -28,6 +28,17 @@
   let lockPin = $state('');
   let watchCode = $state('');
 
+  /** Was die Person tun will: grosse Knöpfe statt einer langen Liste (Klassencode nicht mit dem eigenen Code verwechseln). */
+  type Choice = 'join' | 'resume' | 'new' | 'watch' | 'manage';
+  const CHOICES: { id: Choice; icon: string }[] = [
+    { id: 'join', icon: '🏫' },
+    { id: 'resume', icon: '↩' },
+    { id: 'new', icon: '＋' },
+    { id: 'watch', icon: '👁' },
+    { id: 'manage', icon: '⚙' },
+  ];
+  let choice = $state<Choice>(session.classCode ? 'resume' : 'join');
+
   const project = () => serializeProject(editor.topology, editor.tasks, editor.snapshots);
   const until = $derived(
     session.expires ? new Date(session.expires).toLocaleString(locale() === 'en' ? 'en-GB' : 'de-CH', { dateStyle: 'short', timeStyle: 'short' }) : '',
@@ -121,68 +132,93 @@
 
 <Modal title={t('session.title')} {onclose}>
   {#if session.code}
-    <p>{t('session.current')}</p>
-    <p class="big code">{session.code} <button onclick={copy}>{t('session.copy')}</button></p>
-    <p class="muted">
-      {t('session.expires', { time: until })}
-      {#if session.classCode}· {t('session.inClass')}{/if}
-      {#if session.site}· {t('verbund.siteOf', { seat: session.site.seat, label: session.site.label || '–' })}{/if}
-    </p>
+    <div class="mine">
+      <p class="muted">{t('session.current')}</p>
+      <p class="big code">{session.code} <button onclick={copy}>{t('session.copy')}</button></p>
+      <p class="muted">
+        {t('session.expires', { time: until })}
+        {#if session.classCode}· {t('session.inClass')}{#if session.classLabel} «{session.classLabel}»{/if}{/if}
+        {#if session.site}· {t('verbund.siteOf', { seat: session.site.seat, label: session.site.label || '–' })}{/if}
+      </p>
+      <p class="note">{t('session.ownCodeNote')}</p>
+    </div>
   {:else}
     <p class="muted">{t('session.none')}</p>
   {/if}
 
-  <h3>{t('session.resumeTitle')}</h3>
-  <form onsubmit={(e) => (e.preventDefault(), resume())}>
-    <input bind:value={resumeCode} placeholder="ABCD-2345" maxlength="14" use:codeInput aria-label={t('session.code')} class="code" autocomplete="off" />
-    <button type="submit" disabled={busy || !resumeCode.trim()}>{t('session.resume')}</button>
-  </form>
-  {#if needPin}
-    <p class="muted">{t('session.needPin')}</p>
-    <form onsubmit={(e) => (e.preventDefault(), resume())}>
-      <input bind:value={pin} type="password" inputmode="numeric" maxlength="8" pattern={"[0-9]{4,8}"} aria-label={t('session.pin')} autocomplete="off" />
-      <button type="submit" disabled={busy || pin.length < 4}>{t('session.resume')}</button>
-    </form>
-  {/if}
-  {#if inUse}
-    <p class="muted">{t('session.inUse')} <button onclick={() => watch(resumeCode)}>{t('session.watch')}</button></p>
-  {/if}
-
-  {#if session.code && !session.takenOver}
-    <h3>{t('session.lockTitle')}</h3>
-    {#if session.locked}
-      <p class="ok">🔒 {t('session.locked')}</p>
-      <button onclick={unlock} disabled={busy}>{t('session.unlock')}</button>
-    {:else}
-      <p class="muted">{t('session.lockHint')}</p>
-      <form onsubmit={(e) => (e.preventDefault(), lock())}>
-        <input bind:value={lockPin} type="password" inputmode="numeric" maxlength="8" pattern={"[0-9]{4,8}"} aria-label={t('session.pin')} autocomplete="new-password" />
-        <button type="submit" disabled={busy || !/^\d{4,8}$/.test(lockPin)}>{t('session.lock')}</button>
-      </form>
-    {/if}
-  {/if}
-
-  <h3>{t('session.watchTitle')}</h3>
-  <p class="muted">{t('session.watchHint')}</p>
-  <form onsubmit={(e) => (e.preventDefault(), watch(watchCode))}>
-    <input bind:value={watchCode} placeholder="ABCD-2345" maxlength="14" use:codeInput aria-label={t('session.watchTitle')} class="code" autocomplete="off" />
-    <button type="submit" disabled={busy || !watchCode.trim()}>{t('session.watch')}</button>
-  </form>
-
-  <h3>{t('session.classTitle')}</h3>
-  <p class="muted">{t('session.classHint')}</p>
-  <form onsubmit={(e) => (e.preventDefault(), join())}>
-    <input bind:value={classCode} placeholder="WXYZ-6789" maxlength="14" use:codeInput aria-label={t('session.classCode')} class="code" autocomplete="off" />
-    <input bind:value={seat} inputmode="numeric" pattern={"[0-9]{1,2}"} placeholder={t('verbund.seat')} aria-label={t('verbund.seatHint')} title={t('verbund.seatHint')} class="seat" autocomplete="off" />
-    <input bind:value={group} maxlength="30" placeholder={t('verbund.group')} aria-label={t('verbund.groupHint')} title={t('verbund.groupHint')} class="group" autocomplete="off" />
-    <button type="submit" disabled={busy || !classCode.trim()}>{t('session.join')}</button>
-  </form>
-
-  <h3>{t('session.manageTitle')}</h3>
-  <div class="row">
-    <button onclick={fresh} disabled={busy}>{t('session.new')}</button>
-    <button class="danger" onclick={remove} disabled={busy || !session.code}>{t('session.delete')}</button>
+  <div class="choices" role="tablist" aria-label={t('session.chooseTitle')}>
+    {#each CHOICES as c (c.id)}
+      <button role="tab" aria-selected={choice === c.id} class:active={choice === c.id} onclick={() => (choice = c.id)}>
+        <span class="icon" aria-hidden="true">{c.icon}</span>
+        <span>{t(`session.choice.${c.id}`)}</span>
+      </button>
+    {/each}
   </div>
+
+  {#if choice === 'join'}
+    <section class="panel">
+      <h3>{t('session.classTitle')}</h3>
+      <p class="muted">{t('session.classHint')}</p>
+      <form onsubmit={(e) => (e.preventDefault(), join())}>
+        <input bind:value={classCode} placeholder="WXYZ-6789" maxlength="14" use:codeInput aria-label={t('session.classCode')} class="code" autocomplete="off" />
+        <input bind:value={seat} inputmode="numeric" pattern={"[0-9]{1,2}"} placeholder={t('verbund.seat')} aria-label={t('verbund.seatHint')} title={t('verbund.seatHint')} class="seat" autocomplete="off" />
+        <input bind:value={group} maxlength="30" placeholder={t('verbund.group')} aria-label={t('verbund.groupHint')} title={t('verbund.groupHint')} class="group" autocomplete="off" />
+        <button type="submit" class="primary" disabled={busy || !classCode.trim()}>{t('session.join')}</button>
+      </form>
+    </section>
+  {:else if choice === 'resume'}
+    <section class="panel">
+      <h3>{t('session.resumeTitle')}</h3>
+      <p class="muted">{t('session.resumeHint')}</p>
+      <form onsubmit={(e) => (e.preventDefault(), resume())}>
+        <input bind:value={resumeCode} placeholder="ABCD-2345" maxlength="14" use:codeInput aria-label={t('session.code')} class="code" autocomplete="off" />
+        <button type="submit" class="primary" disabled={busy || !resumeCode.trim()}>{t('session.resume')}</button>
+      </form>
+      {#if needPin}
+        <p class="muted">{t('session.needPin')}</p>
+        <form onsubmit={(e) => (e.preventDefault(), resume())}>
+          <input bind:value={pin} type="password" inputmode="numeric" maxlength="8" pattern={"[0-9]{4,8}"} aria-label={t('session.pin')} autocomplete="off" />
+          <button type="submit" disabled={busy || pin.length < 4}>{t('session.resume')}</button>
+        </form>
+      {/if}
+      {#if inUse}
+        <p class="muted">{t('session.inUse')} <button onclick={() => watch(resumeCode)}>{t('session.watch')}</button></p>
+      {/if}
+    </section>
+  {:else if choice === 'new'}
+    <section class="panel">
+      <h3>{t('session.newTitle')}</h3>
+      <p class="muted">{t('session.newHint')}</p>
+      <button class="primary" onclick={fresh} disabled={busy}>{t('session.new')}</button>
+    </section>
+  {:else if choice === 'watch'}
+    <section class="panel">
+      <h3>{t('session.watchTitle')}</h3>
+      <p class="muted">{t('session.watchHint')}</p>
+      <form onsubmit={(e) => (e.preventDefault(), watch(watchCode))}>
+        <input bind:value={watchCode} placeholder="ABCD-2345" maxlength="14" use:codeInput aria-label={t('session.watchTitle')} class="code" autocomplete="off" />
+        <button type="submit" disabled={busy || !watchCode.trim()}>{t('session.watch')}</button>
+      </form>
+    </section>
+  {:else if choice === 'manage'}
+    <section class="panel">
+      {#if session.code && !session.takenOver}
+        <h3>{t('session.lockTitle')}</h3>
+        {#if session.locked}
+          <p class="ok">🔒 {t('session.locked')}</p>
+          <button onclick={unlock} disabled={busy}>{t('session.unlock')}</button>
+        {:else}
+          <p class="muted">{t('session.lockHint')}</p>
+          <form onsubmit={(e) => (e.preventDefault(), lock())}>
+            <input bind:value={lockPin} type="password" inputmode="numeric" maxlength="8" pattern={"[0-9]{4,8}"} aria-label={t('session.pin')} autocomplete="new-password" />
+            <button type="submit" disabled={busy || !/^\d{4,8}$/.test(lockPin)}>{t('session.lock')}</button>
+          </form>
+        {/if}
+      {/if}
+      <h3>{t('session.deleteTitle')}</h3>
+      <button class="danger" onclick={remove} disabled={busy || !session.code}>{t('session.delete')}</button>
+    </section>
+  {/if}
 
   {#if message}<p class={message.kind} role="status">{message.text}</p>{/if}
   <p class="muted small">{t('session.privacy', { hours: session.config?.policy.sessionHours ?? 24 })}</p>
@@ -191,6 +227,48 @@
 <style>
   .seat {
     width: 4.5rem;
+  }
+  .mine {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-2, var(--surface));
+  }
+  .mine p {
+    margin: 2px 0;
+  }
+  .note {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+    gap: 8px;
+    margin: 14px 0 6px;
+  }
+  .choices button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .choices button.active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  }
+  .choices .icon {
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+  .panel {
+    margin-top: 12px;
+  }
+  .panel h3:first-child {
+    margin-top: 0;
   }
   .group {
     width: 9rem;

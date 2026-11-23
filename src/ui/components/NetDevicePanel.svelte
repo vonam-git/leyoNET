@@ -141,12 +141,13 @@
             <tr class="nat-{entry.kind ?? 'pat'}">
               <td><span class="kind">{t(`nat.kind.${entry.kind === 'cgnat' ? 'pat' : (entry.kind ?? 'pat')}`)}</span></td>
               <td>{entry.protocol.toUpperCase()}{entry.forwarded ? ' ⇄' : ''}</td>
-              <td class="mono">{entry.inside}:{entry.insidePort}</td>
-              <td class="mono">{entry.outside}:{entry.outsidePort}</td>
+              <td class="mono" title={entry.protocol === 'icmp' ? t('nat.icmpId') : undefined}>{entry.inside}{entry.protocol === 'icmp' ? ` · ID ${entry.insidePort}` : `:${entry.insidePort}`}</td>
+              <td class="mono" title={entry.protocol === 'icmp' ? t('nat.icmpId') : undefined}>{entry.outside}{entry.protocol === 'icmp' ? ` · ID ${entry.outsidePort}` : `:${entry.outsidePort}`}</td>
             </tr>
           {/each}
         </tbody>
       </table>
+      {#if (deviceState?.nat ?? []).some((e) => e.protocol === 'icmp')}<p class="muted small">{t('nat.icmpId')}</p>{/if}
     {/if}
   {/if}
   <StateTables {device} arp={deviceState?.arp ?? []} {now} />

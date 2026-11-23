@@ -66,7 +66,7 @@
     {/each}
   </ul>
   {#if !editor.editable}
-    <p class="hint">{t('palette.simulationHint')}</p>
+    <p class="hint">{t(editor.viewOnly ? 'palette.viewOnlyHint' : 'palette.simulationHint')}</p>
   {/if}
 </nav>
 

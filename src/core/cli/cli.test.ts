@@ -293,3 +293,35 @@ group('CLI: dynamisches Routing, serielle Leitungen, NAT', () => {
     expect(getDevice(topology, r1)!.staticNat).toEqual([{ inside: '192.168.1.10', outside: '10.0.0.5' }]);
   });
 });
+
+group('CLI: Abkürzungen und Vereinfachungen', () => {
+  it('versteht Anschlussnamen mit Leerzeichen und Cisco-Namen auf dem Router', () => {
+    const net = new NetBuilder();
+    const r = net.add('router', 'R1');
+    const { topology, output } = run(net.topology, r, [
+      'en',
+      'conf t',
+      'int eth 0',
+      'ip add 192.168.1.1 255.255.255.0',
+      'no sh',
+      'int g1',
+      'ip addr 10.0.0.1/30',
+      'int fa 0/1',
+      'desc Uplink',
+      'int lo 0',
+      'ip addr 10.255.255.1/32',
+      'ex',
+      'ip ro 0.0.0.0 0.0.0.0 10.0.0.2',
+      'end',
+      'sh int',
+      'wr',
+    ]);
+    expect(output.filter((l) => l.startsWith('%'))).toEqual([]);
+    const dev = getDevice(topology, r)!;
+    expect(dev.interfaces[0]!.ip).toBe('192.168.1.1');
+    expect(dev.interfaces[1]!.ip).toBe('10.0.0.1');
+    expect(dev.interfaces[1]!.description).toBe('Uplink');
+    expect(dev.routes?.[0]).toMatchObject({ network: '0.0.0.0', gateway: '10.0.0.2' });
+    expect(dev.startupConfig).toBeTruthy();
+  });
+});

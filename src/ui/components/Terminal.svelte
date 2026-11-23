@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import type { Device } from '../../core';
+  import { parseInterfaceCommand, setInterfaceShutdown, type Device } from '../../core';
+  import { editor } from '../state/editor.svelte';
   import { t } from '../../i18n';
   import { simStore } from '../state/sim.svelte';
   import CliTerminal from './CliTerminal.svelte';
@@ -87,6 +88,12 @@
       simStore.runCommand(device.id, command);
       passwordFor = ssh;
       return;
+    }
+    // Anschluss ab-/einschalten ändert die Konfiguration des Geräts (wie im Fenster «Anschlüsse»).
+    const iface = parseInterfaceCommand(command, device.interfaces.length);
+    if (iface && !('error' in iface) && !editor.viewOnly) {
+      const result = setInterfaceShutdown(editor.topology, device.id, iface.index, !iface.up);
+      if (result.ok) editor.applyConfig(result.value);
     }
     simStore.runCommand(device.id, command);
   }

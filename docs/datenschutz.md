@@ -48,7 +48,8 @@ Es wird nichts übertragen. Die Admin-Konsole, Sessions und Rückmeldungen sind 
 - Die Lehrperson eröffnet in der Admin-Konsole eine Klasse mit einer **Bezeichnung ohne Personenbezug** (z.B. «INF22a»). Lernende treten mit dem Klassencode bei.
 - Die Lehrperson sieht die Session-Codes und kann die Arbeiten öffnen, aber **keine Namen**. Wer welche Session hat, klärt die Klasse mündlich oder über den Code, ohne dass der Server davon weiss.
 - Löschung: automatisch nach der eingestellten Zeit (Standard 14 Tage) oder mit **Schliessen**.
-- Je Session optional **Platz** (Zahl 1–62) und **Gruppe** (z.B. «Team Rot», höchstens 30 Zeichen). Das Eingabefeld weist darauf hin, keine Personennamen einzutragen. Dazu der Fortschritt bei der geladenen Aufgabe (erfüllte Ziele von gesamt) als zwei Zahlen.
+- Je Session optional **Platz** (Zahl 1–62) und **Gruppe** (z.B. «Team Rot», höchstens 30 Zeichen). Das Eingabefeld weist darauf hin, keine Personennamen einzutragen. Dazu der Fortschritt bei der geladenen Aufgabe (erfüllte Ziele von gesamt) als zwei Zahlen; der Browser bestimmt ihn selbst und schickt ihn mit dem Lebenszeichen.
+- **Hilfe anfordern** und **Erkennen** (Bildschirm blinkt) sind nur ein Zeitpunkt je Session im Arbeitsspeicher des Servers, nach einem Neustart weg. Solange die Lehrperson eine Session bearbeitet, merkt sich der Server nur, seit wann (ebenfalls nur im Arbeitsspeicher).
 
 ### Klassen-Verbund
 

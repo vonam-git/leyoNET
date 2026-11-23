@@ -571,6 +571,7 @@ const COMMANDS: Command[] = [
   { modes: EXEC, types: L3, syntax: 'show ipv6 ripng', help: 'RIPng routes', run: ({ device, env }) => ok(showRipng(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip protocols', help: 'Active routing protocols', run: ({ device }) => ok(showProtocols(device)) },
   { modes: EXEC, types: L3, syntax: 'show ip interface brief', help: 'Interface addresses and status', run: ({ device, env }) => ok(showIpInterfaceBrief(device, env)) },
+  { modes: EXEC, syntax: 'show interfaces', help: 'Interface status summary', run: ({ device, env }) => ok(usesPortNames(device) ? showInterfacesStatus(device, env) : showIpInterfaceBrief(device, env)) },
   { modes: EXEC, syntax: 'show interface brief', help: 'Interface status summary', run: ({ device, env }) => ok(usesPortNames(device) ? showInterfacesStatus(device, env) : showIpInterfaceBrief(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show ip arp', help: 'ARP table', run: ({ device, env }) => ok(showArp(device, env)) },
   { modes: EXEC, types: L3, syntax: 'show arp', help: 'ARP table', run: ({ device, env }) => ok(showArp(device, env)) },
@@ -1529,6 +1530,14 @@ function restOfLine(raw: string, skip: number): string {
   return rest;
 }
 
+/** Anschlussname mit Leerzeichen wie «int eth 0» oder «interface gi 0/1»: zu einem Wort zusammenfassen. */
+const IFACE_WORD = /^(?:eth|ethernet|e|gigabitethernet|gi|g|fastethernet|fa|f|port|p|vlan|vl|loopback|lo|serial|se|sfp|te)$/i;
+function mergeIfaceTokens(tokens: string[]): string[] | null {
+  const at = tokens.findIndex((tok, i) => i > 0 && 'interface'.startsWith(tokens[i - 1]!.toLowerCase()) && tokens[i - 1]!.length >= 2 && IFACE_WORD.test(tok) && /^\d+(?:\/\d+)*(?:\.\d+)?(?:-\d+)?$/.test(tokens[i + 1] ?? ''));
+  if (at < 0) return null;
+  return [...tokens.slice(0, at), tokens[at]! + tokens[at + 1]!, ...tokens.slice(at + 2)];
+}
+
 function tokenize(line: string): string[] {
   return line.trim().split(/\s+/).filter(Boolean);
 }
@@ -1560,6 +1569,8 @@ export function execute(session: CliSession, line: string, env: CliEnv): CliOutp
   if (!trimmed || trimmed.startsWith('!')) return { session, lines: [] };
   if (trimmed.endsWith('?')) return { session, lines: help(device, session, trimmed.slice(0, -1), line.slice(0, line.lastIndexOf('?'))) };
 
+  const merged = mergeIfaceTokens(tokenize(trimmed));
+  if (merged) return execute(session, merged.join(' '), env);
   const tokens = tokenize(trimmed);
   // «do show …» im Konfigurationsmodus.
   if (CONFIG_ALL.includes(session.mode) && tokens[0]?.toLowerCase() === 'do' && tokens.length > 1) {

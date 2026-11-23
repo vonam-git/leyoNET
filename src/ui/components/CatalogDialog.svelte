@@ -16,7 +16,7 @@
   let { onclose }: { onclose: () => void } = $props();
 
   // Platz im Klassen-Verbund und Klassencode: Übungen wie die Verbund-Fehlersuche sind pro Platz anders.
-  const ctx = $derived({ ...(session.site ? { seat: session.site.seat } : {}), ...(session.classCode ? { salt: session.classCode } : {}) });
+  const ctx = $derived({ ...(session.viewSite ? { seat: session.viewSite.seat } : {}), ...(session.viewClass ? { salt: session.viewClass } : {}) });
   // Texte erst beim Öffnen erzeugen (aktuelle Sprache).
   const entries = $derived(
     CATALOG.filter(catalogVisible).map((entry) => {

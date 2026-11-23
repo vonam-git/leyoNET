@@ -1,6 +1,6 @@
 {
   "version": "1.8.0",
-  "date": "2026-11-19T10:09:36.710Z",
+  "date": "2026-11-23T19:11:07.919Z",
   "checks": [
     {
       "id": "privacy.noExternal",
@@ -108,7 +108,7 @@
       "id": "standards.registered",
       "category": "standards",
       "status": "pass",
-      "detail": "94 zitierte Normen, alle im Verzeichnis (74 RFCs, 17 IEEE/ITU-T/CableLabs)."
+      "detail": "95 zitierte Normen, alle im Verzeichnis (75 RFCs, 17 IEEE/ITU-T/CableLabs)."
     },
     {
       "id": "standards.reviewed",

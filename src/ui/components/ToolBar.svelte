@@ -6,6 +6,7 @@
   import { dialogs } from '../state/dialogs.svelte';
   import { editor } from '../state/editor.svelte';
   import { session } from '../state/session.svelte';
+  import { examMode } from '../state/exam.svelte';
   import { ui } from '../state/ui.svelte';
   import Icon from './Icon.svelte';
 
@@ -112,8 +113,13 @@
   {#if ui.online}
     <button class="chip session" class:problem={!!session.problem} onclick={() => dialogs.show('session')} title={session.problem ? t(`session.problem.${session.problem}`) : t('session.buttonHint')}>
       {#if session.problem}⚠{/if}
-      {session.code ? t('session.button', { code: session.code }) : t('session.buttonNone')}
+      {session.code ? t('session.button', { code: session.code }) : t('session.buttonNone')}{#if session.site && !session.watching}&nbsp;· {t('verbund.seatN', { seat: session.site.seat })}{/if}
     </button>
+    {#if session.classCode && session.code && !session.watching && !examMode.active}
+      <button class="chip help" class:asked={session.help} aria-pressed={session.help} onclick={() => void session.requestHelp(!session.help)} title={t(session.help ? 'classLive.help.cancelHint' : 'classLive.help.askHint')}>
+        🙋 {t(session.help ? 'classLive.help.asked' : 'classLive.help.ask')}
+      </button>
+    {/if}
   {/if}
   <!-- Schneller Weg in die Admin-Konsole. Sicher bleibt es, weil die Schaltfläche nur das Anmeldefenster öffnet:
        kein Passwort und kein Token im Browser-Speicher, in der Prüfung gesperrt, ohne Admin auf dem Server versteckt. -->
@@ -140,6 +146,11 @@
 </div>
 
 <style>
+  .chip.help.asked {
+    background: #c026d3;
+    border-color: #c026d3;
+    color: #fff;
+  }
   .chip.problem {
     color: var(--danger);
     border-color: var(--danger);

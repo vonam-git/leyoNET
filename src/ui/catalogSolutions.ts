@@ -66,7 +66,7 @@ function unwrap<T>(r: Result<T>): T {
 const byName = (t: Topology, name: string) => t.devices.find((d) => d.name === name)!.id;
 
 /** Antworten auf Fragen (Ziel «answer») in den Musterlösungen. */
-export const ANSWERS: Record<string, Record<string, string>> = { ...LAB_ANSWERS, ...M145_ANSWERS, ...ADVANCED_ANSWERS, 'm129-routing-a3': { 'ziel-5': 'show ip route', 'ziel-6': '192.168.2.2' } };
+export const ANSWERS: Record<string, Record<string, string>> = { ...LAB_ANSWERS, ...M145_ANSWERS, ...ADVANCED_ANSWERS, 'm129-routing-a3': { 'ziel-5': '0.0.0.0/0', 'ziel-6': '192.168.2.2' } };
 
 /** Musterlösungen: Jede Aufgabe muss lösbar sein. */
 export const SOLUTIONS: Record<string, (t: Topology) => Topology> = {

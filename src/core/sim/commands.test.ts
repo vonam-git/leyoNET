@@ -1,5 +1,5 @@
 import { describe as group, expect, it } from 'vitest';
-import { COMMANDS } from './commands';
+import { COMMANDS, parseInterfaceCommand } from './commands';
 import { Simulation } from './simulation';
 import { NetBuilder } from './testing';
 
@@ -102,5 +102,36 @@ group('Befehlszeile', () => {
     const sim = new Simulation(net.topology);
     sim.runCommand(pc1, 'ipconfig /renew');
     expect(codes(sim, pc1).at(-1)).toBe('dhcp.static');
+  });
+});
+
+group('Konsole der Endgeräte: Anschluss ab-/einschalten, Linux-Schreibweisen', () => {
+  it('erkennt Windows- und Linux-Befehle für Anschlüsse', () => {
+    expect(parseInterfaceCommand('ifdown eth0', 1)).toEqual({ index: 0, up: false });
+    expect(parseInterfaceCommand('ifup', 1)).toEqual({ index: 0, up: true });
+    expect(parseInterfaceCommand('ip link set eth1 down', 2)).toEqual({ index: 1, up: false });
+    expect(parseInterfaceCommand('ip l set dev eth0 up', 1)).toEqual({ index: 0, up: true });
+    expect(parseInterfaceCommand('netsh interface set interface "Ethernet" disable', 1)).toEqual({ index: 0, up: false });
+    expect(parseInterfaceCommand('netsh int set int name="Ethernet 2" admin=enabled', 2)).toEqual({ index: 1, up: true });
+    expect(parseInterfaceCommand('ifdown eth5', 1)).toEqual({ error: 'unknown', name: 'eth5' });
+    expect(parseInterfaceCommand('ip link set eth0', 1)).toEqual({ error: 'usage' });
+    expect(parseInterfaceCommand('netsh interface ipv6 show neighbors', 1)).toBeNull();
+    expect(parseInterfaceCommand('ping 192.0.2.1', 1)).toBeNull();
+  });
+
+  it('meldet den Anschluss und versteht ip addr, ifconfig und dhclient', () => {
+    const { net, pc1 } = chain();
+    const sim = new Simulation(net.topology);
+    sim.runCommand(pc1, 'ifdown eth0');
+    sim.runCommand(pc1, 'ifup Ethernet');
+    sim.runCommand(pc1, 'ip a');
+    sim.runCommand(pc1, 'ifconfig');
+    sim.runCommand(pc1, 'ifdown eth9');
+    const c = codes(sim, pc1);
+    expect(c).toContain('iface.down');
+    expect(c).toContain('iface.up');
+    expect(c).toContain('iface.unknown');
+    expect(c.filter((x) => x.startsWith('ipconfig')).length).toBeGreaterThan(0);
+    expect(c).not.toContain('cmd.unknown');
   });
 });

@@ -518,7 +518,7 @@ export const M129: CatalogEntry[] = [
             goal(key, 2, { type: 'address', device: 'Router2', address: R129.r2.mgmt }),
             goal(key, 3, { type: 'address', device: 'Router3', address: R129.r3.mgmt }),
             goal(key, 4, { type: 'pings', pairs: [['Router1', 'Admin-Notebook'], ['Router2', 'Admin-Notebook'], ['Router3', 'Admin-Notebook']] }),
-            goal(key, 5, { type: 'answer', accept: ['show ip route', 'sh ip route', 'sh ip ro', 'show ip ro'] }),
+            goal(key, 5, { type: 'answer', accept: ['0.0.0.0/0', 'Standardroute 0.0.0.0/0', 'Standardroute (0.0.0.0/0)', '0.0.0.0/0 (Standardroute)', 'Default-Route 0.0.0.0/0', 'default route 0.0.0.0/0', '0.0.0.0 0.0.0.0'] }),
             goal(key, 6, { type: 'answer', accept: ['192.168.2.2'] }),
           ]),
         },

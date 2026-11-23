@@ -55,6 +55,10 @@ export function keyLabel(keys: string): string {
 }
 
 const selectedDevice = () => editor.selectedDevice;
+const endpointSelected = () => {
+  const d = selectedDevice();
+  return !!d && DEVICE_SPECS[d.type].role === 'endpoint';
+};
 const design = () => editor.editable;
 const simulation = () => editor.acting;
 
@@ -140,14 +144,20 @@ const COMMANDS: Command[] = [
   },
   {
     id: 'sim.cli',
-    label: () => t('cli.open'),
+    // Router und Switches: Befehlszeile; Endgeräte: Konsole (Eingabeaufforderung) auf ihrem Desktop.
+    // Die Befehle der Endgeräte brauchen die laufende Simulation: Im Entwurf wird dorthin gewechselt.
+    label: () => (endpointSelected() ? t('terminal.open') : t('cli.open')),
     keys: ['T'],
     run: () => {
       const d = selectedDevice();
-      if (d) openCli(d.id);
+      if (!d) return;
+      if (DEVICE_SPECS[d.type].role === 'endpoint') {
+        if (!editor.acting) editor.setMode('simulation');
+        openDesktop(d.id, 'terminal');
+      } else openCli(d.id);
     },
-    enabled: () => !!selectedDevice() && hasCli(selectedDevice()!.type),
-    visible: () => ui.has('net.cli'),
+    enabled: () => !!selectedDevice() && (hasCli(selectedDevice()!.type) || endpointSelected()),
+    visible: () => ui.has('net.cli') || endpointSelected(),
     icon: 'terminal',
   },
 
