@@ -76,3 +76,11 @@ export const taskView = new TaskView();
 export function isLargeTask(tasks: TaskSet): boolean {
   return (tasks.description?.length ?? 0) > 280 || tasks.goals.length > 8;
 }
+
+/**
+ * Erkennungszeichen einer Aufgabe ohne Antworten und Ergebnisse: gleich, solange es dieselbe
+ * Aufgabe ist, auch wenn sie mit einem neuen Stand als neues Objekt ankommt.
+ */
+export function taskKey(tasks: TaskSet): string {
+  return JSON.stringify([tasks.title, tasks.description ?? '', tasks.goals.map((g) => g.id)]);
+}
