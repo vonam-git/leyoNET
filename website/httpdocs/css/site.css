@@ -1690,6 +1690,7 @@ kbd {
   66%, 74%, 82% { opacity: 0.25; }
 }
 .nav-dc-new {
+  display: inline-block;
   padding: 1px 5px;
   border-radius: 4px;
   background: #4ade80;
