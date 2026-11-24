@@ -19,7 +19,7 @@ Options -Indexes
 
 <IfModule mod_headers.c>
   # Nur eigene Dateien, keine fremden Server, keine Einbettung
-  Header always set Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  Header always set Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
   Header always set Strict-Transport-Security "max-age=31536000"
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "DENY"
@@ -29,7 +29,7 @@ Options -Indexes
   Header always set Cross-Origin-Resource-Policy "same-origin"
 
   # Bilder, Schrift und Skripte lange zwischenspeichern, Seiten kurz
-  <FilesMatch "\.(webp|png|svg|css|js)$">
+  <FilesMatch "\.(webp|png|jpg|svg|css|js|webm|mp4)$">
     Header set Cache-Control "public, max-age=604800"
   </FilesMatch>
   <FilesMatch "\.html$">
