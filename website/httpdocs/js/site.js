@@ -43,6 +43,7 @@
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'menu-toggle';
+    toggle.hidden = true; // zeigt erst die Gestaltung (site.css) auf dem Handy
     toggle.setAttribute('aria-controls', nav.id);
     toggle.setAttribute('aria-expanded', 'false');
     const bars = document.createElement('span');

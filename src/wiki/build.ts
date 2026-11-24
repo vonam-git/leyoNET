@@ -465,7 +465,7 @@ export function buildWiki(root: string, version: string): WikiBuild {
       <nav aria-label="${u('mainNav')}">
         <ul>
           ${AREAS.map((a) => `<li><a href="index.html#${a.id}">${escapeHtml(a.nav[lang])}</a></li>`).join('\n          ')}
-          <li class="nav-dc-item"><a class="nav-dc" href="${siteRoot}${lang === 'de' ? '' : 'en/'}dc.html" title="${u('dcTitle')}"><span class="nav-dc-led" aria-hidden="true"></span><b>DC</b><span class="nav-dc-more">${u('dcMore')}</span><span class="nav-dc-new">${u('dcNew')}</span></a></li>
+          <li class="nav-dc-item"><a class="nav-dc" href="${siteRoot}${lang === 'de' ? '' : 'en/'}dc.html" title="${u('dcTitle')}"><span class="nav-dc-led" aria-hidden="true"></span><b>DC</b> <span class="nav-dc-more" hidden>${u('dcMore')}</span> <span class="nav-dc-new" hidden>${u('dcNew')}</span></a></li>
         </ul>
       </nav>
       <a class="lang-switch" href="${otherHref(path)}" hreflang="${otherLang}" lang="${otherLang}" title="${u('other')}">${u('otherShort')}</a>

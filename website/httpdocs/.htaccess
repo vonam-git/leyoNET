@@ -28,11 +28,12 @@ Options -Indexes
   Header always set Cross-Origin-Opener-Policy "same-origin"
   Header always set Cross-Origin-Resource-Policy "same-origin"
 
-  # Bilder, Schrift und Skripte lange zwischenspeichern, Seiten kurz
-  <FilesMatch "\.(webp|png|jpg|svg|css|js|webm|mp4)$">
+  # Bilder und Filme lange zwischenspeichern; Gestaltung, Skripte und Seiten bei jedem Aufruf
+  # kurz nachfragen (ETag), damit nach dem Hochladen nie alte Gestaltung zu neuen Seiten passt
+  <FilesMatch "\.(webp|png|jpg|svg|webm|mp4)$">
     Header set Cache-Control "public, max-age=604800"
   </FilesMatch>
-  <FilesMatch "\.html$">
+  <FilesMatch "\.(html|css|js)$">
     Header set Cache-Control "no-cache"
   </FilesMatch>
   # Downloads immer als Datei
