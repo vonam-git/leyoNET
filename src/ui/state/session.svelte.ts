@@ -12,6 +12,20 @@ const CODE_KEY = 'netzwerk-simulator.session';
 const CLASS_KEY = 'netzwerk-simulator.class';
 /** Schreib-Token der eigenen Session (zufällig, technisch notwendig: nur dieses Gerät schreibt). */
 const WRITER_KEY = 'netzwerk-simulator.writer';
+/** Zufällige Kennung dieses Browsers, damit ein Gerät einer Klasse nur einmal beitritt (keine Personendaten). */
+const DEVICE_KEY = 'netzwerk-simulator.device';
+function deviceId(): string | null {
+  let id = read(DEVICE_KEY);
+  if (id && /^[A-Za-z0-9_-]{24,64}$/.test(id)) return id;
+  try {
+    const bytes = crypto.getRandomValues(new Uint8Array(24));
+    id = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    write(DEVICE_KEY, id);
+    return read(DEVICE_KEY) === id ? id : null;
+  } catch {
+    return null;
+  }
+}
 /** Lebenszeichen an den Server, damit kein zweites Gerät die Session übernimmt. */
 export const PING_MS = 20_000;
 /** In einer Klasse öfter: Hilfe-Anfrage, «Erkennen» und Bearbeiten durch die Lehrperson kommen so rasch an. */
@@ -124,7 +138,7 @@ export interface CatalogVisibility {
 }
 export interface ClassSettings {
   catalog: CatalogVisibility;
-  verbund: { enabled: boolean; shareSites: boolean; showMap: boolean };
+  verbund: { enabled: boolean; shareSites: boolean; showMap: boolean; seatChoice?: boolean };
 }
 
 export class SessionStore {
@@ -319,12 +333,22 @@ export class SessionStore {
   }
 
   /** Neuer Code für den aktuellen Stand, optional einer Klasse zugeordnet. */
+  /** Beim Beitreten: Dieses Gerät war schon in der Klasse, die bisherige Session ist wieder offen (Projekt dazu). */
+  rejoined: LoadedProject | null = null;
+
   async create(projectJson: string, classCode: string | null = this.classCode, site?: { seat?: number; label?: string }): Promise<string> {
-    const data = await api<{ code: string; expires: number; classCode: string | null; site?: { seat: number; label: string } | null; writer?: string }>('POST', 'sessions', {
+    const device = classCode ? deviceId() : null;
+    const data = await api<{ code: string; expires: number; classCode: string | null; site?: { seat: number; label: string } | null; writer?: string; existing?: boolean; project?: unknown }>('POST', 'sessions', {
       project: JSON.parse(projectJson),
       ...(classCode ? { classCode } : {}),
       ...(classCode && site ? { site } : {}),
+      ...(device ? { device } : {}),
     });
+    this.rejoined = null;
+    if (data.existing && data.project) {
+      const parsed = parseProject(JSON.stringify(data.project));
+      if (parsed.ok) this.rejoined = parsed;
+    }
     this.site = data.site ?? null;
     this.#setWriter(data.writer);
     this.takenOver = false;
@@ -336,6 +360,11 @@ export class SessionStore {
     write(CLASS_KEY, data.classCode);
     this.status = 'saved';
     return data.code;
+  }
+
+  /** Klasse nachschlagen, ohne beizutreten (Bezeichnung, ob Platz und Gruppe selbst gewählt werden). */
+  async checkClass(classCode: string): Promise<{ classCode: string; label: string } & ClassSettings> {
+    return api<{ classCode: string; label: string } & ClassSettings>('POST', 'classes/join', { classCode });
   }
 
   async joinClass(classCode: string, projectJson: string, site?: { seat?: number; label?: string }): Promise<void> {

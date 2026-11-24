@@ -1150,7 +1150,8 @@ function loadClass(code) {
 }
 
 const EMPTY_CATALOG = { hidden: [], hiddenSeries: [], verbund: true };
-const verbundOf = (c) => ({ enabled: false, shareSites: false, showMap: false, infra: null, infraUpdated: 0, ...(c.verbund || {}) });
+// seatChoice: Lernende wählen Platz und Gruppe beim Beitreten selbst (sonst vergibt der Server den nächsten freien Platz).
+const verbundOf = (c) => ({ enabled: false, shareSites: false, showMap: false, seatChoice: false, infra: null, infraUpdated: 0, ...(c.verbund || {}) });
 function classView(c, sessions) {
   const v = verbundOf(c);
   return {
@@ -1161,7 +1162,7 @@ function classView(c, sessions) {
     owner: c.owner || null,
     sessions: sessions.filter((s) => s.classCode === c.code).length,
     catalog: c.catalog || EMPTY_CATALOG,
-    verbund: { enabled: v.enabled, shareSites: v.shareSites, showMap: v.showMap, hasInfra: !!v.infra, infraUpdated: v.infraUpdated },
+    verbund: { enabled: v.enabled, shareSites: v.shareSites, showMap: v.showMap, seatChoice: v.seatChoice, hasInfra: !!v.infra, infraUpdated: v.infraUpdated },
   };
 }
 
@@ -1236,6 +1237,21 @@ async function api(req, res, url) {
         classCode = normalizeCode(body.classCode);
         if (!classCode || !loadClass(classCode)) return fail(res, 404, 'unknownClass');
       }
+      // Ein Gerät tritt einer Klasse nur einmal bei: Der Browser schickt eine zufällige Gerätekennung
+      // (nur in seinem Speicher, keine Personendaten); gespeichert wird nur ihr Hash. Kommt dasselbe Gerät
+      // wieder, bekommt es seine bisherige Session zurück (mit neuem Schreib-Token) statt einer neuen.
+      const device = classCode && typeof body.device === 'string' && /^[A-Za-z0-9_-]{24,64}$/.test(body.device) ? writerHash(`device:${body.device}`) : null;
+      if (device) {
+        const now = Date.now();
+        const known = entries('sessions').find((m) => m.classCode === classCode && m.device === device && !m.exam);
+        const full = known && loadSession(known.code);
+        if (full) {
+          const writer = crypto.randomBytes(24).toString('base64url');
+          store('sessions', full.code, { ...full, writer: writerHash(writer), expires: Math.max(full.expires, now + ttl) });
+          leases.set(full.code, now);
+          return json(res, 200, { code: full.code, expires: Math.max(full.expires, now + ttl), classCode, site: full.site || null, writer, existing: true, project: full.project });
+        }
+      }
       if (!fits(projectSize(body.project), 1)) return fail(res, 507, 'storageFull');
       let code = newCode();
       while (indexes.sessions.has(code) || fs.existsSync(fileFor(dirs.sessions, code))) code = newCode();
@@ -1244,10 +1260,13 @@ async function api(req, res, url) {
       // In einer Klasse: Platz (gewünscht oder nächster freier) und Gruppenbezeichnung für den Verbund.
       let site = null;
       if (classCode) {
-        const seat = seatFor(classCode, body.site && body.site.seat);
-        if (seat) site = { seat, label: cleanLabel(body.site && body.site.label) };
+        // Platz und Gruppe nur, wenn die Lehrperson die Wahl freigibt; sonst der nächste freie Platz.
+        const cls = loadClass(classCode);
+        const choose = !!cls && verbundOf(cls).enabled && verbundOf(cls).seatChoice;
+        const seat = seatFor(classCode, choose ? body.site && body.site.seat : undefined);
+        if (seat) site = { seat, label: choose ? cleanLabel(body.site && body.site.label) : '' };
       }
-      const item = { code, created: now, updated: now, expires: now + ttl, classCode, ...(site ? { site } : {}), project: body.project, writer: writerHash(writer) };
+      const item = { code, created: now, updated: now, expires: now + ttl, classCode, ...(site ? { site } : {}), ...(device ? { device } : {}), project: body.project, writer: writerHash(writer) };
       store('sessions', code, item);
       leases.set(code, now);
       return json(res, 201, { code, expires: item.expires, classCode, site, writer });
@@ -1297,6 +1316,9 @@ async function api(req, res, url) {
     if (parts[2] === 'site' && method === 'PUT') {
       if (!item.classCode) return fail(res, 400, 'notInClass');
       if (!isWriter(item, token)) return json(res, 409, { error: 'sessionTakenOver', ...about(item) });
+      // Platz und Gruppe selbst ändern nur, wenn die Lehrperson die Wahl freigegeben hat.
+      const cls = loadClass(item.classCode);
+      if (!cls || !verbundOf(cls).seatChoice) return fail(res, 403, 'seatFixed');
       const current = item.site || {};
       let seat = current.seat;
       if (body.seat !== undefined && body.seat !== current.seat) {
@@ -1499,7 +1521,7 @@ async function api(req, res, url) {
     const item = code && loadClass(code);
     if (!item) return fail(res, 404, 'unknownClass');
     const v = verbundOf(item);
-    return json(res, 200, { classCode: code, label: item.label, catalog: item.catalog || EMPTY_CATALOG, verbund: { enabled: v.enabled, shareSites: v.shareSites, showMap: v.showMap } });
+    return json(res, 200, { classCode: code, label: item.label, catalog: item.catalog || EMPTY_CATALOG, verbund: { enabled: v.enabled, shareSites: v.shareSites, showMap: v.showMap, seatChoice: v.enabled && v.seatChoice } });
   }
 
   // --- Klassen-Verbund (öffentlich mit Klassen-Code) ---
@@ -1933,6 +1955,7 @@ async function admin(req, res, parts, method) {
           enabled: typeof body.verbund.enabled === 'boolean' ? body.verbund.enabled : v.enabled,
           shareSites: typeof body.verbund.shareSites === 'boolean' ? body.verbund.shareSites : v.shareSites,
           showMap: typeof body.verbund.showMap === 'boolean' ? body.verbund.showMap : v.showMap,
+          seatChoice: typeof body.verbund.seatChoice === 'boolean' ? body.verbund.seatChoice : v.seatChoice,
         };
       }
       writeJson(fileFor(dirs.classes, code), next);

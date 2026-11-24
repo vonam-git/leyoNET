@@ -13,6 +13,7 @@ In der Webversion ([app.leyonet.ch](https://app.leyonet.ch) oder auf dem Schulse
 
 In der **Admin-Konsole** eröffnen Sie eine Klasse mit einer Bezeichnung wie «INF22a» und zeigen den **Klassencode** mit «Code gross zeigen» am Beamer. Die Lernenden wählen unter «Session» den Knopf **Klasse beitreten**. Danach sehen Sie alle Sessions der Klasse; die Liste aktualisiert sich von selbst:
 
+- **Einladung**: Text mit Direkt-Link zum Kopieren; die Lernenden klicken nur «Beitreten». Jedes Gerät tritt nur einmal bei; «Inaktive schliessen» räumt auf.
 - **Fortschritt**: erfüllte Lernziele der geladenen Aufgabe, vom Browser der Lernenden von selbst geprüft (niemand muss abgeben). Orange: mindestens die Hälfte, grün: alles erfüllt.
 - **Hilfe anfordern**: Lernende drücken «🙋 Hilfe anfordern», die Zeile wird magenta; «Hilfe erledigt» quittiert.
 - **Erkennen**: Der Bildschirm der Session blinkt rot und zeigt Platz und Code. So sehen Sie, wer an welcher Session sitzt.

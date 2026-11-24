@@ -140,6 +140,8 @@ Ideen für die neuen Funktionen:
 
 In der Webversion eröffnet die Lehrperson in der Admin-Konsole eine Klasse mit einer Bezeichnung ohne Personenbezug (z.B. «INF22a»). **Code gross zeigen** stellt den Klassencode bildschirmfüllend für den Beamer dar, mit den Schritten zum Beitreten. Lernende wählen unter «Session» den Knopf **Klasse beitreten**; ihr eigener Code steht getrennt davon. Die Lehrperson sieht Session-Codes, aber keine Namen. Einrichtung: [plesk.md](plesk.md).
 
+Unter der Klasse steht eine **Einladung zum Kopieren** (für Mail, Teams oder Lernplattform) mit Direkt-Link `https://app.leyonet.ch/?klasse=CODE`: Er öffnet leyoNET mit eingetragenem Klassencode, die Lernenden klicken nur «Beitreten». Danach schliesst der Dialog, und oben steht die Klasse. **Ein Gerät tritt einer Klasse nur einmal bei:** Kommt es wieder, öffnet sich seine bisherige Session (der Browser merkt sich dafür eine zufällige Gerätekennung, siehe [datenschutz.md](datenschutz.md)). Platz und Gruppe fragt leyoNET nur, wenn beim Verbund «Lernende wählen Platz und Gruppe selbst» eingeschaltet ist; sonst vergibt der Server den nächsten freien Platz. Nicht mehr gebrauchte Sessions schliesst «Schliessen» bzw. «Inaktive schliessen» (Browser nicht offen).
+
 In der Liste der Klasse (aktualisiert sich von selbst):
 
 - **Fortschritt** und **Zustand**: erfüllte Lernziele der geladenen Aufgabe. Der Browser der Lernenden prüft das von selbst kurz nach jeder Änderung, «Abgeben» braucht es nicht. Orange heisst mindestens die Hälfte, grün alles erfüllt, magenta «braucht Hilfe» (Knopf **Hilfe anfordern** der Lernenden, quittiert mit «Hilfe erledigt»). Die Maus über «Fortschritt» erklärt die Zahl.

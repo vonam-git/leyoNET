@@ -64,7 +64,7 @@
     <h3>🌐 {t('verbund.title')}</h3>
     <p class="site">
       {#if seat}<strong>{siteName(seat, session.viewSite?.label)}</strong> · {t('verbund.seatN', { seat })}{/if}
-      {#if !session.watching}<button type="button" class="link" onclick={startEdit}>{t('verbund.changeSite')}</button>{/if}
+      {#if !session.watching && session.classSettings?.verbund.seatChoice}<button type="button" class="link" onclick={startEdit}>{t('verbund.changeSite')}</button>{/if}
     </p>
     {#if editing}
       <form class="row" onsubmit={saveSite}>

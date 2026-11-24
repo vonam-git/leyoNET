@@ -62,6 +62,8 @@ export interface PendingExam {
 
 class Dialogs {
   open = $state<DialogName | null>(null);
+  /** Klassencode aus einem Einladungslink (?klasse=…): im Dialog «Session» schon eingetragen. */
+  sessionClassCode = $state<string | null>(null);
   examStart = $state.raw<PendingExam | null>(null);
   ipcalc = $state.raw<IpCalcTarget>({});
   /** Hilfe-Seitenleiste mit dem gewählten Thema. */

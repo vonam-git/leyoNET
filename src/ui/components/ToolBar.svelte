@@ -113,7 +113,7 @@
   {#if ui.online}
     <button class="chip session" class:problem={!!session.problem} onclick={() => dialogs.show('session')} title={session.problem ? t(`session.problem.${session.problem}`) : t('session.buttonHint')}>
       {#if session.problem}⚠{/if}
-      {session.code ? t('session.button', { code: session.code }) : t('session.buttonNone')}{#if session.site && !session.watching}&nbsp;· {t('verbund.seatN', { seat: session.site.seat })}{/if}
+      {session.code ? t('session.button', { code: session.code }) : t('session.buttonNone')}{#if session.classCode && !session.watching}&nbsp;· 🏫 {session.classLabel ?? t('session.inClass')}{/if}{#if session.site && !session.watching}&nbsp;· {t('verbund.seatN', { seat: session.site.seat })}{/if}
     </button>
     {#if session.classCode && session.code && !session.watching && !examMode.active}
       <button class="chip help" class:asked={session.help} aria-pressed={session.help} onclick={() => void session.requestHelp(!session.help)} title={t(session.help ? 'classLive.help.cancelHint' : 'classLive.help.askHint')}>
