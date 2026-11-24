@@ -16,7 +16,7 @@ In der **Admin-Konsole** eröffnen Sie eine Klasse mit einer Bezeichnung wie «I
 - **Einladung**: Text mit Direkt-Link zum Kopieren; die Lernenden klicken nur «Beitreten». Jedes Gerät tritt nur einmal bei; «Inaktive schliessen» räumt auf.
 - **Fortschritt**: erfüllte Lernziele der geladenen Aufgabe, vom Browser der Lernenden von selbst geprüft (niemand muss abgeben). Orange: mindestens die Hälfte, grün: alles erfüllt.
 - **Hilfe anfordern**: Lernende drücken «🙋 Hilfe anfordern», die Zeile wird magenta; «Hilfe erledigt» quittiert.
-- **Erkennen**: Der Bildschirm der Session blinkt rot und zeigt Platz und Code. So sehen Sie, wer an welcher Session sitzt.
+- **Erkennen**: Der Bildschirm der Session blinkt rot und zeigt den Platz. So sehen Sie, wer an welcher Session sitzt. Die **Blinkdauer** (5–10 Sekunden) wählen Sie über der Liste. Der Knopf zeigt zuerst «Wird zugestellt …», dann «Blinkt noch 7 s» und zählt herunter; «Nicht erreicht» heisst, der Browser der Lernenden ist nicht offen.
 - **Ansehen**: schreibgeschützt, alle 5 Sekunden neu geladen, die Lernziele gleich grün oder rot geprüft. Gut für die Fehlersuche mit der Klasse am Beamer.
 - **Öffnen**: Sie bearbeiten die Session selbst. Die Änderungen gehen direkt an die Lernenden, die solange nur zusehen.
 

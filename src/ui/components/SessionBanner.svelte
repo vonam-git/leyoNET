@@ -4,6 +4,7 @@
   import { editor } from '../state/editor.svelte';
   import { session, SessionStore } from '../state/session.svelte';
   import { startWatch, stopWatch } from '../watch';
+  import IdentifyButton from './IdentifyButton.svelte';
   import { showcase } from '../state/showcase.svelte';
   import { tour } from '../state/tour.svelte';
 
@@ -42,14 +43,14 @@
     }
   }
 
-  /** Lehrperson: Lernende erkennen (Bildschirm blinkt), Hilfe erledigen, zwischen Ansehen und Bearbeiten wechseln. */
-  async function signal(kind: 'identify' | 'help') {
+  /** Lehrperson: Hilfe erledigen («Erkennen» siehe IdentifyButton), zwischen Ansehen und Bearbeiten wechseln. */
+  async function signal(kind: 'help') {
     const w = session.watching;
     if (!w?.admin) return;
     try {
       await SessionStore.signal(w.admin, w.code, kind);
-      editor.notify(t(kind === 'identify' ? 'classLive.identify.sent' : 'classLive.help.cleared'));
-      if (kind === 'help' && session.watching) session.watching = { ...session.watching, help: null };
+      editor.notify(t('classLive.help.cleared'));
+      if (session.watching) session.watching = { ...session.watching, help: null };
     } catch {
       editor.notify(t('session.error.other'), 'error');
     }
@@ -85,7 +86,7 @@
     <span>{t(w.edit ? 'classLive.edit.text' : 'watch.readOnly')}</span>
     {#if w.help}<span class="help-pill">🙋 {t('classLive.help.pill')}</span><button onclick={() => signal('help')}>{t('classLive.help.done')}</button>{/if}
     {#if w.admin && w.classCode}
-      <button onclick={() => signal('identify')} title={t('classLive.identify.hint2')}>🔴 {t('classLive.identify.button')}</button>
+      <IdentifyButton admin={w.admin} code={w.code} onerror={() => editor.notify(t('session.error.other'), 'error')} />
       <button onclick={() => switchMode(!w.edit)} disabled={busy} title={t(w.edit ? 'classLive.edit.toViewHint' : 'classLive.edit.toEditHint')}>{t(w.edit ? 'classLive.edit.toView' : 'classLive.edit.toEdit')}</button>
     {/if}
     {#if fresh}<span class="fresh">⟳ {t('watch.fresh')}</span>{/if}

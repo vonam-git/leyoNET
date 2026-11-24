@@ -5,15 +5,15 @@
 
   /**
    * «Erkennen»: Die Lehrperson hat in der Admin-Konsole auf diese Session gezeigt. Der Bildschirm
-   * blinkt einige Sekunden rot, damit sie im Schulzimmer sieht, wer an welcher Session arbeitet.
+   * blinkt rot, so lange wie sie gewählt hat (Standard 7 s), damit sie im Schulzimmer sieht, wer an
+   * welcher Session arbeitet.
    */
-  const SHOW_MS = 7000;
   let visible = $state(false);
   $effect(() => {
-    const at = session.identify;
-    if (!at) return;
+    const id = session.identify;
+    if (!id) return;
     visible = true;
-    const timer = setTimeout(() => (visible = false), Math.max(0, at + SHOW_MS - Date.now()));
+    const timer = setTimeout(() => (visible = false), Math.max(0, id.at + id.ms - Date.now()));
     return () => clearTimeout(timer);
   });
   const site = $derived(session.site);

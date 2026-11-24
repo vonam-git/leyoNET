@@ -13,7 +13,7 @@ In the **admin console** you open a class with a label such as “INF22a” and 
 - **Invitation**: a text with a direct link to copy; learners only click “Join”. Every device joins only once; “Close inactive” tidies up.
 - **Progress**: goals met in the loaded task, checked by the learner's browser by itself (nobody needs to submit). Orange: at least half, green: all met.
 - **Ask for help**: learners press “🙋 Ask for help”, the row turns magenta; “Help done” acknowledges it.
-- **Identify**: the session's screen flashes red and shows seat and code, so you can see who is sitting at which session.
+- **Identify**: the session's screen flashes red and shows the seat, so you can see who is sitting at which session. Choose the **flash time** (5–10 seconds) above the list. The button first shows «Sending …», then «Flashing, 7 s left» and counts down; «Not reached» means the learner's browser is not open.
 - **View**: read-only, reloaded every 5 seconds, the goals checked green or red right away. Useful for troubleshooting with the class on the projector.
 - **Open**: you edit the session yourself. The changes go straight to the learners, who can only watch meanwhile.
 

@@ -565,7 +565,10 @@ const pinFails = new Map();
 // Lernenden aufblinkt («Erkennen»); teacher: letzte Meldung der Lehrperson, die die Session
 // gerade bearbeitet (solange ist die Session für die Lernenden nur lesbar).
 const signals = new Map();
+/** «Erkennen»: so lange wartet der Auftrag auf das nächste Lebenszeichen der Lernenden. */
 const IDENTIFY_MS = 12_000;
+/** Blinkdauer in Sekunden (die Lehrperson wählt; Standard 7). */
+const IDENTIFY_SECONDS = { min: 3, max: 15, standard: 7 };
 const TEACHER_EDIT_MS = 30_000;
 const MAX_SIGNALS = 20_000;
 function signalOf(code) {
@@ -573,7 +576,7 @@ function signalOf(code) {
   if (!s) {
     if (signals.size >= MAX_SIGNALS) {
       const now = Date.now();
-      for (const [k, v] of signals) if (!v.help && v.identify < now && now - v.teacher > TEACHER_EDIT_MS) signals.delete(k);
+      for (const [k, v] of signals) if (!v.help && v.identify < now && (v.identifyShown || 0) + (v.identifyMs || 0) < now && now - v.teacher > TEACHER_EDIT_MS) signals.delete(k);
       if (signals.size >= MAX_SIGNALS) return { help: 0, identify: 0, teacher: 0 };
     }
     s = { help: 0, identify: 0, teacher: 0 };
@@ -1310,7 +1313,13 @@ async function api(req, res, url) {
       }
       if (body.help === true && !sig.help) sig.help = now;
       if (body.help === false) sig.help = 0;
-      return json(res, 200, { ok: true, ...about(item), updated: item.updated, help: !!sig.help, identify: sig.identify > now, teacher: teacherEditing(code, now) });
+      // «Erkennen» nur einmal zustellen (als Blinkdauer in ms); die Lehrperson sieht, ab wann es blinkt.
+      let identify = false;
+      if (sig.identify > now && !sig.identifyShown) {
+        sig.identifyShown = now;
+        identify = sig.identifyMs || IDENTIFY_SECONDS.standard * 1000;
+      }
+      return json(res, 200, { ok: true, ...about(item), updated: item.updated, help: !!sig.help, identify, teacher: teacherEditing(code, now) });
     }
     // Platz und Gruppe im Klassen-Verbund ändern (nur das schreibende Gerät).
     if (parts[2] === 'site' && method === 'PUT') {
@@ -2041,15 +2050,31 @@ async function admin(req, res, parts, method) {
     if (method === 'GET' && parts.length === 2) return json(res, 200, { code, project: item.project, classCode: item.classCode, site: item.site || null, updated: item.updated, connected: connected(code), locked: !!item.lock, help: helpOf(code) });
     // Klassen: Bildschirm der Lernenden kurz aufblinken lassen, Hilfe-Anfrage erledigen,
     // Session bearbeiten (solange sehen die Lernenden nur zu). Nie für Prüfungsplätze.
+    // Stand von «Erkennen»: wartet auf die Lernenden, blinkt (noch so lange), nicht erreicht.
+    if (parts.length === 3 && method === 'GET' && parts[2] === 'identify') {
+      const sig = signals.get(code);
+      const now = Date.now();
+      if (!sig || !sig.identify) return json(res, 200, { state: 'none' });
+      if (sig.identifyShown) {
+        const left = sig.identifyShown + (sig.identifyMs || 0) - now;
+        return json(res, 200, left > 0 ? { state: 'shown', left } : { state: 'done' });
+      }
+      return json(res, 200, sig.identify > now ? { state: 'pending' } : { state: 'missed' });
+    }
     if (parts.length === 3 && method === 'POST' && ['identify', 'help', 'edit'].includes(parts[2])) {
       if (item.exam || !item.classCode) return fail(res, 409, 'notInClass');
       const body = await readBody(req, 1024);
       const sig = signalOf(code);
       const now = Date.now();
-      if (parts[2] === 'identify') sig.identify = now + IDENTIFY_MS;
+      if (parts[2] === 'identify') {
+        const seconds = Number.isInteger(body.seconds) ? Math.min(IDENTIFY_SECONDS.max, Math.max(IDENTIFY_SECONDS.min, body.seconds)) : IDENTIFY_SECONDS.standard;
+        sig.identify = now + IDENTIFY_MS;
+        sig.identifyMs = seconds * 1000;
+        sig.identifyShown = 0;
+      }
       if (parts[2] === 'help') sig.help = 0;
       if (parts[2] === 'edit') sig.teacher = body.active === false ? 0 : now;
-      return json(res, 200, { ok: true, help: !!sig.help, teacher: teacherEditing(code, now) });
+      return json(res, 200, { ok: true, help: !!sig.help, teacher: teacherEditing(code, now), ...(parts[2] === 'identify' ? { ms: sig.identifyMs } : {}) });
     }
     if (method === 'PUT' && parts.length === 2) {
       if (item.exam || !item.classCode) return fail(res, 409, 'notInClass');
