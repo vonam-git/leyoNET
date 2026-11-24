@@ -25,6 +25,8 @@
   import ClassCodeBig from './ClassCodeBig.svelte';
   import { inviteLink } from '../invite';
   import Icon from './Icon.svelte';
+  import IdentifyButton from './IdentifyButton.svelte';
+  import IdentifySeconds from './IdentifySeconds.svelte';
   import Logo from './Logo.svelte';
   import '../admin.css';
   import type { CatalogVisibility } from '../state/session.svelte';
@@ -309,12 +311,12 @@
     if (token && (await startWatch(code, token, label, edit))) oneditor();
   }
 
-  /** Klassen-Session: Lernende erkennen (Bildschirm blinkt) oder Hilfe-Anfrage erledigen. */
-  async function signal(s: ClassSession, kind: 'identify' | 'help') {
+  /** Klassen-Session: Hilfe-Anfrage erledigen («Erkennen» siehe IdentifyButton). */
+  async function signal(s: ClassSession, kind: 'help') {
     try {
       await call('POST', `sessions/${s.code}/${kind}`, {});
-      if (kind === 'help') classSessions = classSessions.map((x) => (x.code === s.code ? { ...x, help: null } : x));
-      notify('ok', t(kind === 'identify' ? 'classLive.identify.sent' : 'classLive.help.cleared'));
+      classSessions = classSessions.map((x) => (x.code === s.code ? { ...x, help: null } : x));
+      notify('ok', t('classLive.help.cleared'));
     } catch {
       notify('error', t('admin.loadFailed'));
     }
@@ -969,6 +971,7 @@
             <div class="row">
               <button onclick={reviewAll}>{t('admin.reviewAll')}</button>
               <button class="danger" disabled={inactive.length === 0} onclick={() => closeSessions(inactive)} title={t('classLive.close.inactiveHint')}>{t('classLive.close.inactive', { n: inactive.length })}</button>
+              <IdentifySeconds />
               <span class="muted">{editor.tasks ? t('review.helpTask', { title: editor.tasks.title }) : t('admin.reviewOwn')}</span>
             </div>
             <table>
@@ -996,7 +999,7 @@
                       {#if s.help}<button class="primary" onclick={() => signal(s, 'help')}>{t('classLive.help.done')}</button>{/if}
                       <button onclick={() => watch(s.code, nameOf(s), true)} title={t('classLive.openHint')}><Icon name="edit" size={16} />{t('admin.open')}</button>
                       <button title={t('classLive.watchHint')} onclick={() => watch(s.code, nameOf(s))}><Icon name="eye" size={16} />{t('admin.exams.watch')}</button>
-                      <button onclick={() => signal(s, 'identify')} title={t('classLive.identify.hint2')} disabled={!s.connected}>🔴 {t('classLive.identify.button')}</button>
+                      {#if token}<IdentifyButton admin={token} code={s.code} disabled={!s.connected} onerror={() => notify('error', t('admin.loadFailed'))} />{/if}
                       <button class="danger" onclick={() => closeSessions([s])} title={t('classLive.close.hint')}>{t('classLive.close.button')}</button>
                     </td>
                   </tr>

@@ -645,10 +645,23 @@ test('Klasse: Fortschritt per Lebenszeichen, Hilfe, Erkennen, Bearbeiten durch d
   assert.equal((await call('POST', `/api/admin/sessions/${s.code}/help`, {})).status, 401);
   assert.equal((await call('POST', `/api/admin/sessions/${s.code}/help`, {}, token)).data.help, false);
   assert.equal((await row()).help, null);
-  await call('POST', `/api/admin/sessions/${s.code}/identify`, {}, token);
+  // Erkennen: Blinkdauer wählbar (3–15 s, sonst 7 s), wird einmal zugestellt; die Lehrperson sieht den Stand.
+  const idState = async () => (await call('GET', `/api/admin/sessions/${s.code}/identify`, null, token)).data;
+  assert.equal((await call('GET', `/api/admin/sessions/${s.code}/identify`, null)).status, 401);
+  assert.equal((await idState()).state, 'none');
+  assert.equal((await call('POST', `/api/admin/sessions/${s.code}/identify`, { seconds: 99 }, token)).data.ms, 15_000);
+  assert.equal((await call('POST', `/api/admin/sessions/${s.code}/identify`, { seconds: 'x' }, token)).data.ms, 7000);
+  assert.equal((await call('POST', `/api/admin/sessions/${s.code}/identify`, { seconds: 5 }, token)).data.ms, 5000);
+  assert.equal((await idState()).state, 'pending');
   ping = (await call('POST', `/api/sessions/${s.code}/ping`, {})).data;
-  assert.equal(ping.identify, true);
+  assert.equal(ping.identify, 5000);
   assert.equal(ping.help, false);
+  const shown = await idState();
+  assert.equal(shown.state, 'shown');
+  assert.ok(shown.left > 4000 && shown.left <= 5000);
+  ping = (await call('POST', `/api/sessions/${s.code}/ping`, {})).data;
+  assert.equal(ping.identify, false, 'nur einmal zustellen');
+  assert.equal((await call('GET', `/api/sessions/${s.code}/identify`, null)).status >= 400, true, 'Lernende sehen den Stand nicht über die eigene Route');
   const watched = (await call('GET', `/api/admin/sessions/${s.code}`, null, token)).data;
   assert.deepEqual(watched.site, { seat: 3, label: 'Bern' });
   assert.equal(watched.classCode, cls.code);

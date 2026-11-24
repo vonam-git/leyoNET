@@ -30,6 +30,12 @@ function deviceId(): string | null {
 export const PING_MS = 20_000;
 /** In einer Klasse öfter: Hilfe-Anfrage, «Erkennen» und Bearbeiten durch die Lehrperson kommen so rasch an. */
 export const CLASS_PING_MS = 6_000;
+
+export type IdentifyStatus = { state: 'none' | 'pending' | 'shown' | 'done' | 'missed'; left?: number };
+/** Blinkdauer aus dem Lebenszeichen: 3–15 s, ohne Angabe 7 s. */
+export function identifyMs(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.min(15_000, Math.max(3000, value)) : 7000;
+}
 /** Lehrperson bearbeitet eine Session: so oft «ich bin noch da» melden. */
 export const EDIT_BEAT_MS = 10_000;
 /** Bearbeitet die Lehrperson so lange nichts, wird wieder nur angesehen (Lernende nicht ewig gesperrt). */
@@ -159,8 +165,8 @@ export class SessionStore {
   progress: { goals: number; total: number; faults?: { fixed: number; total: number } } | null = null;
   /** Hilfe bei der Lehrperson angefordert (Klasse). */
   help = $state(false);
-  /** Lehrperson hat «Erkennen» gedrückt: Zeitpunkt, an dem der Bildschirm aufblinkt. */
-  identify = $state<number | null>(null);
+  /** «Erkennen»: seit wann und wie lange der Bildschirm blinkt. */
+  identify = $state<{ at: number; ms: number } | null>(null);
   /** Lehrperson bearbeitet diese Session gerade: hier nur zusehen. */
   teacherEditing = $state(false);
   /** Neuer Stand vom Server übernehmen (nach Änderungen der Lehrperson), von App.svelte gesetzt. */
@@ -229,13 +235,14 @@ export class SessionStore {
     try {
       // In einer Klasse: Fortschritt und Hilfe-Anfrage mitschicken; zurück kommen «Erkennen» und ob die Lehrperson bearbeitet.
       const body = this.classCode ? { ...(this.progress ? { progress: this.progress } : {}), ...(change !== null ? { help: change } : {}) } : undefined;
-      const data = await api<{ locked: boolean; help?: boolean; identify?: boolean; teacher?: boolean; updated?: number }>('POST', `sessions/${code}/ping`, body, undefined, this.#headers());
+      const data = await api<{ locked: boolean; help?: boolean; identify?: boolean | number; teacher?: boolean; updated?: number }>('POST', `sessions/${code}/ping`, body, undefined, this.#headers());
       if (code !== this.code) return;
       this.locked = data.locked;
       if (!this.classCode) return;
       // Die Lehrperson kann die Hilfe-Anfrage erledigen: Stand vom Server übernehmen (ausser es wurde inzwischen neu geklickt).
       if (data.help !== undefined && this.#helpChange === null) this.help = data.help;
-      if (data.identify && (!this.identify || Date.now() - this.identify > 8000)) this.identify = Date.now();
+      // Der Server stellt «Erkennen» nur einmal zu (Blinkdauer in ms; ältere Server: true).
+      if (data.identify) this.identify = { at: Date.now(), ms: identifyMs(data.identify) };
       const was = this.teacherEditing;
       this.teacherEditing = !!data.teacher;
       // Die Lehrperson hat geändert (oder bearbeitet noch): neuen Stand holen und zeigen.
@@ -638,8 +645,13 @@ export class SessionStore {
   }
 
   /** Lehrperson: Lernende einer Klasse erkennen (Bildschirm blinkt) oder ihre Hilfe-Anfrage erledigen. */
-  static async signal(admin: string, code: string, kind: 'identify' | 'help'): Promise<void> {
-    await api('POST', `admin/sessions/${encodeURIComponent(code)}/${kind}`, {}, admin);
+  static async signal(admin: string, code: string, kind: 'identify' | 'help', seconds?: number): Promise<void> {
+    await api('POST', `admin/sessions/${encodeURIComponent(code)}/${kind}`, kind === 'identify' && seconds ? { seconds } : {}, admin);
+  }
+
+  /** Lehrperson: Stand von «Erkennen» (wartet, blinkt noch so lange, nicht erreicht). */
+  static async identifyStatus(admin: string, code: string): Promise<IdentifyStatus> {
+    return api<IdentifyStatus>('GET', `admin/sessions/${encodeURIComponent(code)}/identify`, undefined, admin);
   }
 
   async #refreshWatch() {

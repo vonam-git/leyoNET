@@ -145,7 +145,7 @@ Unter der Klasse steht eine **Einladung zum Kopieren** (für Mail, Teams oder Le
 In der Liste der Klasse (aktualisiert sich von selbst):
 
 - **Fortschritt** und **Zustand**: erfüllte Lernziele der geladenen Aufgabe. Der Browser der Lernenden prüft das von selbst kurz nach jeder Änderung, «Abgeben» braucht es nicht. Orange heisst mindestens die Hälfte, grün alles erfüllt, magenta «braucht Hilfe» (Knopf **Hilfe anfordern** der Lernenden, quittiert mit «Hilfe erledigt»). Die Maus über «Fortschritt» erklärt die Zahl.
-- **Erkennen**: Der Bildschirm dieser Session blinkt einige Sekunden rot und zeigt Platz und Code. So findet man heraus, wer an welcher Session arbeitet.
+- **Erkennen**: Der Bildschirm dieser Session blinkt rot und zeigt den Platz. So findet man heraus, wer an welcher Session arbeitet. Die **Blinkdauer** (5–10 Sekunden, Standard 7) steht über der Liste und wird im Browser gemerkt. Der Knopf zeigt «Wird zugestellt …», bis sich der Browser der Lernenden meldet (alle 6 Sekunden), dann «Blinkt noch n s» bis zum Ende; «Nicht erreicht» nach 12 Sekunden ohne Meldung.
 - **Ansehen**: nur lesen, alle 5 Sekunden neu geladen, Lernziele gleich grün oder rot geprüft (Fehlersuche am Beamer). Im Klassen-Verbund gilt dabei der Platz der angesehenen Session.
 - **Öffnen**: Die Lehrperson bearbeitet die Session; die Änderungen gehen direkt an die Lernenden, die solange nur zusehen und danach mit dem neuen Stand weiterarbeiten. Nach 10 Minuten ohne Änderung wird wieder nur angesehen.
 
