@@ -30,6 +30,8 @@ Die Admin-Konsole ist eine eigene Seite: **`/admin`** (z.B. `https://app.leyonet
 
 Unter **Sessions und Statistik** stehen alle aktiven Sessions mit Kennzahlen; jede lässt sich live ansehen, im Editor öffnen, verlängern oder löschen. Gespeichert und angezeigt werden nur technische Angaben.
 
+Nur der Hauptadmin sieht **Website und Downloads**: Aufrufe von leyonet.ch pro Tag, Herkunft der Besuche, Länder (ungefähr, aus der Zeitzone), Geräte, Klicks auf Downloads, wie oft die Web-App geöffnet wurde, und die Download-Zähler der GitHub-Releases. Gezählt wird anonym, ohne Cookies und ohne IP-Adressen; gespeichert werden nur Tageszähler.
+
 ## Zwei-Faktor-Anmeldung
 
 Unter **Sicherheit** richten Sie eine Authenticator-App ein (z.B. Aegis, 2FAS, Google oder Microsoft Authenticator): QR-Code scannen, Code bestätigen, die acht Wiederherstellungscodes sicher aufbewahren. Danach braucht die Anmeldung Passwort bzw. Schlüssel **und** den Code aus der App. Die App rechnet nur auf dem Handy; leyoNET kennt weder Telefonnummer noch E-Mail. Der Hauptadmin kann Zwei-Faktor für alle Zugänge verlangen.

@@ -28,6 +28,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const net = require('node:net');
 const { promisify } = require('node:util');
+const { createSiteStats } = require('./sitestats.cjs');
 const scrypt = promisify(crypto.scrypt);
 
 const ROOT = path.join(__dirname, '..');
@@ -62,6 +63,21 @@ const ADMIN_IDLE_MS = 60 * 60_000;
 /** Feature-IDs dürfen nur aus Buchstaben, Ziffern und Punkten bestehen (Liste in src/ui/features.ts). */
 const FEATURE_ID = /^[a-z]+\.[A-Za-z0-9]+$/;
 const CHECKS_FILE = path.join(ROOT, 'release', 'checks.json');
+/**
+ * Website-Statistik: Adressen der Website, deren Aufrufe gezählt werden (kommagetrennt), und das
+ * GitHub-Repository der Downloads («off» schaltet die Abfrage ab). Siehe server/sitestats.cjs.
+ */
+const STATS_ORIGINS = String(process.env.STATS_ORIGINS ?? 'https://leyonet.ch,https://www.leyonet.ch')
+  .split(',')
+  .map((o) => o.trim().replace(/\/$/, ''))
+  .filter((o) => /^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(o));
+const STATS_GITHUB_REPO = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(String(process.env.STATS_GITHUB_REPO ?? 'vonam-git/leyoNET'))
+  ? String(process.env.STATS_GITHUB_REPO ?? 'vonam-git/leyoNET')
+  : null;
+/** Höchstens so viele Meldungen der Website pro Minute je Adresse bzw. insgesamt. */
+const HITS_PER_MINUTE = 120;
+const HITS_PER_MINUTE_TOTAL = 6000;
+let siteStats = null;
 
 const DEFAULT_SETTINGS = {
   modes: { design: true, simulation: true },
@@ -1991,6 +2007,15 @@ async function admin(req, res, parts, method) {
     }
   }
 
+  // Website-Statistik und Downloads: nur der Hauptadmin (es geht um das ganze Projekt, nicht um eine Schule).
+  if (parts[0] === 'website' && parts.length === 1 && method === 'GET') {
+    if (superOnly()) return;
+    if (!siteStats) return fail(res, 503, 'unavailable');
+    const days = Number(new URL(req.url || '/', 'http://localhost').searchParams.get('days')) || 30;
+    const [report, downloads] = await Promise.all([siteStats.report(days), siteStats.downloads()]);
+    return json(res, 200, { ...report, downloads });
+  }
+
   // Statistik: aktive Sessions (nur Kennzahlen, ohne Projekte). Zugänge sehen nur ihre Klassen und Prüfungen.
   if (parts[0] === 'stats' && method === 'GET') {
     const now = Date.now();
@@ -2333,6 +2358,7 @@ function createServer() {
     .catch((error) => console.error('Verzeichnis:', error && error.message));
   const timer = setInterval(() => void cleanup().catch(() => undefined), 10 * 60_000);
   timer.unref();
+  siteStats = createSiteStats({ dataDir: DATA_DIR, origins: STATS_ORIGINS, githubRepo: STATS_GITHUB_REPO });
 
   const server = http.createServer(async (req, res) => {
     let url;
@@ -2342,6 +2368,14 @@ function createServer() {
       return fail(res, 400, 'badRequest');
     }
     try {
+      // Website meldet einen Aufruf (navigator.sendBeacon, daher text/plain und von leyonet.ch).
+      // Antwortet immer gleich, damit niemand erfährt, ob gezählt wurde.
+      if (url.pathname === '/api/hit') {
+        if (req.method !== 'POST') return fail(res, 405, 'methodNotAllowed');
+        const body = await readBody(req, 2048).catch(() => null);
+        if (body && siteStats && siteStats.accepts(req) && !limited(req, 'hit', HITS_PER_MINUTE) && !limitedGlobal('hit', HITS_PER_MINUTE_TOTAL)) siteStats.record(body);
+        return send(res, 204, '');
+      }
       if (url.pathname.startsWith('/api/')) {
         // Nur JSON von der eigenen Seite (Schutz gegen fremde Formulare).
         const hasBody = Number(req.headers['content-length'] || 0) > 0 || !!req.headers['transfer-encoding'];
@@ -2353,6 +2387,8 @@ function createServer() {
       if (req.method !== 'GET' && req.method !== 'HEAD') return fail(res, 405, 'methodNotAllowed');
       // Admin-Konsole als eigene Seite (eigener Tab): dieselbe App, sie erkennt die Adresse.
       if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/admin' || url.pathname === '/admin/') {
+        // Aufrufe der Web-App zählen (nur die Zahl pro Tag, siehe sitestats.cjs).
+        if (req.method === 'GET' && !url.pathname.startsWith('/admin') && siteStats) siteStats.countApp(req);
         return send(res, 200, req.method === 'HEAD' ? '' : html(), { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': CSP });
       }
       const asset = url.pathname.startsWith('/assets/') ? bundle().assets.get(url.pathname) : undefined;
@@ -2399,4 +2435,4 @@ function createServer() {
 }
 
 // `_leases` nur für Tests (Gerät «verschwindet»).
-module.exports = { createServer, normalizeCode, newCode, cleanup, DATA_DIR, ROOT, ADMIN_PASSWORD, rateAddress, _leases: leases };
+module.exports = { siteStats: () => siteStats, createServer, normalizeCode, newCode, cleanup, DATA_DIR, ROOT, ADMIN_PASSWORD, rateAddress, _leases: leases };

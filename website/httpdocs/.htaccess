@@ -18,12 +18,15 @@ Options -Indexes
 </FilesMatch>
 
 <IfModule mod_headers.c>
-  # Nur eigene Dateien, keine fremden Server, keine Einbettung
-  Header always set Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  # Nur eigene Dateien, keine fremden Server, keine Einbettung. Einzige Verbindung: anonyme
+  # Besucherzählung an app.leyonet.ch (siehe js/site.js und die Datenschutzerklärung)
+  Header always set Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self'; manifest-src 'self'; connect-src https://app.leyonet.ch; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
   Header always set Strict-Transport-Security "max-age=31536000"
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "DENY"
-  Header always set Referrer-Policy "no-referrer"
+  # Herkunft nur innerhalb von leyonet.ch (für die Besucherzählung: Seitenwechsel sind kein neuer Besuch);
+  # fremde Seiten erfahren nicht, dass man von leyonet.ch kommt
+  Header always set Referrer-Policy "same-origin"
   Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
   Header always set Cross-Origin-Opener-Policy "same-origin"
   Header always set Cross-Origin-Resource-Policy "same-origin"

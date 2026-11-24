@@ -11,7 +11,8 @@ Diese Seite beschreibt, wie man leyoNET angreifen könnte, was dagegen getan ist
 | Webversion: `/api/sessions`, `/api/exams/join`, `/api/classes/join`, `/api/feedback` | alle, **ohne Anmeldung** | Projekte speichern und laden, Prüfung beitreten, Rückmeldung senden |
 | Webversion: `/api/classes/:code/verbund`, `/api/classes/:code/messages` | wer den Klassencode kennt | Infrastruktur und (falls freigegeben) Standorte des Klassen-Verbunds lesen; Nachrichten nur mit Session der Klasse |
 | Webversion: `/api/admin/…` | nur mit Admin-Passwort oder Zugangsschlüssel, falls eingerichtet mit zweitem Faktor | Einstellungen, Klassen, Prüfungen, Statistik der Sessions, Rückmeldungen, Zugänge (je nach Rolle) |
-| Website leyonet.ch (`website/httpdocs/`) | alle | statische Seiten, ein kleines eigenes Skript für Animationen, Downloads als Links auf GitHub-Releases |
+| Webversion: `/api/hit` | alle, **ohne Anmeldung** | anonyme Besucherzählung der Website (Tageszähler, siehe unten) |
+| Website leyonet.ch (`website/httpdocs/`) | alle | statische Seiten, ein kleines eigenes Skript für Animationen und die anonyme Besucherzählung, Downloads als Links auf GitHub-Releases |
 | Projektdateien, Prüfungsdateien, Abgaben | wer eine Datei weitergibt oder hochlädt | werden in der Oberfläche geöffnet und dargestellt |
 
 ## Angriffe und Gegenmassnahmen
@@ -28,6 +29,7 @@ Diese Seite beschreibt, wie man leyoNET angreifen könnte, was dagegen getan ist
 | Server mit Rechenarbeit anhalten (PIN setzen oder prüfen, je rund 30 ms scrypt) | scrypt läuft asynchron und hält andere Anfragen nicht auf; Sperren höchstens 20-mal pro Minute und Adresse, Prüfen höchstens 5 Fehlversuche je Session in 10 Minuten. |
 | Gleichzeitige Anfragen überschreiben einander (langsames Speichern, währenddessen Sperre, Freigabe oder Löschen) | Der Server liest erst den Inhalt der Anfrage und lädt dann den aktuellen Stand; nach asynchroner Rechenarbeit liest er ihn nochmals. Eine gesetzte Sperre, eine Freigabe und Zusatzminuten bleiben, gelöschte Sessions kommen nicht zurück (Tests). |
 | Langsame Verbindungen offen halten (Slowloris) | Zeitlimits: Kopfzeilen 20 s, ganze Anfrage 120 s, Keep-Alive 5 s, höchstens 60 Kopfzeilen. |
+| Besucherzählung fluten (`/api/hit`) | Höchstens 2 KB je Meldung, 120 Meldungen pro Minute und Adresse, 6000 insgesamt; nur mit `Origin` aus `STATS_ORIGINS`, Bots und Vorladen zählen nicht. Je Tag höchstens 300 Seiten, 200 Herkunftsseiten, 120 Länder und 40 Klick-Ziele, der Rest zählt unter «andere»; Tageszähler höchstens 400 Tage. Die Datei bleibt so auch bei Angriffen klein. Gefälschte Zahlen sind möglich (wie bei jeder Zählung ohne Kennung), betreffen aber nur die Statistik. Die Antwort ist immer 204, damit niemand erfährt, was gezählt wurde. Test: `server/website.test.cjs`. |
 | Kaputtes JSON, `null`, tief verschachtelte Daten | Nur JSON-Objekte werden angenommen (400); Fehler in einer Anfrage werden abgefangen und bringen den Prozess nicht zum Absturz. |
 
 ### In fremde Daten schauen (Vertraulichkeit)
