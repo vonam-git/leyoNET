@@ -98,6 +98,9 @@ const UI = {
   skip: { de: 'Zum Inhalt', en: 'Skip to content' },
   home: { de: 'leyoNET Startseite', en: 'leyoNET home' },
   mainNav: { de: 'Hauptnavigation', en: 'Main navigation' },
+  dcTitle: { de: 'Neu: leyoNET DC, ein Rechenzentrum in 3D bauen', en: 'New: leyoNET DC, build a data centre in 3D' },
+  dcMore: { de: 'Rechenzentrum in 3D bauen', en: 'Build a data centre in 3D' },
+  dcNew: { de: 'Neu', en: 'New' },
   wikiNav: { de: 'Wiki-Inhalt', en: 'Wiki contents' },
   searchLabel: { de: 'Im Wiki suchen', en: 'Search the wiki' },
   searchPlaceholder: { de: 'Suchen, z.B. «OSPF» oder «Trunk»', en: 'Search, e.g. “OSPF” or “trunk”' },
@@ -462,6 +465,7 @@ export function buildWiki(root: string, version: string): WikiBuild {
       <nav aria-label="${u('mainNav')}">
         <ul>
           ${AREAS.map((a) => `<li><a href="index.html#${a.id}">${escapeHtml(a.nav[lang])}</a></li>`).join('\n          ')}
+          <li class="nav-dc-item"><a class="nav-dc" href="${siteRoot}${lang === 'de' ? '' : 'en/'}dc.html" title="${u('dcTitle')}"><span class="nav-dc-led" aria-hidden="true"></span><b>DC</b><span class="nav-dc-more">${u('dcMore')}</span><span class="nav-dc-new">${u('dcNew')}</span></a></li>
         </ul>
       </nav>
       <a class="lang-switch" href="${otherHref(path)}" hreflang="${otherLang}" lang="${otherLang}" title="${u('other')}">${u('otherShort')}</a>

@@ -35,6 +35,47 @@
     if (!root.dataset.theme) applyTheme();
   });
 
+  /* --- Handy: Menü hinter einem Knopf (ohne Skript bleibt die wischbare Zeile) ---------- */
+  const top = document.querySelector('header.top');
+  const nav = top?.querySelector('nav');
+  if (top && nav) {
+    nav.id ||= 'hauptmenue';
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'menu-toggle';
+    toggle.setAttribute('aria-controls', nav.id);
+    toggle.setAttribute('aria-expanded', 'false');
+    const bars = document.createElement('span');
+    bars.className = 'bars';
+    bars.setAttribute('aria-hidden', 'true');
+    bars.append(...[0, 1, 2].map(() => document.createElement('i')));
+    const label = document.createElement('span');
+    label.className = 'menu-label';
+    label.textContent = L('Menü', 'Menu');
+    toggle.append(bars, label);
+    toggle.setAttribute('aria-label', L('Menü', 'Menu'));
+    const after = top.querySelector('.wiki-badge') || top.querySelector('.brand');
+    after.after(toggle);
+    top.classList.add('js-menu');
+    const set = (open) => {
+      top.classList.toggle('menu-open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+    };
+    toggle.addEventListener('click', () => set(!top.classList.contains('menu-open')));
+    nav.addEventListener('click', (e) => {
+      if (e.target.closest('a')) set(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && top.classList.contains('menu-open')) {
+        set(false);
+        toggle.focus();
+      }
+    });
+    document.addEventListener('click', (e) => {
+      if (top.classList.contains('menu-open') && !top.contains(e.target)) set(false);
+    });
+  }
+
   /* --- Kontakt: Nachricht im eigenen E-Mail-Programm öffnen (nichts geht an den Server) ---- */
   const contact = document.querySelector('form.contact');
   const user = contact?.dataset.user ?? '';
