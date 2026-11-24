@@ -53,6 +53,27 @@
     });
   }
 
+  /* --- leyoNET DC: Film im Kopf anhalten/abspielen; bei «weniger Bewegung» steht er still ------- */
+  for (const film of document.querySelectorAll('.dc-film')) {
+    const video = film.querySelector('video');
+    const button = film.querySelector('.dc-play');
+    if (!video || !button) continue;
+    const show = () => {
+      const playing = !video.paused;
+      button.textContent = playing ? '❚❚' : '▶';
+      button.setAttribute('aria-label', playing ? button.dataset.labelPause : button.dataset.labelPlay);
+      button.title = button.getAttribute('aria-label');
+    };
+    if (reduced) {
+      video.removeAttribute('autoplay');
+      video.pause();
+    }
+    button.addEventListener('click', () => (video.paused ? video.play().catch(() => {}) : video.pause()));
+    video.addEventListener('play', show);
+    video.addEventListener('pause', show);
+    show();
+  }
+
   /* --- Hero: Ping über einen Router, wie in der Simulation ------------------------- */
   const X = { pc: 66, sw: 240, r: 410, srv: 551 };
   const FRAMES = [

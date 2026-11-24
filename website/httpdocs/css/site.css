@@ -1370,3 +1370,221 @@ code {
 }
 
 /* Zeile über der Hauptüberschrift: sagt Menschen und Suchmaschinen in der H1, was leyoNET ist. */
+
+/* --- leyoNET DC (dc.html): Film im Kopf, Bilder aus dem Spiel ---------------------------------
+   Gleiche Sprache wie die Startseite (Papier, Courier, 2-px-Rand); der Film ist das einzige laute
+   Element, alles andere bleibt ruhig. */
+.dc-hero {
+  border-bottom: 2px solid var(--ink);
+}
+.dc-film {
+  position: relative;
+  background: #000;
+  aspect-ratio: 16 / 9;
+  max-height: 78vh;
+  width: 100%;
+  overflow: hidden;
+}
+.dc-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dc-play {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  min-width: 44px;
+  min-height: 44px;
+  border: 2px solid #fff;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font: 700 0.95rem/1 var(--mono);
+  cursor: pointer;
+}
+.dc-play:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.dc-hero-text {
+  padding-top: clamp(28px, 5vw, 56px);
+  padding-bottom: clamp(36px, 6vw, 72px);
+}
+.dc-logotype {
+  font-family: var(--mono);
+  font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+  letter-spacing: -0.03em;
+  margin: 0 0 0.6rem;
+}
+.dc-logotype .ly,
+.dc-logotype .dc {
+  color: var(--graphite);
+}
+.dc-logotype b {
+  color: var(--ink);
+}
+.dc-page section:not(.dc-hero) {
+  padding: clamp(48px, 7vw, 96px) 0;
+  border-bottom: 1px solid var(--line);
+}
+.dc-three {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-top: 2rem;
+}
+.dc-three article {
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 22px 22px 6px;
+  background: var(--paper);
+}
+.dc-three h3 {
+  margin-bottom: 0.6rem;
+}
+.dc-step-list {
+  list-style: none;
+  counter-reset: step;
+  padding: 0;
+  margin: 2rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 28px 22px;
+}
+.dc-step-list li {
+  counter-increment: step;
+}
+.dc-step-list img,
+.dc-shot img,
+.dc-end-box img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: #000;
+}
+.dc-step-list h3 {
+  margin: 0.9rem 0 0.4rem;
+}
+.dc-step-list h3::before {
+  content: counter(step) '  ';
+  color: var(--graphite);
+}
+.dc-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(24px, 4vw, 56px);
+  align-items: center;
+}
+.dc-split-rev > figure {
+  order: 0;
+}
+.dc-shot {
+  margin: 0;
+}
+.dc-shot figcaption {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin-top: 0.6rem;
+}
+.dc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.4rem;
+  font-size: 0.98rem;
+}
+.dc-table th,
+.dc-table td {
+  text-align: left;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.dc-table th {
+  font-family: var(--mono);
+  border-bottom: 2px solid var(--ink);
+}
+.dc-table td:first-child {
+  font-family: var(--mono);
+  font-weight: 700;
+  width: 3.5em;
+}
+.dc-table td:last-child {
+  color: var(--muted);
+}
+.dc-note {
+  color: var(--muted);
+  margin-top: 1rem;
+}
+.dc-list {
+  padding-left: 1.1em;
+  margin: 1.4rem 0;
+}
+.dc-list li {
+  margin-bottom: 0.7rem;
+  max-width: 62ch;
+}
+.dc-keylist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px 24px;
+  margin: 1.8rem 0 0;
+}
+.dc-keylist div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.dc-keylist dd {
+  margin: 0;
+  color: var(--muted);
+  text-align: right;
+}
+kbd {
+  font-family: var(--code);
+  font-size: 0.85em;
+  border: 1px solid var(--ink);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  background: var(--paper);
+}
+.dc-end-box {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: clamp(24px, 4vw, 56px);
+  align-items: center;
+}
+.dc-end h2 {
+  margin-bottom: 1rem;
+}
+/* Hinweis auf DC auf der Startseite */
+.dc-teaser {
+  padding: clamp(40px, 6vw, 72px) 0;
+  border-bottom: 1px solid var(--line);
+}
+.dc-teaser-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: clamp(24px, 4vw, 56px);
+  align-items: center;
+}
+.dc-teaser img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+}
+@media (max-width: 860px) {
+  .dc-split,
+  .dc-end-box,
+  .dc-teaser-grid {
+    grid-template-columns: 1fr;
+  }
+}

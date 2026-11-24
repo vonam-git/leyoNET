@@ -49,6 +49,7 @@ Es wird nichts übertragen. Die Admin-Konsole, Sessions und Rückmeldungen sind 
 - Die Lehrperson sieht die Session-Codes und kann die Arbeiten öffnen, aber **keine Namen**. Wer welche Session hat, klärt die Klasse mündlich oder über den Code, ohne dass der Server davon weiss.
 - Löschung: automatisch nach der eingestellten Zeit (Standard 14 Tage) oder mit **Schliessen**.
 - Je Session optional **Platz** (Zahl 1–62) und **Gruppe** (z.B. «Team Rot», höchstens 30 Zeichen). Das Eingabefeld weist darauf hin, keine Personennamen einzutragen. Dazu der Fortschritt bei der geladenen Aufgabe (erfüllte Ziele von gesamt) als zwei Zahlen; der Browser bestimmt ihn selbst und schickt ihn mit dem Lebenszeichen.
+- **Gerätekennung beim Beitreten einer Klasse:** Der Browser erzeugt einmal eine zufällige Kennung (`netzwerk-simulator.device` im Speicher des Browsers, kein Cookie) und schickt sie nur beim Beitreten mit. Der Server speichert davon nur einen Hash in der Session, damit dasselbe Gerät nicht mehrere Sessions in einer Klasse anlegt. Die Kennung sagt nichts über die Person, wird nie angezeigt und verschwindet mit der Session; im privaten Fenster oder nach dem Löschen der Browserdaten gibt es eine neue.
 - **Hilfe anfordern** und **Erkennen** (Bildschirm blinkt) sind nur ein Zeitpunkt je Session im Arbeitsspeicher des Servers, nach einem Neustart weg. Solange die Lehrperson eine Session bearbeitet, merkt sich der Server nur, seit wann (ebenfalls nur im Arbeitsspeicher).
 
 ### Klassen-Verbund

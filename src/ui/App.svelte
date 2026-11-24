@@ -7,6 +7,7 @@
   import { showcase } from './state/showcase.svelte';
   import { verbund } from './state/verbund.svelte';
   import { setupClassLive } from './classLive.svelte';
+  import { takeInvite } from './invite';
   import IdentifyFlash from './components/IdentifyFlash.svelte';
   import { parseProject, serializeProject } from '../core';
   import { locale, t } from '../i18n';
@@ -165,6 +166,8 @@
       // halten, aus der Adresszeile entfernen und gleich «Prüfung beitreten» öffnen.
       const seb = takeSebKey();
       if (seb) session.sebKey = seb;
+      // Einladungslink der Lehrperson («?klasse=…»): Dialog «Klasse beitreten» mit eingetragenem Code.
+      const invite = seb ? null : takeInvite();
       const config = await session.loadConfig();
       if (config) ui.setPolicy(normalizePolicy(config.policy));
       const remote = await session.restore();
@@ -175,6 +178,10 @@
       }
       restored = true;
       if (seb && !examMode.active) dialogs.show('examJoin');
+      else if (invite && !examMode.active && session.classCode !== invite) {
+        dialogs.sessionClassCode = invite;
+        dialogs.show('session');
+      }
       return;
     }
     const text = await loadAutosave();

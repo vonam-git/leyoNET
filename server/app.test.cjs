@@ -480,11 +480,18 @@ test('Klassen-Verbund: Plätze, Infrastruktur, Standorte nur bei Freigabe, Nachr
   const { token } = (await anmelden('test-admin-passwort'));
   const klasse = (await call('POST', '/api/admin/classes', { label: 'Verbund' }, token)).data;
   const p = project(0);
+  // Ohne Freigabe der Platzwahl vergibt der Server die Plätze und ignoriert Wünsche.
+  const z = (await foreign('POST', '/api/sessions', { project: p, classCode: klasse.code, site: { seat: 9, label: 'Zug' } })).data;
+  assert.deepEqual(z.site, { seat: 1, label: '' });
+  assert.equal((await foreign('PUT', `/api/sessions/${z.code}/site`, { seat: 9 }, { 'X-Leyonet-Writer': z.writer })).status, 403);
+  assert.equal((await call('DELETE', `/api/admin/sessions/${z.code}`, null, token)).status, 200);
+  await call('PATCH', `/api/admin/classes/${klasse.code}`, { verbund: { enabled: true, seatChoice: true } }, token);
   const a = (await foreign('POST', '/api/sessions', { project: p, classCode: klasse.code, site: { seat: 3, label: 'Bern' } })).data;
   const b = (await foreign('POST', '/api/sessions', { project: p, classCode: klasse.code, site: { seat: 3 } })).data;
   assert.deepEqual(a.site, { seat: 3, label: 'Bern' });
   assert.equal(b.site.seat, 1);
   // Ohne Freigabe: kein Verbund.
+  await call('PATCH', `/api/admin/classes/${klasse.code}`, { verbund: { enabled: false } }, token);
   assert.equal((await foreign('GET', `/api/classes/${klasse.code}/verbund`)).data.enabled, false);
   await call('PATCH', `/api/admin/classes/${klasse.code}`, { verbund: { enabled: true } }, token);
   await call('PUT', `/api/admin/classes/${klasse.code}/infra`, { project: p }, token);
@@ -612,6 +619,7 @@ test('Klasse: Fortschritt per Lebenszeichen, Hilfe, Erkennen, Bearbeiten durch d
   const { token } = (await call('POST', '/api/admin/login', { password: 'test-admin-passwort' })).data;
   liveToken = token;
   const cls = (await call('POST', '/api/admin/classes', { label: 'Live' }, token)).data;
+  await call('PATCH', `/api/admin/classes/${cls.code}`, { verbund: { enabled: true, seatChoice: true } }, token);
   const s = (await call('POST', '/api/sessions', { project: project(2), classCode: cls.code, site: { seat: 3, label: 'Bern' } })).data;
   const solo = (await call('POST', '/api/sessions', { project: project(1) })).data;
   const row = async () => (await call('GET', `/api/admin/classes/${cls.code}/sessions`, null, token)).data.find((x) => x.code === s.code);
@@ -686,5 +694,34 @@ test('Klasse: Bearbeiten überschreibt keinen neueren Stand, Lebenszeichen klein
   let last = 200;
   for (let i = 0; i < 45 && last !== 429; i++) last = (await call('POST', `/api/sessions/${s.code}/ping`, {})).status;
   assert.equal(last, 429);
+  await call('DELETE', `/api/admin/classes/${cls.code}`, null, token);
+});
+
+test('Klasse: ein Gerät tritt nur einmal bei (Gerätekennung), sonst kommt die bisherige Session zurück', async () => {
+  const token = liveToken;
+  const cls = (await call('POST', '/api/admin/classes', { label: 'Einmal' }, token)).data;
+  const device = 'A'.repeat(32);
+  const first = await call('POST', '/api/sessions', { project: project(4), classCode: cls.code, device });
+  assert.equal(first.status, 201);
+  const again = await call('POST', '/api/sessions', { project: project(1), classCode: cls.code, device });
+  assert.equal(again.status, 200);
+  assert.equal(again.data.existing, true);
+  assert.equal(again.data.code, first.data.code);
+  assert.equal(again.data.project.topology.devices.length, 4, 'bisherige Arbeit, nicht die neue leere');
+  assert.notEqual(again.data.writer, first.data.writer, 'neues Schreib-Token');
+  // Das alte Token schreibt nicht mehr (das neue Gerätefenster hat übernommen).
+  assert.equal((await foreign('PUT', `/api/sessions/${first.data.code}`, { project: project(2) }, { 'X-Leyonet-Writer': first.data.writer })).status, 409);
+  // Ein anderes Gerät bekommt eine eigene Session; ungültige Kennungen werden ignoriert.
+  const other = await call('POST', '/api/sessions', { project: project(1), classCode: cls.code, device: 'B'.repeat(32) });
+  assert.notEqual(other.data.code, first.data.code);
+  const junk = await call('POST', '/api/sessions', { project: project(1), classCode: cls.code, device: '<script>' });
+  assert.equal(junk.status, 201);
+  // Die Kennung erscheint nirgends in den Antworten der Lehrperson.
+  const list = await call('GET', `/api/admin/classes/${cls.code}/sessions`, null, token);
+  assert.ok(!/"device"/.test(JSON.stringify(list.data)));
+  // Ohne Klasse keine Wirkung.
+  const solo1 = await call('POST', '/api/sessions', { project: project(1), device });
+  const solo2 = await call('POST', '/api/sessions', { project: project(1), device });
+  assert.notEqual(solo1.data.code, solo2.data.code);
   await call('DELETE', `/api/admin/classes/${cls.code}`, null, token);
 });

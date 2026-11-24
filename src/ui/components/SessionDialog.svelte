@@ -4,6 +4,7 @@
   import { locale, t } from '../../i18n';
   import { editor } from '../state/editor.svelte';
   import { session, ApiError } from '../state/session.svelte';
+  import { dialogs } from '../state/dialogs.svelte';
   import { ensureProjectFeatures } from '../actions';
   import { startWatch } from '../watch';
   import Modal from './Modal.svelte';
@@ -15,7 +16,10 @@
   let { onclose }: { onclose: () => void } = $props();
 
   let resumeCode = $state('');
-  let classCode = $state('');
+  // Aus einem Einladungslink schon eingetragen.
+  let classCode = $state(dialogs.sessionClassCode ?? '');
+  /** Klasse gefunden, Lehrperson lässt Platz und Gruppe wählen: zweiter Schritt. */
+  let pendingClass = $state<{ code: string; label: string } | null>(null);
   /** Platz (leer = nächster freier) und Gruppe für den Klassen-Verbund. */
   let seat = $state('');
   let group = $state('');
@@ -37,7 +41,8 @@
     { id: 'watch', icon: '👁' },
     { id: 'manage', icon: '⚙' },
   ];
-  let choice = $state<Choice>(session.classCode ? 'resume' : 'join');
+  let choice = $state<Choice>(dialogs.sessionClassCode || !session.classCode ? 'join' : 'resume');
+  dialogs.sessionClassCode = null;
 
   const project = () => serializeProject(editor.topology, editor.tasks, editor.snapshots);
   const until = $derived(
@@ -96,12 +101,38 @@
       return t('session.unlockedOk');
     });
 
+  // Beitreten: Klasse nachschlagen. Platz und Gruppe nur fragen, wenn die Lehrperson das will;
+  // danach schliesst der Dialog, damit gleich gearbeitet werden kann.
   const join = () =>
     run(async () => {
+      if (!pendingClass) {
+        const info = await session.checkClass(classCode);
+        // Schon in dieser Klasse: nichts Neues anlegen.
+        if (session.code && session.classCode === info.classCode) {
+          editor.notify(t('session.alreadyInClass', { label: info.label }));
+          onclose();
+          return '';
+        }
+        if (info.verbund.enabled && info.verbund.seatChoice) {
+          pendingClass = { code: info.classCode, label: info.label };
+          return t('session.joinChooseSeat', { label: info.label });
+        }
+      }
       const n = Number(seat);
-      await session.joinClass(classCode, project(), { ...(seat.trim() && Number.isInteger(n) ? { seat: n } : {}), ...(group.trim() ? { label: group.trim() } : {}) });
+      const choose = !!pendingClass;
+      await session.joinClass(pendingClass?.code ?? classCode, project(), choose ? { ...(seat.trim() && Number.isInteger(n) ? { seat: n } : {}), ...(group.trim() ? { label: group.trim() } : {}) } : undefined);
       classCode = '';
-      return t('session.joined', { label: session.classLabel ?? '', code: session.code ?? '' });
+      pendingClass = null;
+      // Dieses Gerät war schon in der Klasse: die bisherige Arbeit wieder öffnen statt einer zweiten Session.
+      const again = session.rejoined;
+      if (again) {
+        editor.replace(again.topology, { undoable: true, tasks: again.tasks ?? null, snapshots: again.snapshots ?? [] });
+        ensureProjectFeatures();
+        session.rejoined = null;
+      }
+      editor.notify(t(again ? 'session.rejoinedToast' : 'session.joinedToast', { label: session.classLabel ?? '', seat: session.site ? String(session.site.seat) : '–' }));
+      onclose();
+      return '';
     });
 
   const fresh = () =>
@@ -160,9 +191,14 @@
       <h3>{t('session.classTitle')}</h3>
       <p class="muted">{t('session.classHint')}</p>
       <form onsubmit={(e) => (e.preventDefault(), join())}>
-        <input bind:value={classCode} placeholder="WXYZ-6789" maxlength="14" use:codeInput aria-label={t('session.classCode')} class="code" autocomplete="off" />
-        <input bind:value={seat} inputmode="numeric" pattern={"[0-9]{1,2}"} placeholder={t('verbund.seat')} aria-label={t('verbund.seatHint')} title={t('verbund.seatHint')} class="seat" autocomplete="off" />
-        <input bind:value={group} maxlength="30" placeholder={t('verbund.group')} aria-label={t('verbund.groupHint')} title={t('verbund.groupHint')} class="group" autocomplete="off" />
+        {#if pendingClass}
+          <p class="ok">🏫 «{pendingClass.label}»: {t('session.joinSeatHint')}</p>
+          <input bind:value={seat} inputmode="numeric" pattern={"[0-9]{1,2}"} placeholder={t('verbund.seat')} aria-label={t('verbund.seatHint')} title={t('verbund.seatHint')} class="seat" autocomplete="off" />
+          <input bind:value={group} maxlength="30" placeholder={t('verbund.group')} aria-label={t('verbund.groupHint')} title={t('verbund.groupHint')} class="group" autocomplete="off" />
+          <button type="button" onclick={() => (pendingClass = null)}>{t('session.back')}</button>
+        {:else}
+          <input bind:value={classCode} placeholder="WXYZ-6789" maxlength="14" use:codeInput aria-label={t('session.classCode')} class="code" autocomplete="off" />
+        {/if}
         <button type="submit" class="primary" disabled={busy || !classCode.trim()}>{t('session.join')}</button>
       </form>
     </section>

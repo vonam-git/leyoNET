@@ -23,6 +23,7 @@
   import AdminSecurity from './AdminSecurity.svelte';
   import VerbundDashboard from './VerbundDashboard.svelte';
   import ClassCodeBig from './ClassCodeBig.svelte';
+  import { inviteLink } from '../invite';
   import Icon from './Icon.svelte';
   import Logo from './Logo.svelte';
   import '../admin.css';
@@ -48,6 +49,7 @@
     enabled: boolean;
     shareSites: boolean;
     showMap: boolean;
+    seatChoice?: boolean;
     hasInfra: boolean;
     infraUpdated?: number;
   }
@@ -328,6 +330,14 @@
     return s.connected ? 'idle' : 'away';
   }
   let bigCode = $state<ClassInfo | null>(null);
+  async function copyText(text: string, done: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      notify('ok', done);
+    } catch {
+      notify('error', t('classLive.invite.copyFailed'));
+    }
+  }
 
   async function loadSession(code: string) {
     try {
@@ -428,6 +438,28 @@
     editor.notify(t('admin.verbund.infraLoaded'));
     oneditor();
   }
+
+  /** Session einer Klasse schliessen (löscht sie); «inaktiv» = Browser gerade nicht offen. */
+  async function closeSessions(list: ClassSession[]) {
+    if (!list.length) return;
+    const msg = list.length === 1 ? t('classLive.close.confirmOne', { name: nameOf(list[0]!), code: list[0]!.code }) : t('classLive.close.confirmMany', { n: list.length });
+    if (!confirm(msg)) return;
+    let done = 0;
+    for (const s of list) {
+      try {
+        await call('DELETE', `sessions/${s.code}`);
+        done++;
+      } catch {
+        /* weiter mit den übrigen */
+      }
+    }
+    notify(done === list.length ? 'ok' : 'error', t('classLive.close.done', { n: done }));
+    if (openClass) await showClass(openClass);
+  }
+  const inactive = $derived(classSessions.filter((s) => !s.connected && !s.teacher));
+  /** Laufnummer 1 … n nach Platz: Nach dem Schliessen zählt sie neu, die letzte Nummer = Anzahl Lernende. */
+  const sortedSessions = $derived([...classSessions].sort((a, b) => (a.site?.seat ?? 999) - (b.site?.seat ?? 999) || a.created - b.created));
+  const onlineCount = $derived(classSessions.filter((s) => s.connected).length);
 
   async function closeClass(c: ClassInfo) {
     if (!confirm(t('admin.closeClassConfirm', { label: c.label, n: c.sessions }))) return;
@@ -899,6 +931,7 @@
               <label><input type="checkbox" checked={oc.verbund.enabled} onchange={(e) => patchClass(oc, { verbund: { enabled: e.currentTarget.checked } })} /> {t('admin.verbund.enabled')}</label>
               <label title={t('admin.verbund.shareSitesHint')}><input type="checkbox" checked={oc.verbund.shareSites} disabled={!oc.verbund.enabled} onchange={(e) => patchClass(oc, { verbund: { shareSites: e.currentTarget.checked } })} /> {t('admin.verbund.shareSites')}</label>
               <label><input type="checkbox" checked={oc.verbund.showMap} disabled={!oc.verbund.enabled} onchange={(e) => patchClass(oc, { verbund: { showMap: e.currentTarget.checked } })} /> {t('admin.verbund.showMap')}</label>
+              <label title={t('admin.verbund.seatChoiceHint')}><input type="checkbox" checked={!!oc.verbund.seatChoice} disabled={!oc.verbund.enabled} onchange={(e) => patchClass(oc, { verbund: { seatChoice: e.currentTarget.checked } })} /> {t('admin.verbund.seatChoice')}</label>
             </div>
             {#if oc.verbund.enabled}
               <p class="muted">{oc.verbund.hasInfra ? t('admin.verbund.infraSet', { time: when(oc.verbund.infraUpdated ?? oc.created) }) : t('admin.verbund.noInfra')}</p>
@@ -917,22 +950,36 @@
               <AdminCatalog value={oc.catalog} scope="class" onchange={(v) => patchClass(oc, { catalog: v })} />
             </details>
           </section>
-          <h3>{t('admin.classSessions', { label: oc.label })}</h3>
+          {@const link = inviteLink(location.origin, oc.code)}
+          {@const invite = t('classLive.invite.text', { label: oc.label, link, code: oc.code, address: location.host })}
+          <section class="panel">
+            <h3 class="with-icon"><Icon name="globe" size={18} />{t('classLive.invite.title')}</h3>
+            <p class="muted">{t('classLive.invite.hint')}</p>
+            <textarea class="invite" readonly rows="9" aria-label={t('classLive.invite.title')}>{invite}</textarea>
+            <div class="row">
+              <button class="primary" onclick={() => copyText(invite, t('classLive.invite.copied'))}>{t('classLive.invite.copyText')}</button>
+              <button onclick={() => copyText(link, t('classLive.invite.linkCopied'))}>{t('classLive.invite.copyLink')}</button>
+              <button onclick={() => (bigCode = oc)}><Icon name="desktop" size={16} />{t('classLive.big.button')}</button>
+            </div>
+          </section>
+          <h3>{t('admin.classSessions', { label: oc.label })} <span class="count-pill" title={t('classLive.countHint')}>{t('classLive.count', { n: classSessions.length, online: onlineCount })}</span></h3>
           {#if classSessions.length === 0}
             <p class="muted">{t('admin.noSessions', { code: oc.code })}</p>
           {:else}
             <div class="row">
               <button onclick={reviewAll}>{t('admin.reviewAll')}</button>
+              <button class="danger" disabled={inactive.length === 0} onclick={() => closeSessions(inactive)} title={t('classLive.close.inactiveHint')}>{t('classLive.close.inactive', { n: inactive.length })}</button>
               <span class="muted">{editor.tasks ? t('review.helpTask', { title: editor.tasks.title }) : t('admin.reviewOwn')}</span>
             </div>
             <table>
               <thead>
-                <tr><th>{t('verbund.site')}</th><th>{t('admin.sessionCode')}</th><th>{t('classLive.state')}</th><th title={t('classLive.progressHint')}><span class="th-hint">{t('admin.progress')} ⓘ</span></th><th>{t('admin.changed')}</th><th>{t('admin.devices')}</th><th>{t('review.score')}</th><th></th></tr>
+                <tr><th title={t('classLive.numberHint')}>#</th><th>{t('verbund.site')}</th><th>{t('admin.sessionCode')}</th><th>{t('classLive.state')}</th><th title={t('classLive.progressHint')}><span class="th-hint">{t('admin.progress')} ⓘ</span></th><th>{t('admin.changed')}</th><th>{t('admin.devices')}</th><th>{t('review.score')}</th><th></th></tr>
               </thead>
               <tbody>
-                {#each classSessions as s (s.code)}
+                {#each sortedSessions as s, i (s.code)}
                   {@const st = stateOf(s)}
                   <tr class="cs cs-{st}">
+                    <td class="num">{i + 1}</td>
                     <td><strong>{s.site ? siteName(s.site.seat, s.site.label) : '–'}</strong></td>
                     <td><span class="who-cell"><span class="led" class:ok={s.connected} title={t(s.connected ? 'verbund.dash.present' : 'classLive.away')}></span><code>{s.code}</code></span></td>
                     <td><span class="state-pill sp-{st}" title={t(`classLive.stateHint.${st}`)}>{t(`classLive.stateName.${st}`)}</span>{#if s.teacher} <span class="pill warn" title={t('classLive.edit.title', { code: '' })}>✏️</span>{/if}</td>
@@ -950,6 +997,7 @@
                       <button onclick={() => watch(s.code, nameOf(s), true)} title={t('classLive.openHint')}><Icon name="edit" size={16} />{t('admin.open')}</button>
                       <button title={t('classLive.watchHint')} onclick={() => watch(s.code, nameOf(s))}><Icon name="eye" size={16} />{t('admin.exams.watch')}</button>
                       <button onclick={() => signal(s, 'identify')} title={t('classLive.identify.hint2')} disabled={!s.connected}>🔴 {t('classLive.identify.button')}</button>
+                      <button class="danger" onclick={() => closeSessions([s])} title={t('classLive.close.hint')}>{t('classLive.close.button')}</button>
                     </td>
                   </tr>
                 {/each}
@@ -1510,6 +1558,27 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+  .invite {
+    width: 100%;
+    font: inherit;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    resize: vertical;
+  }
+  td.num {
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    width: 2.5em;
+  }
+  .count-pill {
+    margin-left: 8px;
+    padding: 1px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+    font-weight: 600;
+    vertical-align: middle;
   }
   .th-hint {
     cursor: help;

@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>leyoNET DC – the datacenter simulator in your browser</title>
+  <meta name="description" content="leyoNET DC: build your own datacenter in 3D. Racks, switches, cables and configuration, computed by the leyoNET core. Free in the browser.">
+  <link rel="canonical" href="https://leyonet.ch/en/dc.html">
+  <link rel="alternate" hreflang="de" href="https://leyonet.ch/dc.html">
+  <link rel="alternate" hreflang="en" href="https://leyonet.ch/en/dc.html">
+  <link rel="alternate" hreflang="x-default" href="https://leyonet.ch/dc.html">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#ffffff">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://leyonet.ch/en/dc.html">
+  <meta property="og:title" content="leyoNET DC – the datacenter simulator">
+  <meta property="og:description" content="A datacenter to build yourself: buy, install, cable, configure. In the browser, free, on the leyoNET core.">
+  <meta property="og:image" content="https://leyonet.ch/img/dc-og.jpg">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:site_name" content="leyoNET">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../css/site.css?v=1.9.0">
+  <script src="../js/site.js?v=1.9.0" defer></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "leyoNET DC",
+    "alternateName": ["leyonet DC", "leyoNET datacenter simulator"],
+    "description": "Datacenter simulator in the browser: build, cable and configure a datacenter in 3D. Whether the network works is computed by the leyoNET simulation core.",
+    "genre": ["Simulation", "Educational game"],
+    "gamePlatform": "Webbrowser",
+    "applicationCategory": "Game",
+    "operatingSystem": "Webbrowser",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CHF" },
+    "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+    "url": "https://dc.leyonet.ch/",
+    "inLanguage": "en",
+    "isAccessibleForFree": true
+  }
+  </script>
+</head>
+<body class="dc-page">
+  <a class="skip" href="#inhalt">Skip to content</a>
+
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="index.html" aria-label="leyoNET home page">
+        <svg viewBox="30 50 470 100" role="img" aria-hidden="true" class="logo">
+          <g stroke="#8a8f98" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M48 66v50"/><path d="M140 85l18 25 22-25M158 110l-14 26"/>
+          </g>
+          <g fill="#8a8f98">
+            <circle cx="48" cy="66" r="5"/><circle cx="48" cy="116" r="5"/>
+            <circle cx="140" cy="85" r="5"/><circle cx="180" cy="85" r="5"/><circle cx="144" cy="136" r="5"/>
+            <text x="76" y="120" font-family="'Courier New', Courier, monospace" font-size="88">e</text>
+            <text x="188" y="120" font-family="'Courier New', Courier, monospace" font-size="88">o</text>
+          </g>
+          <text x="244" y="120" fill="currentColor" font-family="'Courier New', Courier, monospace" font-size="112" font-weight="700">NET</text>
+        </svg>
+      </a>
+      <nav aria-label="Main navigation">
+        <ul>
+          <li><a href="#was">What is DC?</a></li>
+          <li><a href="#ablauf">How it works</a></li>
+          <li><a href="#levels">Levels</a></li>
+          <li><a href="#klasse">Class</a></li>
+          <li><a href="#technik">Technology</a></li>
+          <li><a href="index.html">Network simulator</a></li>
+        </ul>
+      </nav>
+      <a class="lang-switch" href="../dc.html" hreflang="de" lang="de" title="Deutsche Fassung">DE</a>
+      <button class="theme-toggle" type="button" aria-label="Dark theme" aria-pressed="false" hidden>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn btn-ink btn-small" href="https://dc.leyonet.ch/">Play now</a>
+    </div>
+  </header>
+
+  <main id="inhalt">
+    <!-- Kopf: der Film zum Spiel, darunter Titel und Einstieg -->
+    <section class="dc-hero">
+      <div class="dc-film">
+        <video class="dc-video" autoplay muted loop playsinline preload="metadata" poster="../img/dc/poster.webp" aria-label="Film: an empty datacenter is built, cabled and configured">
+          <source src="../video/leyonet-dc.webm" type="video/webm">
+          <source src="../video/leyonet-dc-720.mp4" type="video/mp4">
+        </video>
+        <button class="dc-play" type="button" data-label-pause="Pause film" data-label-play="Play film" aria-label="Pause film">❚❚</button>
+      </div>
+      <div class="wrap dc-hero-text">
+        <p class="dc-logotype" aria-hidden="true"><span class="ly">leyo</span><b>NET</b> <span class="dc">DC</span></p>
+        <h1>Your datacenter. Still empty.</h1>
+        <p class="lead">leyoNET DC is a game and a simulator at once: you build your own datacenter in 3D – buy, install, cable, connect power, configure. Whether your network works is decided by the leyoNET simulation core. Every ping is really computed.</p>
+        <div class="cta">
+          <a class="btn btn-ink" href="https://dc.leyonet.ch/">Play now <small>dc.leyonet.ch</small></a>
+          <a class="btn btn-line" href="https://github.com/vonam-git/leyoNET-DC">Source code</a>
+        </div>
+        <ul class="facts">
+          <li>Free and open source</li>
+          <li>In the browser, nothing to install</li>
+          <li>No account for learners</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Was ist DC? -->
+    <section id="was" class="dc-what">
+      <div class="wrap">
+        <h2>What is leyoNET DC?</h2>
+        <p class="section-lead"><b>DC</b> stands for <b>datacenter</b>: the room full of servers and network devices that websites, school platforms and chats run on. In leyoNET DC you are standing in it yourself.</p>
+        <div class="dc-three">
+          <article>
+            <h3>A game</h3>
+            <p>You walk through your server room, shop for hardware, carry devices to the rack and mount them unit by unit. Levels with a budget, goals, a speedrun timer and sayings on the wall every IT person knows.</p>
+          </article>
+          <article>
+            <h3>A simulator</h3>
+            <p>Behind the game runs the same core as in the <a class="link" href="index.html">leyoNET network simulator</a>: addresses, VLANs, routing, NAT, firewall, BGP. The console understands real commands, and the network diagram draws itself from what you have built.</p>
+          </article>
+          <article>
+            <h3>For the classroom</h3>
+            <p>Made for IT apprenticeships: the levels lead from the first cable to the core switch. In the class network the whole class builds one shared network; the teacher sees everything on the dashboard and signs off the sites.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ablauf eines Levels: echte Reihenfolge, darum nummeriert -->
+    <section id="ablauf" class="dc-steps">
+      <div class="wrap">
+        <h2>How a level works</h2>
+        <p class="section-lead">Stills from the film, just as it looks in the game.</p>
+        <ol class="dc-step-list">
+          <li>
+            <img src="../img/dc/licht.webp" srcset="../img/dc/licht-1x.webp 640w, ../img/dc/licht.webp 1280w" sizes="(min-width: 900px) 33vw, 100vw" width="1280" height="720" loading="lazy" alt="Empty server room with a concrete wall, glass front and marked rack spaces">
+            <h3>Lights on</h3>
+            <p>An empty room, a budget, a task. Yellow markings show where racks may go.</p>
+          </li>
+          <li>
+            <img src="../img/dc/bauen.webp" srcset="../img/dc/bauen-1x.webp 640w, ../img/dc/bauen.webp 1280w" sizes="(min-width: 900px) 33vw, 100vw" width="1280" height="720" loading="lazy" alt="Open 19-inch rack with devices being mounted">
+            <h3>Build</h3>
+            <p>Set up racks, mount switches, routers, firewalls and patch panels – with a preview showing whether the device fits the rack unit.</p>
+          </li>
+          <li>
+            <img src="../img/dc/verkabeln.webp" srcset="../img/dc/verkabeln-1x.webp 640w, ../img/dc/verkabeln.webp 1280w" sizes="(min-width: 900px) 33vw, 100vw" width="1280" height="720" loading="lazy" alt="Blue patch cables and a yellow fibre in the rack">
+            <h3>Cable</h3>
+            <p>Copper, fibre and power: cable in hand, port A, port B. Bundles sag in the cable tray, just like in real life.</p>
+          </li>
+          <li>
+            <img src="../img/dc/konfigurieren.webp" srcset="../img/dc/konfigurieren-1x.webp 640w, ../img/dc/konfigurieren.webp 1280w" sizes="(min-width: 900px) 33vw, 100vw" width="1280" height="720" loading="lazy" alt="Router console with an address, a default route and a successful ping">
+            <h3>Configure</h3>
+            <p>On the notebook at the desk or at the console: real commands, real answers. <code>ip route</code>, <code>ping</code>, <code>show</code>.</p>
+          </li>
+          <li>
+            <img src="../img/dc/verstehen.webp" srcset="../img/dc/verstehen-1x.webp 640w, ../img/dc/verstehen.webp 1280w" sizes="(min-width: 900px) 33vw, 100vw" width="1280" height="720" loading="lazy" alt="Automatically drawn network diagram with router, switches and notebooks">
+            <h3>Understand</h3>
+            <p>The network diagram is drawn from your room, also live on the wall screen. A goal only turns green once it really works in the simulation.</p>
+          </li>
+          <li>
+            <img src="../img/dc/raum.webp" srcset="../img/dc/raum-1x.webp 640w, ../img/dc/raum.webp 1280w" sizes="(min-width: 900px) 33vw, 100vw" width="1280" height="720" loading="lazy" alt="Finished room with notebooks at the desk, a wall screen and the graffiti “Ping first”">
+            <h3>Your room</h3>
+            <p>Save your game and keep building later. Or restart the level and play against the clock.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Levels -->
+    <section id="levels" class="dc-levels">
+      <div class="wrap dc-split">
+        <div>
+          <h2>Seven levels, from cable to core switch</h2>
+          <p class="section-lead">Every level starts empty, with a budget and a build plan. If you like, the build is done for you and you only configure.</p>
+          <div class="table-wrap">
+            <table class="dc-table">
+              <thead><tr><th>Level</th><th>Task</th><th>Topics</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>Connect two notebooks</td><td>Cable, IPv4, ping</td></tr>
+                <tr><td>2</td><td>Build a rack, patch, uplink</td><td>Rack, patch panel, power</td></tr>
+                <tr><td>3</td><td>Set up a switch on the console</td><td>Console, management address, saving</td></tr>
+                <tr><td>4</td><td>Router: connect two networks</td><td>Subnets, gateway, SSH</td></tr>
+                <tr><td>5</td><td>Firewall: LAN and DMZ</td><td>Firewall rules, DMZ</td></tr>
+                <tr><td>6</td><td>Fibre uplink</td><td>SFP, fibre</td></tr>
+                <tr><td>7</td><td>Core switch: route VLANs</td><td>Layer 3, VLAN, SSH</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="dc-note">Plus free building without a budget and a ready-made demo datacenter with 8 racks and over 140 devices (both with an access code).</p>
+        </div>
+        <figure class="dc-shot">
+          <img src="../img/dc/demo-rz.webp" srcset="../img/dc/demo-rz-1x.webp 640w, ../img/dc/demo-rz.webp 1280w" sizes="(min-width: 900px) 50vw, 100vw" width="1280" height="720" loading="lazy" alt="Screenshot from the game: demo datacenter with full racks, a desk with three notebooks and a minimap">
+          <figcaption>The demo datacenter in the game, with the minimap at the top right and the keys at the bottom.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Klasse -->
+    <section id="klasse" class="dc-class">
+      <div class="wrap dc-split dc-split-rev">
+        <figure class="dc-shot">
+          <img src="../img/dc/verbund.webp" srcset="../img/dc/verbund-1x.webp 640w, ../img/dc/verbund.webp 1280w" sizes="(min-width: 900px) 50vw, 100vw" width="1280" height="720" loading="lazy" alt="Aisle between two rows of racks with the caption “5 × Verbund”">
+        </figure>
+        <div>
+          <h2>The whole class builds one network</h2>
+          <p class="section-lead">Every workstation builds its own site with its own addresses and connects it to the provider line. Just like the <a class="link" href="index.html#verbund">leyoNET class network</a>.</p>
+          <ul class="dc-list">
+            <li><b>Five class network tasks</b> from “Connecting to the Alpine network” (default route) to “Your own autonomous system” (BGP, OSPF, ACL).</li>
+            <li><b>Dashboard for the projector:</b> map, tiles and ticker show who is connected, online or done.</li>
+            <li><b>Sign-off:</b> the teacher checks all seats at the push of a button, and the result appears in the game.</li>
+            <li><b>Honestly computed:</b> the game only sends intentions. The server replays them in the same core and decides what works.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Steuerung -->
+    <section class="dc-keys" aria-labelledby="keys-title">
+      <div class="wrap">
+        <h2 id="keys-title">Controls</h2>
+        <p class="section-lead">With keyboard and mouse, like any game. All keys can be remapped in the game; on the iPad there are touch controls (being tested).</p>
+        <dl class="dc-keylist">
+          <div><dt><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></dt><dd>walk</dd></div>
+          <div><dt><kbd>Shift</kbd></dt><dd>run</dd></div>
+          <div><dt><kbd>E</kbd> / click</dt><dd>use, mount, plug in</dd></div>
+          <div><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>take in hand</dd></div>
+          <div><dt><kbd>B</kbd></dt><dd>Shop</dd></div>
+          <div><dt><kbd>I</kbd></dt><dd>Inventory</dd></div>
+          <div><dt><kbd>N</kbd></dt><dd>Network diagram</dd></div>
+          <div><dt><kbd>R</kbd></dt><dd>remove</dd></div>
+          <div><dt><kbd>L</kbd></dt><dd>Level</dd></div>
+          <div><dt><kbd>H</kbd></dt><dd>Help</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- Technik und Herkunft -->
+    <section id="technik" class="dc-tech">
+      <div class="wrap dc-split">
+        <div>
+          <h2>Technology and origin</h2>
+          <ul class="dc-list">
+            <li><b>In the browser:</b> three.js with WebGL 2, graphics levels low/medium/high for school laptops. The first start loads about 20 MB, after that it comes from the cache.</li>
+            <li><b>On the leyoNET core:</b> topology, command line, simulation and task checking come unchanged from <a class="link" href="index.html">leyoNET</a>.</li>
+            <li><b>Built in-house:</b> rooms and devices are generated in Blender from scripts, with free textures (CC0). A check in every build verifies the origin and licence of all components.</li>
+            <li><b>Open source:</b> AGPL-3.0, like leyoNET. The source code is on <a class="link" href="https://github.com/vonam-git/leyoNET-DC">GitHub</a>.</li>
+            <li><b>Work in progress:</b> leyoNET DC is an early version. Feedback helps a lot, easiest via <a class="link" href="../impressum.html#kontakt">contact</a>.</li>
+          </ul>
+          <p>leyoNET DC is developed by <b>Mark</b> with the help of AI and builds on the leyoNET core by Mark and Mika.</p>
+        </div>
+        <figure class="dc-shot">
+          <img src="../img/dc/dns.webp" srcset="../img/dc/dns-1x.webp 640w, ../img/dc/dns.webp 1280w" sizes="(min-width: 900px) 50vw, 100vw" width="1280" height="720" loading="lazy" alt="Graffiti on the concrete wall: “It’s always DNS.”">
+          <figcaption>Sayings on the wall (in German in the game): “It’s always DNS.”, “Ping first.”, “Have you tried restarting?”</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Schluss: spielen und unterstützen -->
+    <section class="dc-end">
+      <div class="wrap dc-end-box">
+        <img src="../img/dc/poster.webp" width="1280" height="720" loading="lazy" alt="leyoNET DC – the datacenter simulator. In the browser. Free.">
+        <div>
+          <h2>Lights on.</h2>
+          <p>The game runs on dc.leyonet.ch, free and with nothing to install. If you would like to support leyoNET and leyoNET DC, you can find us on Patreon.</p>
+          <div class="cta">
+            <a class="btn btn-ink" href="https://dc.leyonet.ch/">Play now</a>
+            <a class="btn btn-line" href="https://patreon.com/leyonet">Support on Patreon</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <p>leyoNET DC is developed by Mark with the help of AI, on the leyoNET core by Mark and Mika.</p>
+      <ul>
+        <li><a href="index.html">leyoNET</a></li>
+        <li><a href="../wiki/en/">Wiki</a></li>
+        <li><a href="https://github.com/vonam-git/leyoNET-DC">GitHub</a></li>
+        <li><a href="https://patreon.com/leyonet">Patreon</a></li>
+        <li><a href="../impressum.html#kontakt">Contact</a></li>
+        <li><a href="../impressum.html">Legal notice</a></li>
+        <li><a href="../datenschutz.html">Privacy</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>
