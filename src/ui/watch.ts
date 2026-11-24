@@ -21,8 +21,9 @@ export async function startWatch(code: string, admin?: string, label?: string, e
     editor.viewOnly = true;
     editor.notify(t('classLive.edit.idle'));
   };
-  await session.watch(code, (p) => editor.replace(p.topology, { undoable: edit, tasks: p.tasks ?? null, snapshots: p.snapshots ?? [] }), admin, label, edit);
-  const error = session.watching?.error;
+  // Gibt false zurück, wenn inzwischen eine andere Session angeklickt wurde: dann nichts mehr tun.
+  if (!(await session.watch(code, (p) => editor.replace(p.topology, { undoable: edit, tasks: p.tasks ?? null, snapshots: p.snapshots ?? [] }), admin, label, edit))) return false;
+  const error = session.watching?.code === code ? session.watching.error : undefined;
   if (error && session.watching?.updated === null) {
     await stopWatch();
     editor.notify(t(`session.error.${error === 'unknownSession' || error === 'offline' || error === 'rateLimited' ? error : 'other'}`), 'error');

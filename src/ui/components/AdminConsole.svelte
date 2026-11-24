@@ -20,6 +20,7 @@
   import AdminCatalog from './AdminCatalog.svelte';
   import AdminTenants from './AdminTenants.svelte';
   import AdminSessions from './AdminSessions.svelte';
+  import AdminWebsite from './AdminWebsite.svelte';
   import AdminSecurity from './AdminSecurity.svelte';
   import VerbundDashboard from './VerbundDashboard.svelte';
   import ClassCodeBig from './ClassCodeBig.svelte';
@@ -137,7 +138,7 @@
     counts: { connected: number; changed24h: number; single: number; class: number; exam: number };
   }
 
-  type Section = 'overview' | 'exams' | 'classes' | 'sessions' | 'tenants' | 'catalog' | 'feedback' | 'settings' | 'security' | 'checks';
+  type Section = 'overview' | 'exams' | 'classes' | 'sessions' | 'website' | 'tenants' | 'catalog' | 'feedback' | 'settings' | 'security' | 'checks';
 
   // --- Anmeldung -------------------------------------------------------------------------
   let token = $state<string | null>(adminToken.value);
@@ -254,7 +255,7 @@
     } else {
       feedback = [];
       checks = null;
-      if (['settings', 'feedback', 'checks', 'catalog'].includes(section) || (section === 'tenants' && overview.me.role !== 'school')) section = 'overview';
+      if (['settings', 'feedback', 'checks', 'catalog', 'website'].includes(section) || (section === 'tenants' && overview.me.role !== 'school')) section = 'overview';
     }
     await refreshLive();
     if (openClass) {
@@ -549,6 +550,7 @@
           ...(role !== 'teacher' ? [{ id: 'tenants' as Section, icon: 'key' }] : []),
           ...(role === 'super'
             ? [
+                { id: 'website' as Section, icon: 'globe' },
                 { id: 'catalog' as Section, icon: 'star' },
                 { id: 'feedback' as Section, icon: 'message', ...(overview?.feedbackOpen ? { badge: String(overview.feedbackOpen), tone: 'warn' as const } : {}) },
                 { id: 'settings' as Section, icon: 'gear' },
@@ -808,6 +810,8 @@
         <AdminExams {call} {version} focus={focusExam ?? running[0]?.id ?? null} {notify} onwatch={(code, name) => void watch(code, name)} />
       {:else if section === 'sessions'}
         <AdminSessions {call} {notify} {version} onopen={(c) => void loadSession(c)} onwatch={(c, name) => void watch(c, name)} />
+      {:else if section === 'website' && role === 'super'}
+        <AdminWebsite {call} {version} />
       {:else if section === 'tenants' && role !== 'teacher'}
         <AdminTenants {call} role={role === 'school' ? 'school' : 'super'} {notify} />
       {:else if section === 'catalog'}

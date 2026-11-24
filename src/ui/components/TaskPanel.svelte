@@ -5,7 +5,7 @@
   import { ui } from '../state/ui.svelte';
   import { examMode } from '../state/exam.svelte';
   import { session } from '../state/session.svelte';
-  import { isLargeTask, taskView } from '../state/taskView.svelte';
+  import { isLargeTask, taskKey, taskView } from '../state/taskView.svelte';
   import TaskBody from './TaskBody.svelte';
 
   /** Aufgabe in der Seitenleiste; «Gross anzeigen» öffnet sie in einem eigenen Fenster. */
@@ -19,14 +19,16 @@
     taskView.reset();
   });
 
-  // Neue grosse Aufgabe (z.B. aus dem Katalog): gleich im Fenster zeigen. Nicht beim Ansehen
-  // einer Session: dort kommt bei jedem neuen Stand dieselbe Aufgabe neu an.
-  let shownFor: unknown = null;
+  // Neue grosse Aufgabe (z.B. aus dem Katalog): gleich im Fenster zeigen. Verglichen wird der
+  // Inhalt, nicht das Objekt: Beim Ansehen einer Session und bei Lernenden, deren Lehrperson gerade
+  // bearbeitet, kommt bei jedem neuen Stand dieselbe Aufgabe neu an und soll nicht jedes Mal aufspringen.
+  let shownFor: string | null = null;
   $effect(() => {
     const current = editor.tasks;
-    if (current && current !== shownFor && shownFor !== null && isLargeTask(current) && !locked && !session.watching) taskView.show();
+    const key = current ? taskKey(current) : '';
+    if (current && key !== shownFor && shownFor !== null && isLargeTask(current) && !locked && !session.watching && !session.teacherEditing) taskView.show();
     if (!current) taskView.close();
-    shownFor = current ?? 0;
+    shownFor = key;
   });
 </script>
 

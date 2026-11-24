@@ -19,7 +19,7 @@
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
     "tauri": "tauri",
-    "test:server": "node --test server/app.test.cjs server/admin.test.cjs server/limits.test.cjs server/beta.test.cjs server/haertung.test.cjs",
+    "test:server": "node --test server/app.test.cjs server/admin.test.cjs server/limits.test.cjs server/beta.test.cjs server/haertung.test.cjs server/website.test.cjs",
     "arbeitsblaetter": "node scripts/arbeitsblaetter/erzeugen.mjs",
     "server": "node server/start.cjs"
   },

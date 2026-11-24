@@ -1,4 +1,5 @@
-/* leyonet.ch – kleine Skripte ohne Bibliotheken und ohne Anfragen nach aussen. */
+/* leyonet.ch – kleine Skripte ohne Bibliotheken. Einzige Anfrage nach aussen: die anonyme
+   Besucherzählung an app.leyonet.ch (siehe ganz unten und die Datenschutzerklärung). */
 (() => {
   'use strict';
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -386,6 +387,80 @@
     counters.forEach((el) => {
       el.textContent = '0';
       io.observe(el);
+    });
+  }
+
+  /* --- Anonyme Besucherzählung ---------------------------------------------------------
+     Meldet an den eigenen Server (app.leyonet.ch) nur: welche Seite, beim ersten Aufruf eines
+     Besuchs zusätzlich die Herkunftsseite (nur der Rechnername), Sprache, Zeitzone (ergibt das
+     Land ungefähr) und ob Handy, Tablet oder Computer. Keine Cookies, nichts im Browser
+     gespeichert, keine Kennung; der Server speichert nur Tageszähler und keine IP-Adressen.
+     Bei «Do Not Track» oder «Global Privacy Control» wird nichts gemeldet. */
+  const STATS_URL = 'https://app.leyonet.ch/api/hit';
+  const optOut = navigator.globalPrivacyControl === true || navigator.doNotTrack === '1' || window.doNotTrack === '1';
+  const counting = !optOut && /^(www\.)?leyonet\.ch$/.test(location.hostname) && typeof navigator.sendBeacon === 'function';
+  const report = (data) => {
+    if (!counting) return;
+    try {
+      navigator.sendBeacon(STATS_URL, JSON.stringify(data));
+    } catch {
+      /* Zählung ist unwichtig */
+    }
+  };
+  if (counting) {
+    let host = '';
+    try {
+      host = document.referrer ? new URL(document.referrer).hostname : '';
+    } catch {
+      host = '';
+    }
+    const nav = performance.getEntriesByType?.('navigation')?.[0];
+    const repeat = nav && (nav.type === 'reload' || nav.type === 'back_forward');
+    // Neuer Besuch: von aussen oder direkt aufgerufen (nicht von einer anderen Seite von leyonet.ch).
+    const fresh = !repeat && !/(^|\.)leyonet\.ch$/.test(host);
+    const view = { e: 'view', p: location.pathname };
+    if (fresh) {
+      const width = Math.min(window.screen?.width || innerWidth, innerWidth || 9999);
+      Object.assign(view, {
+        n: 1,
+        r: host,
+        l: (navigator.language || '').slice(0, 2).toLowerCase(),
+        z: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+        w: width < 700 ? 'm' : width < 1100 ? 't' : 'd',
+      });
+    }
+    // Erst wenn die Seite sichtbar ist (nicht beim Vorladen im Hintergrund).
+    if (document.visibilityState === 'visible') report(view);
+    else document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && report(view), { once: true });
+  }
+  /** Klicks auf Downloads und die Apps zählen (nur das Ziel, z.B. «windows-setup»). */
+  const targetOf = (href) => {
+    const m = /\/releases\/latest\/download\/([^/?#]+)$/.exec(href);
+    if (m) {
+      const file = m[1].toLowerCase();
+      if (file.endsWith('-setup.exe')) return 'windows-setup';
+      if (file.endsWith('.msi')) return 'windows-msi';
+      if (file.endsWith('.dmg')) return 'macos';
+      if (file.endsWith('.appimage')) return 'linux-appimage';
+      if (file.endsWith('.deb')) return 'linux-deb';
+      if (file.endsWith('.rpm')) return 'linux-rpm';
+      if (file === 'leyonet.html') return 'html';
+      if (file.startsWith('leyonet-arbeitsbl')) return 'arbeitsblaetter';
+      if (file.startsWith('sha256')) return 'sha256';
+      return null;
+    }
+    if (/^https:\/\/app\.leyonet\.ch\/\?schaufenster/.test(href)) return 'schaufenster';
+    if (/^https:\/\/app\.leyonet\.ch\//.test(href)) return 'app';
+    if (/^https:\/\/dc\.leyonet\.ch\//.test(href)) return 'dc';
+    if (/^https:\/\/github\.com\/vonam-git\/leyonet\/releases\/?$/i.test(href)) return 'releases';
+    if (/^https:\/\/github\.com\/vonam-git\/leyonet\/?$/i.test(href)) return 'github';
+    return null;
+  };
+  if (counting) {
+    document.addEventListener('click', (event) => {
+      const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+      const target = link ? targetOf(link.href) : null;
+      if (target) report({ e: 'click', c: target });
     });
   }
 })();

@@ -571,16 +571,22 @@ export class SessionStore {
    * Fremde Session nur ansehen und laufend neu laden. Mit Admin-Token über die Admin-Schnittstelle
    * (Prüfungsplatz), sonst mit dem Session-Code. Schreibt nie und verdrängt niemanden.
    */
-  async watch(code: string, onLoad: (p: LoadedProject) => void, admin?: string, label?: string, edit = false) {
-    await this.stopWatch();
+  async watch(code: string, onLoad: (p: LoadedProject) => void, admin?: string, label?: string, edit = false): Promise<boolean> {
+    // Jeder Aufruf bekommt eine Nummer. Klickt die Lehrperson schnell nacheinander zwei Sessions an,
+    // gewinnt der letzte Klick: Ein älterer Aufruf, der später fertig wird, ändert nichts mehr.
+    const run = ++this.#watchRun;
+    await this.stopWatch(run);
+    if (run !== this.#watchRun) return false;
     this.#onWatch = onLoad;
     this.watching = { code, updated: null, connected: false, ...(admin ? { admin } : {}), ...(label ? { label } : {}), ...(edit && admin ? { edit: true } : {}) };
     await this.#refreshWatch();
+    if (run !== this.#watchRun) return false;
     if (this.watching?.edit) {
-      if (this.watching.updated === null) return;
+      if (this.watching.updated === null) return true;
       // Bearbeiten: Lernende sehen nur zu, solange die Lehrperson sich meldet.
       this.#editAt = Date.now();
       await this.#beat(true);
+      if (run !== this.#watchRun) return false;
       this.#watchTimer = setInterval(() => {
         // Lange nichts geändert (z.B. Tab am Beamer vergessen): zurück zu «nur ansehen».
         if (Date.now() - this.#editAt > EDIT_IDLE_MS) {
@@ -594,10 +600,14 @@ export class SessionStore {
         void this.#beat(true);
         void this.#refreshWatch();
       }, EDIT_BEAT_MS);
-      return;
+      return true;
     }
     this.#watchTimer = setInterval(() => void this.#refreshWatch(), WATCH_MS);
+    return true;
   }
+
+  /** Laufnummer des aktuellen Ansehens (siehe watch). */
+  #watchRun = 0;
 
   #editPending: string | null = null;
   #editAt = 0;
@@ -669,18 +679,26 @@ export class SessionStore {
       const parsed = parseProject(JSON.stringify(data.project));
       if (parsed.ok) this.#onWatch?.(parsed);
     } catch (error) {
-      if (this.watching) this.watching = { ...this.watching, error: error instanceof ApiError ? error.code : 'error' };
+      // Nur der eigenen Session den Fehler anhängen, nicht einer inzwischen geöffneten anderen.
+      if (this.watching?.code === w.code) this.watching = { ...this.watching, error: error instanceof ApiError ? error.code : 'error' };
     }
   }
 
-  async stopWatch() {
+  /**
+   * Ansehen beenden. Ohne Nummer (Knopf «Beenden») gilt auch ein noch laufendes Öffnen als
+   * abgebrochen; watch() übergibt seine eigene Nummer.
+   */
+  async stopWatch(run = ++this.#watchRun) {
     clearInterval(this.#watchTimer);
     this.#watchTimer = undefined;
-    if (this.watching?.edit) {
+    const w = this.watching;
+    if (w?.edit) {
       clearTimeout(this.#editTimer);
       await this.#flushEdit();
       await this.#beat(false);
     }
+    // Nur aufräumen, wenn inzwischen nicht schon eine andere Session geöffnet wurde.
+    if (run !== this.#watchRun && this.watching !== w) return;
     this.watching = null;
     this.#onWatch = null;
   }

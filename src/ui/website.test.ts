@@ -109,9 +109,17 @@ describe('Website leyonet.ch', () => {
     }
   });
 
-  it('Skripte nur aus eigenen Dateien, ohne Netzwerkzugriff', () => {
+  it('Skripte nur aus eigenen Dateien; einzige Verbindung ist die anonyme Zählung an den eigenen Server', () => {
     const js = readFileSync(join(site, 'js', 'site.js'), 'utf8');
-    expect(js).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|sendBeacon|document\.cookie|localStorage|innerHTML\s*=/);
+    expect(js).not.toMatch(/fetch\(|XMLHttpRequest|WebSocket|EventSource|document\.cookie|localStorage|sessionStorage|indexedDB|innerHTML\s*=/);
+    // Genau ein Ziel: app.leyonet.ch/api/hit, per sendBeacon, und nur ohne «Do Not Track»/GPC.
+    expect([...js.matchAll(/https:\/\/[a-z.]+\/api\/[a-z]+/g)].map((m) => m[0])).toEqual(['https://app.leyonet.ch/api/hit']);
+    expect(js.match(/sendBeacon\(/g)).toHaveLength(1);
+    expect(js).toMatch(/globalPrivacyControl/);
+    expect(js).toMatch(/doNotTrack/);
+    // Keine Gerätemerkmale für Fingerabdrücke (nur grobe Gerätegrösse).
+    expect(js).not.toMatch(/userAgent|canvas\.toDataURL|getContext\(|hardwareConcurrency|deviceMemory|plugins/);
+    expect(readFileSync(join(site, '.htaccess'), 'utf8')).toMatch(/connect-src https:\/\/app\.leyonet\.ch;/);
   });
 
   it('keine persönlichen Kontaktdaten im Repo: Impressum und Datenschutz als Vorlage mit Platzhaltern, nur info@leyonet.ch', () => {
