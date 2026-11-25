@@ -68,4 +68,4 @@ Die Richtlinie gilt sofort für alle Sitzungen. In der lokalen Datei und der Des
 | Dienste | `service.dhcp`, `service.dns`, `service.web`, `service.mail`, `service.voip` |
 | Netzwerk | `net.portShutdown`, `net.macEdit`, `net.cableDamage`, `net.vlan`, `net.stp`, `net.poe`, `net.qos`, `net.wlanMesh`, `net.dhcpRelay`, `net.nat`, `net.subinterfaces`, `net.staticNat`, `net.cgnat`, `net.firewall`, `net.acl`, `net.vpn`, `net.ipv6`, `net.dsLite`, `net.cli`, `net.ssh` |
 | Routing | `routing.auto`, `routing.static`, `routing.rip`, `routing.ospf`, `routing.bgp` |
-| Werkzeuge | `tool.sniffer`, `tool.osi`, `tool.hex`, `tool.frame`, `tool.pcap`, `tool.ipCalculator`, `tool.areas`, `tool.snapshots`, `tool.addressBadges`, `tool.floors`, `tool.costs`, `tool.prices`, `tool.racks`, `tool.taskEditor` |
+| Werkzeuge | `tool.sniffer`, `tool.osi`, `tool.hex`, `tool.frame`, `tool.pcap`, `tool.scanner`, `tool.ipCalculator`, `tool.areas`, `tool.snapshots`, `tool.addressBadges`, `tool.floors`, `tool.costs`, `tool.prices`, `tool.racks`, `tool.taskEditor` |

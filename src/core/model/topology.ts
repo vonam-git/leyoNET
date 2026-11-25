@@ -126,6 +126,7 @@ export type ErrorCode =
   | 'duplicateRoute'
   | 'dhcpServerNeedsStatic'
   | 'notAServer'
+  | 'notAComputer'
   | 'notPoeCapable'
   | 'notQosCapable'
   | 'invalidRate'
@@ -1505,6 +1506,17 @@ export function setDnsForwarder(t: Topology, id: string, address: string): Resul
       return { ...d, dnsServer: value ? { ...rest, forwarder: value } : rest };
     }),
   );
+}
+
+/** Geräte, auf denen sich Programme wie der Netzscanner installieren lassen. */
+export const canInstall = (type: DeviceType): boolean => type === 'pc' || type === 'notebook' || type === 'server';
+
+/** Netzscanner installieren oder entfernen. */
+export function setScanner(t: Topology, id: string, on: boolean): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canInstall(device.type)) return fail('notAComputer');
+  return ok(updateDevice(t, id, (d) => (on ? { ...d, scanner: true } : without(d, 'scanner'))));
 }
 
 /** Beim Einschalten erhält der Webserver eine Startseite, damit sofort etwas abrufbar ist. */

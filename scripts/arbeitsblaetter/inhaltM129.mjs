@@ -702,7 +702,43 @@ export const M129_SHEETS = [
             },
           },
           { tip: 'Windows beginnt mit TTL 128, Linux und leyoNET mit 64. An der TTL einer Antwort lässt sich darum oft das Betriebssystem erraten.' },
-          { check: 6 },
+          { h: 'Mit der TTL spielen' },
+          { p: 'Mit **ping -i <TTL>** wählst du die TTL der Anfrage selbst (Windows-Schreibweise). Pinge von PC W11 den Webserver News im Internet: **ping -i 1 198.51.100.10**, dann -i 2, -i 3 …' },
+          {
+            fields: [
+              { label: 'Antwort bei TTL 1 von', name: 'ttl_1', answer: '192.168.1.1 (Firewall): TTL abgelaufen' },
+              { label: 'Antwort bei TTL 2 von', name: 'ttl_2', answer: '203.0.113.1 (Internet): TTL abgelaufen' },
+              { label: 'Antwort bei TTL 3 von', name: 'ttl_3', answer: '198.51.100.10 (Webserver News)' },
+              { label: 'Kleinste TTL mit Antwort', name: 'ttl_min', answer: '3' },
+              { label: 'ICMP-Typ von «TTL abgelaufen»', name: 'ttl_typ', answer: '11 (Time Exceeded)' },
+            ].map((f) => ({ ...f, wide: true })),
+          },
+          {
+            question: {
+              name: 'ttlnull',
+              lines: 3,
+              text: 'Siehst du in der Paketliste je ein Paket mit TTL 0? Erkläre, und vergleiche mit **ping -i 0**.',
+              answer: 'Nein. Ein Router senkt die TTL, bevor er weiterleitet; wird sie dabei 0, verwirft er das Paket und sendet es gar nicht mehr. «ping -i 0» lehnt schon das Gerät ab: erlaubt sind 1 bis 255.',
+            },
+          },
+          {
+            question: {
+              name: 'tracert',
+              text: 'Vergleiche mit **tracert 198.51.100.10**. Was hat tracert mit deinem Versuch zu tun?',
+              answer: 'tracert macht genau das automatisch: Es beginnt mit TTL 1 und erhöht sie, bis das Ziel antwortet. Jeder Router auf dem Weg verrät sich durch «TTL abgelaufen».',
+            },
+          },
+          { h: 'Dauerping' },
+          { p: 'Starte **ping -t 10.10.1.20** und schalte während des Laufs den Anschluss des Webservers ab und wieder ein. Beende mit **Strg+C**.' },
+          {
+            question: {
+              name: 'dauerping',
+              lines: 3,
+              text: 'Was zeigt der Dauerping beim Abschalten, was nach dem Einschalten? Was steht in der Statistik?',
+              answer: 'Beim Abschalten «Zeitüberschreitung» (rot), solange keine Antwort kommt. Nach dem Einschalten kommen die Antworten von selbst wieder (grün). Die Statistik nennt gesendete, empfangene und verlorene Pakete in Prozent.',
+            },
+          },
+          { check: 10 },
         ],
       },
       {
@@ -815,6 +851,105 @@ export const M129_SHEETS = [
             fields: [
               { label: 'Statuszeile der HTTP-Antwort', name: 'status', answer: 'HTTP/1.1 200 OK', wide: true },
             ],
+          },
+          { check: 7 },
+        ],
+      },
+    ],
+  },
+  // --- Netzscan ---------------------------------------------------------------------------
+  {
+    ...M129,
+    file: 'M129_Netzscan',
+    block: 'Protokollanalyse',
+    title: 'Netzscan',
+    subtitle: 'Geräte und offene Ports finden, Firewall von aussen prüfen · Richtzeit 2 × 45 Minuten',
+    entries: ['m129-lab-a4', 'm129-lab-a5'],
+    projects: ['M129_Netzscan_A4', 'M129_Netzscan_A5'],
+    intro: [
+      { p: 'Wer ein Netz schützen will, muss wissen, was darin läuft. Ein **Netzscanner** findet Geräte und prüft, welche TCP-Ports erreichbar sind. Er schickt an jeden Port ein **SYN** und deutet die Antwort.' },
+      {
+        table: [
+          ['Antwort auf SYN', 'Zustand', 'Bedeutung'],
+          ['SYN/ACK', 'offen', 'Ein Dienst nimmt Verbindungen an.'],
+          ['RST', 'geschlossen', 'Das Gerät ist da, aber kein Dienst hört auf diesen Port.'],
+          ['keine', 'gefiltert', 'Etwas verwirft das Paket, meist eine Firewall.'],
+        ],
+        widths: [1.2, 1.2, 3],
+      },
+      { box: '**Rechtliches:** Fremde Netze darf man nur mit ausdrücklicher Erlaubnis scannen. In leyoNET ist alles simuliert.' },
+      { tip: 'Grafisch: Desktop » Netzscanner. Befehlszeile: nmap 192.168.1.0/24 (Geräte und Ports), nmap -sn … (nur Geräte), nmap -Pn … (ohne Suche), nmap -p 22,80 … (bestimmte Ports).' },
+    ],
+    sections: [
+      {
+        id: 'a4',
+        heading: 'Auftrag 4 – Netzscan',
+        stars: 3,
+        catalog: 'Protokollanalyse – Auftrag 4: Netzscan',
+        blocks: [
+          { p: 'Suche von PC W11 alle Geräte im Intranet **192.168.1.0/24** und prüfe ihre Ports.' },
+          {
+            fields: [
+              { label: 'Anzahl Geräte (mit PC W11)', name: 'anzahl', answer: '4' },
+              { label: 'Unerwarteter Webserver', name: 'unerwartet', answer: '192.168.1.100 (Testgerät)' },
+              { label: 'Offene Ports auf 10.10.1.20', name: 'offen', answer: '25, 80, 110, 143' },
+              { label: 'Router bis 10.10.1.20 (aus TTL)', name: 'hops', answer: '1 (TTL 63)' },
+            ],
+          },
+          {
+            question: {
+              name: 'arp',
+              lines: 3,
+              text: 'Filtere die Paketliste mit **arp**. Wie findet der Scanner Geräte im eigenen Netz, und warum geht das nicht für Geräte in der DMZ?',
+              answer: 'Er fragt jede Adresse per ARP-Broadcast; wer da ist, antwortet mit seiner MAC-Adresse. Broadcasts bleiben im eigenen Netz, der Router leitet sie nicht weiter. Geräte in der DMZ findet er per ICMP-Echo (Ping).',
+            },
+          },
+          {
+            question: {
+              name: 'syn',
+              lines: 3,
+              text: 'Filtere mit **tcp**. Zeichne den Ablauf für einen offenen und einen geschlossenen Port auf (Flags der Pakete).',
+              answer: 'Offen: SYN, SYN/ACK, dann bricht der Scanner mit RST ab (halb offene Verbindung). Geschlossen: SYN, RST/ACK.',
+            },
+          },
+          {
+            question: {
+              name: 'beheben',
+              text: 'Was hast du abgeschaltet, und warum ist jeder unnötige Dienst ein Risiko?',
+              answer: 'Den Webserver auf dem Testgerät und den Mailserver auf dem Webserver DMZ. Jeder Dienst kann Fehler haben und wird vielleicht nicht gepflegt; was nicht läuft, kann niemand angreifen.',
+            },
+          },
+          { check: 8 },
+        ],
+      },
+      {
+        id: 'a5',
+        heading: 'Auftrag 5 – Die Firewall von aussen prüfen',
+        stars: 4,
+        catalog: 'Protokollanalyse – Auftrag 5: Die Firewall von aussen prüfen',
+        blocks: [
+          { p: 'Scanne vom Prüfgerät im Internet die öffentliche Adresse **203.0.113.2** (Vorgehen «Ports prüfen ohne Suche» oder **nmap -Pn 203.0.113.2**).' },
+          {
+            fields: [
+              { label: 'Offene Ports vorher', name: 'vorher', answer: '25, 80, 110, 143' },
+              { label: 'Offene Ports nachher', name: 'nachher', answer: '25, 80' },
+              { label: 'Zustand von Port 443', name: 'zustand', answer: 'gefiltert' },
+            ].map((f) => ({ ...f, wide: true })),
+          },
+          {
+            question: {
+              name: 'nat',
+              lines: 3,
+              text: 'Die Dienste laufen auf 10.10.1.20. Warum sieht das Prüfgerät sie trotzdem, und unter welcher Adresse?',
+              answer: 'Die Firewall leitet die Ports weiter (Portweiterleitung, DNAT). Von aussen ist nur die öffentliche Adresse 203.0.113.2 sichtbar; die private Adresse 10.10.1.20 wird im Internet nicht geroutet.',
+            },
+          },
+          {
+            question: {
+              name: 'innen',
+              text: 'Warum bleibt der Abruf von E-Mail aus dem Intranet möglich, obwohl 110 und 143 von aussen zu sind?',
+              answer: 'Entfernt wurde nur die Weiterleitung an der WAN-Adresse. Aus dem Intranet spricht man den Server direkt unter 10.10.1.20 an; der Mailserver selbst läuft weiter.',
+            },
           },
           { check: 7 },
         ],

@@ -4,7 +4,7 @@ import type { EthernetFrame } from './frames';
 import type { Device } from '../model/types';
 import { formatIp, parseIp } from '../net/ipv4';
 import { lookupRoute } from '../net/routing';
-import { PingRun, TracerouteRun, icmpView, type IcmpApp, type IcmpHost } from './apps';
+import { PingRun, TracerouteRun, icmpView, type IcmpApp, type IcmpHost, type PingOptions } from './apps';
 import { formatIp6, parseIp6 } from '../net/ipv6';
 import type { Ip6State } from './ip6';
 import type { FirewallState } from './firewall';
@@ -14,6 +14,7 @@ import { DHCP_CLIENT_PORT, DHCP_SERVER_PORT, DNS_PORT, type Ipv4Packet, type Ipv
 import { HttpClient, HttpServer, type BrowserState } from './http';
 import { IpNode, asIpv4View, type ArpEntry } from './ip';
 import { MailClient, MailServer, type MailClientState } from './mail';
+import { NetScan, type ScanState } from './scan';
 import type { NodeContext } from './simulation';
 import { SshClient } from './ssh';
 import { TcpStack, type TcpState } from './tcp';
@@ -46,6 +47,10 @@ export interface HostState {
   dhcpLeases?: LeaseRecord[];
   dnsCache: DnsCacheEntry[];
   connections: ConnectionInfo[];
+  /** Dauerping oder Ping läuft noch (Stopp mit Strg+C). */
+  pinging?: boolean;
+  /** Netzscanner: laufende oder letzte Suche. */
+  scan?: ScanState;
   browser?: BrowserState;
   mail: MailClientState;
   mailboxes?: { user: string; count: number }[];
@@ -77,7 +82,8 @@ export class HostNode extends IpNode {
   readonly phone: SipPhone;
   readonly pbx: SipServer;
   readonly iperf: Iperf;
-  #ping: IcmpApp | null = null;
+  readonly scanner = new NetScan(this);
+  #ping: PingRun | null = null;
   #trace: IcmpApp | null = null;
   #icmpId = 0;
 
@@ -148,6 +154,7 @@ export class HostNode extends IpNode {
   protected override onIcmp(packet: Ipv4Packet) {
     this.#ping?.onIcmp(packet);
     this.#trace?.onIcmp(packet);
+    this.scanner.onIcmp(packet);
   }
 
   /** ICMPv6 für Ping und Traceroute: dieselben Anwendungen, Hop Limit statt TTL. */
@@ -220,6 +227,7 @@ export class HostNode extends IpNode {
   }
 
   protected override onTcp(packet: Ipv4Packet, segment: TcpSegment) {
+    this.scanner.onTcp(packet, segment);
     this.tcp.receive(packet.src, packet.dst, segment);
   }
 
@@ -367,16 +375,23 @@ export class HostNode extends IpNode {
     });
   }
 
-  ping(target: string) {
+  ping(target: string, options: PingOptions = {}) {
+    if (this.#ping?.endless) this.interrupt();
     this.#withTarget(target, 'ping', (ip, name) => {
       this.#ping?.cancel();
       const v6 = parseIp(ip) === null;
       const run = v6
-        ? new PingRun(this.#icmp6, ip, ++this.#icmpId, this.v6.state()?.gateway ?? '', name)
-        : new PingRun(this, ip, ++this.#icmpId, this.effectiveDevice()?.gateway ?? '', name);
+        ? new PingRun(this.#icmp6, ip, ++this.#icmpId, this.v6.state()?.gateway ?? '', name, options)
+        : new PingRun(this, ip, ++this.#icmpId, this.effectiveDevice()?.gateway ?? '', name, options);
       this.#ping = run;
       run.start();
     });
+  }
+
+  /** Strg+C in der Befehlszeile: laufenden Ping und eine mit «nmap» gestartete Suche beenden. */
+  interrupt() {
+    this.#ping?.stop();
+    this.scanner.stop();
   }
 
   traceroute(target: string) {
@@ -428,6 +443,8 @@ export class HostNode extends IpNode {
       arp: this.arpEntries(),
       ...(ipv6 ? { ipv6 } : {}),
       ...(firewall ? { firewall } : {}),
+      ...(this.#ping?.running ? { pinging: true } : {}),
+      ...(this.scanner.state() ? { scan: this.scanner.state()! } : {}),
       address: this.address(),
       dnsCache: this.resolver.cacheEntries(),
       connections: this.connections(),

@@ -19,6 +19,7 @@ Ausfüllbare PDFs zu **allen** Übungen im Aufgaben-Katalog (Werkzeuge » Aufgab
 | [M129_Routing](M129_Routing.pdf) | Statisches Routing, Aufträge 1–3: drei Router statisch, Internet mit NAT, Verwaltungsnetz und SSH | ★★★ ★★★★ ★★★ |
 | [M129_Dynamisches_Routing](M129_Dynamisches_Routing.pdf) | Dynamisches Routing, Aufträge 1–2: RIP, OSPF mit Standardroute | ★★★ ★★★★ |
 | [M129_Protokollanalyse](M129_Protokollanalyse.pdf) | Protokollanalyse, Aufträge 1–3: ICMP und TTL, DHCP, ARP/DNS/HTTP | ★★ ★★★ ★★★★ |
+| [M129_Netzscan](M129_Netzscan.pdf) | Protokollanalyse, Aufträge 4–5: Netzscan, Firewall von aussen prüfen | ★★★ ★★★★ |
 | [M145_UE02_Netzwerk_OldSchool](M145_UE02_Netzwerk_OldSchool.pdf) | Zwei Netze mit einem Router | ★ |
 | [M145_UE03_Portbasiertes_VLAN](M145_UE03_Portbasiertes_VLAN.pdf) | VLAN 10 und 20 an einem Switch | ★★ |
 | [M145_UE04_Trunk_VLAN](M145_UE04_Trunk_VLAN.pdf) | Trunk über zwei Stockwerke | ★★★ |

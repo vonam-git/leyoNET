@@ -5,7 +5,7 @@ import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME } from '../net/routing';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
 import { MAX_DHCP_EXCLUDED, MAX_DHCP_POOLS, canDhcpPool, checkDhcpPool, normalizePool } from '../net/dhcp';
 import { MAC_PATTERN } from '../model/mac';
-import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, PHONE_NUMBER, MAX_STARTUP_CONFIG, canQos, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
+import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, PHONE_NUMBER, MAX_STARTUP_CONFIG, canInstall, canQos, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
 import { ACL_NAME, MAX_ACLS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
 import { MAX_GROUP_SIZE } from '../model/devices';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
@@ -551,6 +551,10 @@ function readDevice(v: unknown, path: string): Device {
       if (parseIp(forwarder) === null && parseIp6(forwarder) === null) throw new Invalid(`${p}.forwarder`);
       device.dnsServer.forwarder = forwarder;
     }
+  }
+  if (o.scanner !== undefined) {
+    if (typeof o.scanner !== 'boolean') throw new Invalid(`${path}.scanner`);
+    if (o.scanner && canInstall(device.type)) device.scanner = true;
   }
   if (o.webServer !== undefined) {
     const p = `${path}.webServer`;

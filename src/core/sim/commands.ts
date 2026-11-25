@@ -3,10 +3,12 @@ import { reverseName } from '../net/dns';
 import { parseIp, parseMask } from '../net/ipv4';
 import { parseIp6 } from '../net/ipv6';
 import { parseDscp } from '../net/qos';
+import { parsePing } from './apps';
 import type { HostNode } from './host';
+import { parsePorts } from './scan';
 
 /** Befehle der simulierten Befehlszeile, angelehnt an Windows ("ipconfig", "tracert"). */
-export const COMMANDS = ['ping', 'tracert', 'nslookup', 'ipconfig', 'ifdown', 'arp', 'netsh', 'netstat', 'ssh', 'call', 'hangup', 'iperf', 'cls', 'help'] as const;
+export const COMMANDS = ['ping', 'tracert', 'nslookup', 'ipconfig', 'ifdown', 'arp', 'netsh', 'netstat', 'nmap', 'ssh', 'call', 'hangup', 'iperf', 'cls', 'help'] as const;
 
 /**
  * Anschluss eines Endgeräts ab- oder einschalten, wie unter Windows oder Linux:
@@ -64,8 +66,17 @@ export function runCommand(host: HostNode, line: string) {
 
   switch (command.toLowerCase()) {
     case 'ping':
-      if (args[0]) host.ping(args[0]);
-      else ctx.print('cmd.usage.ping');
+    {
+      const ping = parsePing(args);
+      if (!('error' in ping)) host.ping(ping.target, ping.options);
+      else if (ping.error === 'usage') ctx.print('cmd.usage.ping');
+      else ctx.print(`ping.${ping.error}`, { value: ping.value ?? '' });
+      return;
+    }
+    // Eigener Netzscanner; der Befehl heisst wie das verbreitete Werkzeug.
+    case 'nmap':
+    case 'scan':
+      scan(host, args);
       return;
     case 'tracert':
     case 'traceroute':
@@ -145,6 +156,40 @@ export function runCommand(host: HostNode, line: string) {
     default:
       ctx.print('cmd.unknown', { cmd: command });
   }
+}
+
+/** «nmap [-sn] [-Pn] [-p Ports] <Ziel>»: Netzscanner in der Befehlszeile (muss installiert sein). */
+function scan(host: HostNode, args: string[]) {
+  const ctx = host.ctx;
+  if (!ctx.device()?.scanner) return ctx.print('scan.notInstalled');
+  const targets: string[] = [];
+  let discoverOnly = false;
+  let skipDiscovery = false;
+  let ports: number[] | undefined;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
+    if (arg === '-sn') discoverOnly = true;
+    else if (arg === '-Pn') skipDiscovery = true;
+    else if (arg === '-sS') continue;
+    else if (/^-p/.test(arg)) {
+      const parsed = parsePorts(arg === '-p' ? (args[++i] ?? '') : arg.slice(2));
+      if ('error' in parsed) return ctx.print(`scan.${parsed.error}`);
+      ports = parsed.ports;
+    } else if (arg.startsWith('-')) return ctx.print('cmd.usage.nmap');
+    else targets.push(arg);
+  }
+  if (!targets.length || (discoverOnly && (skipDiscovery || ports))) return ctx.print('cmd.usage.nmap');
+  const run = (target: string) => {
+    const error = host.scanner.start({ target, discoverOnly, skipDiscovery, ...(ports ? { ports } : {}) }, true);
+    if (error) ctx.print(`scan.${error}`);
+  };
+  // Ein einzelner Name wird per DNS aufgelöst.
+  const name = targets.length === 1 && /[a-z]/i.test(targets[0]!) ? targets[0]! : null;
+  if (!name) return run(targets.join(','));
+  host.resolver.resolveAddress(name, (result) => {
+    if (result.ok && result.type === 'A') run(result.ip);
+    else ctx.print('scan.unknownHost', { name });
+  });
 }
 
 /**

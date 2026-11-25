@@ -31,6 +31,8 @@ export type Check =
   /** Gerät bezieht per DHCP eine Adresse (optional genau diese, optional mit diesem DNS-Server). */
   | { type: 'dhcpLease'; device: string; ip?: string; dns?: string }
   | { type: 'mail'; from: string; to: string }
+  /** TCP-Port von `to`, gesehen von `from`: offen (Standard), geschlossen, gefiltert oder «blocked» (nicht offen). */
+  | { type: 'port'; from: string; to: string; port: number; state?: PortCheckState }
   | { type: 'packetSeen'; protocol: string; from?: string; to?: string }
   /** Router hat ein Netz über ein Routingprotokoll gelernt (oder überhaupt eine Route dorthin). */
   | { type: 'routeLearned'; device: string; network: string; protocol?: 'ospf' | 'rip' | 'bgp' }
@@ -94,6 +96,9 @@ function staticIpv4(device: Device): string | undefined {
 
 const TAG_COLOR_NAMES: readonly TagColor[] = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'gray'];
 
+export const PORT_CHECK_STATES = ['open', 'closed', 'filtered', 'blocked'] as const;
+export type PortCheckState = (typeof PORT_CHECK_STATES)[number];
+
 export const CHECK_TYPES = [
   'deviceCount',
   'connected',
@@ -106,6 +111,7 @@ export const CHECK_TYPES = [
   'http',
   'dhcpLease',
   'mail',
+  'port',
   'packetSeen',
   'routeLearned',
   'neighbors',
@@ -425,6 +431,20 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
         return { id, passed: true };
       }
       return fail(id, 'httpFailed', { url: check.url, detail: status ?? browser?.steps.at(-1)?.code ?? '' });
+    }
+    case 'port': {
+      const from = need(check.from);
+      if (!from) return missing(check.from);
+      const targetDevice = need(check.to);
+      const sim = bootedSimulation(topology);
+      const address = targetDevice ? (staticIpv4(targetDevice) ?? sim.getDeviceState(targetDevice.id).address?.ip) : check.to;
+      if (!address) return fail(id, 'noAddress', { name: check.to });
+      if (sim.scan(from.id, { target: address, ports: [check.port], skipDiscovery: true })) return fail(id, 'portNoScan', { from: from.name, to: check.to });
+      sim.runUntil(BOOT_MS + ACTION_MS);
+      const state = sim.getDeviceState(from.id).scan?.hosts[0]?.ports[0]?.state ?? 'filtered';
+      const wanted = check.state ?? 'open';
+      if (wanted === 'blocked' ? state !== 'open' : state === wanted) return { id, passed: true };
+      return fail(id, 'portState', { to: check.to, port: check.port, state, wanted });
     }
     case 'dhcpLease': {
       const device = need(check.device);
@@ -826,6 +846,14 @@ export function readTasks(value: unknown, invalid: (path: string) => never, read
           const ip = optStr(c.ip, `${cp}.ip`);
           const dns = optStr(c.dns, `${cp}.dns`);
           check = { type, device: str(c.device, `${cp}.device`), ...(ip ? { ip } : {}), ...(dns ? { dns } : {}) };
+          break;
+        }
+        case 'port': {
+          const state = c.state;
+          if (state !== undefined && !(PORT_CHECK_STATES as readonly unknown[]).includes(state)) invalid(`${cp}.state`);
+          const port = optNum(c.port, `${cp}.port`);
+          if (port === undefined || !Number.isInteger(port) || port < 1 || port > 65535) invalid(`${cp}.port`);
+          check = { type, from: str(c.from, `${cp}.from`), to: str(c.to, `${cp}.to`), port: port!, ...(state !== undefined ? { state: state as PortCheckState } : {}) };
           break;
         }
         case 'mail':

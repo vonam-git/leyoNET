@@ -582,7 +582,7 @@ test('Modul 129: Reiter, Übung mit Frage starten', async ({ page }) => {
   const catalog = page.getByRole('dialog');
   await catalog.getByRole('tab', { name: /M129/ }).click();
   await expect(catalog.getByRole('tab', { name: /M129/ })).toHaveAttribute('aria-selected', 'true');
-  await expect(catalog.locator('li')).toHaveCount(11);
+  await expect(catalog.locator('li')).toHaveCount(13);
   await expect(catalog).toContainText('Modul 129 (Subnetting, statisches und dynamisches Routing, Protokollanalyse)');
   if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
   await catalog.locator('li').filter({ hasText: 'Auftrag 1: ICMP und TTL' }).getByRole('button', { name: 'Starten' }).click();
@@ -691,4 +691,54 @@ test('MAC-Tabelle heisst auch SAT', async ({ page }) => {
   await page.locator('.device').filter({ hasText: /Switch/ }).first().click();
   await page.getByRole('radio', { name: 'Simulation' }).click();
   await expect(page.locator('body')).toContainText('MAC-Tabelle (SAT)');
+});
+
+test('Netzscanner installieren und scannen; Dauerping läuft bis Stopp', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.getByRole('button', { name: /Aufgaben-Katalog/ }).click();
+  const catalog = page.getByRole('dialog');
+  await catalog.getByRole('tab', { name: /M129/ }).click();
+  await catalog.locator('li').filter({ hasText: 'Auftrag 4: Netzscan' }).getByRole('button', { name: 'Starten' }).click();
+  const taskWindow = page.getByRole('dialog', { name: 'Aufgabe', exact: true });
+  if (await taskWindow.isVisible().catch(() => false)) await taskWindow.getByRole('button', { name: /schliessen/i }).first().click();
+  await page.getByRole('radio', { name: 'Simulation' }).click();
+  // PC W11 hat den Netzscanner schon.
+  const openDesktop = async (name: RegExp) => {
+    await page.getByRole('button', { name }).click();
+    await page.getByRole('button', { name: 'Desktop öffnen' }).click();
+  };
+  await openDesktop(/^PC W11,/);
+  const desktop = page.getByRole('dialog', { name: 'Desktop von PC W11' });
+  await desktop.getByRole('tab', { name: 'Netzscanner' }).click();
+  await page.waitForTimeout(6000);
+  await desktop.getByLabel(/Ziel/).fill('192.168.1.0/24');
+  await desktop.getByRole('button', { name: 'Scannen' }).click();
+  await expect(desktop.locator('.hosts')).toContainText('192.168.1.100', { timeout: 40_000 });
+  await expect(desktop.locator('.status')).toContainText('Fertig: 4 von 254', { timeout: 40_000 });
+  await expect(desktop.locator('.hosts li').filter({ hasText: '192.168.1.100' })).toContainText('http');
+  await page.screenshot({ path: 'test-results/scanner.png' });
+  await desktop.getByLabel(/Ziel/).fill('x');
+  await desktop.getByRole('button', { name: 'Scannen' }).click();
+  await expect(desktop.getByRole('alert')).toContainText('Ziel nicht verstanden');
+  // Dauerping mit Stopp.
+  await desktop.getByRole('tab', { name: 'Befehlszeile' }).click();
+  const input = desktop.getByLabel('Befehl eingeben');
+  await input.fill('ping -t 192.168.1.1');
+  await input.press('Enter');
+  await expect(desktop.locator('.good').nth(4)).toBeVisible({ timeout: 15_000 });
+  await desktop.getByRole('button', { name: 'Stopp' }).click();
+  await expect(desktop.getByRole('log')).toContainText('Ping-Statistik');
+  await expect(desktop.getByRole('button', { name: 'Stopp' })).toHaveCount(0);
+  await input.fill('ping -n 1 -i 1 198.51.100.10');
+  await input.press('Enter');
+  await expect(desktop.getByRole('log')).toContainText('senkte sie auf 0');
+  // Auf einem anderen Gerät zuerst installieren.
+  await desktop.getByRole('button', { name: 'Desktop schliessen' }).click();
+  await openDesktop(/^Server Intranet,/);
+  const server = page.getByRole('dialog', { name: 'Desktop von Server Intranet' });
+  await expect(server.getByRole('tab', { name: 'Netzscanner' })).toHaveCount(0);
+  await server.getByRole('tab', { name: 'Programme' }).click();
+  await server.getByRole('button', { name: 'Installieren' }).click();
+  await server.getByRole('button', { name: 'Öffnen' }).click();
+  await expect(server.getByRole('button', { name: 'Scannen' })).toBeVisible();
 });

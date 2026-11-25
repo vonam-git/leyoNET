@@ -24,12 +24,13 @@
 
   // Nur bei neuen Zeilen nach unten scrollen, und nur wenn man schon unten war:
   // Wer hochscrollt, um ältere Ausgaben zu lesen, wird nicht zurückgerissen.
-  let shown = 0;
+  // Verglichen wird die letzte Zeile, nicht die Anzahl: Die Ausgabe ist auf 500 Zeilen begrenzt (Dauerping).
+  let shown: unknown = null;
   let atBottom = true;
   $effect(() => {
-    const count = lines.length;
-    if (count === shown) return;
-    shown = count;
+    const latest = lines.at(-1);
+    if (latest === shown) return;
+    shown = latest;
     if (atBottom) tick().then(() => output?.scrollTo({ top: output.scrollHeight }));
   });
   function onscroll() {
@@ -46,19 +47,18 @@
 
   let passwordFor = $state<{ user: string; target: string } | null>(null);
   let remote = $state<{ deviceId: string; target: string; intro: string[] } | null>(null);
-  let seen = $state(0);
+  let seen: (typeof lines)[number] | undefined;
 
   $effect(() => {
     const all = lines;
-    if (all.length < seen) seen = 0;
-    for (const entry of all.slice(seen)) {
+    for (const entry of all.slice(seen ? all.lastIndexOf(seen) + 1 : 0)) {
       if (entry.code === 'ssh.open' && entry.params?.device) {
         remote = { deviceId: String(entry.params.device), target: String(entry.params.target), intro: [t('console.ssh.open', entry.params)] };
       } else if (entry.code === 'ssh.closed' && remote) {
         remote = null;
       }
     }
-    seen = all.length;
+    seen = all.at(-1);
   });
 
   function parseSsh(command: string): { user: string; target: string } | null {
@@ -103,8 +103,21 @@
     remote = null;
   }
 
-  /** Pfeiltasten blättern durch frühere Befehle wie in einer echten Konsole. */
+  const pinging = $derived(!!(simStore.tick, simStore.sim?.getDeviceState(device.id).pinging));
+
+  /** Farbe einer Zeile: Antwort grün, Fehler rot; so sieht man beim Dauerping sofort, wann die Verbindung abbricht. */
+  const PING_BAD = /^ping\.(timeout|ttlExpired|ttlExpiredSet|netUnreachable|hostUnreachable|gatewayUnreachable|noRoute)/;
+  const tone = (code: string) => (code === 'ping.reply' ? 'good' : PING_BAD.test(code) ? 'bad' : '');
+
+  /** Strg+C bricht ab (ohne markierten Text); Pfeiltasten blättern durch frühere Befehle wie in einer echten Konsole. */
   function onkeydown(event: KeyboardEvent) {
+    if (event.ctrlKey && event.key.toLowerCase() === 'c' && !event.shiftKey && !event.altKey) {
+      if (window.getSelection()?.toString() || input?.selectionStart !== input?.selectionEnd) return;
+      event.preventDefault();
+      line = '';
+      simStore.interrupt(device.id);
+      return;
+    }
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
     event.preventDefault();
     if (history.length === 0) return;
@@ -131,7 +144,7 @@
       {#if entry.code === 'cmd.echo'}
         <p class="echo"><span class="prompt">{prompt}</span> {entry.params?.line}</p>
       {:else}
-        <p>{t(`console.${entry.code}`, entry.params)}</p>
+        <p class={tone(entry.code)}>{t(`console.${entry.code}`, entry.params)}</p>
       {/if}
     {/each}
   </div>
@@ -149,6 +162,7 @@
       aria-label={t('terminal.input')}
       placeholder={passwordFor ? '' : t('terminal.placeholder')}
     />
+    {#if pinging}<button type="button" class="stop" onclick={() => simStore.interrupt(device.id)} title={t('terminal.stopHint')}>{t('terminal.stop')}</button>{/if}
   </form>
 </div>
 {/if}
@@ -174,6 +188,21 @@
     line-height: 1.5;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+  }
+  .good {
+    color: #8fd18f;
+  }
+  .bad {
+    color: #ff9b8f;
+  }
+  .stop {
+    flex: none;
+    min-height: 0;
+    padding: 1px 10px;
+    font: inherit;
+    color: #fff;
+    background: #b4232a;
+    border-color: #b4232a;
   }
   .echo {
     margin-top: 6px;

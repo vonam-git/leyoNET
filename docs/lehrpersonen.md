@@ -78,7 +78,7 @@ Die praktische Prüfung (LB3) erstellt **Werkzeuge → Prüfung erstellen …**:
 
 ## Modul 129: Subnetting, Routing und Protokollanalyse
 
-Der Reiter **«M129»** im Aufgaben-Katalog enthält vier Gruppen mit je einem ausfüllbaren Arbeitsblatt. Alles läuft in leyoNET: Router, Firewall, Server und die Paketanalyse. Adressen im «Internet» stammen aus den Dokumentationsbereichen nach RFC 5737, Namen enden auf `.example`.
+Der Reiter **«M129»** im Aufgaben-Katalog enthält vier Gruppen mit ausfüllbaren Arbeitsblättern. Alles läuft in leyoNET: Router, Firewall, Server und die Paketanalyse. Adressen im «Internet» stammen aus den Dokumentationsbereichen nach RFC 5737, Namen enden auf `.example`.
 
 | Sterne | Übung | Arbeitsblatt |
 |---|---|---|
@@ -93,6 +93,8 @@ Der Reiter **«M129»** im Aufgaben-Katalog enthält vier Gruppen mit je einem a
 | ★★ | Protokollanalyse – Auftrag 1: ICMP und TTL | M129_Protokollanalyse |
 | ★★★ | Protokollanalyse – Auftrag 2: DHCP | M129_Protokollanalyse |
 | ★★★★ | Protokollanalyse – Auftrag 3: ARP, DNS und HTTP | M129_Protokollanalyse |
+| ★★★ | Protokollanalyse – Auftrag 4: Netzscan | M129_Netzscan |
+| ★★★★ | Protokollanalyse – Auftrag 5: Die Firewall von aussen prüfen | M129_Netzscan |
 
 Neu sind **Fragen direkt in leyoNET** (Baustein «Antwort»): z.B. der EtherType von ARP oder die TTL nach der Firewall. «Prüfen» bewertet sie zusammen mit den Netzzielen. Die Arbeitsblätter zum Routing zeigen die Theorie und Beispielbefehle mit anderen Adressen; die Befehle für das eigene Netz erarbeiten die Lernenden selbst (Musterlösung im Blatt `_mL`). Zum Schluss speichern sie auf jedem Router mit `copy running-config startup-config`, das prüft die Übung mit. Nummern und Titel der Übungen lassen sich später an die Unterlagen der Schule anpassen (`src/ui/catalogM129.ts`, Texte in `src/i18n`, Arbeitsblätter in `scripts/arbeitsblaetter/inhaltM129.mjs`).
 

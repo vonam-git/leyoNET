@@ -3,6 +3,7 @@ import { linkStatus } from '../model/links';
 import { cableAt, getCable, getDevice, otherEnd } from '../model/topology';
 import type { Device, Endpoint, Medium, Topology } from '../model/types';
 import { runCommand } from './commands';
+import type { ScanError, ScanRequest, ScanState } from './scan';
 import type { LeaseRecord } from './dhcp';
 import type { AccessTech, EthernetFrame } from './frames';
 import { ACCESS_PROFILES } from './access';
@@ -82,6 +83,8 @@ export interface DeviceState {
   dhcpLeases?: LeaseRecord[];
   dnsCache?: DnsCacheEntry[];
   connections?: ConnectionInfo[];
+  pinging?: boolean;
+  scan?: ScanState;
   browser?: BrowserState;
   mail?: MailClientState;
   mailboxes?: { user: string; count: number }[];
@@ -276,6 +279,20 @@ export class Simulation {
     else if (node instanceof ClientGroupNode) node.member(member)?.ping(target);
     else if (node instanceof RouterNode) node.ping(target, vrf);
     else if (node instanceof L3SwitchNode) node.router.ping(target, vrf);
+  }
+
+  /** Strg+C in der Befehlszeile des Geräts. */
+  interrupt(deviceId: string, member = 1) {
+    this.#host(deviceId, member)?.interrupt();
+  }
+
+  /** Netzscanner starten (Programm auf PC, Notebook oder Server); liefert bei falschen Angaben einen Fehlercode. */
+  scan(deviceId: string, request: ScanRequest): ScanError | null {
+    return this.#host(deviceId)?.scanner.start(request) ?? null;
+  }
+
+  scanStop(deviceId: string) {
+    this.#host(deviceId)?.scanner.stop();
   }
 
   traceroute(deviceId: string, target: string, member = 1) {

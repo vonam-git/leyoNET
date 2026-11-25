@@ -31,7 +31,7 @@ export const HELP_GROUPS: { id: string; topics: string[] }[] = [
   { id: 'nat', topics: ['nat', 'staticNat', 'portForward', 'cgnat', 'dsLite'] },
   { id: 'security', topics: ['firewall', 'acl', 'vpn'] },
   { id: 'services', topics: ['web', 'mail', 'voip', 'cli', 'ssh'] },
-  { id: 'analysis', topics: ['sniffer', 'osi', 'osiStep', 'filter', 'pcap'] },
+  { id: 'analysis', topics: ['sniffer', 'osi', 'osiStep', 'filter', 'pcap', 'scanner'] },
   { id: 'documentation', topics: ['areas', 'racks', 'floors', 'snapshots', 'netdoc'] },
 ];
 

@@ -256,6 +256,8 @@ export interface Device {
   dnsServer?: DnsServerConfig;
   /** Nur Rechner: Webserver mit seinen Seiten. */
   webServer?: WebServerConfig;
+  /** PC, Notebook, Server: Netzscanner installiert. */
+  scanner?: boolean;
   /** Nur Rechner: Mailserver (SMTP, POP3, IMAP) mit Postfächern. */
   mailServer?: MailServerConfig;
   /** Endgeräte: E-Mail-Konto für die Anwendung "E-Mail". */

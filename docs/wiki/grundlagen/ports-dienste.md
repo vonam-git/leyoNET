@@ -3,8 +3,9 @@ titel: Ports und Dienste
 kurz: Wie Ports Programme auf einem Gerät unterscheiden, welche Bereiche es nach RFC 6335 gibt und welche Portnummern man kennen sollte.
 reihenfolge: 5.5
 schicht: 4 (Transport)
+hilfe: [scanner]
 normen: [RFC 6335, RFC 9293, RFC 768]
-uebungen: [m129-lab-a3]
+uebungen: [m129-lab-a3, m129-lab-a4, m129-lab-a5]
 verwandt: [tcp, udp, nat, paketfilter]
 ---
 ## Adresse plus Port
@@ -43,3 +44,15 @@ RFC 6335 teilt die Ports ein; die IANA führt das Register:
 ## In leyoNET
 
 In der Paketliste steht bei jedem TCP- und UDP-Rahmen Quell- und Zielport; der Filter `tcp.port == 80` zeigt nur Web-Verkehr. Clients nehmen Quellports ab 49152, Server antworten vom bekannten Port. In der Firewall und bei der Portweiterleitung (DNAT) wählt man Dienste über ihre Ports.
+
+## Offene Ports finden: der Netzscanner
+
+Auf PC, Notebook und Server lässt sich in der Simulation unter **Programme** der **Netzscanner** installieren (auch als Befehl `nmap`). Er findet Geräte per ARP und Ping und schickt an jeden Port ein SYN:
+
+| Antwort | Zustand |
+|---|---|
+| SYN/ACK | **offen**: Ein Dienst nimmt Verbindungen an |
+| RST | **geschlossen**: Das Gerät ist da, aber kein Dienst hört |
+| keine | **gefiltert**: meist verwirft eine Firewall das Paket |
+
+In echten Netzen nur mit Erlaubnis scannen.

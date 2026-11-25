@@ -38,3 +38,15 @@ RFC 6335 divides the ports; IANA keeps the registry:
 ## In leyoNET
 
 The packet list shows source and destination port for every TCP and UDP frame; the filter `tcp.port == 80` shows only web traffic. Clients use source ports from 49152, servers reply from the well-known port. In the firewall and for port forwarding (DNAT), services are selected by their ports.
+
+## Finding open ports: the network scanner
+
+On PCs, notebooks and servers the **network scanner** can be installed in the simulation under **Programs** (also as the command `nmap`). It finds devices by ARP and ping and sends a SYN to every port:
+
+| Reply | State |
+|---|---|
+| SYN/ACK | **open**: a service accepts connections |
+| RST | **closed**: the device is there, but no service listens |
+| none | **filtered**: usually a firewall drops the packet |
+
+In real networks, scan only with permission.
