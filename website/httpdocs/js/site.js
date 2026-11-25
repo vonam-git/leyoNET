@@ -117,6 +117,70 @@
     show();
   }
 
+  /* --- Schulung: ein Video nach dem anderen, Kapitel zum Anspringen -------------------------------
+     Ohne Skript stehen alle drei Videos untereinander. Nichts wird gespeichert. */
+  const lernVideos = [...document.querySelectorAll('.lern-video')];
+  if (lernVideos.length) {
+    document.body.classList.add('lern-js');
+    const links = document.querySelectorAll('a[data-video]');
+    const cards = document.querySelectorAll('.lern-card');
+    const select = (n, play) => {
+      if (!lernVideos.some((a) => a.dataset.video === n)) return;
+      for (const a of lernVideos) {
+        const on = a.dataset.video === n;
+        a.classList.toggle('on', on);
+        const v = a.querySelector('video');
+        if (!on) v.pause();
+        else if (play) v.play().catch(() => {});
+      }
+      for (const c of cards) {
+        if (c.dataset.video === n) c.setAttribute('aria-current', 'true');
+        else c.removeAttribute('aria-current');
+      }
+    };
+    for (const a of links) {
+      a.addEventListener('click', (event) => {
+        event.preventDefault();
+        history.replaceState(null, '', a.getAttribute('href'));
+        select(a.dataset.video, true);
+        if (a.classList.contains('lern-next')) document.querySelector('.lern-cards').scrollIntoView({ block: 'start', behavior: reduced ? 'auto' : 'smooth' });
+      });
+    }
+    for (const a of lernVideos) {
+      const v = a.querySelector('video');
+      const buttons = [...a.querySelectorAll('.lern-chapters button')];
+      for (const b of buttons) {
+        b.addEventListener('click', () => {
+          const go = () => {
+            v.currentTime = Number(b.dataset.t);
+            v.play().catch(() => {});
+          };
+          if (v.readyState > 0) go();
+          else {
+            v.addEventListener('loadedmetadata', go, { once: true });
+            v.load();
+          }
+        });
+      }
+      // Laufendes Kapitel hervorheben; am Ende den Knopf zum nächsten Video.
+      v.addEventListener('timeupdate', () => {
+        let current = null;
+        for (const b of buttons) if (v.currentTime >= Number(b.dataset.t)) current = b;
+        for (const b of buttons) {
+          if (b === current) b.setAttribute('aria-current', 'true');
+          else b.removeAttribute('aria-current');
+        }
+      });
+      v.addEventListener('ended', () => {
+        a.classList.add('done');
+        for (const c of cards) if (c.dataset.video === a.dataset.video) c.classList.add('seen');
+      });
+    }
+    const fromHash = () => /^#video-(\d)$/.exec(location.hash)?.[1];
+    select(fromHash() ?? '1', false);
+    window.addEventListener('hashchange', () => fromHash() && select(fromHash(), false));
+  }
+
   /* --- Hero: Ping über einen Router, wie in der Simulation ------------------------- */
   const X = { pc: 66, sw: 240, r: 410, srv: 551 };
   const FRAMES = [

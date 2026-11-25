@@ -37,6 +37,7 @@ Es gibt keine Konten und kein Tracking. leyoNET läuft auf drei Arten, überall 
 - **Webversion mit Klassen:** Arbeiten der Klasse live ansehen: [[webversion]].
 - **Klassen-Verbund:** Jede Gruppe baut einen Standort, der Beamer zeigt, wer online ist: [[klassen-verbund]].
 - **Reihen für die ICT-Module** 117, 129 und 145: [[m117]], [[m129]], [[m145]].
+- **Videos für die Lernenden:** [Schulung](../schulung.html) mit drei kurzen Einführungen und allen Arbeitsblättern.
 - **Alle Demo-Netze** stehen unten auf dieser Seite, jedes mit Link zum Ansehen.
 - **Theorie für die Lernenden:** Zu jedem [[switch|Gerät]] und jedem [[arp|Protokoll]] gibt es hier im Wiki eine Seite mit Beispiel zum Ansehen und der Norm.
 

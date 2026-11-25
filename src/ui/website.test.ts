@@ -102,6 +102,28 @@ describe('Website leyonet.ch', () => {
     for (const loc of ['https://leyonet.ch/', 'https://leyonet.ch/en/']) expect(map).toContain(`<loc>${loc}</loc>`);
   });
 
+  it('Schulung: Videos, Untertitel und Bilder vorhanden, Kapitel passen, jedes Arbeitsblatt verlinkt (de und en)', () => {
+    const sheets = readdirSync(join(root, 'docs', 'arbeitsblaetter')).filter((f) => f.endsWith('.pdf') && !f.endsWith('_mL.pdf'));
+    for (const page of ['schulung.html', 'en/schulung.html']) {
+      const html = read(page);
+      for (const [, ref] of html.matchAll(/(?:src|poster)="((?:\.\.\/)?(?:video|img)\/[^"]+)"/g)) expect(() => readFileSync(join(site, page, '..', ref!)), ref).not.toThrow();
+      expect(html.match(/<article class="lern-video"/g)).toHaveLength(3);
+      expect(html.match(/<track kind="subtitles" srclang="en"/g)).toHaveLength(3);
+      for (const [, list] of html.matchAll(/<ol class="lern-chapters">([\s\S]*?)<\/ol>/g)) {
+        const times = [...list!.matchAll(/data-t="(\d+)"/g)].map((m) => Number(m[1]));
+        expect(times[0]).toBe(0);
+        expect(times).toEqual([...times].sort((a, b) => a - b));
+      }
+      const linked = [...html.matchAll(/raw\/main\/docs\/arbeitsblaetter\/([^"]+\.pdf)"/g)].map((m) => m[1]!);
+      expect(linked.sort()).toEqual([...sheets].sort());
+      expect(html).toContain(`<span data-sheets>${sheets.length}</span>`);
+      expect(html).not.toContain('_mL');
+    }
+    for (const n of [1, 2, 3]) for (const l of ['de', 'en']) expect(read(`video/schulung-${n}.${l}.vtt`).startsWith('WEBVTT')).toBe(true);
+    for (const page of ['index.html', 'en/index.html']) expect(read(page)).toContain('href="schulung.html"');
+    for (const loc of ['schulung.html', 'en/schulung.html']) expect(read('sitemap.xml')).toContain(`<loc>https://leyonet.ch/${loc}</loc>`);
+  });
+
   it('Bildschirmfotos der Ansichten gibt es hell und dunkel', () => {
     const html = read('index.html');
     for (const [, name, same] of html.matchAll(/data-img="([\w-]+)"( data-dark="same")?/g)) {

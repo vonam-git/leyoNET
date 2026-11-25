@@ -33,6 +33,7 @@ There are no accounts and no tracking. leyoNET runs in three ways, the same ever
 - **Web version with classes:** watch the class’s work live: [[webversion]].
 - **Class network:** every group builds a site, the projector shows who is online: [[klassen-verbund]].
 - **Series for the Swiss ICT modules** 117, 129 and 145: [[m117]], [[m129]], [[m145]].
+- **Videos for learners:** [training](../../en/schulung.html) with three short introductions (German, English subtitles) and all worksheets.
 - **All demo networks** are listed at the bottom of this page, each with a link to watch it.
 - **Theory for learners:** every [[switch|device]] and every [[arp|protocol]] has a page in this wiki with an example to watch and the standard.
 

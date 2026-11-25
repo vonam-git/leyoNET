@@ -1,0 +1,70 @@
+WEBVTT
+
+00:00:04.052 --> 00:00:08.581
+Willkommen bei leyoNET. In diesem Video lernst du, was wo zu finden ist.
+
+00:00:08.581 --> 00:00:12.536
+In der Mitte liegt die Zeichenfläche. Hier baust du dein Netz.
+
+00:00:12.536 --> 00:00:18.953
+Links findest du die Geräte: Endgeräte, Server, Switches, Router, WLAN und mehr.
+
+00:00:18.953 --> 00:00:22.418
+Darunter steht die Aufgabe mit ihren Lernzielen.
+
+00:00:22.418 --> 00:00:25.958
+Rechts siehst du die Eigenschaften des ausgewählten Geräts.
+
+00:00:25.958 --> 00:00:30.509
+Ganz oben sind die Menüs. Alle Funktionen findest du auch hier.
+
+00:00:30.509 --> 00:00:37.469
+Im Menü Datei öffnest und speicherst du Projekte. Speichern geht auch mit Strg+S.
+
+00:00:37.469 --> 00:00:43.203
+Im Menü Werkzeuge sind der Aufgaben-Katalog und der IP-Rechner.
+
+00:00:43.203 --> 00:00:47.003
+In der Werkzeugleiste: Auswählen und Kabel ziehen.
+
+00:00:47.003 --> 00:00:52.146
+Falsch geklickt? Rückgängig nimmt den letzten Schritt zurück (Strg+Z).
+
+00:00:52.146 --> 00:00:57.002
+Hier steht der Projektname. So heisst später auch deine Datei.
+
+00:00:57.002 --> 00:01:01.877
+leyoNET hat zwei Modi. Im Entwurf baust du und stellst ein.
+
+00:01:01.877 --> 00:01:07.118
+In der Simulation läuft dein Netz wirklich. Wechseln kannst du mit der Taste M.
+
+00:01:07.118 --> 00:01:10.694
+Schauen wir ein fertiges Beispiel an: Demo-Netze.
+
+00:01:10.694 --> 00:01:15.002
+«ARP und Ping im LAN» auswählen und Vorführen klicken.
+
+00:01:15.002 --> 00:01:20.013
+Die Simulation startet, und PC 1 pingt einen anderen PC.
+
+00:01:20.013 --> 00:01:25.293
+Das ist der Desktop des PCs: Befehlszeile, Webbrowser und E-Mail.
+
+00:01:25.293 --> 00:01:29.272
+Wir minimieren den Desktop und sehen uns die Pakete an.
+
+00:01:29.272 --> 00:01:34.869
+Unten steht die Paketliste. Jede Zeile ist ein Paket, das gesendet wurde.
+
+00:01:34.869 --> 00:01:40.529
+Ein Klick auf ein Gerät zeigt rechts, was es gerade weiss, z.B. seine Adresse.
+
+00:01:40.529 --> 00:01:47.696
+Nicht sicher? F1 öffnet die Hilfe. Sie passt zu dem, was du gerade tust.
+
+00:01:47.696 --> 00:01:53.625
+Und Strg+K sucht jede Funktion. Tippe einfach, was du brauchst.
+
+00:01:53.625 --> 00:01:57.995
+Das war der Überblick. Im nächsten Video baust du dein erstes Netz.
