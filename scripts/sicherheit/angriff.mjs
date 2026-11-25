@@ -348,7 +348,11 @@ async function tenantChecks(base, post, project) {
   check(target, 'zugang-anmelden', 'Lehrperson meldet sich mit Zugangsschlüssel an', 'hoch', !!tokenA && !!tokenB, '');
   if (!tokenA || !tokenB) return;
   const tenantList = await request(`${base}/api/admin/tenants`, { headers: as(admin) });
-  check(target, 'zugang-hash', 'Zugangsschlüssel wird nicht gespeichert oder zurückgegeben', 'hoch', !tenantList.body.includes(a.key.split('-').pop()), '');
+  // Das ganze Geheimnis prüfen: Es ist base64url und kann selbst «-» enthalten, ein Abschnitt davon
+  // (im schlimmsten Fall ein leerer) würde zufällig gefunden.
+  const secretOf = (key) => /^LN-[0-9a-f]{8}-(.{24,})$/.exec(key)?.[1];
+  const secrets = [secretOf(a.key), secretOf(b.key)];
+  check(target, 'zugang-hash', 'Zugangsschlüssel wird nicht gespeichert oder zurückgegeben', 'hoch', tenantList.status === 200 && secrets.every((x) => x && !tenantList.body.includes(x)), '');
   const klasse = json(await call('POST', 'classes', tokenA, { label: 'Prüfklasse' }));
   const overviewB = json(await call('GET', 'overview', tokenB));
   check(target, 'zugang-trennung', 'Lehrperson B sieht die Klasse von A nicht', 'hoch', Array.isArray(overviewB.classes) && !overviewB.classes.some((c) => c.code === klasse.code), '');
