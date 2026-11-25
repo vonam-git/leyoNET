@@ -201,6 +201,9 @@ Zwei Kabel zwischen denselben Switches oder ein Ring bilden eine Schleife. Ohne 
 
 ## In der Simulation
 
+- **Ping-Optionen:** `ping -t 192.168.2.10` läuft bis Strg+C oder «Stopp», `ping -n 10 …` sendet zehn Anfragen, `ping -i 1 …` startet mit TTL 1 (der erste Router meldet «TTL abgelaufen»).
+- **Netzscanner:** In der Simulation Desktop → **Programme** → «Installieren», danach Reiter **Netzscanner** oder `nmap 192.168.1.0/24`.
+- **Sicherheit:** Desktop → **Sicherheit** zeigt den Wächter und schaltet ARP-Schutz und SYN-Cookies ein; den **Angreifer** gibt es im Shop unter Endgeräte (Funktion «Sicherheits-Szenarien»).
 - **Konsole der Endgeräte:** Gerät wählen und **T** (oder «Konsole öffnen» im Fenster des Geräts) öffnet die Eingabeaufforderung, auch aus dem Entwurf. Dort gehen u.a. `ipconfig`, `ipconfig /release` und `/renew`, `ifdown eth0`/`ifup eth0` (auch `ip link set eth0 down|up` oder `netsh interface set interface Ethernet disable|enable`), `ping`, `tracert`, `nslookup`, `arp -a`; `help` zeigt alle.
 - **Desktops:** Doppelklick auf ein Endgerät öffnet seinen Desktop (Eingabeaufforderung, Browser, Mail). Mehrere können offen sein. Mit **—** minimieren; «Offene Desktops» in der Simulationsleiste holt sie zurück. Inhalte bleiben erhalten. Desktops lassen sich am Kopf verschieben und unten rechts in der Grösse ändern.
 - **Maus darüber:** Geräte zeigen Adressen, MAC, Gateway und die Grösse ihrer Tabellen; Kabel ihren Zustand und den Verkehr; Pakete Protokoll, Quelle, Ziel und OSI-Schichten.
