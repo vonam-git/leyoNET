@@ -1625,6 +1625,8 @@
   "security.quiet": "Nichts Auffälliges.",
   "security.alert.arpChange": "{ip} hat plötzlich eine andere MAC-Adresse: {to} statt {from}. ARP-Spoofing?",
   "security.alert.arpBlocked": "Gefälschte ARP-Angabe abgewehrt: {ip} soll {to} sein (bekannt ist {from}).",
+  "security.alert.arpFlood": "{ip} behauptet dauernd ungefragt per ARP, die MAC-Adresse {mac} zu haben. ARP-Spoofing?",
+  "security.alert.arpRejected": "Ungefragte ARP-Angaben ignoriert: {ip} soll {mac} sein.",
   "security.alert.synFlood": "Port {port}: {halfOpen} halb offene Verbindungen, die Warteschlange ist voll. SYN-Flood?",
   "security.alert.portScan": "{ip} probiert viele Ports ({ports}). Portscan?",
   "attack.title": "Angreifer",

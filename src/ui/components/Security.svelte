@@ -31,7 +31,7 @@
   <h4>{t('security.watch')}</h4>
   <ul role="log" aria-label={t('security.watch')}>
     {#each alerts as a (a.time + a.kind + (a.params.ip ?? ''))}
-      <li class={a.kind === 'arpBlocked' ? 'ok' : 'bad'}>
+      <li class={a.kind === 'arpBlocked' || a.kind === 'arpRejected' ? 'ok' : 'bad'}>
         <code>{(a.time / 1000).toFixed(1)} s</code>
         <span>{t(`security.alert.${a.kind}`, a.params)}</span>
         {#if a.count > 1}<em>× {a.count}</em>{/if}
@@ -66,7 +66,7 @@
   }
   .protect {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
     gap: 8px;
   }
   label {
@@ -92,6 +92,10 @@
     padding: 0;
     display: grid;
     gap: 4px;
+  }
+  li span {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   li {
     display: flex;

@@ -1714,6 +1714,8 @@
   }
   .attack-row select {
     width: auto;
+    max-width: 100%;
+    min-width: 0;
   }
   .pill.attack-effective {
     background: #8f1d24;

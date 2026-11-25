@@ -17,13 +17,25 @@
 <style>
   .icon :global(rect),
   .icon :global(circle),
-  .icon :global(path:not(.line)) {
+  .icon :global(path:not(.line, .warn, .mark)) {
     fill: var(--role-soft);
     stroke: var(--role);
     stroke-width: 2;
   }
   .icon :global(circle.fill) {
     fill: var(--role);
+  }
+  .icon :global(.warn) {
+    fill: #ef6c00;
+    stroke: #b4530a;
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+  .icon :global(.mark) {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2.6;
+    stroke-linecap: round;
   }
   .icon :global(.line) {
     fill: none;

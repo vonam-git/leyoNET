@@ -742,3 +742,36 @@ test('Netzscanner installieren und scannen; Dauerping läuft bis Stopp', async (
   await server.getByRole('button', { name: 'Öffnen' }).click();
   await expect(server.getByRole('button', { name: 'Scannen' })).toBeVisible();
 });
+
+test('Angreifer: Abschnitt ragt nie über die Eigenschaften hinaus, auch bei schmaler Leiste und auf Englisch', async ({ page }) => {
+  /** Grösster Überstand eines Elements über den rechten Rand des Bereichs. */
+  const overflow = (selector: string) =>
+    page.locator(selector).first().evaluate((box) => Math.max(box.scrollWidth - box.clientWidth, ...[...box.querySelectorAll('*')].map((e) => Math.round(e.getBoundingClientRect().right - box.getBoundingClientRect().right))));
+  await page.getByRole('button', { name: /Aufgaben-Katalog/ }).click();
+  await page.getByRole('dialog').locator('li').filter({ hasText: 'Wer gibt sich als Gateway aus?' }).getByRole('button', { name: 'Starten' }).click();
+  const task = page.getByRole('dialog', { name: 'Aufgabe', exact: true });
+  if (await task.isVisible().catch(() => false)) await task.getByRole('button', { name: /schliessen/i }).first().click();
+  await page.getByRole('button', { name: /^Angreifer,/ }).click();
+  await expect(page.locator('.inspector .attacker')).toBeVisible();
+  for (const width of [1600, 1280, 1000]) {
+    await page.setViewportSize({ width, height: 800 });
+    for (const kind of ['arpSpoof', 'synFlood', 'portScan', 'sshGuess']) {
+      await page.locator('.attacker select').selectOption(kind);
+      expect(await overflow('.inspector'), `${width} ${kind}`).toBeLessThanOrEqual(1);
+    }
+  }
+  await page.locator('.attacker select').selectOption('arpSpoof');
+  // Desktop-Fenster «Sicherheit» vom schmalsten an.
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.getByRole('radio', { name: 'Simulation' }).click();
+  await page.getByRole('button', { name: 'Alles zeigen' }).click();
+  await page.getByRole('button', { name: /^PC 1,/ }).click();
+  await page.getByRole('button', { name: 'Desktop öffnen' }).click();
+  const desktop = page.getByRole('dialog', { name: 'Desktop von PC 1' });
+  await desktop.getByRole('tab', { name: 'Sicherheit' }).click();
+  await expect(desktop.locator('.security li').first()).toContainText('ARP-Spoofing?', { timeout: 15_000 });
+  for (const width of [320, 420, 620]) {
+    await desktop.evaluate((e, w) => ((e as HTMLElement).style.width = `${w}px`), width);
+    expect(await overflow('.desktop .security'), `Sicherheit ${width}`).toBeLessThanOrEqual(1);
+  }
+});
