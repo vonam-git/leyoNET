@@ -341,7 +341,13 @@ export class IpNode implements SimNode {
     if (!iface) return;
     const forMe = parseIp(arp.targetIp) === iface.ip || this.answersArpFor(index, arp.targetIp);
     // Wie RFC 826: Absender lernen, wenn die Anfrage uns gilt oder er schon bekannt ist.
-    if (forMe || this.#arp.has(this.#arpKey(arp.senderIp, index))) this.#learn(arp.senderIp, arp.senderMac, index);
+    const key = this.#arpKey(arp.senderIp, index);
+    if (this.ctx.device()?.arpGuard) {
+      // ARP-Schutz: nur Antworten auf eigene Anfragen gelten, unverlangte Angaben nicht.
+      const known = this.#arp.get(key);
+      if (arp.op === 'reply' && this.#pending.has(key)) this.#learn(arp.senderIp, arp.senderMac, index);
+      else if (known && known.mac !== arp.senderMac) this.onArpChange(arp.senderIp, known.mac, arp.senderMac, true);
+    } else if (forMe || this.#arp.has(key)) this.#learn(arp.senderIp, arp.senderMac, index);
     if (arp.op === 'request' && forMe) {
       this.sendFrame(index, {
         src: iface.mac,
@@ -364,8 +370,13 @@ export class IpNode implements SimNode {
     return vrf ? `${vrf}|${ip}` : ip;
   }
 
+  /** Eine bekannte Adresse meldet sich mit anderer MAC (Hinweis für den Wächter). */
+  protected onArpChange(_ip: string, _from: string, _to: string, _blocked: boolean) {}
+
   #learn(ip: string, mac: string, iface: number) {
     const key = this.#arpKey(ip, iface);
+    const before = this.#arp.get(key);
+    if (before && before.mac !== mac && before.expires > this.ctx.now) this.onArpChange(ip, before.mac, mac, false);
     this.#arp.set(key, { ip, mac, iface, expires: this.ctx.now + ARP_TTL });
     const pending = this.#pending.get(key);
     if (!pending) return;

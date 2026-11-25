@@ -3,6 +3,8 @@ import { linkStatus } from '../model/links';
 import { cableAt, getCable, getDevice, otherEnd } from '../model/topology';
 import type { Device, Endpoint, Medium, Topology } from '../model/types';
 import { runCommand } from './commands';
+import type { AttackState } from './attack';
+import type { Alert } from './host';
 import type { ScanError, ScanRequest, ScanState } from './scan';
 import type { LeaseRecord } from './dhcp';
 import type { AccessTech, EthernetFrame } from './frames';
@@ -84,6 +86,8 @@ export interface DeviceState {
   dnsCache?: DnsCacheEntry[];
   connections?: ConnectionInfo[];
   pinging?: boolean;
+  attack?: AttackState;
+  alerts?: Alert[];
   scan?: ScanState;
   browser?: BrowserState;
   mail?: MailClientState;
@@ -187,7 +191,7 @@ export class Simulation {
   #bootDhcpClients() {
     const order = (d: Device) => (DEVICE_SPECS[d.type].role === 'endpoint' ? 1 : 0);
     for (const device of [...this.#topology.devices].sort((a, b) => order(a) - order(b))) {
-      if (DEVICE_SPECS[device.type].role === 'endpoint' && !device.dhcp && !device.wifi && !device.voip) continue;
+      if (DEVICE_SPECS[device.type].role === 'endpoint' && !device.dhcp && !device.wifi && !device.voip && !device.attack) continue;
       this.#node(device.id)?.boot?.();
     }
   }

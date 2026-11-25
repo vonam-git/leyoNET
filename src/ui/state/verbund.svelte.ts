@@ -1,4 +1,4 @@
-import { federate, parseProject, siteName, type Federation, type Topology } from '../../core';
+import { federate, parseProject, siteName, withAttacker, type Federation, type Topology } from '../../core';
 import { api, session } from './session.svelte';
 import { examMode } from './exam.svelte';
 import { editor } from './editor.svelte';
@@ -157,8 +157,18 @@ class VerbundStore {
   }
 
   simTopology(own: Topology): Topology {
-    return this.federation(own)?.topology ?? own;
+    const net = this.federation(own)?.topology ?? own;
+    // Angriff der Lehrperson: ein virtueller Angreifer nur für die Simulation. Beim Zusehen und in Prüfungen nie.
+    const attack = session.attack;
+    if (!attack || session.watching || examMode.active || !session.classCode) return net;
+    const c = this.#attacked;
+    if (c && c.net === net && c.id === attack.id) return c.result;
+    const result = withAttacker(net, attack.kind)?.topology ?? net;
+    this.#attacked = { net, id: attack.id, result };
+    return result;
   }
+
+  #attacked: { net: Topology; id: number; result: Topology } | null = null;
 
   /** Eigener Name im Verbund. */
   get ownName(): string {

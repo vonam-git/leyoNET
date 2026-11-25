@@ -66,6 +66,23 @@ Jede Verbund-Übung zeigt im Aufgabenfenster den Kasten **«Dein Platz im Klasse
 
 Die Musterlösungen im Arbeitsblatt zeigen die Adressen von Platz 1 (bei der Fehlersuche auch die Fehler von Platz 1 ohne Klassencode).
 
+## Sicherheits-Szenarien
+
+In jeder Klasse (mit und ohne Verbund) startet die Lehrperson in der Admin-Konsole über der Session-Liste einen **simulierten Angriff** auf eine oder alle Sessions. Im Browser der Lernenden wird dafür ein virtueller Angreifer nur für die Simulation angeschlossen: am Internet-Gerät (bzw. Provider des Verbunds) oder an einem Switch im eigenen Netz. Das Projekt bleibt unverändert, es entsteht nie ein echtes Paket.
+
+| Angriff | STRIDE | Wirkung | Abwehr |
+|---|---|---|---|
+| ARP-Spoofing | Spoofing | Verkehr ans Gateway landet beim Angreifer | ARP-Schutz auf den Endgeräten |
+| SYN-Flood | Denial of Service | Warteschlange des Webservers ist voll (RFC 4987) | SYN-Cookies, Firewall-Regel |
+| Portscan | Information Disclosure | offene Ports werden sichtbar | nur Web (80, 443) und E-Mail-Empfang (25) von aussen offen |
+| SSH-Passwort raten | Elevation of Privilege | häufige Passwörter werden probiert | starkes Passwort, SSH von aussen sperren |
+
+Die Lernenden sehen «Sicherheitsvorfall», aber nicht, welcher Angriff es ist. Sie finden die Ursache in der Paketliste und unter **Desktop → Sicherheit** (Wächter) und schalten dort den Schutz ein. Ihr Browser prüft nach jeder Änderung, ob der Angriff noch wirkt; die Liste der Lehrperson zeigt «Angriff wirkt», «abgewehrt» oder «kein Ziel». Wie der Fortschritt ist das eine Angabe des Browsers der Lernenden, keine Prüfungsnote. Ein Angriff endet nach 45 Minuten oder mit «Beenden» von selbst; in Prüfungen gibt es ihn nie.
+
+Tampering und Repudiation kommen nur als Begriff vor, dafür gibt es noch keinen eigenen Angriff.
+
+**Übungen:** im Katalog vier Übungen mit Angreifer («Wer gibt sich als Gateway aus?», «Die Webseite antwortet nicht mehr», «Ein zu einfaches Passwort», «Netz bauen, dann kommt der Angreifer») und im Verbund «Standort unter Beschuss». Für eigene Aufgaben: der **Angreifer** aus dem Shop (Endgeräte) und der Prüfbaustein `resist`.
+
 ## Aufgaben ein- und ausblenden
 
 - **Hauptadmin** (Admin-Konsole → Aufgaben): ganze Reihen (Module), einzelne Übungen und die Verbund-Aufgaben für die ganze Instanz.

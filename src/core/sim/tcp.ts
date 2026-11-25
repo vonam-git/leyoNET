@@ -9,6 +9,8 @@ export const MSS = 1460;
 export const RTO = 1000;
 export const MAX_RETRIES = 3;
 export const EPHEMERAL_PORT_START = 49152;
+/** So viele halb offene Verbindungen nimmt ein Gerät an (RFC 4987); danach verwirft es neue SYN. */
+export const MAX_HALF_OPEN = 32;
 
 export type TcpState =
   | 'SYN_SENT'
@@ -250,6 +252,9 @@ export class TcpStack {
     return this.seed * 10_000 + ++this.#issCounter * 1000;
   }
 
+  /** Warteschlange voll (Hinweis für den Wächter). */
+  onBacklog?: (halfOpen: number, port: number) => void;
+
   /** Der Annahme-Callback darf null liefern (Dienst gerade aus): dann wird abgewiesen. */
   listen(port: number, accept: (conn: TcpConnection) => TcpHandlers | null) {
     this.#listeners.set(port, accept);
@@ -279,6 +284,15 @@ export class TcpStack {
     const isSyn = segment.flags.includes('SYN') && !segment.flags.includes('ACK');
     const accept = isSyn ? this.#listeners.get(segment.dstPort) : undefined;
     if (accept) {
+      const half = this.connections().filter((c) => c.state === 'SYN_RECEIVED');
+      if (half.length >= MAX_HALF_OPEN) {
+        this.onBacklog?.(half.length, segment.dstPort);
+        // SYN-Cookies: Der Server merkt sich halb offene Verbindungen nicht, die älteste wird vergessen.
+        if (!this.host.ctx.device()?.synCookies) return;
+        const oldest = half[0]!;
+        oldest.state = 'CLOSED';
+        this.remove(oldest);
+      }
       const incoming = new TcpConnection(this, { ip: dst, port: segment.dstPort }, remote, this.#nextIss(), {}, 'SYN_RECEIVED');
       const handlers = accept(incoming);
       if (handlers) {

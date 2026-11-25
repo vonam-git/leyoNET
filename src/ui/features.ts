@@ -89,6 +89,7 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('tool.frame', 'tools', 2),
   f('tool.pcap', 'tools', 4),
   f('tool.scanner', 'tools', 3),
+  f('tool.security', 'tools', 3),
   f('tool.ipCalculator', 'tools', 1),
   f('tool.areas', 'tools', 1),
   f('tool.snapshots', 'tools', 1),
@@ -138,6 +139,7 @@ export function usedFeatures(t: Topology): string[] {
     if (d.dnsServer) used.add('service.dns');
     if (d.webServer) used.add('service.web');
     if (d.scanner) used.add('tool.scanner');
+    if (d.attack || d.arpGuard || d.synCookies || d.variant === 'attacker') used.add('tool.security');
     if (d.mailServer || d.mailAccount) used.add('service.mail');
     if (d.stp) used.add('net.stp');
     if (d.poe || d.power === 'poe') used.add('net.poe');

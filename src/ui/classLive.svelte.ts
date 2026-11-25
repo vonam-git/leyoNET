@@ -1,5 +1,5 @@
 import { untrack } from 'svelte';
-import { evaluateTasks } from '../core';
+import { attackEffect, evaluateTasks } from '../core';
 import { t } from '../i18n';
 import { editor } from './state/editor.svelte';
 import { examMode } from './state/exam.svelte';
@@ -38,6 +38,23 @@ export function setupClassLive() {
       if (editing) editor.setMode('design');
       editor.viewOnly = editing;
     });
+  });
+
+  // Angriff der Lehrperson: kurz nach jeder Änderung prüfen, ob er noch wirkt.
+  $effect(() => {
+    const { topology } = editor;
+    const attack = session.attack;
+    const v = verbund.version;
+    if (!attack || !session.classCode || session.watching || examMode.active) return;
+    const timer = setTimeout(() => {
+      try {
+        session.attackEffect = attackEffect(verbund.federation(topology)?.topology ?? topology, attack.kind);
+      } catch {
+        /* beim nächsten Mal */
+      }
+    }, PROGRESS_DELAY_MS);
+    void v;
+    return () => clearTimeout(timer);
   });
 
   // Fortschritt der eigenen Klassen-Session.

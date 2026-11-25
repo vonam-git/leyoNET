@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_SPECS, canAutoRoute, isRouterLike, isRouterType, isSwitchType } from '../../core';
+  import { DEVICE_SPECS, canAutoRoute, isRouterLike, isRouterType, isSwitchType, isAttacker } from '../../core';
   import { t } from '../../i18n';
   import { dialogs } from '../state/dialogs.svelte';
   import { editor } from '../state/editor.svelte';
@@ -7,6 +7,7 @@
   import AreaForm from './AreaForm.svelte';
   import CpeConfig from './CpeConfig.svelte';
   import CableInspector from './CableInspector.svelte';
+  import AttackerForm from './AttackerForm.svelte';
   import DeviceBasics from './DeviceBasics.svelte';
   import GroupConfig from './GroupConfig.svelte';
   import HostConfigForm from './HostConfigForm.svelte';
@@ -43,6 +44,7 @@
 
   {#if device && spec}
     <DeviceBasics {device} />
+    {#if isAttacker(device) && editor.mode === 'design'}<AttackerForm {device} />{/if}
     {#if ui.has('net.verbund')}<VerbundUplink {device} />{/if}
 
     {#if spec.role === 'endpoint'}

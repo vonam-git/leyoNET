@@ -4,7 +4,7 @@ kurz: Jede Gruppe baut einen Standort und schliesst ihn an Ihre Infrastruktur an
 reihenfolge: 10
 hilfe: [verbund]
 demos: [verbund]
-uebungen: [verbund-anschluss, verbund-dhcp-dns, verbund-webserver, verbund-fehlersuche]
+uebungen: [verbund-anschluss, verbund-dhcp-dns, verbund-webserver, verbund-fehlersuche, verbund-angriff]
 verwandt: [webversion, nat, statisches-routing]
 ---
 ## Die Idee
@@ -21,6 +21,7 @@ Ein **Platz** ist ein Standort im Klassen-Netz, wie eine Filiale einer Firma, ge
 | Standort mit DHCP und Namen der Zentrale | zusätzlich DHCP am Router mit DNS der Zentrale; Abruf von zentrale.verbund.example | online |
 | Eigenen Webserver im Verbund veröffentlichen | zusätzlich Portweiterleitung, die Zentrale ruft die Webseite des Standorts ab | Dienste erreichbar |
 | Fehlersuche im Verbund-Standort | fertiger Standort mit 5 Fehlern, an jedem Platz andere; alle finden und beheben | Fehler behoben n/5, dann fertig |
+| Standort unter Beschuss | Webseite veröffentlichen und drei Angriffe abwehren ([[it-sicherheit]]) | Dienste erreichbar, dann fertig |
 
 | Platz n | Transitnetz | WAN-Adresse | Provider (Gateway) |
 |---|---|---|---|

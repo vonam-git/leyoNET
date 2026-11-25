@@ -55,11 +55,13 @@ import type {
   RipConfig,
   RoutingMode,
   IpMode,
+  AttackConfig,
   StaticRoute6,
   SerialEncapsulation,
   StaticNat,
   VlanDef,
 } from './types';
+import { ATTACK_KINDS } from './types';
 import { CHANNEL_MODES, MAX_CHANNEL, MAX_VNI } from './types';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
 
@@ -127,6 +129,8 @@ export type ErrorCode =
   | 'dhcpServerNeedsStatic'
   | 'notAServer'
   | 'notAComputer'
+  | 'notAnAttacker'
+  | 'badAttack'
   | 'notPoeCapable'
   | 'notQosCapable'
   | 'invalidRate'
@@ -1510,6 +1514,29 @@ export function setDnsForwarder(t: Topology, id: string, address: string): Resul
 
 /** Geräte, auf denen sich Programme wie der Netzscanner installieren lassen. */
 export const canInstall = (type: DeviceType): boolean => type === 'pc' || type === 'notebook' || type === 'server';
+
+/** Gehört das Gerät zu den Angreifern aus dem Shop? */
+export const isAttacker = (d: Pick<Device, 'type' | 'variant'>): boolean => d.type === 'notebook' && d.variant === 'attacker';
+
+/** Angriff des Angreifers wählen (Art, Ziel, Beginn); null = kein Angriff. */
+export function setAttack(t: Topology, id: string, attack: AttackConfig | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!isAttacker(device)) return fail('notAnAttacker');
+  if (!attack) return ok(updateDevice(t, id, (d) => without(d, 'attack')));
+  const delay = attack.delay ?? 2;
+  if (!ATTACK_KINDS.includes(attack.kind) || !Number.isInteger(delay) || delay < 0 || delay > 600 || (attack.target ?? '').length > 60) return fail('badAttack');
+  const target = attack.target?.trim();
+  return ok(updateDevice(t, id, (d) => ({ ...d, attack: { kind: attack.kind, ...(target ? { target } : {}), ...(delay !== 2 ? { delay } : {}) } })));
+}
+
+/** Schutz auf PC, Notebook oder Server ein- oder ausschalten. */
+export function setProtection(t: Topology, id: string, key: 'arpGuard' | 'synCookies', on: boolean): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canInstall(device.type) || isAttacker(device)) return fail('notAComputer');
+  return ok(updateDevice(t, id, (d) => (on ? { ...d, [key]: true } : without(d, key))));
+}
 
 /** Netzscanner installieren oder entfernen. */
 export function setScanner(t: Topology, id: string, on: boolean): Result<Topology> {

@@ -3,6 +3,8 @@
 // Dynamische Prüfungen (Ping, HTTP, DHCP, E-Mail) laufen in einer eigenen,
 // frischen Simulation des aktuellen Netzes und sind deshalb wiederholbar.
 
+import { attackEffect } from './attacks';
+import { ATTACK_KINDS, type AttackKind } from '../model/types';
 import { DEVICE_TYPES, isSwitchType } from '../model/devices';
 import { cablesOf, otherEnd, vlanColor, vlanExists } from '../model/topology';
 import { linkStatus, mediumOf } from '../model/links';
@@ -33,6 +35,8 @@ export type Check =
   | { type: 'mail'; from: string; to: string }
   /** TCP-Port von `to`, gesehen von `from`: offen (Standard), geschlossen, gefiltert oder «blocked» (nicht offen). */
   | { type: 'port'; from: string; to: string; port: number; state?: PortCheckState }
+  /** Das Netz widersteht diesem Angriff (virtueller Angreifer, siehe attacks.ts). */
+  | { type: 'resist'; attack: AttackKind }
   | { type: 'packetSeen'; protocol: string; from?: string; to?: string }
   /** Router hat ein Netz über ein Routingprotokoll gelernt (oder überhaupt eine Route dorthin). */
   | { type: 'routeLearned'; device: string; network: string; protocol?: 'ospf' | 'rip' | 'bgp' }
@@ -112,6 +116,7 @@ export const CHECK_TYPES = [
   'dhcpLease',
   'mail',
   'port',
+  'resist',
   'packetSeen',
   'routeLearned',
   'neighbors',
@@ -431,6 +436,10 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
         return { id, passed: true };
       }
       return fail(id, 'httpFailed', { url: check.url, detail: status ?? browser?.steps.at(-1)?.code ?? '' });
+    }
+    case 'resist': {
+      const effect = attackEffect(topology, check.attack);
+      return effect === 'blocked' ? { id, passed: true } : fail(id, effect === 'noTarget' ? 'attackNoTarget' : 'attackEffective', { attack: check.attack });
     }
     case 'port': {
       const from = need(check.from);
@@ -848,6 +857,10 @@ export function readTasks(value: unknown, invalid: (path: string) => never, read
           check = { type, device: str(c.device, `${cp}.device`), ...(ip ? { ip } : {}), ...(dns ? { dns } : {}) };
           break;
         }
+        case 'resist':
+          if (!(ATTACK_KINDS as readonly unknown[]).includes(c.attack)) invalid(`${cp}.attack`);
+          check = { type, attack: c.attack as AttackKind };
+          break;
         case 'port': {
           const state = c.state;
           if (state !== undefined && !(PORT_CHECK_STATES as readonly unknown[]).includes(state)) invalid(`${cp}.state`);

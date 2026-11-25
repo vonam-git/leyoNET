@@ -586,13 +586,27 @@ const IDENTIFY_MS = 12_000;
 /** Blinkdauer in Sekunden (die Lehrperson wählt; Standard 7). */
 const IDENTIFY_SECONDS = { min: 3, max: 15, standard: 7 };
 const TEACHER_EDIT_MS = 30_000;
+/** Simulierte Angriffe (laufen nur im Browser der Lernenden): erlaubte Arten, Ergebnis, Dauer. */
+const ATTACK_KINDS = ['arpSpoof', 'synFlood', 'portScan', 'sshGuess'];
+const ATTACK_EFFECTS = ['effective', 'blocked', 'noTarget'];
+const ATTACK_MS = 45 * 60_000;
+let attackId = 0;
+const attackView = (code) => {
+  const a = attackOf(code);
+  return a ? { kind: a.kind, effect: a.effect } : null;
+};
+/** Laufender Angriff einer Session oder null. */
+function attackOf(code, now = Date.now()) {
+  const a = signals.get(code)?.attack;
+  return a && a.until > now ? a : null;
+}
 const MAX_SIGNALS = 20_000;
 function signalOf(code) {
   let s = signals.get(code);
   if (!s) {
     if (signals.size >= MAX_SIGNALS) {
       const now = Date.now();
-      for (const [k, v] of signals) if (!v.help && v.identify < now && (v.identifyShown || 0) + (v.identifyMs || 0) < now && now - v.teacher > TEACHER_EDIT_MS) signals.delete(k);
+      for (const [k, v] of signals) if (!v.help && !(v.attack && v.attack.until > now) && v.identify < now && (v.identifyShown || 0) + (v.identifyMs || 0) < now && now - v.teacher > TEACHER_EDIT_MS) signals.delete(k);
       if (signals.size >= MAX_SIGNALS) return { help: 0, identify: 0, teacher: 0 };
     }
     s = { help: 0, identify: 0, teacher: 0 };
@@ -1329,13 +1343,16 @@ async function api(req, res, url) {
       }
       if (body.help === true && !sig.help) sig.help = now;
       if (body.help === false) sig.help = 0;
+      // Ergebnis des Angriffs (nur für den laufenden, nur bekannte Werte).
+      const attack = attackOf(code, now);
+      if (attack && body.attack && typeof body.attack === 'object' && body.attack.id === attack.id && ATTACK_EFFECTS.includes(body.attack.effect)) attack.effect = body.attack.effect;
       // «Erkennen» nur einmal zustellen (als Blinkdauer in ms); die Lehrperson sieht, ab wann es blinkt.
       let identify = false;
       if (sig.identify > now && !sig.identifyShown) {
         sig.identifyShown = now;
         identify = sig.identifyMs || IDENTIFY_SECONDS.standard * 1000;
       }
-      return json(res, 200, { ok: true, ...about(item), updated: item.updated, help: !!sig.help, identify, teacher: teacherEditing(code, now) });
+      return json(res, 200, { ok: true, ...about(item), updated: item.updated, help: !!sig.help, identify, teacher: teacherEditing(code, now), attack: attack ? { id: attack.id, kind: attack.kind } : null });
     }
     // Platz und Gruppe im Klassen-Verbund ändern (nur das schreibende Gerät).
     if (parts[2] === 'site' && method === 'PUT') {
@@ -1960,7 +1977,7 @@ async function admin(req, res, parts, method) {
         .sort((a, b) => a.created - b.created)
         .map((m) => loadSession(m.code))
         .filter(Boolean)
-        .map((s) => ({ code: s.code, created: s.created, updated: s.updated, expires: s.expires, site: s.site || null, progress: progressOf(s.code, s.progress), connected: connected(s.code), help: helpOf(s.code), teacher: teacherEditing(s.code), ...summary(s.project), ...(withProjects ? { project: s.project } : {}) }));
+        .map((s) => ({ code: s.code, created: s.created, updated: s.updated, expires: s.expires, site: s.site || null, progress: progressOf(s.code, s.progress), connected: connected(s.code), help: helpOf(s.code), attack: attackView(s.code), teacher: teacherEditing(s.code), ...summary(s.project), ...(withProjects ? { project: s.project } : {}) }));
       return json(res, 200, sessions);
     }
     if (parts.length === 2 && method === 'PATCH') {
@@ -2086,7 +2103,7 @@ async function admin(req, res, parts, method) {
       }
       return json(res, 200, sig.identify > now ? { state: 'pending' } : { state: 'missed' });
     }
-    if (parts.length === 3 && method === 'POST' && ['identify', 'help', 'edit'].includes(parts[2])) {
+    if (parts.length === 3 && method === 'POST' && ['identify', 'help', 'edit', 'attack'].includes(parts[2])) {
       if (item.exam || !item.classCode) return fail(res, 409, 'notInClass');
       const body = await readBody(req, 1024);
       const sig = signalOf(code);
@@ -2098,6 +2115,10 @@ async function admin(req, res, parts, method) {
         sig.identifyShown = 0;
       }
       if (parts[2] === 'help') sig.help = 0;
+      if (parts[2] === 'attack') {
+        if (body.kind !== null && !ATTACK_KINDS.includes(body.kind)) return fail(res, 400, 'badAttack');
+        sig.attack = body.kind === null ? undefined : { id: ++attackId, kind: body.kind, effect: null, until: now + ATTACK_MS };
+      }
       if (parts[2] === 'edit') sig.teacher = body.active === false ? 0 : now;
       return json(res, 200, { ok: true, help: !!sig.help, teacher: teacherEditing(code, now), ...(parts[2] === 'identify' ? { ms: sig.identifyMs } : {}) });
     }

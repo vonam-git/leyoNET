@@ -685,6 +685,48 @@ test('Klasse: Fortschritt per Lebenszeichen, Hilfe, Erkennen, Bearbeiten durch d
   await call('DELETE', `/api/admin/classes/${cls.code}`, null, token);
 });
 
+test('Sicherheits-Szenario: nur die Lehrperson startet, nur bekannte Angriffe, Ergebnis nur zum laufenden', async () => {
+  // Anmeldung aus dem Test davor: Die Anmeldung ist begrenzt.
+  const token = liveToken;
+  const cls = (await call('POST', '/api/admin/classes', { label: 'Szenario' }, token)).data;
+  const s = (await call('POST', '/api/sessions', { project: project(1), classCode: cls.code })).data;
+  const solo = (await call('POST', '/api/sessions', { project: project(1) })).data;
+  const url = `/api/admin/sessions/${s.code}/attack`;
+  const ping = async (body) => (await call('POST', `/api/sessions/${s.code}/ping`, body)).data.attack;
+  const row = async () => (await call('GET', `/api/admin/classes/${cls.code}/sessions`, null, token)).data.find((x) => x.code === s.code).attack;
+
+  assert.equal(await ping({}), null);
+  assert.equal((await call('POST', url, { kind: 'synFlood' })).status, 401);
+  assert.equal((await call('POST', `/api/admin/sessions/${solo.code}/attack`, { kind: 'synFlood' }, token)).status, 409);
+  for (const kind of ['rm -rf', 1, {}, undefined, '__proto__']) assert.equal((await call('POST', url, { kind }, token)).status, 400);
+  // Lernende können weder starten noch ohne laufenden Angriff etwas melden.
+  assert.equal(await ping({ attack: { id: 1, kind: 'synFlood', effect: 'effective' } }), null);
+  assert.equal(await row(), null);
+
+  assert.equal((await call('POST', url, { kind: 'synFlood' }, token)).status, 200);
+  const running = await ping({});
+  assert.equal(running.kind, 'synFlood');
+  assert.deepEqual(await row(), { kind: 'synFlood', effect: null });
+  // Ergebnis: nur bekannte Werte und nur zur richtigen Kennung.
+  for (const attack of [{ id: running.id, effect: '<script>' }, { id: running.id + 1, effect: 'blocked' }, 'blocked', { id: String(running.id), effect: 'blocked' }]) await ping({ attack });
+  assert.equal((await row()).effect, null);
+  await ping({ attack: { id: running.id, effect: 'blocked' } });
+  assert.deepEqual(await row(), { kind: 'synFlood', effect: 'blocked' });
+  // Neuer Angriff: neue Kennung, Ergebnis beginnt von vorn; beenden.
+  await call('POST', url, { kind: 'arpSpoof' }, token);
+  const next = await ping({ attack: { id: running.id, effect: 'blocked' } });
+  assert.notEqual(next.id, running.id);
+  assert.deepEqual(await row(), { kind: 'arpSpoof', effect: null });
+  await call('POST', url, { kind: null }, token);
+  assert.equal(await ping({}), null);
+  // Nichts davon steht in der gespeicherten Session; die Arten passen zum Simulationskern.
+  assert.doesNotMatch(JSON.stringify((await call('GET', `/api/sessions/${s.code}`)).data), /synFlood|arpSpoof/);
+  const core = fs.readFileSync(path.join(__dirname, '..', 'src', 'core', 'model', 'types.ts'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, 'app.cjs'), 'utf8');
+  const kinds = (text) => /ATTACK_KINDS = \[([^\]]+)\]/.exec(text)[1];
+  assert.equal(kinds(server), kinds(core));
+});
+
 test('Klasse: Bearbeiten überschreibt keinen neueren Stand, Lebenszeichen klein und begrenzt', async () => {
   // Gleiche Anmeldung wie oben (die Anmeldung ist pro Minute begrenzt).
   const token = liveToken;

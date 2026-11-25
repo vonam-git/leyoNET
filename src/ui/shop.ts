@@ -117,6 +117,7 @@ export const SHOP: readonly ShopItem[] = [
   device('notebook', 'endpoints', 'notebook'),
   device('pc', 'endpoints', 'pc'),
   device('ipphone', 'endpoints', 'ipphone'),
+  device('attacker', 'endpoints', 'notebook', { options: { variant: 'attacker' }, features: ['tool.security'] }),
   device('camera', 'endpoints', 'camera'),
   device('group10', 'endpoints', 'clientgroup', { options: { groupSize: 10 } }),
   device('group25', 'endpoints', 'clientgroup', { options: { groupSize: 25 } }),

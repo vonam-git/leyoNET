@@ -19,6 +19,8 @@ const line = (d: string): IconShape => ({ tag: 'path', cls: 'line', attrs: { d }
 
 const ICONS: Record<string, IconShape[]> = {
   notebook: [rect(-17, -18, 34, 23, 2), path('M-24 8 H24 L20 15 H-20 Z')],
+  // Angreifer: Notebook mit Warndreieck auf dem Bildschirm.
+  'notebook:attacker': [rect(-17, -18, 34, 23, 2), path('M-24 8 H24 L20 15 H-20 Z'), line('M0 -15 L9 1 H-9 Z M0 -10 V-5'), circle(0, -2, 1.3, 'fill')],
   pc: [rect(-24, -18, 30, 22, 2), line('M-9 4 V10 M-15 11 H-3'), rect(11, -18, 13, 30, 2), line('M14 -12 H21 M14 -7 H21')],
   'server:rack': [rect(-24, -13, 48, 11, 2), rect(-24, 1, 48, 11, 2), line('M-18 -7.5 H-6 M-18 6.5 H-6'), circle(17, -7.5, 1.8, 'fill'), circle(17, 6.5, 1.8, 'fill')],
   server: [rect(-13, -20, 26, 40, 3), line('M-8 -13 H8 M-8 -7 H8 M-8 -1 H8'), circle(0, 12, 2.2, 'fill')],
