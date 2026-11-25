@@ -67,6 +67,24 @@ describe('Angriffe und Abwehr', () => {
     expect(safe.getDeviceState(id['PC 1']!).console.filter((l) => l.code === 'ping.reply')).toHaveLength(4);
     expect(safe.getDeviceState(id['PC 1']!).alerts!.some((x) => x.kind === 'arpBlocked')).toBe(true);
   });
+  it('Der Wächter warnt auch, wenn die falsche ARP-Angabe die erste war; ohne Angriff bleibt er still', () => {
+    for (const guard of [false, true]) {
+      const net = guard ? u(setProtection(t, id['PC 1']!, 'arpGuard', true)) : t;
+      const a = withAttacker(net, 'arpSpoof')!;
+      const sim = new Simulation(a.topology);
+      sim.runUntil(10_000);
+      sim.ping(id['PC 1']!, '192.168.1.1');
+      sim.runUntil(20_000);
+      expect(sim.getDeviceState(id['PC 1']!).alerts!.map((x) => x.kind)).toContain(guard ? 'arpRejected' : 'arpFlood');
+    }
+    const quiet = new Simulation(t);
+    for (let i = 0; i < 12; i++) {
+      quiet.ping(id['PC 1']!, '192.168.1.80');
+      quiet.ping(id['PC 2']!, '192.168.1.11');
+      quiet.runUntil(quiet.now + 5000);
+    }
+    for (const n of ['PC 1', 'PC 2', 'Web']) expect(quiet.getDeviceState(id[n]!).alerts).toBeUndefined();
+  });
   it('SYN-Flood aus dem Internet legt die Webseite lahm; SYN-Cookies wehren ab', () => {
     expect(attackEffect(t, 'synFlood')).toBe('effective');
     expect(attackEffect(u(setProtection(t, id['Web']!, 'synCookies', true)), 'synFlood')).toBe('blocked');

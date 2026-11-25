@@ -50,7 +50,7 @@
   }
   article {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr);
     gap: 14px;
     align-items: center;
     padding: 12px 14px;
@@ -66,6 +66,11 @@
     margin: 2px 0 0;
     font-size: 0.82rem;
     color: var(--muted);
+  }
+  article > button,
+  .row {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
   .row {
     display: flex;

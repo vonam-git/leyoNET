@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_SPECS, MAX_NAME_LENGTH, MAX_SFP_SLOTS, canHaveSfp, convert, copperPorts, devicePrice, floorsOf, hasCli, isRackable, type Device } from '../../core';
+  import { isAttacker, DEVICE_SPECS, MAX_NAME_LENGTH, MAX_SFP_SLOTS, canHaveSfp, convert, copperPorts, devicePrice, floorsOf, hasCli, isRackable, type Device } from '../../core';
   import { t } from '../../i18n';
   import { roleLabel, typeLabel } from '../labels';
   import { openCli } from '../state/cli.svelte';
@@ -46,7 +46,7 @@
 </label>
 <dl class="facts">
   <dt>{t('inspector.type')}</dt>
-  <dd>{typeLabel(device.type)}{device.variant === 'rack' ? ` (${t('shop.serverRack')})` : ''}</dd>
+  <dd>{isAttacker(device) ? t('shop.attacker') : typeLabel(device.type)}{device.variant === 'rack' ? ` (${t('shop.serverRack')})` : ''}</dd>
   <dt>{t('inspector.role')}</dt>
   <dd>{roleLabel(device.type)}</dd>
   {#if ui.showPrices && devicePrice(device) > 0}

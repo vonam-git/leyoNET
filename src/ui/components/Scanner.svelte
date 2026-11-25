@@ -168,7 +168,7 @@
   }
   form {
     display: grid;
-    grid-template-columns: 1.3fr 1.1fr 1.3fr auto;
+    grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
     gap: 8px;
     align-items: end;
     padding: 10px;
@@ -185,10 +185,22 @@
     font-size: 0.72rem;
     color: var(--muted);
   }
+  form {
+    min-width: 0;
+  }
   input,
   select {
+    box-sizing: border-box;
     width: 100%;
+    max-width: 100%;
     min-width: 0;
+    padding: 5px 8px;
+    font-size: 0.85rem;
+    text-overflow: ellipsis;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
   }
   input {
     font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
@@ -231,9 +243,11 @@
     align-items: flex-start;
   }
   .map {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    max-width: 100%;
+    box-sizing: border-box;
     display: grid;
-    grid-template-columns: repeat(16, 18px);
+    grid-template-columns: repeat(16, minmax(0, 18px));
     gap: 2px;
     padding: 6px;
     border: 1px solid var(--border);
@@ -241,7 +255,9 @@
     background: var(--surface);
   }
   .cell {
-    width: 18px;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
     height: 15px;
     padding: 0;
     border: 0;
@@ -271,7 +287,8 @@
     outline: 2px solid var(--text);
   }
   .hosts {
-    flex: 1 1 260px;
+    flex: 1 1 220px;
+    min-width: 0;
     list-style: none;
     margin: 0;
     padding: 0;
@@ -343,10 +360,5 @@
     max-width: 60ch;
     color: var(--muted);
     background: var(--surface);
-  }
-  @media (max-width: 700px) {
-    form {
-      grid-template-columns: 1fr 1fr;
-    }
   }
 </style>

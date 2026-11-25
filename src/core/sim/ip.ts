@@ -342,6 +342,7 @@ export class IpNode implements SimNode {
     const forMe = parseIp(arp.targetIp) === iface.ip || this.answersArpFor(index, arp.targetIp);
     // Wie RFC 826: Absender lernen, wenn die Anfrage uns gilt oder er schon bekannt ist.
     const key = this.#arpKey(arp.senderIp, index);
+    if (forMe && arp.op === 'request') this.onUnaskedArp(arp.senderIp, arp.senderMac);
     if (this.ctx.device()?.arpGuard) {
       // ARP-Schutz: nur Antworten auf eigene Anfragen gelten, unverlangte Angaben nicht.
       const known = this.#arp.get(key);
@@ -372,6 +373,9 @@ export class IpNode implements SimNode {
 
   /** Eine bekannte Adresse meldet sich mit anderer MAC (Hinweis für den Wächter). */
   protected onArpChange(_ip: string, _from: string, _to: string, _blocked: boolean) {}
+
+  /** ARP-Angabe ohne eigene Anfrage (Hinweis für den Wächter). */
+  protected onUnaskedArp(_ip: string, _mac: string) {}
 
   #learn(ip: string, mac: string, iface: number) {
     const key = this.#arpKey(ip, iface);

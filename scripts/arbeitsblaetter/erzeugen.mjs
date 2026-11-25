@@ -294,6 +294,9 @@ class Writer {
       this.page.drawCircle({ x: cx + a.cx * k, y: cy - a.cy * k, size: a.r * k, ...(s.cls === 'fill' ? { color: stroke } : { color: soft, borderColor: stroke, borderWidth: width }) });
       return;
     }
+    // Warnzeichen des Angreifers: orange mit hellem Ausrufezeichen (wie in der App).
+    if (s.cls === 'mark') return void this.page.drawSvgPath(a.d, { x: cx, y: cy, scale: k, borderColor: rgb(1, 1, 1), borderWidth: 2.4, borderLineCap: LineCapStyle.Round });
+    if (s.cls === 'warn') return void this.page.drawSvgPath(a.d, { x: cx, y: cy, scale: k, color: hex('#ef6c00'), borderColor: hex('#b4530a'), borderWidth: 1.5 });
     const d = s.tag === 'path' ? a.d : `M${a.x + a.rx} ${a.y} H${a.x + a.width - a.rx} Q${a.x + a.width} ${a.y} ${a.x + a.width} ${a.y + a.rx} V${a.y + a.height - a.rx} Q${a.x + a.width} ${a.y + a.height} ${a.x + a.width - a.rx} ${a.y + a.height} H${a.x + a.rx} Q${a.x} ${a.y + a.height} ${a.x} ${a.y + a.height - a.rx} V${a.y + a.rx} Q${a.x} ${a.y} ${a.x + a.rx} ${a.y} Z`;
     this.page.drawSvgPath(d, { x: cx, y: cy, scale: k, borderColor: stroke, borderWidth: 1.8, borderLineCap: LineCapStyle.Round, ...(s.cls === 'line' ? {} : { color: soft }) });
   }

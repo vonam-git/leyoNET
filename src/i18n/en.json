@@ -1580,6 +1580,8 @@
   "security.quiet": "Nothing suspicious.",
   "security.alert.arpChange": "{ip} suddenly has a different MAC address: {to} instead of {from}. ARP spoofing?",
   "security.alert.arpBlocked": "Forged ARP information rejected: {ip} claims to be {to} (known is {from}).",
+  "security.alert.arpFlood": "{ip} keeps claiming unasked by ARP to have the MAC address {mac}. ARP spoofing?",
+  "security.alert.arpRejected": "Unasked ARP information ignored: {ip} claims to be {mac}.",
   "security.alert.synFlood": "Port {port}: {halfOpen} half-open connections, the queue is full. SYN flood?",
   "security.alert.portScan": "{ip} tries many ports ({ports}). Port scan?",
   "attack.title": "Attacker",

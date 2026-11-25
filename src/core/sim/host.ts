@@ -68,7 +68,7 @@ export interface HostState {
 /** Auffälliges Ereignis, das der Wächter eines Endgeräts meldet. */
 export interface Alert {
   time: number;
-  kind: 'arpChange' | 'arpBlocked' | 'synFlood' | 'portScan';
+  kind: 'arpChange' | 'arpBlocked' | 'arpFlood' | 'arpRejected' | 'synFlood' | 'portScan';
   params: Record<string, string | number>;
   /** So oft in Folge. */
   count: number;
@@ -76,6 +76,8 @@ export interface Alert {
 const MAX_ALERTS = 30;
 /** Ab so vielen verschiedenen Ports eines Absenders in 10 s meldet der Wächter einen Portscan. */
 const SCAN_ALERT_PORTS = 5;
+/** Ab so vielen ungefragten ARP-Anfragen desselben Geräts in 10 s meldet der Wächter. */
+const ARP_ALERT_ASKS = 4;
 
 type Command = 'ping' | 'tracert';
 
@@ -102,6 +104,7 @@ export class HostNode extends IpNode {
   readonly scanner = new NetScan(this);
   readonly attacker = new AttackRun(this, (target, user, password, done) => this.#trySsh(target, user, password, done));
   #alerts: Alert[] = [];
+  #arpAsks = new Map<string, { since: number; n: number }>();
   #synPorts = new Map<string, { since: number; ports: Set<number> }>();
   #ping: PingRun | null = null;
   #trace: IcmpApp | null = null;
@@ -277,6 +280,21 @@ export class HostNode extends IpNode {
 
   protected override onArpChange(ip: string, from: string, to: string, blocked: boolean) {
     this.#alert(blocked ? 'arpBlocked' : 'arpChange', { ip, from, to });
+  }
+
+  /**
+   * Dasselbe Gerät fragt immer wieder per ARP: Normal ist das nicht, weil ARP-Einträge Minuten halten.
+   * So fällt ARP-Spoofing auch auf, wenn die falsche Angabe die erste war.
+   */
+  protected override onUnaskedArp(ip: string, mac: string) {
+    const key = `${ip}|${mac}`;
+    const seen = this.#arpAsks.get(key);
+    if (!seen || this.ctx.now - seen.since > 10_000) {
+      if (this.#arpAsks.size > 64) this.#arpAsks.clear();
+      this.#arpAsks.set(key, { since: this.ctx.now, n: 1 });
+      return;
+    }
+    if (++seen.n >= ARP_ALERT_ASKS) this.#alert(this.ctx.device()?.arpGuard ? 'arpRejected' : 'arpFlood', { ip, mac });
   }
 
   /** Viele verschiedene Ports vom selben Absender: Portscan. */
