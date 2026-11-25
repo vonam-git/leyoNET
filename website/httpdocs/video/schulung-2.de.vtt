@@ -1,73 +1,73 @@
 WEBVTT
 
-00:00:04.063 --> 00:00:08.541
+00:00:04.051 --> 00:00:08.536
 In diesem Video baust du dein erstes Netz: zwei PCs und ein Switch.
 
-00:00:08.541 --> 00:00:13.026
+00:00:08.536 --> 00:00:13.032
 Öffne links Endgeräte und klicke auf Desktop-PC.
 
-00:00:13.026 --> 00:00:16.397
+00:00:13.032 --> 00:00:16.380
 Mit gedrückter Maustaste verschiebst du das Gerät.
 
-00:00:16.397 --> 00:00:23.233
+00:00:16.380 --> 00:00:22.927
 Noch ein PC …
 
-00:00:23.233 --> 00:00:30.039
+00:00:22.927 --> 00:00:29.172
 … und ein Switch aus der Kategorie Switches.
 
-00:00:30.039 --> 00:00:34.548
+00:00:29.172 --> 00:00:33.624
 Jetzt die Kabel: Werkzeug Kabel ziehen wählen, oder Taste K.
 
-00:00:34.548 --> 00:00:38.485
+00:00:33.624 --> 00:00:37.209
 Zuerst PC 1 anklicken, dann den Switch.
 
-00:00:38.485 --> 00:00:42.277
+00:00:37.209 --> 00:00:40.894
 Dasselbe für PC 2.
 
-00:00:42.277 --> 00:00:46.377
+00:00:40.894 --> 00:00:44.975
 Zurück zu Auswählen. Das geht auch mit Esc.
 
-00:00:46.377 --> 00:00:50.124
+00:00:44.975 --> 00:00:48.706
 Grüne Punkte an den Kabeln heissen: Die Verbindung steht.
 
-00:00:50.124 --> 00:00:54.921
+00:00:48.706 --> 00:00:53.495
 Klicke PC 1 an. Rechts erscheinen seine Eigenschaften.
 
-00:00:54.921 --> 00:01:03.746
+00:00:53.495 --> 00:01:02.331
 Hier kommt die IP-Adresse hin. Wir nehmen das Netz 192.168.1.0/24.
 
-00:01:03.746 --> 00:01:15.872
+00:01:02.331 --> 00:01:14.622
 PC 1 bekommt 192.168.1.10. Die Maske 255.255.255.0 ergänzt leyoNET.
 
-00:01:15.872 --> 00:01:24.335
+00:01:14.622 --> 00:01:23.080
 PC 2 bekommt 192.168.1.11. Jede Adresse darf nur einmal vorkommen.
 
-00:01:24.335 --> 00:01:29.143
+00:01:23.080 --> 00:01:27.890
 Gespeichert wird von selbst. Einen Knopf «Übernehmen» braucht es nicht.
 
-00:01:29.143 --> 00:01:32.308
+00:01:27.890 --> 00:01:30.988
 Mit der Taste M geht es in die Simulation.
 
-00:01:32.308 --> 00:01:36.946
+00:01:30.988 --> 00:01:35.366
 PC 1 auswählen und rechts Desktop öffnen.
 
-00:01:36.946 --> 00:01:43.447
+00:01:35.366 --> 00:01:41.846
 In der Befehlszeile: ping 192.168.1.11 und Enter.
 
-00:01:43.447 --> 00:01:47.719
+00:01:41.846 --> 00:01:46.090
 Vier Antworten: Deine PCs erreichen sich!
 
-00:01:47.719 --> 00:01:51.296
+00:01:46.090 --> 00:01:49.658
 Schliessen wir den Desktop und schauen die Paketliste an.
 
-00:01:51.296 --> 00:01:58.319
+00:01:49.658 --> 00:01:56.632
 Zuerst fragt PC 1 mit ARP nach der MAC-Adresse, danach folgt ICMP, der Ping.
 
-00:01:58.319 --> 00:02:02.796
+00:01:56.632 --> 00:02:01.108
 Ein Klick auf eine Zeile zeigt das Paket Schicht für Schicht.
 
-00:02:02.796 --> 00:02:08.554
+00:02:01.108 --> 00:02:06.865
 Kein Erfolg? Prüfe der Reihe nach: Kabel, IP-Adresse, Maske.
 
-00:02:08.554 --> 00:02:12.672
+00:02:06.865 --> 00:02:10.981
 Im nächsten Video löst du Aufgaben und arbeitest in einer Klasse.

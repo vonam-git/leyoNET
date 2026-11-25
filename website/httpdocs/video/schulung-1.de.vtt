@@ -1,70 +1,70 @@
 WEBVTT
 
-00:00:04.054 --> 00:00:08.539
+00:00:04.057 --> 00:00:08.606
 Willkommen bei leyoNET. In diesem Video lernst du, was wo zu finden ist.
 
-00:00:08.539 --> 00:00:12.522
+00:00:08.606 --> 00:00:12.559
 In der Mitte liegt die Zeichenfläche. Hier baust du dein Netz.
 
-00:00:12.522 --> 00:00:18.934
+00:00:12.559 --> 00:00:18.979
 Links findest du die Geräte: Endgeräte, Server, Switches, Router, WLAN und mehr.
 
-00:00:18.934 --> 00:00:22.364
+00:00:18.979 --> 00:00:22.409
 Darunter steht die Aufgabe mit ihren Lernzielen.
 
-00:00:22.364 --> 00:00:25.868
+00:00:22.409 --> 00:00:25.929
 Rechts siehst du die Eigenschaften des ausgewählten Geräts.
 
-00:00:25.868 --> 00:00:30.383
+00:00:25.929 --> 00:00:30.443
 Ganz oben sind die Menüs. Alle Funktionen findest du auch hier.
 
-00:00:30.383 --> 00:00:37.296
+00:00:30.443 --> 00:00:37.355
 Im Menü Datei öffnest und speicherst du Projekte. Speichern geht auch mit Strg+S.
 
-00:00:37.296 --> 00:00:43.016
+00:00:37.355 --> 00:00:43.089
 Im Menü Werkzeuge sind der Aufgaben-Katalog und der IP-Rechner.
 
-00:00:43.016 --> 00:00:46.755
+00:00:43.089 --> 00:00:46.816
 In der Werkzeugleiste: Auswählen und Kabel ziehen.
 
-00:00:46.755 --> 00:00:51.889
+00:00:46.816 --> 00:00:51.939
 Falsch geklickt? Rückgängig nimmt den letzten Schritt zurück (Strg+Z).
 
-00:00:51.889 --> 00:00:56.717
+00:00:51.939 --> 00:00:56.764
 Hier steht der Projektname. So heisst später auch deine Datei.
 
-00:00:56.717 --> 00:01:01.517
+00:00:56.764 --> 00:01:01.700
 leyoNET hat zwei Modi. Im Entwurf baust du und stellst ein.
 
-00:01:01.517 --> 00:01:06.836
+00:01:01.700 --> 00:01:06.943
 In der Simulation läuft dein Netz wirklich. Wechseln kannst du mit der Taste M.
 
-00:01:06.836 --> 00:01:10.402
+00:01:06.943 --> 00:01:10.509
 Schauen wir ein fertiges Beispiel an: Demo-Netze.
 
-00:01:10.402 --> 00:01:14.713
+00:01:10.509 --> 00:01:14.811
 «ARP und Ping im LAN» auswählen und Vorführen klicken.
 
-00:01:14.713 --> 00:01:19.780
+00:01:14.811 --> 00:01:19.823
 Die Simulation startet, und PC 1 pingt einen anderen PC.
 
-00:01:19.780 --> 00:01:25.060
+00:01:19.823 --> 00:01:25.108
 Das ist der Desktop des PCs: Befehlszeile, Webbrowser und E-Mail.
 
-00:01:25.060 --> 00:01:29.062
+00:01:25.108 --> 00:01:29.111
 Wir minimieren den Desktop und sehen uns die Pakete an.
 
-00:01:29.062 --> 00:01:34.655
+00:01:29.111 --> 00:01:34.691
 Unten steht die Paketliste. Jede Zeile ist ein Paket, das gesendet wurde.
 
-00:01:34.655 --> 00:01:40.365
+00:01:34.691 --> 00:01:40.355
 Ein Klick auf ein Gerät zeigt rechts, was es gerade weiss, z.B. seine Adresse.
 
-00:01:40.365 --> 00:01:47.501
+00:01:40.355 --> 00:01:47.474
 Nicht sicher? F1 öffnet die Hilfe. Sie passt zu dem, was du gerade tust.
 
-00:01:47.501 --> 00:01:53.420
+00:01:47.474 --> 00:01:53.380
 Und Strg+K sucht jede Funktion. Tippe einfach, was du brauchst.
 
-00:01:53.420 --> 00:01:57.792
+00:01:53.380 --> 00:01:57.737
 Das war der Überblick. Im nächsten Video baust du dein erstes Netz.
