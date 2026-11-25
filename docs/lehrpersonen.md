@@ -12,6 +12,10 @@
 
 Profile und Funktionsdateien: [funktionsprofile.md](funktionsprofile.md).
 
+## Einführungsvideos für Lernende
+
+Auf [leyonet.ch/schulung.html](https://leyonet.ch/schulung.html) führen drei Videos von je rund zwei Minuten ein: «Was ist wo?», «Dein erstes Netz» und «Aufgaben lösen» (Klasse beitreten, prüfen, Hilfe holen, abgeben). Jedes hat Kapitel zum Anspringen und Untertitel auf Deutsch und Englisch. Darunter stehen alle Arbeitsblätter einzeln und als ZIP.
+
 ## Demo-Netze zum Vorführen
 
 **Schaufenster:** [app.leyonet.ch/?schaufenster](https://app.leyonet.ch/?schaufenster) zeigt den Rechenzentren-Verbund (drei Rechenzentren, Racks mit VLAN-Farben, Modems, IPsec) schreibgeschützt in einer Schleife, z.B. für den Beamer am Infotag. Mit `?schaufenster=<Demo>` läuft jede andere Demo so, die Namen stehen im Wiki unter [Crashkurs → Alle Demo-Netze](https://leyonet.ch/wiki/crashkurs.html#alle-demo-netze).

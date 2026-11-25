@@ -46,6 +46,7 @@ Options -Indexes
 </IfModule>
 
 AddType image/webp .webp
+AddType text/vtt .vtt
 AddType application/x-apple-diskimage .dmg
 AddType application/vnd.debian.binary-package .deb
 AddType application/x-rpm .rpm

@@ -24,6 +24,18 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://leyonet.ch/en/dc.html"/>
     <priority>0.7</priority>
   </url>
+  <url>
+    <loc>https://leyonet.ch/schulung.html</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leyonet.ch/schulung.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leyonet.ch/en/schulung.html"/>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://leyonet.ch/en/schulung.html</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://leyonet.ch/schulung.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://leyonet.ch/en/schulung.html"/>
+    <priority>0.7</priority>
+  </url>
   <url><loc>https://leyonet.ch/impressum.html</loc><priority>0.2</priority></url>
   <url><loc>https://leyonet.ch/datenschutz.html</loc><priority>0.2</priority></url>
 </urlset>

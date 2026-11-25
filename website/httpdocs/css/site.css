@@ -1276,7 +1276,7 @@ code {
 /* --- Kleine Bildschirme ------------------------------------------------------------ */
 
 /* Tablet (z.B. iPad): Menü enger, damit Sprache, Design und «Starten» noch Platz haben */
-@media (max-width: 1240px) {
+@media (max-width: 1380px) {
   .top-row {
     gap: 14px;
   }
@@ -1292,7 +1292,7 @@ html {
   scroll-padding-top: 76px;
 }
 /* Tablet und Handy: Menü als eigene Zeile unter dem Logo, seitlich wischbar */
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   html {
     scroll-padding-top: 116px;
   }
@@ -1836,5 +1836,271 @@ kbd {
   }
   .js-menu .top-row {
     gap: 8px;
+  }
+}
+
+/* --- Schulung (schulung.html): drei Einführungsvideos mit Kapiteln, Arbeitsblätter -------------- */
+.lern-section {
+  padding: clamp(36px, 5vw, 72px) 0;
+  border-bottom: 1px solid var(--line);
+}
+.lern-cards {
+  list-style: none;
+  margin: 1.8rem 0 1.2rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+body:not(.lern-js) .lern-cards {
+  display: none;
+}
+.lern-card {
+  display: block;
+  height: 100%;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--text);
+  text-decoration: none;
+}
+.lern-card:hover {
+  border-color: var(--graphite);
+}
+.lern-card:focus-visible,
+.lern-chapters button:focus-visible,
+.lern-sheets summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.lern-card[aria-current] {
+  border-color: var(--ink);
+}
+.lern-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  opacity: 0.75;
+}
+.lern-card[aria-current] img,
+.lern-card:hover img {
+  opacity: 1;
+}
+.lern-card-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+}
+.lern-no {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.8em;
+  height: 1.8em;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--on-ink);
+  font: 700 0.9rem/1 var(--mono);
+}
+.lern-card.seen .lern-no {
+  background: var(--port);
+}
+.lern-len {
+  margin-left: auto;
+  color: var(--muted);
+  font: 0.9rem var(--mono);
+}
+.lern-video {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--paper);
+  margin: 0 0 24px;
+  scroll-margin-top: 90px;
+}
+.lern-js .lern-video:not(.on) {
+  display: none;
+}
+.lern-stage {
+  background: #0e131b;
+  display: grid;
+  align-items: center;
+}
+.lern-stage video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+.lern-info {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  border-left: 2px solid var(--ink);
+}
+.lern-info h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 0.5rem;
+}
+.lern-info p {
+  margin: 0 0 0.8rem;
+}
+.lern-ch-title {
+  color: var(--muted);
+  font: 700 0.82rem var(--mono);
+}
+body:not(.lern-js) .lern-ch-title,
+body:not(.lern-js) .lern-chapters {
+  display: none;
+}
+.lern-chapters {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+.lern-chapters button {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 4px 8px;
+  border: 0;
+  border-left: 3px solid var(--line);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+}
+.lern-chapters button span {
+  font: 0.85rem var(--mono);
+  color: var(--muted);
+}
+.lern-chapters button:hover {
+  background: var(--canvas);
+}
+.lern-chapters button[aria-current] {
+  border-left-color: var(--icmp);
+  background: var(--icmp-bg);
+  color: var(--icmp-ink);
+}
+.lern-next {
+  margin-top: auto;
+  text-align: center;
+}
+.lern-video.done .lern-next {
+  outline: 3px solid var(--port);
+  outline-offset: 2px;
+}
+.lern-zip {
+  margin: 1.2rem 0 1.6rem;
+}
+.lern-sheets {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin: 0 0 10px;
+  background: var(--paper);
+}
+.lern-sheets summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+  font-family: var(--mono);
+}
+.lern-sheets summary b::before {
+  content: '+ ';
+  color: var(--graphite);
+}
+.lern-sheets[open] summary b::before {
+  content: '– ';
+}
+.lern-sheets summary span {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.lern-sheets ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 18px 12px;
+  columns: 2 340px;
+  column-gap: 32px;
+}
+.lern-sheets li {
+  break-inside: avoid;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--row-line);
+}
+.lern-sheets li a {
+  color: var(--text);
+}
+.lern-stars {
+  flex: none;
+  color: #b4530a;
+  letter-spacing: 1px;
+}
+.lern-stars i {
+  color: var(--line);
+  font-style: normal;
+}
+.lern-note {
+  color: var(--muted);
+  margin-top: 1.2rem;
+}
+.lern-teaser {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  margin-top: 28px;
+  padding: 20px 24px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.lern-teaser p {
+  margin: 0;
+  max-width: 62ch;
+}
+.lern-teaser .cta {
+  margin: 0;
+}
+@media (max-width: 980px) {
+  .lern-video {
+    grid-template-columns: 1fr;
+  }
+  .lern-info {
+    border-left: 0;
+    border-top: 2px solid var(--ink);
+  }
+}
+@media (max-width: 620px) {
+  .lern-cards {
+    gap: 8px;
+  }
+  .lern-card-text {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+  .lern-len {
+    margin-left: 0;
   }
 }

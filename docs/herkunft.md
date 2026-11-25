@@ -33,6 +33,7 @@ Alle diese Lizenzen sind mit der AGPL-3.0, unter der leyoNET steht, verträglich
 | Logo und Symbol (`branding/leyoNET.svg`, `branding/favicon.svg`) | eigene Gestaltung von Mark; App-Symbole der Desktop-Version daraus erzeugt (`npx tauri icon`). Name und Logo sind nicht Teil der AGPL, siehe [NOTICE.md](../NOTICE.md) |
 | Logo-Schrift | Systemschrift «Courier New» bzw. Monospace des Geräts, nicht eingebettet |
 | Schriften | keine eingebetteten Schriften, es werden die Systemschriften genutzt |
+| Einführungsvideos (`website/httpdocs/video/schulung-*.mp4`) | eigene Aufnahmen aus leyoNET; computererzeugte Stimme mit Piper (GPL-3.0, nur Werkzeug, nicht ausgeliefert) und dem Stimmmodell «de_DE-thorsten-medium»: Aufnahmen von Thorsten Müller (CC0), Grundmodell «rdh» (CC0); Schrift im Textband: Liberation (SIL OFL 1.1), nur als Bild |
 | Texte, Hilfe, Übungen, Beispiele | eigene Texte; die Übungen zu den Modulen 117 und 129 und ihre Arbeitsblätter beruhen auf Unterrichtsunterlagen, die Mark aus seinem Unterricht zur Verfügung gestellt hat (für leyoNET neu formuliert, Adressen ersetzt) |
 | Server (`server/`) | eigene Implementierung, nur Node.js-Bordmittel |
 

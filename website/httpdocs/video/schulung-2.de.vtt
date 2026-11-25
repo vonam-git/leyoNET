@@ -1,0 +1,73 @@
+WEBVTT
+
+00:00:04.053 --> 00:00:08.571
+In diesem Video baust du dein erstes Netz: zwei PCs und ein Switch.
+
+00:00:08.571 --> 00:00:13.101
+Öffne links Endgeräte und klicke auf Desktop-PC.
+
+00:00:13.101 --> 00:00:16.473
+Mit gedrückter Maustaste verschiebst du das Gerät.
+
+00:00:16.473 --> 00:00:22.796
+Noch ein PC …
+
+00:00:22.796 --> 00:00:29.317
+… und ein Switch aus der Kategorie Switches.
+
+00:00:29.317 --> 00:00:33.762
+Jetzt die Kabel: Werkzeug Kabel ziehen wählen, oder Taste K.
+
+00:00:33.762 --> 00:00:37.722
+Zuerst PC 1 anklicken, dann den Switch.
+
+00:00:37.722 --> 00:00:41.377
+Dasselbe für PC 2.
+
+00:00:41.377 --> 00:00:45.466
+Zurück zu Auswählen. Das geht auch mit Esc.
+
+00:00:45.466 --> 00:00:49.235
+Grüne Punkte an den Kabeln heissen: Die Verbindung steht.
+
+00:00:49.235 --> 00:00:54.001
+Klicke PC 1 an. Rechts erscheinen seine Eigenschaften.
+
+00:00:54.001 --> 00:01:02.822
+Hier kommt die IP-Adresse hin. Wir nehmen das Netz 192.168.1.0/24.
+
+00:01:02.822 --> 00:01:15.136
+PC 1 bekommt 192.168.1.10. Die Maske 255.255.255.0 ergänzt leyoNET.
+
+00:01:15.136 --> 00:01:23.633
+PC 2 bekommt 192.168.1.11. Jede Adresse darf nur einmal vorkommen.
+
+00:01:23.633 --> 00:01:28.440
+Gespeichert wird von selbst. Einen Knopf «Übernehmen» braucht es nicht.
+
+00:01:28.440 --> 00:01:31.534
+Mit der Taste M geht es in die Simulation.
+
+00:01:31.534 --> 00:01:36.236
+PC 1 auswählen und rechts Desktop öffnen.
+
+00:01:36.236 --> 00:01:42.711
+In der Befehlszeile: ping 192.168.1.11 und Enter.
+
+00:01:42.711 --> 00:01:46.962
+Vier Antworten: Deine PCs erreichen sich!
+
+00:01:46.962 --> 00:01:50.593
+Schliessen wir den Desktop und schauen die Paketliste an.
+
+00:01:50.593 --> 00:01:57.582
+Zuerst fragt PC 1 mit ARP nach der MAC-Adresse, danach folgt ICMP, der Ping.
+
+00:01:57.582 --> 00:02:02.075
+Ein Klick auf eine Zeile zeigt das Paket Schicht für Schicht.
+
+00:02:02.075 --> 00:02:07.884
+Kein Erfolg? Prüfe der Reihe nach: Kabel, IP-Adresse, Maske.
+
+00:02:07.884 --> 00:02:12.004
+Im nächsten Video löst du Aufgaben und arbeitest in einer Klasse.
