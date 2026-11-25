@@ -19,7 +19,7 @@ Dieses Dokument hält fest, woher Code, Texte und Grafiken stammen. Es dient als
 | clsx | MIT | Hilfsfunktion von Svelte | ebenda |
 | Tauri und Rust-Pakete | MIT, Apache-2.0, BSD, ISC, Zlib, MPL-2.0 u.a. | nur Desktop-Version | `src-tauri/THIRD_PARTY_RUST.md` |
 
-Nicht ausgeliefert, nur zum Bauen und Testen: Vite, TypeScript, Vitest, Playwright, svelte-check, vite-plugin-singlefile, Tauri-CLI und pdf-lib (MIT, erzeugt die Arbeitsblätter in `docs/arbeitsblaetter`; die PDFs nutzen nur die Standardschrift Helvetica, nicht eingebettet). Diese Werkzeuge stehen ebenfalls unter freien Lizenzen. Die Release-Prüfung listet sie unter `licenses.tools`.
+Nicht ausgeliefert, nur zum Bauen und Testen: Vite, TypeScript, Vitest, Playwright, svelte-check, vite-plugin-singlefile, Tauri-CLI und pdf-lib (MIT, erzeugt die Arbeitsblätter in `docs/arbeitsblaetter`; die PDFs nutzen nur die Standardschriften Helvetica und Courier, nicht eingebettet). Diese Werkzeuge stehen ebenfalls unter freien Lizenzen. Die Release-Prüfung listet sie unter `licenses.tools`.
 
 Alle diese Lizenzen sind mit der AGPL-3.0, unter der leyoNET steht, verträglich.
 

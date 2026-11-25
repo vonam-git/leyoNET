@@ -1,8 +1,8 @@
 # Abläufe für die Arbeit am Projekt
 
-Ergänzt [`CLAUDE.md`](../CLAUDE.md) um Abläufe, die nicht in jeder Sitzung vorkommen: Release, Impressum und Datenschutz der Website, Plesk und praktische Hilfen. Die laufende Liste der offenen Punkte liegt nicht im (öffentlichen) Repository, sondern im claude.ai-Projekt «leyoNET» (`claude/offene-aufgaben.md`).
+Ergänzt [`CLAUDE.md`](../CLAUDE.md) um Abläufe, die nicht in jeder Sitzung vorkommen: Release, Impressum und Datenschutz der Website, Plesk und praktische Hilfen. Die laufende Liste der offenen Punkte liegt nicht im (öffentlichen) Repository, sondern im claude.ai-Projekt «leyoNET» (`claude/offene-aufgaben.md`) bzw. auf der eigenen VM in `~/leyonet-privat/offene-aufgaben.md`.
 
-**Was Claude nicht kann** (GitHub-Proxy): Tags setzen oder pushen, Releases erstellen oder veröffentlichen, Branches löschen, Repository-Einstellungen ändern. Das macht Mark. Pull Requests erstellen und mergen geht (über `gh api`).
+**Was Claude nicht kann** (in der Cloud-Sitzung von claude.ai, GitHub-Proxy): Tags setzen oder pushen, Releases erstellen oder veröffentlichen, Branches löschen, Repository-Einstellungen ändern. Das macht Mark. Pull Requests erstellen und mergen geht (über `gh api`). Auf der eigenen VM hat Claude Code Marks GitHub-Zugang; Tags, Releases und Löschen fragt es trotzdem immer zuerst (`.claude/settings.json`).
 
 ## Projekt in Kürze
 
@@ -28,18 +28,18 @@ Die echten Dateien `website/httpdocs/impressum.html` und `website/httpdocs/daten
 
 Die Vorlagen enthalten den Platzhalter `[PLZ Ort]` (als `<span class="platzhalter">…</span>`). Öffentliche Kontaktadresse ist `info@leyonet.ch`. Diese darf überall stehen. Marks private E-Mail-Adresse und Anschrift gehören nirgends ins Repository, in keine Doku, keinen Commit und keine Ausgabe.
 
-**Ablauf bei jeder Website-Änderung, die diese Seiten betrifft** (z.B. neue Version im `?v=`-Parameter):
+**Ablauf bei jeder Website-Änderung, die diese Seiten betrifft** (z.B. neue Version im `?v=`-Parameter oder geänderter Text der Vorlage):
 
-1. Claude fragt Mark einmal im Chat nach der Ortsangabe (PLZ und Ort), falls sie in der laufenden Sitzung nicht bekannt ist.
-2. Claude erzeugt die beiden Dateien **lokal** aus den Vorlagen, ersetzt `<span class="platzhalter">[PLZ Ort]</span>` durch `<span>PLZ Ort</span>` und prüft, dass die Version stimmt.
-3. Claude **schickt die beiden Dateien als Datei** an Mark (nicht als Text im Chat, nicht ins Repository) und prüft vor dem Commit, dass `git status` sie nicht anzeigt.
+1. `node scripts/rechtstexte.mjs` erzeugt beide Dateien aus den Vorlagen. Die Ortsangabe kommt aus `LEYONET_ORT` oder `~/leyonet-privat/ort.txt` (eine Zeile «PLZ Ort») und wird nie ausgegeben. Claude liest die erzeugten Dateien nicht (Leseverbot in `.claude/settings.json`).
+2. In der claude.ai-Cloud fehlt `ort.txt`: Claude fragt Mark einmal nach der Ortsangabe, setzt sie nur als `LEYONET_ORT` für diesen Aufruf und **schickt die beiden Dateien als Datei** an Mark (nicht als Text im Chat).
+3. Vor dem Commit prüfen, dass `git status` die beiden Dateien nicht anzeigt.
 4. Mark lädt sie mit dem Rest von `website/httpdocs` auf den Webserver.
 
 Ändert sich der Text von Impressum oder Datenschutz, immer zuerst die Vorlage anpassen, dann die Dateien neu erzeugen.
 
 ## Plesk
 
-Einrichtung, Umgebungsvariablen und Updates in [plesk.md](plesk.md) (Branch `develop`, Anwendungsstamm `<repo>/server`, Startdatei `start.cjs`, Dokumentstamm `<repo>/server/public`).
+Einrichtung, Umgebungsvariablen und Updates in [plesk.md](plesk.md) (Branch `develop`, Anwendungsstamm `<repo>/server`, Startdatei `start.cjs`, Dokumentstamm `<repo>/server/public`). Git-Pull, Neustart und das Hochladen von `website/httpdocs` macht Mark. Zugangsdaten für Plesk, FTP oder den Admin der Webversion gehören nicht in Dateien, die Claude liest.
 
 ## Hilfen für die Arbeit
 

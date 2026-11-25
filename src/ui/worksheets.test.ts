@@ -6,6 +6,7 @@ import { CATALOG } from './catalog';
 import { OUT_DIR, buildSheet } from '../../scripts/arbeitsblaetter/erzeugen.mjs';
 import { SHEETS } from '../../scripts/arbeitsblaetter/inhalt.mjs';
 import { catalogSheets } from './catalogSheets';
+import { sheetPlans } from './sheetPlans';
 
 setLocale('de');
 
@@ -21,6 +22,8 @@ interface Sheet {
 }
 // Von Hand geschriebene Blätter (Module) und automatisch erzeugte (Übungen ohne Modulreihe).
 const sheets = [...(SHEETS as Sheet[]), ...(catalogSheets() as Sheet[])];
+
+const plans = sheetPlans();
 
 describe('Arbeitsblätter (PDF) zu den Katalog-Übungen', () => {
   it('jede Übung mit Arbeitsblatt hat ein Blatt, jedes Blatt passt zu seinen Übungen', () => {
@@ -55,8 +58,8 @@ describe('Arbeitsblätter (PDF) zu den Katalog-Übungen', () => {
   it.each(sheets.map((s) => s.file))('%s: eingechecktes PDF passt zum Inhalt (npm run arbeitsblaetter), Musterlösung lässt sich erzeugen', async (file) => {
     const sheet = sheets.find((s) => s.file === file)!;
     const onDisk = readFileSync(join(OUT_DIR, `${file}.pdf`));
-    expect(Buffer.from(await buildSheet(sheet)).equals(onDisk)).toBe(true);
+    expect(Buffer.from(await buildSheet(sheet, { plans })).equals(onDisk)).toBe(true);
     // Die Musterlösung liegt bewusst nicht im öffentlichen Repo.
-    expect((await buildSheet(sheet, { solution: true })).length).toBeGreaterThan(10_000);
+    expect((await buildSheet(sheet, { solution: true, plans })).length).toBeGreaterThan(10_000);
   });
 });

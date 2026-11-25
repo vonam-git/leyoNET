@@ -102,4 +102,6 @@ Der Inhalt steht in [`scripts/arbeitsblaetter/inhalt.mjs`](../../scripts/arbeits
 npm run arbeitsblaetter
 ```
 
-Ein Test (`src/ui/worksheets.test.ts`) prüft, dass die PDFs zum Inhalt passen, die Musterlösungen sich erzeugen lassen und dass Titel, Sterne und Anzahl Lernziele mit dem Katalog übereinstimmen. Schrift ist Helvetica (Standardschrift jedes PDF-Programms, nicht eingebettet).
+Ein Test (`src/ui/worksheets.test.ts`) prüft, dass die PDFs zum Inhalt passen, die Musterlösungen sich erzeugen lassen und dass Titel, Sterne und Anzahl Lernziele mit dem Katalog übereinstimmen. Gestaltung wie [leyonet.ch](https://leyonet.ch): Logo, Überschriften in Courier, Text in Helvetica (Standardschriften jedes PDF-Programms, nicht eingebettet), Farben der OSI-Schichten im Fuss. Das Startnetz jeder Übung ist als Netzplan gezeichnet, mit denselben Symbolen wie in der App ([`sheetPlans.ts`](../../src/ui/sheetPlans.ts)).
+
+Die Musterlösungen (`_mL.pdf`, mit gelöstem Netz und Konfiguration) landen nie im Repository: Gibt es den Ordner `~/leyonet-privat`, schreibt der Befehl sie nach `~/leyonet-privat/musterloesungen/`, dazu unter `projekte/` das gelöste Netz jeder Übung als Projektdatei zum Öffnen in leyoNET. Einen anderen Ordner nennt `LEYONET_LOESUNGEN`; sonst liegen sie neben den Blättern und sind in `.gitignore`.

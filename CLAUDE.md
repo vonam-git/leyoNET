@@ -9,7 +9,7 @@ leyoNET ist ein Netzwerk-Simulator für den Informatik-Unterricht (1. Lehrjahr b
 - Vor jedem Commit: `npm run release` (Typprüfung, Tests, Server-Tests, Build, `release/leyonet.html`, Release-Prüfung). Die Datei `release/leyonet.html` ist eingecheckt und muss zum Code passen, sonst schlägt die CI fehl.
 - Automatische Prüfungen: CI bei jedem Push; jeden Montag `.github/workflows/woechentlich.yml` (Funktionsprüfung plus Abgleich der RFCs mit dem RFC-Index, bei Handlungsbedarf ein Issue). Offene Issues «Wöchentliche Prüfung: Handlungsbedarf» zu Beginn einer Sitzung ansehen und erledigen.
 - Oberflächentests: `PW_EXECUTABLE=<chromium> npx playwright test` nach `npm run build`.
-- Nach Abschluss committen und pushen. Offene Punkte nach jeder Sitzung im claude.ai-Projekt in `claude/offene-aufgaben.md` nachführen (erledigt abhaken, neue ergänzen), nicht im öffentlichen Repository.
+- Nach Abschluss committen und pushen. Offene Punkte nach jeder Sitzung nachführen (erledigt abhaken, neue ergänzen), nie im öffentlichen Repository: auf der eigenen VM in `~/leyonet-privat/offene-aufgaben.md`, in der claude.ai-Cloud im Projekt unter `claude/offene-aufgaben.md`. Impressum/Datenschutz: `node scripts/rechtstexte.mjs` (siehe [docs/ablaeufe.md](docs/ablaeufe.md)).
 - **Plesk-Schritte nennen:** Mark hat das Repo in Plesk verbunden (Branch `develop`). Nach jedem Push am Ende der Antwort sagen, was er in Plesk tun muss, in dieser Reihenfolge: *Git → Pull Updates*, *Jetzt bereitstellen*, *Node.js → App neu starten*. Dazu nennen, ob etwas Zusätzliches nötig ist (z.B. neue Umgebungsvariablen, geänderte Einstellungen unter Node.js) oder ob nur der Neustart wichtig ist (Änderungen in `server/`).
 
 ## Architektur

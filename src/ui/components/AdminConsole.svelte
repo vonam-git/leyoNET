@@ -903,7 +903,8 @@
         {#if overview.classes.length === 0}
           <p class="muted">{t('admin.noClasses')}</p>
         {:else}
-          <table>
+          <div class="table-scroll">
+          <table class="classes-table">
             <thead>
               <tr><th>{t('admin.classLabel')}</th><th>{t('admin.classCode')}</th><th>{t('admin.sessions')}</th><th>{t('admin.until')}</th><th></th></tr>
             </thead>
@@ -914,7 +915,7 @@
                   <td><code>{c.code}</code></td>
                   <td>{c.sessions}</td>
                   <td>{when(c.expires)}</td>
-                  <td class="actions">
+                  <td class="actions"><div class="btns">
                     <button onclick={() => showClass(c)}>{t('admin.show')}</button>
                     <button onclick={() => (bigCode = c)} title={t('classLive.big.hint')}><Icon name="desktop" size={16} />{t('classLive.big.button')}</button>
                     {#each [7, 30] as days (days)}
@@ -922,11 +923,12 @@
                     {/each}
                     {#if c.verbund.enabled}<button onclick={() => (dashboard = c)}><Icon name="desktop" size={16} />{t('admin.verbund.dashboard')}</button>{/if}
                     <button class="danger" onclick={() => closeClass(c)}>{t('admin.closeClass')}</button>
-                  </td>
+                  </div></td>
                 </tr>
               {/each}
             </tbody>
           </table>
+          </div>
         {/if}
         {#if openClass}
           {@const oc = openClass}
@@ -978,7 +980,8 @@
               <IdentifySeconds />
               <span class="muted">{editor.tasks ? t('review.helpTask', { title: editor.tasks.title }) : t('admin.reviewOwn')}</span>
             </div>
-            <table>
+            <div class="table-scroll">
+            <table class="sessions-table">
               <thead>
                 <tr><th title={t('classLive.numberHint')}>#</th><th>{t('verbund.site')}</th><th>{t('admin.sessionCode')}</th><th>{t('classLive.state')}</th><th title={t('classLive.progressHint')}><span class="th-hint">{t('admin.progress')} ⓘ</span></th><th>{t('admin.changed')}</th><th>{t('admin.devices')}</th><th>{t('review.score')}</th><th></th></tr>
               </thead>
@@ -999,17 +1002,18 @@
                     <td>{when(s.updated)}</td>
                     <td>{s.devices} / {s.cables}</td>
                     <td>{score(reviews[s.code])}</td>
-                    <td class="actions">
+                    <td class="actions"><div class="btns">
                       {#if s.help}<button class="primary" onclick={() => signal(s, 'help')}>{t('classLive.help.done')}</button>{/if}
                       <button onclick={() => watch(s.code, nameOf(s), true)} title={t('classLive.openHint')}><Icon name="edit" size={16} />{t('admin.open')}</button>
                       <button title={t('classLive.watchHint')} onclick={() => watch(s.code, nameOf(s))}><Icon name="eye" size={16} />{t('admin.exams.watch')}</button>
                       {#if token}<IdentifyButton admin={token} code={s.code} disabled={!s.connected} onerror={() => notify('error', t('admin.loadFailed'))} />{/if}
                       <button class="danger" onclick={() => closeSessions([s])} title={t('classLive.close.hint')}>{t('classLive.close.button')}</button>
-                    </td>
+                    </div></td>
                   </tr>
                 {/each}
               </tbody>
             </table>
+            </div>
           {/if}
         {/if}
       {:else if section === 'feedback'}
@@ -1642,10 +1646,60 @@
     background: #d97706;
   }
   tr.cs-help td {
-    background: color-mix(in srgb, #c026d3 10%, transparent);
+    background: color-mix(in srgb, #c026d3 10%, var(--surface));
   }
   tr.cs-done td {
-    background: color-mix(in srgb, #15803d 8%, transparent);
+    background: color-mix(in srgb, #15803d 8%, var(--surface));
+  }
+  /* Listen im Bereich «Klassen»: Die Knöpfe brechen um, statt über den Rand zu ragen; nur in sehr
+     schmalen Fenstern rollt die Tabelle für sich, nie die ganze Seite. */
+  .table-scroll {
+    overflow-x: auto;
+    border-radius: var(--a-radius);
+    margin-bottom: var(--a-gap);
+  }
+  .table-scroll table {
+    margin: 0;
+    /* sonst bleibt die Spalte mit den Knöpfen nicht stehen */
+    overflow: visible;
+  }
+  .table-scroll td.actions {
+    white-space: normal;
+  }
+  .btns {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 220px;
+  }
+  .sessions-table th {
+    padding: 10px 8px;
+    white-space: normal;
+  }
+  .sessions-table td {
+    padding: 8px;
+  }
+  /* «.num» ist sonst die grosse Zahl der Übersicht (flex); hier eine gewöhnliche Zelle. */
+  .sessions-table td.num {
+    display: table-cell;
+    font-size: 1rem;
+  }
+  .sessions-table .bar {
+    width: 56px;
+    min-width: 0;
+  }
+  /* Knöpfe bleiben sichtbar, wenn die Tabelle in schmalen Fenstern seitlich rollt. */
+  .sessions-table td.actions {
+    position: sticky;
+    right: 0;
+  }
+  .sessions-table tr:not(.cs-help, .cs-done) td.actions {
+    background: var(--surface);
+  }
+  .sessions-table .who-cell,
+  .sessions-table td:nth-child(5) {
+    white-space: nowrap;
   }
   .who-cell {
     display: inline-flex;
