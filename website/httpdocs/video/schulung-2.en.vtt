@@ -1,73 +1,73 @@
 WEBVTT
 
-00:00:04.053 --> 00:00:08.571
+00:00:04.063 --> 00:00:08.541
 In this video you build your first network: two PCs and a switch.
 
-00:00:08.571 --> 00:00:13.101
+00:00:08.541 --> 00:00:13.026
 Open Endgeräte (end devices) on the left and click Desktop-PC.
 
-00:00:13.101 --> 00:00:16.473
+00:00:13.026 --> 00:00:16.397
 Hold the mouse button to move the device.
 
-00:00:16.473 --> 00:00:22.796
+00:00:16.397 --> 00:00:23.233
 Another PC …
 
-00:00:22.796 --> 00:00:29.317
+00:00:23.233 --> 00:00:30.039
 … and a switch from the Switches category.
 
-00:00:29.317 --> 00:00:33.762
+00:00:30.039 --> 00:00:34.548
 Now the cables: choose the cable tool, or press K.
 
-00:00:33.762 --> 00:00:37.722
+00:00:34.548 --> 00:00:38.485
 Click PC 1 first, then the switch.
 
-00:00:37.722 --> 00:00:41.377
+00:00:38.485 --> 00:00:42.277
 The same for PC 2.
 
-00:00:41.377 --> 00:00:45.466
+00:00:42.277 --> 00:00:46.377
 Back to select. Esc works too.
 
-00:00:45.466 --> 00:00:49.235
+00:00:46.377 --> 00:00:50.124
 Green dots on the cables mean: the link is up.
 
-00:00:49.235 --> 00:00:54.001
+00:00:50.124 --> 00:00:54.921
 Click PC 1. Its properties appear on the right.
 
-00:00:54.001 --> 00:01:02.822
+00:00:54.921 --> 00:01:03.746
 The IP address goes here. We use the network 192.168.1.0/24.
 
-00:01:02.822 --> 00:01:15.136
+00:01:03.746 --> 00:01:15.872
 PC 1 gets 192.168.1.10. leyoNET adds the mask 255.255.255.0.
 
-00:01:15.136 --> 00:01:23.633
+00:01:15.872 --> 00:01:24.335
 PC 2 gets 192.168.1.11. Every address may exist only once.
 
-00:01:23.633 --> 00:01:28.440
+00:01:24.335 --> 00:01:29.143
 Everything is saved automatically. No “Apply” button needed.
 
-00:01:28.440 --> 00:01:31.534
+00:01:29.143 --> 00:01:32.308
 Press M to enter the simulation.
 
-00:01:31.534 --> 00:01:36.236
+00:01:32.308 --> 00:01:36.946
 Select PC 1 and open its desktop on the right.
 
-00:01:36.236 --> 00:01:42.711
+00:01:36.946 --> 00:01:43.447
 On the command line: ping 192.168.1.11 and Enter.
 
-00:01:42.711 --> 00:01:46.962
+00:01:43.447 --> 00:01:47.719
 Four replies: your PCs reach each other!
 
-00:01:46.962 --> 00:01:50.593
+00:01:47.719 --> 00:01:51.296
 Let's close the desktop and look at the packet list.
 
-00:01:50.593 --> 00:01:57.582
+00:01:51.296 --> 00:01:58.319
 First PC 1 asks for the MAC address with ARP, then ICMP follows, the ping.
 
-00:01:57.582 --> 00:02:02.075
+00:01:58.319 --> 00:02:02.796
 Clicking a row shows the packet layer by layer.
 
-00:02:02.075 --> 00:02:07.884
+00:02:02.796 --> 00:02:08.554
 No success? Check in this order: cable, IP address, mask.
 
-00:02:07.884 --> 00:02:12.004
+00:02:08.554 --> 00:02:12.672
 In the next video you solve exercises and work in a class.
