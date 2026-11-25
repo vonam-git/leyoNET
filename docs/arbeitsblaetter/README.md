@@ -19,6 +19,7 @@ Ausfüllbare PDFs zu **allen** Übungen im Aufgaben-Katalog (Werkzeuge » Aufgab
 | [M129_Routing](M129_Routing.pdf) | Statisches Routing, Aufträge 1–3: drei Router statisch, Internet mit NAT, Verwaltungsnetz und SSH | ★★★ ★★★★ ★★★ |
 | [M129_Dynamisches_Routing](M129_Dynamisches_Routing.pdf) | Dynamisches Routing, Aufträge 1–2: RIP, OSPF mit Standardroute | ★★★ ★★★★ |
 | [M129_Protokollanalyse](M129_Protokollanalyse.pdf) | Protokollanalyse, Aufträge 1–3: ICMP und TTL, DHCP, ARP/DNS/HTTP | ★★ ★★★ ★★★★ |
+| [M129_Netzscan](M129_Netzscan.pdf) | Protokollanalyse, Aufträge 4–5: Netzscan, Firewall von aussen prüfen | ★★★ ★★★★ |
 | [M145_UE02_Netzwerk_OldSchool](M145_UE02_Netzwerk_OldSchool.pdf) | Zwei Netze mit einem Router | ★ |
 | [M145_UE03_Portbasiertes_VLAN](M145_UE03_Portbasiertes_VLAN.pdf) | VLAN 10 und 20 an einem Switch | ★★ |
 | [M145_UE04_Trunk_VLAN](M145_UE04_Trunk_VLAN.pdf) | Trunk über zwei Stockwerke | ★★★ |
@@ -58,6 +59,11 @@ Ausfüllbare PDFs zu **allen** Übungen im Aufgaben-Katalog (Werkzeuge » Aufgab
 | [Uebung_port-shutdown](Uebung_port-shutdown.pdf) | Gast aussperren | ★ |
 | [Uebung_rip-chain](Uebung_rip-chain.pdf) | RIP in der Kette | ★★★ |
 | [Uebung_router-on-a-stick](Uebung_router-on-a-stick.pdf) | Router-on-a-Stick | ★★★ |
+| [Uebung_sec-arp-spoof](Uebung_sec-arp-spoof.pdf) | Angriff: Wer gibt sich als Gateway aus? | ★★★ |
+| [Uebung_sec-build](Uebung_sec-build.pdf) | Netz bauen, dann kommt der Angreifer | ★★★★ |
+| [Uebung_sec-ssh](Uebung_sec-ssh.pdf) | Angriff: Ein zu einfaches Passwort | ★★★ |
+| [Uebung_sec-syn-flood](Uebung_sec-syn-flood.pdf) | Angriff: Die Webseite antwortet nicht mehr | ★★★ |
+| [Uebung_verbund-angriff](Uebung_verbund-angriff.pdf) | Standort unter Beschuss (Verbund) | ★★★★ |
 | [Uebung_serial-wan](Uebung_serial-wan.pdf) | Standorte über eine serielle Leitung | ★★★★ |
 | [Uebung_server-group](Uebung_server-group.pdf) | Ein ganzes Schulzimmer | ★★ |
 | [Uebung_snat-mail](Uebung_snat-mail.pdf) | SNAT: feste Absenderadresse für den Mailserver | ★★★★ |

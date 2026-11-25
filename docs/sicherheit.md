@@ -127,6 +127,19 @@ Diese Seite beschreibt, wie man leyoNET angreifen könnte, was dagegen getan ist
 - **Prüfungsmodus:** Er ist eine Hürde im Unterricht, kein Schutz gegen Absicht. Wer eine eigene Kopie öffnet, umgeht ihn (siehe [pruefungen.md](pruefungen.md)).
 - **HTTPS** richtet Plesk ein (Let's Encrypt). Ohne HTTPS könnten Codes und Admin-Token im Netz mitgelesen werden.
 
+## Sicherheits-Szenarien (simulierte Angriffe)
+
+- **Kein echtes Paket:** Angriffe laufen nur in der Simulation im Browser; der Server überträgt nur die Art (feste Liste) und das Ergebnis (feste Liste).
+- **Nur die eigene Lehrperson** startet und beendet (`POST /api/admin/sessions/<code>/attack`, gleiche Rechte wie «Erkennen»), nie für Prüfungsplätze und nie ausserhalb von Klassen. Geprüft in `server/app.test.cjs` und `angriff.mjs`.
+- **Nur im Arbeitsspeicher**, höchstens 45 Minuten, innerhalb der Grenze `MAX_SIGNALS`; nichts davon steht in der Session.
+- **Last im Browser:** 40 Pakete pro Sekunde, 32 halb offene Verbindungen, Paketliste auf 5000 Zeilen begrenzt; die Wirkungsprüfung läuft in eigenen, zeitlich begrenzten Simulationen.
+- **Das Ergebnis meldet der Browser der Lernenden** und lässt sich fälschen (wie der Fortschritt); es zählt nicht als Note.
+- **Projektdateien:** Angriffe nur beim Gerät «Angreifer», Art aus fester Liste, Ziel höchstens 60 Zeichen.
+
+## Netzscanner und Dauerping
+
+Beide arbeiten nur in der Simulation im Browser: Sie senden nie ein echtes Paket (die CSP verbietet jede Verbindung, in der Webversion ausser zum eigenen Server). Grenzen, damit eine Eingabe den Browser nicht lahmlegt: höchstens 256 Adressen, 1024 Ports und 4096 Proben je Suche, 1000 Echo-Anfragen (Dauerping bis Strg+C, die Konsole behält 500 Zeilen). Aus Projektdateien wird nur der Wahrheitswert «installiert» gelesen, und nur bei PC, Notebook und Server; Suchen und Pings stehen nie in einer Datei. Beim Prüfen von Aufgaben läuft die Suche in einer eigenen, zeitlich begrenzten Simulation.
+
 ## Checkliste bei Änderungen
 
 1. Neuer Endpunkt: Anmeldung nötig? Ratenbegrenzung je Adresse und insgesamt? Grösse und Anzahl begrenzt? Speicher-Grenze (`fits`)?

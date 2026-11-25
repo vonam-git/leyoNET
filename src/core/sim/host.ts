@@ -4,7 +4,7 @@ import type { EthernetFrame } from './frames';
 import type { Device } from '../model/types';
 import { formatIp, parseIp } from '../net/ipv4';
 import { lookupRoute } from '../net/routing';
-import { PingRun, TracerouteRun, icmpView, type IcmpApp, type IcmpHost } from './apps';
+import { PingRun, TracerouteRun, icmpView, type IcmpApp, type IcmpHost, type PingOptions } from './apps';
 import { formatIp6, parseIp6 } from '../net/ipv6';
 import type { Ip6State } from './ip6';
 import type { FirewallState } from './firewall';
@@ -14,8 +14,10 @@ import { DHCP_CLIENT_PORT, DHCP_SERVER_PORT, DNS_PORT, type Ipv4Packet, type Ipv
 import { HttpClient, HttpServer, type BrowserState } from './http';
 import { IpNode, asIpv4View, type ArpEntry } from './ip';
 import { MailClient, MailServer, type MailClientState } from './mail';
+import { AttackRun, type AttackState } from './attack';
+import { NetScan, type ScanState } from './scan';
 import type { NodeContext } from './simulation';
-import { SshClient } from './ssh';
+import { SSH_PORT, SshClient, seal, unseal } from './ssh';
 import { TcpStack, type TcpState } from './tcp';
 import { Iperf, SipPhone, SipServer, type VoipHost, type VoipState } from './voip';
 
@@ -46,6 +48,14 @@ export interface HostState {
   dhcpLeases?: LeaseRecord[];
   dnsCache: DnsCacheEntry[];
   connections: ConnectionInfo[];
+  /** Dauerping oder Ping läuft noch (Stopp mit Strg+C). */
+  pinging?: boolean;
+  /** Angreifer: laufender Angriff. */
+  attack?: AttackState;
+  /** Wächter: auffällige Ereignisse, neueste zuletzt. */
+  alerts?: Alert[];
+  /** Netzscanner: laufende oder letzte Suche. */
+  scan?: ScanState;
   browser?: BrowserState;
   mail: MailClientState;
   mailboxes?: { user: string; count: number }[];
@@ -54,6 +64,18 @@ export interface HostState {
   /** Telefonanlage: angemeldete Rufnummern. */
   sipRegistrations?: { number: string; address: string; nat?: boolean }[];
 }
+
+/** Auffälliges Ereignis, das der Wächter eines Endgeräts meldet. */
+export interface Alert {
+  time: number;
+  kind: 'arpChange' | 'arpBlocked' | 'synFlood' | 'portScan';
+  params: Record<string, string | number>;
+  /** So oft in Folge. */
+  count: number;
+}
+const MAX_ALERTS = 30;
+/** Ab so vielen verschiedenen Ports eines Absenders in 10 s meldet der Wächter einen Portscan. */
+const SCAN_ALERT_PORTS = 5;
 
 type Command = 'ping' | 'tracert';
 
@@ -77,7 +99,11 @@ export class HostNode extends IpNode {
   readonly phone: SipPhone;
   readonly pbx: SipServer;
   readonly iperf: Iperf;
-  #ping: IcmpApp | null = null;
+  readonly scanner = new NetScan(this);
+  readonly attacker = new AttackRun(this, (target, user, password, done) => this.#trySsh(target, user, password, done));
+  #alerts: Alert[] = [];
+  #synPorts = new Map<string, { since: number; ports: Set<number> }>();
+  #ping: PingRun | null = null;
   #trace: IcmpApp | null = null;
   #icmpId = 0;
 
@@ -91,6 +117,7 @@ export class HostNode extends IpNode {
     this.tcp = new TcpStack(this, seq);
     this.browser = new HttpClient(this);
     new HttpServer(this);
+    this.tcp.onBacklog = (halfOpen, port) => this.#alert('synFlood', { port, halfOpen });
     this.mailServer = new MailServer(this);
     this.mail = new MailClient(this);
     const voipHost: VoipHost = {
@@ -148,6 +175,7 @@ export class HostNode extends IpNode {
   protected override onIcmp(packet: Ipv4Packet) {
     this.#ping?.onIcmp(packet);
     this.#trace?.onIcmp(packet);
+    this.scanner.onIcmp(packet);
   }
 
   /** ICMPv6 für Ping und Traceroute: dieselben Anwendungen, Hop Limit statt TTL. */
@@ -220,6 +248,8 @@ export class HostNode extends IpNode {
   }
 
   protected override onTcp(packet: Ipv4Packet, segment: TcpSegment) {
+    this.#watchSyn(packet, segment);
+    this.scanner.onTcp(packet, segment);
     this.tcp.receive(packet.src, packet.dst, segment);
   }
 
@@ -235,7 +265,72 @@ export class HostNode extends IpNode {
     else this.#start();
   }
 
+  // --- Wächter und Angreifer ------------------------------------------------------------
+
+  #alert(kind: Alert['kind'], params: Alert['params']) {
+    const last = this.#alerts.at(-1);
+    const { halfOpen: _a, ports: _b, ...id } = params;
+    const { halfOpen: _c, ports: _d, ...lastId } = last?.params ?? {};
+    if (last?.kind === kind && JSON.stringify(lastId) === JSON.stringify(id)) this.#alerts[this.#alerts.length - 1] = { ...last, params, count: last.count + 1 };
+    else this.#alerts = [...this.#alerts, { time: this.ctx.now, kind, params, count: 1 }].slice(-MAX_ALERTS);
+  }
+
+  protected override onArpChange(ip: string, from: string, to: string, blocked: boolean) {
+    this.#alert(blocked ? 'arpBlocked' : 'arpChange', { ip, from, to });
+  }
+
+  /** Viele verschiedene Ports vom selben Absender: Portscan. */
+  #watchSyn(packet: Ipv4Packet, segment: TcpSegment) {
+    if (!segment.flags.includes('SYN') || segment.flags.includes('ACK')) return;
+    let seen = this.#synPorts.get(packet.src);
+    if (!seen || this.ctx.now - seen.since > 10_000) {
+      if (this.#synPorts.size > 64) this.#synPorts.clear();
+      seen = { since: this.ctx.now, ports: new Set() };
+      this.#synPorts.set(packet.src, seen);
+    }
+    seen.ports.add(segment.dstPort);
+    if (seen.ports.size >= SCAN_ALERT_PORTS) this.#alert('portScan', { ip: packet.src, ports: seen.ports.size });
+  }
+
+  sendRaw(index: number, frame: EthernetFrame) {
+    this.sendFrame(index, frame);
+  }
+
+  override receiveOn(index: number, frame: EthernetFrame) {
+    // Fremder Verkehr an die eigene MAC-Adresse: Folge von ARP-Spoofing.
+    if (frame.payload.kind === 'ipv4' && frame.dst === this.macOf(index) && this.attacker.state() && !this.isOwn(parseIp(frame.payload.dst) ?? 0)) this.attacker.onForeign();
+    super.receiveOn(index, frame);
+  }
+
+  /** Ein Anmeldeversuch am SSH-Zugang. */
+  #trySsh(target: string, user: string, password: string, done: (ok: boolean) => void) {
+    let buffer = '';
+    let finished = false;
+    const finish = (ok: boolean) => {
+      if (finished) return;
+      finished = true;
+      done(ok);
+    };
+    const conn = this.tcp.connect(target, SSH_PORT, {
+      onOpen: (c) => c.write(`SSH-2.0-Attacker\r\n${seal(`AUTH ${user} ${password}`)}\r\n`),
+      onData: (c, data) => {
+        buffer += data;
+        for (const line of buffer.split('\r\n')) {
+          const message = line.startsWith('SSH-') ? null : unseal(line);
+          if (message?.startsWith('OK ')) finish(true);
+          else if (message === 'DENIED') finish(false);
+          else continue;
+          c.close();
+        }
+      },
+      onEnd: (c) => c.close(),
+      onError: () => finish(false),
+    });
+    if (!conn) finish(false);
+  }
+
   #start() {
+    this.attacker.boot();
     this.ensureDhcp();
     this.v6.boot();
     if (this.ctx.device()?.type === 'ipphone') this.phone.boot();
@@ -367,16 +462,23 @@ export class HostNode extends IpNode {
     });
   }
 
-  ping(target: string) {
+  ping(target: string, options: PingOptions = {}) {
+    if (this.#ping?.endless) this.interrupt();
     this.#withTarget(target, 'ping', (ip, name) => {
       this.#ping?.cancel();
       const v6 = parseIp(ip) === null;
       const run = v6
-        ? new PingRun(this.#icmp6, ip, ++this.#icmpId, this.v6.state()?.gateway ?? '', name)
-        : new PingRun(this, ip, ++this.#icmpId, this.effectiveDevice()?.gateway ?? '', name);
+        ? new PingRun(this.#icmp6, ip, ++this.#icmpId, this.v6.state()?.gateway ?? '', name, options)
+        : new PingRun(this, ip, ++this.#icmpId, this.effectiveDevice()?.gateway ?? '', name, options);
       this.#ping = run;
       run.start();
     });
+  }
+
+  /** Strg+C in der Befehlszeile: laufenden Ping und eine mit «nmap» gestartete Suche beenden. */
+  interrupt() {
+    this.#ping?.stop();
+    this.scanner.stop();
   }
 
   traceroute(target: string) {
@@ -428,6 +530,10 @@ export class HostNode extends IpNode {
       arp: this.arpEntries(),
       ...(ipv6 ? { ipv6 } : {}),
       ...(firewall ? { firewall } : {}),
+      ...(this.#ping?.running ? { pinging: true } : {}),
+      ...(this.attacker.state() ? { attack: this.attacker.state()! } : {}),
+      ...(this.#alerts.length ? { alerts: this.#alerts } : {}),
+      ...(this.scanner.state() ? { scan: this.scanner.state()! } : {}),
       address: this.address(),
       dnsCache: this.resolver.cacheEntries(),
       connections: this.connections(),

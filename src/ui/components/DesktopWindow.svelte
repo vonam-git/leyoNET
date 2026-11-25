@@ -1,14 +1,19 @@
 <script lang="ts">
-  import { getDevice } from '../../core';
+  import { canInstall, getDevice, isAttacker } from '../../core';
   import { t } from '../../i18n';
   import { closeDesktop, desktops, minimizeDesktop, type DesktopWindow } from '../state/desktop.svelte';
   import { editor } from '../state/editor.svelte';
   import AddressView from './AddressView.svelte';
   import Browser from './Browser.svelte';
+  import { session } from '../state/session.svelte';
   import { simStore } from '../state/sim.svelte';
   import DhcpServerView from './DhcpServerView.svelte';
   import MailApp from './MailApp.svelte';
   import PhoneApp from './PhoneApp.svelte';
+  import Programs from './Programs.svelte';
+  import Scanner from './Scanner.svelte';
+  import Security from './Security.svelte';
+  import { ui } from '../state/ui.svelte';
   import ServiceLog from './ServiceLog.svelte';
   import Terminal from './Terminal.svelte';
 
@@ -20,11 +25,16 @@
   const special = $derived(device?.type === 'ipphone' ? ['phone', 'terminal', 'network'] : device?.type === 'camera' ? ['terminal', 'network'] : null);
   const apps = $derived([
     ...(special ?? ['terminal', 'browser', 'mail', 'network']),
+    ...(device?.scanner ? ['scanner'] : []),
+    // Während eines Szenarios der Lehrperson auch bei tiefem Funktionsprofil, sonst liesse sich nichts abwehren.
+    ...(device && canInstall(device.type) && !isAttacker(device) && (ui.has('tool.security') || session.attack || device.arpGuard || device.synCookies) ? ['security'] : []),
     ...(device?.dhcpServer ? ['dhcpServer'] : []),
     ...(device?.dnsServer ? ['dnsServer'] : []),
     ...(device?.webServer ? ['webServer'] : []),
     ...(device?.mailServer ? ['mailServer'] : []),
     ...(device?.sipServer ? ['pbx'] : []),
+    // Programme installieren: am Schluss, nur auf Rechnern und wenn es im Funktionsumfang ist.
+    ...(device && canInstall(device.type) && (ui.has('tool.scanner') || device.scanner) ? ['programs'] : []),
   ]);
   const pbxSummary = $derived(
     ((simStore.tick, simStore.sim?.getDeviceState(win.deviceId).sipRegistrations) || []).map((r) => t(r.nat ? 'pbx.lineNat' : 'pbx.line', { number: r.number, address: r.address })),
@@ -105,6 +115,12 @@
     <div class="content" role="tabpanel">
       {#if win.app === 'phone'}
         <PhoneApp {device} />
+      {:else if win.app === 'scanner'}
+        <Scanner {device} />
+      {:else if win.app === 'security'}
+        <Security {device} />
+      {:else if win.app === 'programs'}
+        <Programs {device} onopen={(app) => (win.app = app)} />
       {:else if win.app === 'network'}
         <div class="padded"><AddressView {device} /></div>
       {:else if win.app === 'browser'}
@@ -192,6 +208,7 @@
   }
   .apps {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
     padding: 6px 8px;
     border-bottom: 1px solid var(--border);

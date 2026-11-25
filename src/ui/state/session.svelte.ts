@@ -1,4 +1,4 @@
-import { parseProject, type Snapshot, type TaskSet, type Topology } from '../../core';
+import { parseProject, type Snapshot, type TaskSet, type Topology, ATTACK_KINDS, type AttackEffect, type AttackKind } from '../../core';
 import { examMode, type SeatStatus } from './exam.svelte';
 
 /**
@@ -163,6 +163,9 @@ export class SessionStore {
   /** Erreichte Lernziele (nach «Prüfen»), wird mit dem Projekt gespeichert. */
   /** Erreichte Lernziele; `faults`: davon behobene Fehler (Fehlersuche, für das Dashboard). */
   progress: { goals: number; total: number; faults?: { fixed: number; total: number } } | null = null;
+  /** Laufender Angriff der Lehrperson und ob er noch wirkt. */
+  attack = $state<{ id: number; kind: AttackKind } | null>(null);
+  attackEffect = $state<AttackEffect | null>(null);
   /** Hilfe bei der Lehrperson angefordert (Klasse). */
   help = $state(false);
   /** «Erkennen»: seit wann und wie lange der Bildschirm blinkt. */
@@ -234,8 +237,9 @@ export class SessionStore {
     this.#helpChange = null;
     try {
       // In einer Klasse: Fortschritt und Hilfe-Anfrage mitschicken; zurück kommen «Erkennen» und ob die Lehrperson bearbeitet.
-      const body = this.classCode ? { ...(this.progress ? { progress: this.progress } : {}), ...(change !== null ? { help: change } : {}) } : undefined;
-      const data = await api<{ locked: boolean; help?: boolean; identify?: boolean | number; teacher?: boolean; updated?: number }>('POST', `sessions/${code}/ping`, body, undefined, this.#headers());
+      const effect = this.attack && this.attackEffect ? { attack: { id: this.attack.id, effect: this.attackEffect } } : {};
+      const body = this.classCode ? { ...(this.progress ? { progress: this.progress } : {}), ...(change !== null ? { help: change } : {}), ...effect } : undefined;
+      const data = await api<{ locked: boolean; help?: boolean; identify?: boolean | number; teacher?: boolean; updated?: number; attack?: { id: number; kind: string } | null }>('POST', `sessions/${code}/ping`, body, undefined, this.#headers());
       if (code !== this.code) return;
       this.locked = data.locked;
       if (!this.classCode) return;
@@ -243,6 +247,12 @@ export class SessionStore {
       if (data.help !== undefined && this.#helpChange === null) this.help = data.help;
       // Der Server stellt «Erkennen» nur einmal zu (Blinkdauer in ms; ältere Server: true).
       if (data.identify) this.identify = { at: Date.now(), ms: identifyMs(data.identify) };
+      // Sicherheits-Szenario der Lehrperson: ein simulierter Angriff auf das eigene Netz (nur in der Simulation).
+      const attack = data.attack && (ATTACK_KINDS as readonly string[]).includes(data.attack.kind) ? { id: data.attack.id, kind: data.attack.kind as AttackKind } : null;
+      if (attack?.id !== this.attack?.id) {
+        this.attack = attack;
+        this.attackEffect = null;
+      }
       const was = this.teacherEditing;
       this.teacherEditing = !!data.teacher;
       // Die Lehrperson hat geändert (oder bearbeitet noch): neuen Stand holen und zeigen.
@@ -657,6 +667,11 @@ export class SessionStore {
   /** Lehrperson: Lernende einer Klasse erkennen (Bildschirm blinkt) oder ihre Hilfe-Anfrage erledigen. */
   static async signal(admin: string, code: string, kind: 'identify' | 'help', seconds?: number): Promise<void> {
     await api('POST', `admin/sessions/${encodeURIComponent(code)}/${kind}`, kind === 'identify' && seconds ? { seconds } : {}, admin);
+  }
+
+  /** Lehrperson: simulierten Angriff auf das Netz dieser Session starten oder beenden (null). */
+  static async launchAttack(admin: string, code: string, kind: AttackKind | null): Promise<void> {
+    await api('POST', `admin/sessions/${encodeURIComponent(code)}/attack`, { kind }, admin);
   }
 
   /** Lehrperson: Stand von «Erkennen» (wartet, blinkt noch so lange, nicht erreicht). */

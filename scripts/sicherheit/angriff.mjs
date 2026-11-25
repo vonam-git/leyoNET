@@ -356,6 +356,11 @@ async function tenantChecks(base, post, project) {
   const klasse = json(await call('POST', 'classes', tokenA, { label: 'Prüfklasse' }));
   const overviewB = json(await call('GET', 'overview', tokenB));
   check(target, 'zugang-trennung', 'Lehrperson B sieht die Klasse von A nicht', 'hoch', Array.isArray(overviewB.classes) && !overviewB.classes.some((c) => c.code === klasse.code), '');
+  const own = json(await post('/api/sessions', { project, classCode: klasse.code }));
+  const noAuth = await post(`/api/admin/sessions/${own.code}/attack`, { kind: 'synFlood' });
+  const foreignAttack = await call('POST', `sessions/${own.code}/attack`, tokenB, { kind: 'synFlood' });
+  const badAttack = await call('POST', `sessions/${own.code}/attack`, tokenA, { kind: 'x' });
+  check(target, 'szenario-rechte', 'Sicherheits-Szenario: nur die eigene Lehrperson, nur bekannte Angriffe', 'hoch', noAuth.status === 401 && foreignAttack.status === 404 && badAttack.status === 400, `${noAuth.status}/${foreignAttack.status}/${badAttack.status}`);
   const foreign = await call('GET', `classes/${klasse.code}/sessions?projects=1`, tokenB);
   check(target, 'zugang-fremde-klasse', 'Lehrperson B liest keine Sessions der Klasse von A', 'hoch', foreign.status === 403 || foreign.status === 404, `${foreign.status}`);
   const patch = await call('PATCH', `classes/${klasse.code}`, tokenB, { verbund: { enabled: true, shareSites: true } });

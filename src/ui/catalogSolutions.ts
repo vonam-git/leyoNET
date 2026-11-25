@@ -51,10 +51,11 @@ import {
   type Result,
   type Topology,
 } from '../core';
-import { LAB_ANSWERS, solveLab2, solveOspf, solveRip, solveRouting1Saved, solveRouting2, solveRouting3, solveSub1, solveSub2, solveSub3 } from './catalogM129';
+import { LAB_ANSWERS, solveLab2, solveLab4, solveLab5, solveOspf, solveRip, solveRouting1Saved, solveRouting2, solveRouting3, solveSub1, solveSub2, solveSub3 } from './catalogM129';
 import { ADVANCED_ANSWERS, solveDatacenter, solveGuest, solveLoopback, solveVrf } from './catalogAdvanced';
 import { M145_ANSWERS, solveFaults, solveLag, solveMgmt, solveUe02, solveUe03, solveUe04, solveUe06, solveUe07, solveUe07b, solveUe08, solveUe09, solveUe10, solveUe11 } from './catalogM145';
 import { readdressUe03, solveHolzer, solveUe03a1, solveUe04a1, solveUe04a2, solveUe05, solveWatch1, solveWatch2 } from './catalogM117';
+import { SECURITY_ANSWERS, SECURITY_SOLUTIONS } from './catalogSecurity';
 import { verbundFaultSite } from './catalogVerbundFaults';
 
 
@@ -66,10 +67,11 @@ function unwrap<T>(r: Result<T>): T {
 const byName = (t: Topology, name: string) => t.devices.find((d) => d.name === name)!.id;
 
 /** Antworten auf Fragen (Ziel «answer») in den Musterlösungen. */
-export const ANSWERS: Record<string, Record<string, string>> = { ...LAB_ANSWERS, ...M145_ANSWERS, ...ADVANCED_ANSWERS, 'm129-routing-a3': { 'ziel-5': '0.0.0.0/0', 'ziel-6': '192.168.2.2' } };
+export const ANSWERS: Record<string, Record<string, string>> = { ...LAB_ANSWERS, ...M145_ANSWERS, ...ADVANCED_ANSWERS, ...SECURITY_ANSWERS, 'm129-routing-a3': { 'ziel-5': '0.0.0.0/0', 'ziel-6': '192.168.2.2' } };
 
 /** Musterlösungen: Jede Aufgabe muss lösbar sein. */
 export const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
+  ...SECURITY_SOLUTIONS,
   'm117-ue03-a1': solveUe03a1,
   'm117-ue03-a2': (t) => readdressUe03(t, '24', ['PC03', 'PC05', 'PC06']),
   'm117-ue03-a3': (t) => readdressUe03(t, '25'),
@@ -91,6 +93,8 @@ export const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
   'm129-lab-a1': (t) => t,
   'm129-lab-a2': solveLab2,
   'm129-lab-a3': (t) => t,
+  'm129-lab-a4': solveLab4,
+  'm129-lab-a5': solveLab5,
   'loopback-ospf': solveLoopback,
   'acl-guest': solveGuest,
   'vrf-customers': solveVrf,

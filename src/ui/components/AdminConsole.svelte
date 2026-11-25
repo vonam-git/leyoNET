@@ -7,7 +7,7 @@
    * live ansehen, Infrastruktur bearbeiten), wechselt in diesem Tab zum Editor und zurück.
    */
   import { adminToken, rememberAdminToken } from '../state/admin.svelte';
-  import { parseProject, reviewSubmission, serializeProject, siteName, type SubmissionReview } from '../../core';
+  import { ATTACK_KINDS, STRIDE, type AttackEffect, type AttackKind, parseProject, reviewSubmission, serializeProject, siteName, type SubmissionReview } from '../../core';
   import { locale, t } from '../../i18n';
   import { editor } from '../state/editor.svelte';
   import { examMode } from '../state/exam.svelte';
@@ -99,6 +99,7 @@
     connected?: boolean;
     help?: number | null;
     teacher?: boolean;
+    attack?: { kind: AttackKind; effect: AttackEffect | null } | null;
   }
   interface CheckResult {
     id: string;
@@ -332,6 +333,26 @@
     if (p && p.total > 0) return 'work';
     return s.connected ? 'idle' : 'away';
   }
+  // --- Sicherheits-Szenarien: simulierte Angriffe auf die Netze der Klasse ---------------------
+  let attackKind = $state<AttackKind>('synFlood');
+  let attackBusy = $state(false);
+  async function launch(list: ClassSession[], kind: AttackKind | null) {
+    if (!list.length || attackBusy) return;
+    attackBusy = true;
+    let done = 0;
+    for (const s of list) {
+      try {
+        await call('POST', `sessions/${s.code}/attack`, { kind });
+        classSessions = classSessions.map((x) => (x.code === s.code ? { ...x, attack: kind ? { kind, effect: null } : null } : x));
+        done++;
+      } catch {
+        /* weiter mit den übrigen */
+      }
+    }
+    attackBusy = false;
+    notify(done === list.length ? 'ok' : 'error', t(kind ? 'attack.admin.sent' : 'attack.admin.stopped', { n: done }));
+  }
+
   let bigCode = $state<ClassInfo | null>(null);
   async function copyText(text: string, done: string) {
     try {
@@ -366,6 +387,8 @@
   let classDaysSet = false;
   let openClass = $state<ClassInfo | null>(null);
   let classSessions = $state<ClassSession[]>([]);
+  const attacked = $derived(classSessions.filter((s) => s.attack));
+  const defended = $derived(attacked.filter((s) => s.attack?.effect === 'blocked').length);
   let reviews = $state<Record<string, SubmissionReview>>({});
   let dashboard = $state<ClassInfo | null>(null);
 
@@ -980,6 +1003,16 @@
               <IdentifySeconds />
               <span class="muted">{editor.tasks ? t('review.helpTask', { title: editor.tasks.title }) : t('admin.reviewOwn')}</span>
             </div>
+            <div class="attack-row" data-help="attacks">
+              <strong>{t('attack.admin.title')}</strong>
+              <select bind:value={attackKind} aria-label={t('attack.kind')}>
+                {#each ATTACK_KINDS as k (k)}<option value={k}>{t(`attack.kind.${k}`)} ({t(`attack.stride.${STRIDE[k]}`)})</option>{/each}
+              </select>
+              <button class="danger" disabled={attackBusy} onclick={() => launch(classSessions, attackKind)} title={t(`attack.hint.${attackKind}`)}>{t('attack.admin.all', { n: classSessions.length })}</button>
+              <button disabled={attackBusy || attacked.length === 0} onclick={() => launch(attacked, null)}>{t('attack.admin.stopAll', { n: attacked.length })}</button>
+              {#if attacked.length}<span class="count-pill">{t('attack.admin.count', { n: defended, total: attacked.length })}</span>{/if}
+              <span class="muted">{t('attack.admin.hint')}</span>
+            </div>
             <div class="table-scroll">
             <table class="sessions-table">
               <thead>
@@ -992,7 +1025,7 @@
                     <td class="num">{i + 1}</td>
                     <td><strong>{s.site ? siteName(s.site.seat, s.site.label) : '–'}</strong></td>
                     <td><span class="who-cell"><span class="led" class:ok={s.connected} title={t(s.connected ? 'verbund.dash.present' : 'classLive.away')}></span><code>{s.code}</code></span></td>
-                    <td><span class="state-pill sp-{st}" title={t(`classLive.stateHint.${st}`)}>{t(`classLive.stateName.${st}`)}</span>{#if s.teacher} <span class="pill warn" title={t('classLive.edit.title', { code: '' })}>✏️</span>{/if}</td>
+                    <td><span class="state-pill sp-{st}" title={t(`classLive.stateHint.${st}`)}>{t(`classLive.stateName.${st}`)}</span>{#if s.attack} <span class="pill attack-{s.attack.effect ?? 'pending'}" title={t(`attack.kind.${s.attack.kind}`)}>{t(`attack.admin.state.${s.attack.effect ?? 'pending'}`)}</span>{/if}{#if s.teacher} <span class="pill warn" title={t('classLive.edit.title', { code: '' })}>✏️</span>{/if}</td>
                     <td title={t('classLive.progressHint')}>
                       {#if s.progress?.total}
                         <span class="bar" aria-hidden="true"><span class="fill sp-{st}" style:width="{Math.round((100 * s.progress.goals) / s.progress.total)}%"></span></span>
@@ -1007,6 +1040,7 @@
                       <button onclick={() => watch(s.code, nameOf(s), true)} title={t('classLive.openHint')}><Icon name="edit" size={16} />{t('admin.open')}</button>
                       <button title={t('classLive.watchHint')} onclick={() => watch(s.code, nameOf(s))}><Icon name="eye" size={16} />{t('admin.exams.watch')}</button>
                       {#if token}<IdentifyButton admin={token} code={s.code} disabled={!s.connected} onerror={() => notify('error', t('admin.loadFailed'))} />{/if}
+                      {#if s.attack}<button disabled={attackBusy} onclick={() => launch([s], null)}>{t('attack.admin.stop')}</button>{:else}<button disabled={attackBusy} onclick={() => launch([s], attackKind)} title={t('attack.admin.oneHint', { kind: t(`attack.kind.${attackKind}`) })}>{t('attack.admin.one')}</button>{/if}
                       <button class="danger" onclick={() => closeSessions([s])} title={t('classLive.close.hint')}>{t('classLive.close.button')}</button>
                     </div></td>
                   </tr>
@@ -1665,6 +1699,29 @@
   }
   .table-scroll td.actions {
     white-space: normal;
+  }
+  .attack-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-left: 4px solid #8f1d24;
+    border-radius: var(--a-radius);
+    background: var(--surface);
+  }
+  .attack-row select {
+    width: auto;
+  }
+  .pill.attack-effective {
+    background: #8f1d24;
+    color: #fff;
+  }
+  .pill.attack-blocked {
+    background: #15803d;
+    color: #fff;
   }
   .btns {
     display: flex;

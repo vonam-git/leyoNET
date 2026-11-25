@@ -8,6 +8,7 @@
   import { verbund } from './state/verbund.svelte';
   import { setupClassLive } from './classLive.svelte';
   import { takeInvite } from './invite';
+  import AttackBanner from './components/AttackBanner.svelte';
   import IdentifyFlash from './components/IdentifyFlash.svelte';
   import { parseProject, serializeProject } from '../core';
   import { locale, t } from '../i18n';
@@ -295,6 +296,7 @@
     <main>
       <ExamBanner />
       <SessionBanner />
+      <AttackBanner />
       <IdentifyFlash />
       {#if editor.acting}
         <SimControls />

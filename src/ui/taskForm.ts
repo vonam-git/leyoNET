@@ -1,7 +1,7 @@
 // Formular für Aufgaben: Lehrpersonen wählen Prüfbausteine aus einer Liste
 // und füllen nur deren Felder aus, statt JSON zu schreiben.
 
-import { readTasks, type Check, type TaskSet } from '../core';
+import { ATTACK_KINDS, PORT_CHECK_STATES, readTasks, type Check, type TaskSet } from '../core';
 import { t } from '../i18n';
 
 export type FieldKind = 'device' | 'devices' | 'text' | 'number' | 'deviceType' | 'protocol' | 'choice' | 'pairs' | 'values' | 'alternatives' | 'numbers';
@@ -58,6 +58,13 @@ export const CHECK_FIELDS: Record<Check['type'], FieldSpec[]> = {
     { key: 'from', kind: 'device', label: 'mailFrom' },
     { key: 'to', kind: 'text', label: 'mailTo' },
   ],
+  port: [
+    { key: 'from', kind: 'device' },
+    { key: 'to', kind: 'device', label: 'pingTo' },
+    { key: 'port', kind: 'number' },
+    { key: 'state', kind: 'choice', optional: true, label: 'portState', options: PORT_CHECK_STATES },
+  ],
+  resist: [{ key: 'attack', kind: 'choice', options: ATTACK_KINDS }],
   packetSeen: [
     { key: 'protocol', kind: 'protocol' },
     { key: 'from', kind: 'device', optional: true, label: 'fromOptional' },

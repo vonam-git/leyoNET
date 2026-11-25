@@ -78,7 +78,7 @@ Die praktische Prüfung (LB3) erstellt **Werkzeuge → Prüfung erstellen …**:
 
 ## Modul 129: Subnetting, Routing und Protokollanalyse
 
-Der Reiter **«M129»** im Aufgaben-Katalog enthält vier Gruppen mit je einem ausfüllbaren Arbeitsblatt. Alles läuft in leyoNET: Router, Firewall, Server und die Paketanalyse. Adressen im «Internet» stammen aus den Dokumentationsbereichen nach RFC 5737, Namen enden auf `.example`.
+Der Reiter **«M129»** im Aufgaben-Katalog enthält vier Gruppen mit ausfüllbaren Arbeitsblättern. Alles läuft in leyoNET: Router, Firewall, Server und die Paketanalyse. Adressen im «Internet» stammen aus den Dokumentationsbereichen nach RFC 5737, Namen enden auf `.example`.
 
 | Sterne | Übung | Arbeitsblatt |
 |---|---|---|
@@ -93,6 +93,8 @@ Der Reiter **«M129»** im Aufgaben-Katalog enthält vier Gruppen mit je einem a
 | ★★ | Protokollanalyse – Auftrag 1: ICMP und TTL | M129_Protokollanalyse |
 | ★★★ | Protokollanalyse – Auftrag 2: DHCP | M129_Protokollanalyse |
 | ★★★★ | Protokollanalyse – Auftrag 3: ARP, DNS und HTTP | M129_Protokollanalyse |
+| ★★★ | Protokollanalyse – Auftrag 4: Netzscan | M129_Netzscan |
+| ★★★★ | Protokollanalyse – Auftrag 5: Die Firewall von aussen prüfen | M129_Netzscan |
 
 Neu sind **Fragen direkt in leyoNET** (Baustein «Antwort»): z.B. der EtherType von ARP oder die TTL nach der Firewall. «Prüfen» bewertet sie zusammen mit den Netzzielen. Die Arbeitsblätter zum Routing zeigen die Theorie und Beispielbefehle mit anderen Adressen; die Befehle für das eigene Netz erarbeiten die Lernenden selbst (Musterlösung im Blatt `_mL`). Zum Schluss speichern sie auf jedem Router mit `copy running-config startup-config`, das prüft die Übung mit. Nummern und Titel der Übungen lassen sich später an die Unterlagen der Schule anpassen (`src/ui/catalogM129.ts`, Texte in `src/i18n`, Arbeitsblätter in `scripts/arbeitsblaetter/inhaltM129.mjs`).
 
@@ -151,6 +153,7 @@ In der Liste der Klasse (aktualisiert sich von selbst):
 - **Fortschritt** und **Zustand**: erfüllte Lernziele der geladenen Aufgabe. Der Browser der Lernenden prüft das von selbst kurz nach jeder Änderung, «Abgeben» braucht es nicht. Orange heisst mindestens die Hälfte, grün alles erfüllt, magenta «braucht Hilfe» (Knopf **Hilfe anfordern** der Lernenden, quittiert mit «Hilfe erledigt»). Die Maus über «Fortschritt» erklärt die Zahl.
 - **Erkennen**: Der Bildschirm dieser Session blinkt rot und zeigt den Platz. So findet man heraus, wer an welcher Session arbeitet. Die **Blinkdauer** (5–10 Sekunden, Standard 7) steht über der Liste und wird im Browser gemerkt. Der Knopf zeigt «Wird zugestellt …», bis sich der Browser der Lernenden meldet (alle 6 Sekunden), dann «Blinkt noch n s» bis zum Ende; «Nicht erreicht» nach 12 Sekunden ohne Meldung.
 - **Ansehen**: nur lesen, alle 5 Sekunden neu geladen, Lernziele gleich grün oder rot geprüft (Fehlersuche am Beamer). Im Klassen-Verbund gilt dabei der Platz der angesehenen Session.
+- **Sicherheits-Szenario** (über der Liste): simulierten Angriff wählen und an eine oder alle Sessions schicken; die Liste zeigt, wer ihn abgewehrt hat. Ablauf: [verbund.md](verbund.md#sicherheits-szenarien).
 - **Öffnen**: Die Lehrperson bearbeitet die Session; die Änderungen gehen direkt an die Lernenden, die solange nur zusehen und danach mit dem neuen Stand weiterarbeiten. Nach 10 Minuten ohne Änderung wird wieder nur angesehen.
 
 Mit dem **Klassen-Verbund** baut jede Gruppe einen eigenen Standort und schliesst ihn an Ihre Klassen-Infrastruktur an; das **Dashboard** auf dem Beamer zeigt live, wer wirklich online ist, und Nachrichten fliegen zwischen den Standorten. Bei der Klasse blenden Sie ausserdem Übungen und ganze Module für die Klasse ein oder aus. Ablauf, Adressplan und Verbund-Übungen: [verbund.md](verbund.md).

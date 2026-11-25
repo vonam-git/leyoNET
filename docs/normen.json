@@ -110,6 +110,10 @@
       "titel": "A Method for Transmitting PPP Over Ethernet (PPPoE)",
       "verwendung": "PPPoE bei DSL"
     },
+    "2544": {
+      "titel": "Benchmarking Methodology for Network Interconnect Devices",
+      "verwendung": "Netz 198.18.0.0/15 für den simulierten Angreifer"
+    },
     "2597": {
       "titel": "Assured Forwarding PHB Group",
       "verwendung": "DSCP-Klassen AF11–AF43 (QoS)"
@@ -209,6 +213,10 @@
     "4862": {
       "titel": "IPv6 Stateless Address Autoconfiguration",
       "verwendung": "SLAAC, Duplicate Address Detection"
+    },
+    "4987": {
+      "titel": "TCP SYN Flooding Attacks and Common Mitigations",
+      "verwendung": "Sicherheits-Szenarien: SYN-Flood, SYN-Cookies"
     },
     "5227": {
       "titel": "IPv4 Address Conflict Detection",

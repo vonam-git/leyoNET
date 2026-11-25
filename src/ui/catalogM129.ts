@@ -8,6 +8,11 @@
  */
 import {
   addDnsRecord,
+  addPortForward,
+  removePortForward,
+  setMailServerEnabled,
+  setScanner,
+  setWebServerEnabled,
   configureHost,
   connect,
   setCliConfig,
@@ -369,16 +374,60 @@ export function solveLab2(topology: Topology): Topology {
   return unwrap(configureHost(topology, id(topology, 'Notebook Gast'), { ip: '', mask: '', dhcp: true }));
 }
 
+/** Auftrag 4: zusätzlich ein vergessenes Testgerät (Adresse per DHCP, Webserver) und ein Mailserver in der DMZ. */
+function scanStart(): Start {
+  return labStart()
+    .add('server', 'Testgerät', -400, 110)
+    .link('Testgerät', 'Switch Intranet')
+    .web('Testgerät', '<h1>Test</h1><p>Vergessener Testserver.</p>')
+    .apply((t, n) => {
+      let next = unwrap(configureHost(t, n('Testgerät'), { ip: '', mask: '', dhcp: true }));
+      next = unwrap(setMailServerEnabled(next, n('Webserver DMZ'), true, LAB_DOMAIN));
+      return unwrap(setScanner(next, n('PC W11'), true));
+    });
+}
+export function solveLab4(topology: Topology): Topology {
+  let t = unwrap(setWebServerEnabled(topology, id(topology, 'Testgerät'), false));
+  t = unwrap(setMailServerEnabled(t, id(t, 'Webserver DMZ'), false));
+  return t;
+}
+
+/** Auftrag 5: Prüfgerät im Internet; die Firewall leitet vier Ports in die DMZ weiter, zwei davon zu viel. */
+function outsideStart(): Start {
+  return labStart()
+    .add('notebook', 'Prüfgerät', 480, 320)
+    .link('Prüfgerät', 'Switch Provider')
+    .host('Prüfgerät', '198.51.100.66', '24', '198.51.100.1')
+    .apply((t, n) => {
+      let next = unwrap(setMailServerEnabled(t, n('Webserver DMZ'), true, LAB_DOMAIN));
+      for (const port of [80, 25, 110, 143]) next = unwrap(addPortForward(next, n('Firewall'), { protocol: 'tcp', port, to: '10.10.1.20', toPort: port }));
+      return unwrap(setScanner(next, n('Prüfgerät'), true));
+    });
+}
+export function solveLab5(topology: Topology): Topology {
+  let t = topology;
+  const fw = id(t, 'Firewall');
+  for (const port of [110, 143]) {
+    const index = (t.devices.find((d) => d.id === fw)?.portForwards ?? []).findIndex((f) => f.port === port);
+    t = unwrap(removePortForward(t, fw, index));
+  }
+  return t;
+}
+
 /** Antworten für die Fragen in leyoNET (Musterlösung, auch im Test). */
 export const LAB_ANSWERS: Record<string, Record<string, string>> = {
-  'm129-lab-a1': { 'ziel-3': '0x0800', 'ziel-4': '1', 'ziel-5': '64', 'ziel-6': '63' },
+  'm129-lab-a1': { 'ziel-3': '0x0800', 'ziel-4': '1', 'ziel-5': '64', 'ziel-6': '63', 'ziel-7': '192.168.1.1', 'ziel-8': '203.0.113.1', 'ziel-9': '3', 'ziel-10': '11' },
   'm129-lab-a2': { 'ziel-3': 'UDP', 'ziel-4': '67', 'ziel-5': '68' },
   'm129-lab-a3': { 'ziel-4': '0x0806', 'ziel-5': '8', 'ziel-6': '20', 'ziel-7': '14' },
+  'm129-lab-a4': { 'ziel-2': '4', 'ziel-3': '192.168.1.100', 'ziel-4': '25, 80, 110, 143', 'ziel-5': 'RST' },
+  'm129-lab-a5': { 'ziel-1': '25, 80, 110, 143', 'ziel-2': 'gefiltert' },
 };
 
 // --- Katalog ----------------------------------------------------------------------------------
 
 const lab = () => labStart().topology;
+/** Die vier Ports, mit oder ohne Leerzeichen. */
+const FOUR_PORTS = ['25, 80, 110, 143', '25,80,110,143', '25 80 110 143', '25; 80; 110; 143'];
 const tasksWith = (key: string, stars: number, goals: ReturnType<typeof goal>[]) => task(key, stars, goals);
 
 export const M129: CatalogEntry[] = [
@@ -592,6 +641,10 @@ export const M129: CatalogEntry[] = [
           goal(key, 4, { type: 'answer', accept: ['1', '0x01', 'ICMP (1)', '1 (ICMP)'] }),
           goal(key, 5, { type: 'answer', accept: ['64'] }),
           goal(key, 6, { type: 'answer', accept: ['63'] }),
+          goal(key, 7, { type: 'answer', accept: ['192.168.1.1', 'Firewall'] }),
+          goal(key, 8, { type: 'answer', accept: ['203.0.113.1', 'Internet', 'Provider'] }),
+          goal(key, 9, { type: 'answer', accept: ['3'] }),
+          goal(key, 10, { type: 'answer', accept: ['11', '0x0b', '0x0B'] }),
         ]),
       };
     },
@@ -636,6 +689,53 @@ export const M129: CatalogEntry[] = [
           goal(key, 5, { type: 'answer', accept: ['8'] }),
           goal(key, 6, { type: 'answer', accept: ['20'] }),
           goal(key, 7, { type: 'answer', accept: ['14'] }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'm129-lab-a4',
+    features: ['tool.sniffer', 'tool.scanner', 'service.web', 'service.mail', 'service.dhcp'],
+    stars: 3,
+    level: 3,
+    series: 'm129',
+    sheet: 'M129_Netzscan',
+    build: () => {
+      const key = 'm129laba4';
+      return {
+        topology: scanStart().topology,
+        tasks: tasksWith(key, 3, [
+          goal(key, 1, { type: 'packetSeen', protocol: 'tcp', from: 'PC W11' }),
+          goal(key, 2, { type: 'answer', accept: ['4', 'vier'] }),
+          goal(key, 3, { type: 'answer', accept: ['192.168.1.100'] }),
+          goal(key, 4, { type: 'answer', accept: FOUR_PORTS }),
+          goal(key, 5, { type: 'answer', kind: 'choice', options: ['SYN/ACK', 'RST', '–'], accept: ['RST'] }),
+          goal(key, 6, { type: 'port', from: 'PC W11', to: 'Testgerät', port: 80, state: 'closed' }),
+          goal(key, 7, { type: 'port', from: 'PC W11', to: 'Webserver DMZ', port: 25, state: 'closed' }),
+          goal(key, 8, { type: 'port', from: 'PC W11', to: 'Webserver DMZ', port: 80 }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'm129-lab-a5',
+    features: ['tool.sniffer', 'tool.scanner', 'net.nat', 'service.web', 'service.mail', 'device.internet'],
+    stars: 4,
+    level: 3,
+    series: 'm129',
+    sheet: 'M129_Netzscan',
+    build: () => {
+      const key = 'm129laba5';
+      return {
+        topology: outsideStart().topology,
+        tasks: tasksWith(key, 4, [
+          goal(key, 1, { type: 'answer', accept: FOUR_PORTS }),
+          goal(key, 2, { type: 'answer', kind: 'choice', options: ['offen', 'geschlossen', 'gefiltert'], accept: ['gefiltert'] }),
+          goal(key, 3, { type: 'port', from: 'Prüfgerät', to: '203.0.113.2', port: 80 }),
+          goal(key, 4, { type: 'port', from: 'Prüfgerät', to: '203.0.113.2', port: 25 }),
+          goal(key, 5, { type: 'port', from: 'Prüfgerät', to: '203.0.113.2', port: 110, state: 'blocked' }),
+          goal(key, 6, { type: 'port', from: 'Prüfgerät', to: '203.0.113.2', port: 143, state: 'blocked' }),
+          goal(key, 7, { type: 'port', from: 'PC W11', to: 'Webserver DMZ', port: 143 }),
         ]),
       };
     },

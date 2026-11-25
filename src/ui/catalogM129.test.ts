@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Simulation, dissect, protocolOf, type Topology } from '../core';
 import { setLocale } from '../i18n';
 import { CATALOG } from './catalog';
-import { solveLab2, solveRouting1, solveRouting2, solveSub1 } from './catalogM129';
+import { solveLab2, solveLab4, solveLab5, solveRouting1, solveRouting2, solveSub1 } from './catalogM129';
 
 setLocale('de');
 
@@ -79,5 +79,53 @@ describe('Arbeitsblatt M129 Protokollanalyse: Zahlen', () => {
     expect(d.layers.find((l) => l.protocol === 'Ethernet II')?.fields.at(-1)?.key).toBe('eth.fcs');
     expect(d.layers.find((l) => l.protocol === 'DNS')?.length).toBe(35);
     expect(sim.getDeviceState(byName(t, 'PC W11')).browser).toMatchObject({ status: 'done', response: { status: 200 } });
+  });
+});
+
+describe('Arbeitsblatt M129 Protokollanalyse: TTL und Netzscan', () => {
+  it('TTL 1 und 2 laufen ab, TTL 3 reicht bis zum Webserver News; Time Exceeded ist Typ 11', () => {
+    const t = start('m129-lab-a1');
+    const pc = byName(t, 'PC W11');
+    const run = (ttl: number) => {
+      const sim = new Simulation(t);
+      sim.runUntil(4000);
+      sim.runCommand(pc, `ping -n 1 -i ${ttl} 198.51.100.10`);
+      sim.runUntil(20_000);
+      return { sim, lines: sim.getDeviceState(pc).console };
+    };
+    expect(run(1).lines.find((l) => l.code === 'ping.ttlExpiredSet')?.params).toMatchObject({ from: '192.168.1.1' });
+    const second = run(2);
+    expect(second.lines.find((l) => l.code === 'ping.ttlExpiredSet')?.params).toMatchObject({ from: '203.0.113.1' });
+    expect(run(3).lines.some((l) => l.code === 'ping.reply')).toBe(true);
+    const error = second.sim.getPacketLog().find((e) => e.frame.payload.kind === 'ipv4' && e.frame.payload.payload.kind === 'icmp' && e.frame.payload.payload.type === 'timeExceeded')!;
+    expect(dissect(error.frame).bytes[14 + 20]).toBe(11);
+  });
+
+  const scan = (t: Topology, from: string, request: { target: string; skipDiscovery?: boolean; ports?: number[]; discoverOnly?: boolean }) => {
+    const sim = new Simulation(t);
+    sim.runUntil(10_000);
+    expect(sim.scan(byName(t, from), request)).toBeNull();
+    sim.runUntil(60_000);
+    const state = sim.getDeviceState(byName(t, from)).scan!;
+    expect(state.status).toBe('done');
+    return state.hosts;
+  };
+  const open = (h: { ports: { port: number; state: string }[] } | undefined) => h?.ports.filter((p) => p.state === 'open').map((p) => p.port);
+
+  it('Auftrag 4: vier Geräte, unerwarteter Webserver auf 192.168.1.100, vier offene Ports in der DMZ; Lösung schliesst sie', () => {
+    const t = start('m129-lab-a4');
+    const hosts = scan(t, 'PC W11', { target: '192.168.1.0/24' });
+    expect(hosts.map((h) => h.ip)).toEqual(['192.168.1.1', '192.168.1.2', '192.168.1.11', '192.168.1.100']);
+    expect(hosts.filter((h) => open(h)!.includes(80)).map((h) => h.ip)).toEqual(['192.168.1.100']);
+    expect(open(scan(t, 'PC W11', { target: '10.10.1.20' })[0])).toEqual([25, 80, 110, 143]);
+    expect(open(scan(solveLab4(t), 'PC W11', { target: '10.10.1.20' })[0])).toEqual([80]);
+  });
+
+  it('Auftrag 5: von aussen vier Ports offen, 443 gefiltert; nach der Lösung nur 25 und 80', () => {
+    const t = start('m129-lab-a5');
+    const outside = (x: Topology) => scan(x, 'Prüfgerät', { target: '203.0.113.2', skipDiscovery: true })[0]!;
+    expect(open(outside(t))).toEqual([25, 80, 110, 143]);
+    expect(outside(t).ports.find((p) => p.port === 443)?.state).toBe('filtered');
+    expect(open(outside(solveLab5(t)))).toEqual([25, 80]);
   });
 });

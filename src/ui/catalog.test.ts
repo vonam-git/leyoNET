@@ -32,6 +32,7 @@ const LOGS: Record<string, (t: Topology) => readonly PacketLogEntry[]> = {
   'm129-lab-a1': labLog,
   'm129-lab-a2': labLog,
   'm129-lab-a3': labLog,
+  'm129-lab-a4': labLog,
   'sniff-arp': (t) => {
     const sim = new Simulation(t);
     sim.ping(byName(t, 'PC 1'), '192.168.1.20');

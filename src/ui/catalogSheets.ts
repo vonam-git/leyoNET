@@ -101,6 +101,9 @@ function settings(d: Device): string[] {
   if (d.dnsServer?.forwarder) lines.push(`DNS-Weiterleitung an ${d.dnsServer.forwarder}`);
   if (d.webServer) lines.push('Webserver eingeschaltet');
   if (d.mailServer) lines.push('Mailserver eingeschaltet');
+  if (d.scanner) lines.push('Netzscanner installiert');
+  if (d.arpGuard) lines.push('Sicherheit: ARP-Schutz eingeschaltet');
+  if (d.synCookies) lines.push('Sicherheit: SYN-Cookies eingeschaltet');
   if (d.wlan) lines.push(`WLAN «${d.wlan.ssid}»${d.wlan.password ? ' mit Passwort' : ' offen'}, Kanal ${d.wlan.channel}`);
   if (d.wifi) lines.push(`verbunden mit WLAN «${d.wifi.ssid}»`);
   return lines;
@@ -133,7 +136,7 @@ function otherChanges(before: Device | undefined, after: Device, shown: Set<stri
   return changed.length ? [`weitere Einstellungen: ${changed.join(', ')}`] : [];
 }
 
-const SETTINGS_FIELDS = ['gateway', 'dns', 'dhcp', 'ipv6Auto', 'gateway6', 'routes', 'dhcpServer', 'dnsServer', 'webServer', 'mailServer', 'wlan', 'wifi'];
+const SETTINGS_FIELDS = ['gateway', 'dns', 'dhcp', 'ipv6Auto', 'gateway6', 'routes', 'dhcpServer', 'dnsServer', 'webServer', 'mailServer', 'wlan', 'wifi', 'scanner', 'arpGuard', 'synCookies'];
 const CLI_FIELDS = ['routes', 'vlans', 'vlanNames', 'svis', 'subinterfaces', 'loopbacks', 'vrfs', 'vxlan', 'acls', 'dhcpPools', 'dhcpExcluded', 'ospf', 'rip', 'bgp', 'stp', 'stpPriority', 'ipRouting', 'routingMode'];
 
 /** Konfigurationsänderungen der Musterlösung, je Gerät, als Textzeilen. */

@@ -1,3 +1,4 @@
+import { ATTACK_KINDS, type AttackKind } from '../model/types';
 import { MAX_RATE, MIN_RATE } from '../net/qos';
 import { MAX_POE_BUDGET, POE_STANDARDS, canBePowered, canSupplyPoe } from '../model/poe';
 import { DEVICE_SPECS, canAutoRoute, canHostServices, isDeviceType, isRouterLike, isSwitchType } from '../model/devices';
@@ -5,7 +6,7 @@ import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME } from '../net/routing';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
 import { MAX_DHCP_EXCLUDED, MAX_DHCP_POOLS, canDhcpPool, checkDhcpPool, normalizePool } from '../net/dhcp';
 import { MAC_PATTERN } from '../model/mac';
-import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, PHONE_NUMBER, MAX_STARTUP_CONFIG, canQos, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
+import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, PHONE_NUMBER, MAX_STARTUP_CONFIG, canInstall, isAttacker, canQos, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
 import { ACL_NAME, MAX_ACLS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
 import { MAX_GROUP_SIZE } from '../model/devices';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
@@ -551,6 +552,22 @@ function readDevice(v: unknown, path: string): Device {
       if (parseIp(forwarder) === null && parseIp6(forwarder) === null) throw new Invalid(`${p}.forwarder`);
       device.dnsServer.forwarder = forwarder;
     }
+  }
+  for (const key of ['arpGuard', 'synCookies'] as const) {
+    if (o[key] === undefined) continue;
+    if (typeof o[key] !== 'boolean') throw new Invalid(`${path}.${key}`);
+    if (o[key] && canInstall(device.type)) device[key] = true;
+  }
+  if (o.attack !== undefined) {
+    const a = obj(o.attack, `${path}.attack`);
+    if (!isAttacker({ type: device.type, ...(o.variant === 'attacker' ? { variant: 'attacker' } : {}) }) || !(ATTACK_KINDS as readonly unknown[]).includes(a.kind)) throw new Invalid(`${path}.attack`);
+    const target = a.target === undefined ? '' : text(a.target, `${path}.attack.target`, 60);
+    if (a.delay !== undefined && (!Number.isInteger(a.delay) || (a.delay as number) < 0 || (a.delay as number) > 600)) throw new Invalid(`${path}.attack.delay`);
+    device.attack = { kind: a.kind as AttackKind, ...(target ? { target } : {}), ...(a.delay !== undefined ? { delay: a.delay as number } : {}) };
+  }
+  if (o.scanner !== undefined) {
+    if (typeof o.scanner !== 'boolean') throw new Invalid(`${path}.scanner`);
+    if (o.scanner && canInstall(device.type)) device.scanner = true;
   }
   if (o.webServer !== undefined) {
     const p = `${path}.webServer`;

@@ -1,4 +1,4 @@
-import { Simulation, type Topology } from '../../core';
+import { Simulation, type ScanError, type ScanRequest, type Topology } from '../../core';
 import { unpackPlan, type UnpackPlan } from '../osiSteps';
 
 /** Längster Zeitschritt pro Bild, damit ein Tab im Hintergrund nicht Minuten "nachholt". */
@@ -191,6 +191,23 @@ class SimStore {
 
   ping(deviceId: string, target: string, vrf?: string) {
     this.#record((sim) => sim.ping(deviceId, target, 1, vrf));
+  }
+
+  /** Strg+C in der Befehlszeile. */
+  interrupt(deviceId: string) {
+    this.#record((sim) => sim.interrupt(deviceId));
+  }
+
+  scan(deviceId: string, request: ScanRequest): ScanError | null {
+    let error: ScanError | null = null;
+    this.#record((sim) => {
+      error = sim.scan(deviceId, request);
+    });
+    return error;
+  }
+
+  scanStop(deviceId: string) {
+    this.#record((sim) => sim.scanStop(deviceId));
   }
 
   ssh(deviceId: string, target: string, user: string, password: string) {

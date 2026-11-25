@@ -1,3 +1,13 @@
+export const ATTACK_KINDS = ['arpSpoof', 'synFlood', 'portScan', 'sshGuess'] as const;
+export type AttackKind = (typeof ATTACK_KINDS)[number];
+export interface AttackConfig {
+  kind: AttackKind;
+  /** Adresse oder Gerätename; leer = passendes Ziel im Netz. */
+  target?: string;
+  /** Sekunden nach dem Start der Simulation (Standard 2). */
+  delay?: number;
+}
+
 export type DeviceType =
   | 'notebook'
   | 'pc'
@@ -256,6 +266,14 @@ export interface Device {
   dnsServer?: DnsServerConfig;
   /** Nur Rechner: Webserver mit seinen Seiten. */
   webServer?: WebServerConfig;
+  /** Notebook als Angreifer (nur für Sicherheits-Szenarien in der Simulation). */
+  attack?: AttackConfig;
+  /** PC, Notebook, Server: ARP-Schutz (unverlangte ARP-Angaben werden ignoriert). */
+  arpGuard?: boolean;
+  /** PC, Notebook, Server: SYN-Cookies (RFC 4987) gegen halb offene Verbindungen. */
+  synCookies?: boolean;
+  /** PC, Notebook, Server: Netzscanner installiert. */
+  scanner?: boolean;
   /** Nur Rechner: Mailserver (SMTP, POP3, IMAP) mit Postfächern. */
   mailServer?: MailServerConfig;
   /** Endgeräte: E-Mail-Konto für die Anwendung "E-Mail". */

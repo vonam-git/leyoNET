@@ -32,7 +32,41 @@ export interface IcmpApp {
   cancel(): void;
 }
 
-/** Ablauf von "ping": vier Echo-Anfragen, jeweils eine Sekunde nach Antwort oder Zeitüberschreitung. */
+/** Optionen von «ping»: Anzahl (null = bis Strg+C) und TTL der Anfragen. */
+export interface PingOptions {
+  count?: number | null;
+  ttl?: number;
+}
+export const PING_MAX_COUNT = 1000;
+
+/**
+ * Liest «ping [-t] [-n Anzahl | -c Anzahl] [-i TTL] Ziel» (Windows: -t, -n, -i; Linux: -c).
+ * «-t» ist wie unter Windows der Dauerping, nie die TTL.
+ */
+export function parsePing(args: readonly string[]): { target: string; options: PingOptions } | { error: 'usage' | 'badCount' | 'badTtl'; value?: string } {
+  const options: PingOptions = {};
+  let target: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
+    const flag = arg.toLowerCase();
+    if (flag === '-t' || flag === '/t') options.count = null;
+    else if (['-n', '/n', '-c'].includes(flag)) {
+      const value = args[++i];
+      if (value === undefined) return { error: 'usage' };
+      if (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > PING_MAX_COUNT) return { error: 'badCount', value };
+      if (options.count !== null) options.count = Number(value);
+    } else if (['-i', '/i', '--ttl', '-ttl'].includes(flag)) {
+      const value = args[++i];
+      if (value === undefined) return { error: 'usage' };
+      if (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > 255) return { error: 'badTtl', value };
+      options.ttl = Number(value);
+    } else if (/^[-/]/.test(arg) || target !== undefined) return { error: 'usage' };
+    else target = arg;
+  }
+  return target === undefined ? { error: 'usage' } : { target, options };
+}
+
+/** Ablauf von "ping": vier (oder gewählt viele) Echo-Anfragen, jeweils eine Sekunde nach Antwort oder Zeitüberschreitung. */
 export class PingRun implements IcmpApp {
   #seq = 0;
   #received = 0;
@@ -45,7 +79,22 @@ export class PingRun implements IcmpApp {
     private readonly id: number,
     private readonly gateway: string,
     private readonly name?: string,
+    private readonly options: PingOptions = {},
   ) {}
+
+  get #count(): number {
+    return this.options.count === null ? Number.POSITIVE_INFINITY : (this.options.count ?? PING_COUNT);
+  }
+
+  /** Dauerping, der noch läuft. */
+  get endless(): boolean {
+    return this.options.count === null && !this.#cancelled;
+  }
+
+  /** Noch nicht fertig (für den Stopp-Knopf). */
+  get running(): boolean {
+    return !this.#cancelled;
+  }
 
   get #ctx() {
     return this.host.ctx;
@@ -61,6 +110,13 @@ export class PingRun implements IcmpApp {
     this.#cancelled = true;
   }
 
+  /** Strg+C: abbrechen und die Statistik zeigen; noch offene Anfragen zählen nicht. */
+  stop() {
+    if (this.#cancelled) return;
+    this.#ctx.print('cmd.interrupt');
+    this.#finish(this.#seq - this.#outstanding.size);
+  }
+
   #send() {
     if (this.#cancelled) return;
     const seq = ++this.#seq;
@@ -69,7 +125,7 @@ export class PingRun implements IcmpApp {
       if (this.#settle(seq)) this.#ctx.print('ping.timeout');
     });
     const request: IcmpMessage = { kind: 'icmp', type: 'echoRequest', id: this.id, seq, size: PING_SIZE };
-    this.host.sendIp(this.target, request, {}, (error) => {
+    this.host.sendIp(this.target, request, this.options.ttl === undefined ? {} : { ttl: this.options.ttl }, (error) => {
       if (this.#settle(seq)) this.#ctx.print(`ping.${error}`, { target: this.target, gateway: this.gateway });
     });
   }
@@ -88,28 +144,29 @@ export class PingRun implements IcmpApp {
     // Ein Router meldet, dass unsere Anfrage nicht zugestellt werden konnte.
     const original = icmp.original;
     if (!original || original.id !== this.id || !this.#settle(original.seq)) return;
-    if (icmp.type === 'timeExceeded') this.#ctx.print('ping.ttlExpired', { from: packet.src });
+    if (icmp.type === 'timeExceeded') this.#ctx.print(this.options.ttl === undefined ? 'ping.ttlExpired' : 'ping.ttlExpiredSet', { from: packet.src, ttl: this.options.ttl ?? 0 });
     else this.#ctx.print(icmp.code === 'host' ? 'ping.hostUnreachableFrom' : 'ping.netUnreachableFrom', { from: packet.src });
   }
 
   /** Schliesst eine Anfrage ab (genau einmal) und plant die nächste. */
   #settle(seq: number): boolean {
     if (this.#cancelled || !this.#outstanding.delete(seq)) return false;
-    if (this.#seq < PING_COUNT) this.#ctx.schedule(PING_INTERVAL, () => this.#send());
+    if (this.#seq < this.#count) this.#ctx.schedule(PING_INTERVAL, () => this.#send());
     else this.#ctx.schedule(0, () => this.#finish());
     return true;
   }
 
-  #finish() {
+  #finish(sent = this.#seq) {
     if (this.#cancelled) return;
-    const sent = this.#seq;
+    this.#cancelled = true;
+    this.#outstanding.clear();
     const lost = sent - this.#received;
     this.#ctx.print('ping.summary', {
       target: this.target,
       sent,
       received: this.#received,
       lost,
-      percent: Math.round((lost / sent) * 100),
+      percent: sent ? Math.round((lost / sent) * 100) : 0,
     });
   }
 }
