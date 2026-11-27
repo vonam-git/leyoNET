@@ -28,6 +28,10 @@ import {
   setAftr,
   setInterfaceShutdown,
   setStp,
+  setStpMode,
+  setVrrpGroup,
+  setOspfCost,
+  setLoadBalancer,
   setVlanDef,
   type PacketLogEntry,
   configureHost,
@@ -131,6 +135,18 @@ export const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
     t = unwrap(setVlanDef(t, { id: 10, name: 'Büro', color: 'blue' }));
     return unwrap(setVlanDef(t, { id: 20, name: 'Labor', color: 'orange' }));
   },
+  'rstp-fast': (t) => {
+    for (const n of ['Switch A', 'Switch B', 'Switch C']) t = unwrap(setStpMode(t, byName(t, n), 'rstp'));
+    return t;
+  },
+  'vrrp-gateway': (t) => {
+    t = unwrap(setVrrpGroup(t, byName(t, 'R1'), { iface: 0, vrid: 1, ip: '192.168.1.1', priority: 110, track: { iface: 1, decrement: 20 } }));
+    t = unwrap(setVrrpGroup(t, byName(t, 'R2'), { iface: 0, vrid: 1, ip: '192.168.1.1' }));
+    for (const [pc, ip] of [['PC 1', '192.168.1.10'], ['PC 2', '192.168.1.11']] as const) t = unwrap(configureHost(t, byName(t, pc), { ip, mask: '255.255.255.0', gateway: '192.168.1.1' }));
+    return t;
+  },
+  'ecmp-ospf': (t) => unwrap(setOspfCost(t, byName(t, 'R1'), 2, null)),
+  'lb-webfarm': (t) => unwrap(setLoadBalancer(t, byName(t, 'Load Balancer'), { port: 80, method: 'roundRobin', backends: [{ ip: '192.168.1.81' }, { ip: '192.168.1.82' }] })),
   'stp-loop': (t) => {
     for (const n of ['Switch A', 'Switch B', 'Switch C']) t = unwrap(setStp(t, byName(t, n), true));
     return t;

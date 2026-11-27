@@ -11,7 +11,7 @@ Someone building a network for the first time does not need BGP settings. leyoNE
 | 1 Starter | 1st year of training | PC, notebook, switch, router, server, automatic routing, DHCP, packet list |
 | 2 Basics | 1st–2nd year | Wi-Fi, internet, home router, fibre, DNS, web, static routes, costs, frame structure |
 | 3 Intermediate | 2nd–3rd year | VLANs, STP, PoE, IP phones and telephony, NAT, firewall, modems, e-mail, command line, network scanner, security scenarios, racks |
-| 4 Advanced | 3rd–4th year, module 145 | layer 3 switch, QoS, ACL, DHCP snooping, syslog, port channel, IPv6, VPN, OSPF, RIP, serial lines, hex view |
+| 4 Advanced | 3rd–4th year, module 145 | layer 3 switch, QoS, ACL, DHCP snooping, syslog, VRRP, load balancer, port channel, IPv6, VPN, OSPF, RIP, serial lines, hex view |
 | 5 University | university of applied sciences | BGP, VRF, VXLAN |
 
 The complete assignment is listed in the documentation [feature profiles](https://github.com/vonam-git/leyoNET/blob/main/docs/funktionsprofile.md) (in German).

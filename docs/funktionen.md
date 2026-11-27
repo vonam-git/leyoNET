@@ -71,7 +71,7 @@ Der **Aufgaben-Katalog** im Simulator enthält über 70 Übungen von ★ bis ★
 
 ## Beispiele
 
-[beispiele/](beispiele) enthält über 35 fertige Projekte, im Programm unter **Datei → Demo-Netze …**, zu jedem Protokoll eines, viele mit Führung Schritt für Schritt. Das grösste ist der **Rechenzentren-Verbund** (`rz-verbund.json`): drei Rechenzentren in drei Bauarten, Racks mit VLAN-Farben, Glasfaser-, Kabel- und VDSL-Anschluss, IPsec-Vollnetz. Als **Schaufenster** läuft es unter [app.leyonet.ch/?schaufenster](https://app.leyonet.ch/?schaufenster) ohne Ende in einer Schleife, nur zum Ansehen (mit `?schaufenster=<Demo>` auch jede andere Demo). Ein Test führt bei jedem Release jede Demo aus und prüft ihr Ergebnis.
+[beispiele/](beispiele) enthält über 35 fertige Projekte, im Programm unter **Datei → Demo-Netze …**, zu jedem Protokoll eines, viele mit Führung Schritt für Schritt. Das grösste ist der **Rechenzentren-Verbund** (`rz-verbund.json`): drei Rechenzentren in drei Bauarten, Racks mit VLAN-Farben, Glasfaser-, Kabel- und VDSL-Anschluss, IPsec-Vollnetz, Rapid Spanning Tree und ein Load Balancer in Zürich. Als **Schaufenster** läuft es unter [app.leyonet.ch/?schaufenster](https://app.leyonet.ch/?schaufenster) ohne Ende in einer Schleife, nur zum Ansehen (mit `?schaufenster=<Demo>` auch jede andere Demo). Ein Test führt bei jedem Release jede Demo aus und prüft ihr Ergebnis.
 
 ## Projektdatei
 

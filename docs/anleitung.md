@@ -205,6 +205,8 @@ Zwei Kabel zwischen denselben Switches oder ein Ring bilden eine Schleife. Ohne 
 - **Netzscanner:** In der Simulation Desktop → **Programme** → «Installieren», danach Reiter **Netzscanner** oder `nmap 192.168.1.0/24`. UDP mit Protokoll «UDP» bzw. `nmap -sU -p 53,514 …`, IPv6 mit `nmap 2001:db8::1-20`.
 - **Router-Befehlszeile:** `ping 192.168.2.10 repeat 10 source 192.168.1.1` und `traceroute 192.168.2.10` (in der Simulation).
 - **Schutz am Switch:** Switch → Erweitert … → **Schutz**: DHCP-Snooping mit vertrauenswürdigen Ports, Port-Sicherheit (höchstens n MAC-Adressen), Syslog-Server.
+- **Redundanz:** Router, Firewall oder Layer-3-Switch → Erweitert … → **Redundanz**: VRRP-Gruppe mit virtueller Adresse, Priorität, Preempt, Accept Mode und Tracking. Switch → Erweitert … → Switching → Spanning Tree → **Variante** RSTP.
+- **Load Balancer:** Server → Erweitert … → Dienste → **Load Balancer** (oder im Shop «Server → Load Balancer»): Port, Verfahren, Health Check und die Server dahinter.
 - **Syslog:** Rechner → Erweitert … → Dienste → **Syslog**: «Syslog-Server» einschalten; die anderen Geräte tragen dessen Adresse ein (Router: Reiter «Schutz» oder `logging host …`).
 - **Reserve-Route:** Reiter «Routing», bei einer statischen Route die Distanz (z.B. 200) eintragen; sie gilt erst, wenn der Anschluss der normalen Route keine Verbindung hat. Auf der Befehlszeile `ip route 0.0.0.0/0 10.0.0.2 200`.
 - **Sicherheit:** Desktop → **Sicherheit** zeigt den Wächter und schaltet ARP-Schutz und SYN-Cookies ein; den **Angreifer** gibt es im Shop unter Endgeräte (Funktion «Sicherheits-Szenarien»).

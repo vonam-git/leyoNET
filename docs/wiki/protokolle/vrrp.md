@@ -5,6 +5,7 @@ reihenfolge: 45
 schicht: 3 (Vermittlung)
 hilfe: [vrrp]
 demos: [vrrp]
+uebungen: [vrrp-gateway]
 normen: [RFC 9568, RFC 826]
 protokolle: [VRRP]
 verwandt: [router, layer3-switch, arp, ecmp]

@@ -5,6 +5,7 @@ reihenfolge: 3.2
 schicht: 2 (Sicherung)
 hilfe: [rstp]
 demos: [rstp]
+uebungen: [rstp-fast]
 normen: [IEEE 802.1Q, IEEE 802.1D]
 protokolle: [RSTP]
 verwandt: [stp, switch, lacp]

@@ -9,13 +9,13 @@
   <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/vrrp.html">
   <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/vrrp.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.11.0">
-  <link rel="stylesheet" href="farben.css?v=1.11.0">
-  <link rel="stylesheet" href="aufbau.css?v=1.11.0">
-  <link rel="stylesheet" href="wiki.css?v=1.11.0">
-  <script src="../js/site.js?v=1.11.0" defer></script>
-  <script src="suche.js?v=1.11.0" defer></script>
-  <script src="wiki.js?v=1.11.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.12.0">
+  <link rel="stylesheet" href="farben.css?v=1.12.0">
+  <link rel="stylesheet" href="aufbau.css?v=1.12.0">
+  <link rel="stylesheet" href="wiki.css?v=1.12.0">
+  <script src="../js/site.js?v=1.12.0" defer></script>
+  <script src="suche.js?v=1.12.0" defer></script>
+  <script src="wiki.js?v=1.12.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -87,7 +87,7 @@
       <div class="page-head"><div><h1>VRRP (redundantes Gateway)</h1>
       <p class="lead">Zwei Router teilen sich eine virtuelle Gateway-Adresse. Fällt der Master aus, übernimmt das Backup, und die Rechner merken nichts.</p></div></div>
       <dl class="facts"><div><dt>Schicht</dt><dd>3 (Vermittlung)</dd></div><div><dt>Norm</dt><dd>RFC 9568, RFC 826</dd></div><div><dt>Beispiel ansehen</dt><dd><a href="#beispiel">Demo ansehen</a></dd></div></dl>
-      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#das-problem-ein-einziges-gateway">Das Problem: ein einziges Gateway</a></li><li><a href="#die-loesung-eine-virtuelle-adresse">Die Lösung: eine virtuelle Adresse</a></li><li><a href="#advertisements-und-uebernahme">Advertisements und Übernahme</a></li><li><a href="#preempt-tracking-accept-mode">Preempt, Tracking, Accept Mode</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#das-problem-ein-einziges-gateway">Das Problem: ein einziges Gateway</a></li><li><a href="#die-loesung-eine-virtuelle-adresse">Die Lösung: eine virtuelle Adresse</a></li><li><a href="#advertisements-und-uebernahme">Advertisements und Übernahme</a></li><li><a href="#preempt-tracking-accept-mode">Preempt, Tracking, Accept Mode</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
       <article class="prose">
 <h2 id="das-problem-ein-einziges-gateway">Das Problem: ein einziges Gateway</h2>
 <p>Jeder Rechner kennt genau ein Standardgateway. Fällt dieser Router aus, erreicht niemand mehr andere Netze, auch wenn ein zweiter Router bereitsteht: Die Rechner wissen nichts von ihm. Man müsste überall das Gateway ändern.</p>
@@ -109,7 +109,9 @@
 <ul><li>Jede Gruppe hat eine Nummer (<strong>VRID</strong>) und damit die virtuelle MAC <code>00:00:5e:00:01:VRID</code>.</li><li>Der Router mit der höchsten <strong>Priorität</strong> (Standard 100) ist <strong>Master</strong>: Er beantwortet ARP für die virtuelle Adresse und leitet weiter. Er meldet sich jede Sekunde mit einem Advertisement an 224.0.0.18 (IP-Protokoll 112, TTL 255).</li><li>Die anderen sind <strong>Backup</strong>. Bleiben die Advertisements 3 Sekunden plus eine kleine Zusatzzeit aus, übernimmt das stärkste Backup und meldet sich per Gratuitous ARP. Die Rechner merken nichts, ihr Gateway bleibt gleich.</li><li><strong>Preempt</strong> (Standard): Ein Router mit höherer Priorität holt sich die Rolle zurück.</li><li><strong>Tracking</strong>: Fällt der Uplink des Masters aus, senkt er seine Priorität, damit ein Backup übernimmt. Gibt es VRRP auf beiden Seiten eines Routers, braucht jede Seite Tracking, sonst laufen die Antworten über den falschen Router.</li><li><strong>Accept Mode</strong>: Nur damit antwortet der Master auf einen Ping an die virtuelle Adresse. Ist die virtuelle Adresse die eigene Interface-Adresse, ist der Router ihr <strong>Besitzer</strong> (Priorität 255).</li></ul>
 <p>Einrichten im Gerätefenster unter <strong>Redundanz</strong> oder im Interface-Modus: <code>vrrp 1 ip 192.168.1.1</code>, <code>vrrp 1 priority 110</code>, <code>vrrp 1 track eth1 decrement 20</code>. <code>show vrrp brief</code> zeigt den Zustand.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>VRRP: redundantes Gateway</strong><p>Zwei Router teilen sich in beiden Netzen eine virtuelle Gateway-Adresse (.1). Router 1 hat die höhere Priorität und ist Master; Router 2 wartet als Backup. Tracking sorgt dafür, dass Router 1 auf beiden Seiten abgibt, wenn eine Seite ausfällt.</p><p class="muted">PC 1 pingt dauernd den Webserver. Kabel Router 1–LAN entfernen: Nach gut 3,5 s übernimmt Router 2, der Ping läuft weiter, das Gateway der PCs bleibt gleich. Paketliste mit Filter «vrrp»: Advertisements an 224.0.0.18. Kabel wieder einstecken: Router 1 holt sich die Rolle zurück (Preempt).</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vrrp">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vrrp.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
+<ul class="cards"><li class="card"><strong>VRRP: redundantes Gateway</strong><p>Zwei Router teilen sich in beiden Netzen eine virtuelle Gateway-Adresse (.1). Router 1 hat die höhere Priorität und ist Master; Router 2 wartet als Backup. Tracking sorgt dafür, dass Router 1 auf beiden Seiten abgibt, wenn eine Seite ausfällt.</p><p class="muted">PC 1 pingt dauernd den Webserver. Kabel Router 1–LAN entfernen: Nach gut 3,5 s übernimmt Router 2, der Ping läuft weiter, das Gateway der PCs bleibt gleich. Paketliste mit Filter «vrrp»: Advertisements an 224.0.0.18. Kabel wieder einstecken: Router 1 holt sich die Rolle zurück (Preempt).</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vrrp">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vrrp.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Gateway ohne Ausfall (VRRP)</strong> <span class="muted">· 4 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_vrrp-gateway.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
 <div class="table-wrap"><table><thead><tr><th>Protokoll</th><th>Schicht</th><th>Vereinfachung in der Simulation</th></tr></thead><tbody><tr><td>VRRP</td><td>3</td><td>Version 3 nur für IPv4: Advertisement jede Sekunde an 224.0.0.18 (TTL 255, virtuelle MAC als Absender) mit echter Prüfsumme; Master_Down_Interval und Skew_Time nach Norm; Preempt, Accept Mode, Besitzer (Priorität 255), Rücktritt mit Priorität 0; Tracking eines Anschlusses (Priorität minus Abzug, wie bei Herstellern üblich); eine virtuelle Adresse je Gruppe, kein VRRP für IPv6</td></tr></tbody></table></div></section>
 <section aria-labelledby="normen"><h2 id="normen">Normen</h2>
@@ -126,7 +128,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.11.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.12.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://patreon.com/leyonet">Patreon</a></li>

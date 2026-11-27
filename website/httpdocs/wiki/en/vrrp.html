@@ -9,13 +9,13 @@
   <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/vrrp.html">
   <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/vrrp.html">
   <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../../css/site.css?v=1.11.0">
-  <link rel="stylesheet" href="../farben.css?v=1.11.0">
-  <link rel="stylesheet" href="../aufbau.css?v=1.11.0">
-  <link rel="stylesheet" href="../wiki.css?v=1.11.0">
-  <script src="../../js/site.js?v=1.11.0" defer></script>
-  <script src="suche.js?v=1.11.0" defer></script>
-  <script src="../wiki.js?v=1.11.0" defer></script>
+  <link rel="stylesheet" href="../../css/site.css?v=1.12.0">
+  <link rel="stylesheet" href="../farben.css?v=1.12.0">
+  <link rel="stylesheet" href="../aufbau.css?v=1.12.0">
+  <link rel="stylesheet" href="../wiki.css?v=1.12.0">
+  <script src="../../js/site.js?v=1.12.0" defer></script>
+  <script src="suche.js?v=1.12.0" defer></script>
+  <script src="../wiki.js?v=1.12.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Skip to content</a>
@@ -87,7 +87,7 @@
       <div class="page-head"><div><h1>VRRP (redundant gateway)</h1>
       <p class="lead">Two routers share a virtual gateway address. If the master fails, the backup takes over, and the computers notice nothing.</p></div></div>
       <dl class="facts"><div><dt>Layer</dt><dd>3 (Vermittlung)</dd></div><div><dt>Standard</dt><dd>RFC 9568, RFC 826</dd></div><div><dt>See an example</dt><dd><a href="#beispiel">See demo</a></dd></div></dl>
-      <nav class="toc" aria-label="On this page"><strong>On this page</strong><ol><li><a href="#the-problem-a-single-gateway">The problem: a single gateway</a></li><li><a href="#the-solution-a-virtual-address">The solution: a virtual address</a></li><li><a href="#advertisements-and-takeover">Advertisements and takeover</a></li><li><a href="#preempt-tracking-accept-mode">Preempt, tracking, accept mode</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">How to do it in leyoNET</a></li><li><a href="#beispiel">See an example</a></li><li><a href="#vereinfachungen">What leyoNET simplifies</a></li><li><a href="#normen">Standards</a></li><li><a href="#weiter">Read on</a></li></ol></nav>
+      <nav class="toc" aria-label="On this page"><strong>On this page</strong><ol><li><a href="#the-problem-a-single-gateway">The problem: a single gateway</a></li><li><a href="#the-solution-a-virtual-address">The solution: a virtual address</a></li><li><a href="#advertisements-and-takeover">Advertisements and takeover</a></li><li><a href="#preempt-tracking-accept-mode">Preempt, tracking, accept mode</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">How to do it in leyoNET</a></li><li><a href="#beispiel">See an example</a></li><li><a href="#ueben">Practise</a></li><li><a href="#vereinfachungen">What leyoNET simplifies</a></li><li><a href="#normen">Standards</a></li><li><a href="#weiter">Read on</a></li></ol></nav>
       <article class="prose">
 <h2 id="the-problem-a-single-gateway">The problem: a single gateway</h2>
 <p>Every computer knows exactly one default gateway. If that router fails, nobody reaches other networks any more, even if a second router is ready: the computers know nothing about it. You would have to change the gateway everywhere.</p>
@@ -109,7 +109,9 @@
 <ul><li>Each group has a number (<strong>VRID</strong>) and with it the virtual MAC <code>00:00:5e:00:01:VRID</code>.</li><li>The router with the highest <strong>priority</strong> (default 100) is <strong>master</strong>: it answers ARP for the virtual address and forwards traffic. It announces itself every second with an advertisement to 224.0.0.18 (IP protocol 112, TTL 255).</li><li>The others are <strong>backups</strong>. If the advertisements stop for 3 seconds plus a little skew time, the strongest backup takes over and announces itself with a gratuitous ARP. Computers notice nothing; their gateway stays the same.</li><li><strong>Preempt</strong> (default): a router with a higher priority takes the role back.</li><li><strong>Tracking</strong>: if the master's uplink fails, it lowers its priority so that a backup takes over. If a router runs VRRP on both sides, each side needs tracking, otherwise replies go through the wrong router.</li><li><strong>Accept mode</strong>: only with it does the master answer a ping to the virtual address. If the virtual address is the router's own interface address, the router is its <strong>owner</strong> (priority 255).</li></ul>
 <p>Set it up in the device window under <strong>Redundancy</strong> or in interface mode: <code>vrrp 1 ip 192.168.1.1</code>, <code>vrrp 1 priority 110</code>, <code>vrrp 1 track eth1 decrement 20</code>. <code>show vrrp brief</code> shows the state.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">See an example</h2>
-<ul class="cards"><li class="card"><strong>VRRP: redundant gateway</strong><p>Two routers share a virtual gateway address (.1) in both networks. Router 1 has the higher priority and is master; Router 2 waits as backup. Tracking makes Router 1 step down on both sides if one side fails.</p><p class="muted">PC 1 pings the web server continuously. Remove the cable Router 1–LAN: after about 3.5 s Router 2 takes over, the ping continues, the PCs keep their gateway. Packet list with filter «vrrp»: advertisements to 224.0.0.18. Plug the cable back in: Router 1 takes the role back (preempt).</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vrrp">Watch live</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vrrp.json">Project file</a></p></li></ul><p class="muted">“Watch live” opens the network in leyoNET, the simulation runs in a loop. In the app you find it under File → Demo networks, ready to present.</p></section>
+<ul class="cards"><li class="card"><strong>VRRP: redundant gateway</strong><p>Two routers share a virtual gateway address (.1) in both networks. Router 1 has the higher priority and is master; Router 2 waits as backup. Tracking makes Router 1 step down on both sides if one side fails.</p><p class="muted">PC 1 pings the web server continuously. Remove the cable Router 1–LAN: after about 3.5 s Router 2 takes over, the ping continues, the PCs keep their gateway. Packet list with filter «vrrp»: advertisements to 224.0.0.18. Plug the cable back in: Router 1 takes the role back (preempt).</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=vrrp">Watch live</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/vrrp.json">Project file</a></p></li></ul><p class="muted">“Watch live” opens the network in leyoNET, the simulation runs in a loop. In the app you find it under File → Demo networks, with a step-by-step tour.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Practise</h2>
+<ul class="exercises"><li><span class="stars" aria-label="4 of 5 stars">★★★★☆</span> <strong>Gateway without failure (VRRP)</strong> <span class="muted">· 4 goals</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_vrrp-gateway.pdf">Worksheet</a> (German)</li></ul><p class="muted">In leyoNET under Tools → Exercise catalogue. Every exercise checks itself.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">What leyoNET simplifies</h2>
 <div class="table-wrap"><table><thead><tr><th>Protocol</th><th>Layer</th><th>Simplification in the simulation</th></tr></thead><tbody><tr><td>VRRP</td><td>3</td><td>Version 3 for IPv4 only: advertisement every second to 224.0.0.18 (TTL 255, virtual MAC as source) with real checksum; Master_Down_Interval and Skew_Time as in the standard; preempt, accept mode, owner (priority 255), resignation with priority 0; tracking of one interface (priority minus decrement, as vendors do); one virtual address per group, no VRRP for IPv6</td></tr></tbody></table></div></section>
 <section aria-labelledby="normen"><h2 id="normen">Standards</h2>
@@ -126,7 +128,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET wiki · as of version 1.11.0 · texts under the same licence as leyoNET (AGPL-3.0).</p>
+      <p>leyoNET wiki · as of version 1.12.0 · texts under the same licence as leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://patreon.com/leyonet">Patreon</a></li>

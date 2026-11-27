@@ -24,7 +24,7 @@ In the data centre a lot of traffic flows between servers (“east-west”). **L
 
 ## In the showcase
 
-The [data centre network](https://app.leyonet.ch/?schaufenster) shows all three designs side by side: Zurich in three tiers, Bern with core and distribution in one rack, Basel as a collapsed core. The sites connect to the provider via modems and are linked with [[ipsec-vpn|IPsec]].
+The [data centre network](https://app.leyonet.ch/?schaufenster) shows all three designs side by side: Zurich in three tiers, Bern with core and distribution in one rack, Basel as a collapsed core. The sites connect to the provider via modems and are linked with [[ipsec-vpn|IPsec]]. Redundancy: port channels, [[rstp|Rapid Spanning Tree]] for the double access uplinks and in Zurich a [[load-balancer|load balancer]] in front of two web servers.
 
 ## Redundancy
 

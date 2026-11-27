@@ -9,13 +9,13 @@
   <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/netzwerkdesign.html">
   <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/netzwerkdesign.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.11.0">
-  <link rel="stylesheet" href="farben.css?v=1.11.0">
-  <link rel="stylesheet" href="aufbau.css?v=1.11.0">
-  <link rel="stylesheet" href="wiki.css?v=1.11.0">
-  <script src="../js/site.js?v=1.11.0" defer></script>
-  <script src="suche.js?v=1.11.0" defer></script>
-  <script src="wiki.js?v=1.11.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.12.0">
+  <link rel="stylesheet" href="farben.css?v=1.12.0">
+  <link rel="stylesheet" href="aufbau.css?v=1.12.0">
+  <link rel="stylesheet" href="wiki.css?v=1.12.0">
+  <script src="../js/site.js?v=1.12.0" defer></script>
+  <script src="suche.js?v=1.12.0" defer></script>
+  <script src="wiki.js?v=1.12.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -98,7 +98,7 @@
 <h2 id="leaf-spine-im-rechenzentrum">Leaf-Spine im Rechenzentrum</h2>
 <p>Im Rechenzentrum fliesst viel Verkehr zwischen Servern («Ost-West»). Dafür eignet sich <strong>Leaf-Spine</strong>: Jeder Leaf-Switch (an dem die Server hängen) ist mit jedem Spine verbunden. Jeder Weg ist gleich lang, und es gibt kein Spanning Tree, weil alles geroutet ist (oft BGP). VLANs, die über mehrere Leafs reichen, transportiert <a href="vxlan.html">VXLAN</a>.</p>
 <h2 id="im-schaufenster">Im Schaufenster</h2>
-<p>Der <a href="https://app.leyonet.ch/?schaufenster">Rechenzentren-Verbund</a> zeigt alle drei Bauarten nebeneinander: Zürich dreistufig, Bern mit Core und Distribution in einem Rack, Basel als Collapsed Core. Die Standorte hängen über Modems am Provider und sind mit <a href="ipsec-vpn.html">IPsec</a> verbunden.</p>
+<p>Der <a href="https://app.leyonet.ch/?schaufenster">Rechenzentren-Verbund</a> zeigt alle drei Bauarten nebeneinander: Zürich dreistufig, Bern mit Core und Distribution in einem Rack, Basel als Collapsed Core. Die Standorte hängen über Modems am Provider und sind mit <a href="ipsec-vpn.html">IPsec</a> verbunden. Redundanz: Port-Channels, <a href="rstp.html">Rapid Spanning Tree</a> für die doppelten Access-Uplinks und in Zürich ein <a href="load-balancer.html">Load Balancer</a> vor zwei Webservern.</p>
 <h2 id="redundanz">Redundanz</h2>
 <p>Ein Netz ohne Reserve fällt mit dem ersten Kabel aus. Im Schaufenster ist darum alles doppelt:</p>
 <ul><li><strong>Doppelte Leitungen:</strong> Core und Distribution sind mit zwei Glasfasern verbunden, gebündelt zu einem Port-Channel mit <a href="lacp.html">Port-Channel und LACP</a>. Beide tragen Verkehr; fällt eine aus, läuft alles über die andere.</li><li><strong>Zwei Wege nach oben:</strong> Jeder Access-Switch hängt an beiden Distribution-Switches. Das ergibt eine Schleife, darum läuft <a href="stp.html">Spanning Tree (STP)</a>: Der Core ist Root-Bridge, ein Uplink jedes Access-Switches ist blockiert und springt ein, wenn der andere ausfällt.</li><li><strong>Collapsed Core in Basel:</strong> zwei Kupferkabel im Port-Channel zwischen Core und Access.</li></ul>
@@ -120,7 +120,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.11.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.12.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://patreon.com/leyonet">Patreon</a></li>

@@ -5,6 +5,7 @@ reihenfolge: 42.5
 schicht: 3 (Vermittlung)
 hilfe: [ecmp]
 demos: [ecmp]
+uebungen: [ecmp-ospf]
 normen: [RFC 2992, RFC 2328]
 protokolle: [ECMP (gleich gute Wege)]
 verwandt: [statisches-routing, ospf, load-balancer]

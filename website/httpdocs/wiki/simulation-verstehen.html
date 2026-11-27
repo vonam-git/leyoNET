@@ -9,13 +9,13 @@
   <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/simulation-verstehen.html">
   <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/simulation-verstehen.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.11.0">
-  <link rel="stylesheet" href="farben.css?v=1.11.0">
-  <link rel="stylesheet" href="aufbau.css?v=1.11.0">
-  <link rel="stylesheet" href="wiki.css?v=1.11.0">
-  <script src="../js/site.js?v=1.11.0" defer></script>
-  <script src="suche.js?v=1.11.0" defer></script>
-  <script src="wiki.js?v=1.11.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.12.0">
+  <link rel="stylesheet" href="farben.css?v=1.12.0">
+  <link rel="stylesheet" href="aufbau.css?v=1.12.0">
+  <link rel="stylesheet" href="wiki.css?v=1.12.0">
+  <script src="../js/site.js?v=1.12.0" defer></script>
+  <script src="suche.js?v=1.12.0" defer></script>
+  <script src="wiki.js?v=1.12.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -110,7 +110,7 @@
 <p>Erst nach der letzten Schicht verarbeitet das Gerät das Paket. <strong>Weiter</strong> (Leertaste) läuft normal weiter.</p></div>
 <div class="help-block"><h3>Anzeigefilter</h3>
 <p>Der Filter funktioniert ähnlich wie in Wireshark:</p>
-<ul><li>Protokolle: <code>arp</code>, <code>dhcp</code>, <code>dns</code>, <code>http</code>, <code>icmp</code>, <code>tcp</code>, <code>udp</code>, <code>stp</code>, <code>ospf</code>, <code>rip</code>, <code>bgp</code>, <code>ppp</code>, <code>wlan</code>, <code>broadcast</code>, IPv6: <code>ipv6</code>, <code>icmpv6</code>, <code>ndp</code>, <code>dhcpv6</code>, <code>dslite</code>, VPN: <code>esp</code>, <code>ike</code>, <code>vpn</code>, Rechenzentrum: <code>vxlan</code>, <code>lacp</code></li><li>Vergleiche: <code>ip.addr == 10.0.0.1</code>, <code>ip.src</code>, <code>ip.dst</code>, <code>ipv6.addr</code>, <code>ipv6.src</code>, <code>ipv6.dst</code>, <code>eth.addr</code>, <code>port == 80</code>, <code>tcp.port</code>, <code>udp.port</code>, <code>vlan == 10</code>, <code>tcp.stream == 0</code> (eine TCP-Verbindung), <code>tcp.flags.syn == 1</code> (auch <code>ack</code>, <code>fin</code>, <code>rst</code>), auch mit <code>!=</code></li><li><code>host PC1</code> (Gerätename), <code>lost</code> (verlorene Rahmen)</li><li>verknüpfen mit <code>and</code>, <code>or</code>, <code>not</code> und Klammern</li><li><strong>TCP-Verbindung folgen:</strong> Paket anklicken, dann «TCP-Verbindung folgen». Die Liste zeigt nur noch diese Verbindung (wie «Follow TCP Stream» in Wireshark), oben steht, ob Aufbau (SYN, SYN/ACK, ACK), Daten und Abbau (FIN) vorkamen.</li></ul>
+<ul><li>Protokolle: <code>arp</code>, <code>dhcp</code>, <code>dns</code>, <code>http</code>, <code>icmp</code>, <code>tcp</code>, <code>udp</code>, <code>stp</code>, <code>ospf</code>, <code>rip</code>, <code>bgp</code>, <code>vrrp</code>, <code>rstp</code>, <code>ppp</code>, <code>wlan</code>, <code>broadcast</code>, IPv6: <code>ipv6</code>, <code>icmpv6</code>, <code>ndp</code>, <code>dhcpv6</code>, <code>dslite</code>, VPN: <code>esp</code>, <code>ike</code>, <code>vpn</code>, Rechenzentrum: <code>vxlan</code>, <code>lacp</code></li><li>Vergleiche: <code>ip.addr == 10.0.0.1</code>, <code>ip.src</code>, <code>ip.dst</code>, <code>ipv6.addr</code>, <code>ipv6.src</code>, <code>ipv6.dst</code>, <code>eth.addr</code>, <code>port == 80</code>, <code>tcp.port</code>, <code>udp.port</code>, <code>vlan == 10</code>, <code>tcp.stream == 0</code> (eine TCP-Verbindung), <code>tcp.flags.syn == 1</code> (auch <code>ack</code>, <code>fin</code>, <code>rst</code>), auch mit <code>!=</code></li><li><code>host PC1</code> (Gerätename), <code>lost</code> (verlorene Rahmen)</li><li>verknüpfen mit <code>and</code>, <code>or</code>, <code>not</code> und Klammern</li><li><strong>TCP-Verbindung folgen:</strong> Paket anklicken, dann «TCP-Verbindung folgen». Die Liste zeigt nur noch diese Verbindung (wie «Follow TCP Stream» in Wireshark), oben steht, ob Aufbau (SYN, SYN/ACK, ACK), Daten und Abbau (FIN) vorkamen.</li></ul>
 <p>Beispiel: <code>dhcp or (icmp and host PC1)</code>. Die Knöpfe unter dem Filter setzen häufige Ausdrücke.</p></div>
 <div class="help-block"><h3>pcap-Export</h3>
 <p><strong>Datei → Mitschnitt exportieren</strong> speichert alle Rahmen als pcapng-Datei. Wireshark öffnet sie wie einen echten Mitschnitt; jede Leitung erscheint als eigene Schnittstelle mit passendem Linktyp (Ethernet, PPP, WLAN …).</p></div></section>
@@ -130,7 +130,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.11.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.12.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://patreon.com/leyonet">Patreon</a></li>

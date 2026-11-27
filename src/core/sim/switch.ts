@@ -205,7 +205,8 @@ export class SwitchNode implements SimNode {
   }
 
   get storm(): StormState | null {
-    return this.#stormSince === null ? null : { since: this.#stormSince, rate: Math.max(this.#lastRate, this.#windowCount) };
+    if (this.#stormSince === null) return null;
+    return { since: this.#stormSince, rate: Math.max(this.#lastRate, this.#windowCount) };
   }
 
   get #device() {
@@ -474,10 +475,11 @@ export class SwitchNode implements SimNode {
     // Steuermeldungen der Leitung (802.11-Anmeldung) gehen nie weiter.
     if (frame.payload.kind === 'link') return this.#onLinkControl(inPort, frame);
     if (frame.payload.kind === 'ppp') return;
-    if (!this.#admit(frame)) return;
 
+    // Gesperrte Ports verwerfen sofort; dort ankommende Rahmen kreisen nicht (zählen nicht zum Sturm).
     const inState = this.#state(inPort);
     if (inState === 'blocking' || inState === 'discarding') return;
+    if (!this.#admit(frame)) return;
     // Getaggte Rahmen gehören nur auf Trunks.
     if (!this.#isTrunk(inPort) && frame.vlan !== undefined) return;
     const vlan = this.#isTrunk(inPort) ? (frame.vlan ?? this.#native(inPort)) : this.#vlanOf(inPort);

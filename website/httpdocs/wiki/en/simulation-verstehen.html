@@ -9,13 +9,13 @@
   <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/simulation-verstehen.html">
   <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/simulation-verstehen.html">
   <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../../css/site.css?v=1.11.0">
-  <link rel="stylesheet" href="../farben.css?v=1.11.0">
-  <link rel="stylesheet" href="../aufbau.css?v=1.11.0">
-  <link rel="stylesheet" href="../wiki.css?v=1.11.0">
-  <script src="../../js/site.js?v=1.11.0" defer></script>
-  <script src="suche.js?v=1.11.0" defer></script>
-  <script src="../wiki.js?v=1.11.0" defer></script>
+  <link rel="stylesheet" href="../../css/site.css?v=1.12.0">
+  <link rel="stylesheet" href="../farben.css?v=1.12.0">
+  <link rel="stylesheet" href="../aufbau.css?v=1.12.0">
+  <link rel="stylesheet" href="../wiki.css?v=1.12.0">
+  <script src="../../js/site.js?v=1.12.0" defer></script>
+  <script src="suche.js?v=1.12.0" defer></script>
+  <script src="../wiki.js?v=1.12.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Skip to content</a>
@@ -110,7 +110,7 @@
 <p>Only after the last layer does the device process the packet. <strong>Resume</strong> (Space) continues normally.</p></div>
 <div class="help-block"><h3>Display filter</h3>
 <p>The filter works much like Wireshark's:</p>
-<ul><li>protocols: <code>arp</code>, <code>dhcp</code>, <code>dns</code>, <code>http</code>, <code>icmp</code>, <code>tcp</code>, <code>udp</code>, <code>stp</code>, <code>ospf</code>, <code>rip</code>, <code>bgp</code>, <code>ppp</code>, <code>wlan</code>, <code>broadcast</code>, IPv6: <code>ipv6</code>, <code>icmpv6</code>, <code>ndp</code>, <code>dhcpv6</code>, <code>dslite</code>, VPN: <code>esp</code>, <code>ike</code>, <code>vpn</code>, data centre: <code>vxlan</code>, <code>lacp</code></li><li>comparisons: <code>ip.addr == 10.0.0.1</code>, <code>ip.src</code>, <code>ip.dst</code>, <code>ipv6.addr</code>, <code>ipv6.src</code>, <code>ipv6.dst</code>, <code>eth.addr</code>, <code>port == 80</code>, <code>tcp.port</code>, <code>udp.port</code>, <code>vlan == 10</code>, <code>tcp.stream == 0</code> (one TCP connection), <code>tcp.flags.syn == 1</code> (also <code>ack</code>, <code>fin</code>, <code>rst</code>), also with <code>!=</code></li><li><code>host PC1</code> (device name), <code>lost</code> (lost frames)</li><li>combine with <code>and</code>, <code>or</code>, <code>not</code> and parentheses</li><li><strong>Follow TCP stream:</strong> click a packet, then “Follow TCP stream”. The list shows only that connection (like “Follow TCP Stream” in Wireshark); the bar on top shows whether setup (SYN, SYN/ACK, ACK), data and teardown (FIN) occurred.</li></ul>
+<ul><li>protocols: <code>arp</code>, <code>dhcp</code>, <code>dns</code>, <code>http</code>, <code>icmp</code>, <code>tcp</code>, <code>udp</code>, <code>stp</code>, <code>ospf</code>, <code>rip</code>, <code>bgp</code>, <code>vrrp</code>, <code>rstp</code>, <code>ppp</code>, <code>wlan</code>, <code>broadcast</code>, IPv6: <code>ipv6</code>, <code>icmpv6</code>, <code>ndp</code>, <code>dhcpv6</code>, <code>dslite</code>, VPN: <code>esp</code>, <code>ike</code>, <code>vpn</code>, data centre: <code>vxlan</code>, <code>lacp</code></li><li>comparisons: <code>ip.addr == 10.0.0.1</code>, <code>ip.src</code>, <code>ip.dst</code>, <code>ipv6.addr</code>, <code>ipv6.src</code>, <code>ipv6.dst</code>, <code>eth.addr</code>, <code>port == 80</code>, <code>tcp.port</code>, <code>udp.port</code>, <code>vlan == 10</code>, <code>tcp.stream == 0</code> (one TCP connection), <code>tcp.flags.syn == 1</code> (also <code>ack</code>, <code>fin</code>, <code>rst</code>), also with <code>!=</code></li><li><code>host PC1</code> (device name), <code>lost</code> (lost frames)</li><li>combine with <code>and</code>, <code>or</code>, <code>not</code> and parentheses</li><li><strong>Follow TCP stream:</strong> click a packet, then “Follow TCP stream”. The list shows only that connection (like “Follow TCP Stream” in Wireshark); the bar on top shows whether setup (SYN, SYN/ACK, ACK), data and teardown (FIN) occurred.</li></ul>
 <p>Example: <code>dhcp or (icmp and host PC1)</code>. The chips below the filter set common expressions.</p></div>
 <div class="help-block"><h3>pcap export</h3>
 <p><strong>File → Export capture</strong> saves all frames as a pcapng file. Wireshark opens it like a real capture; each link appears as its own interface with the right link type (Ethernet, PPP, Wi-Fi …).</p></div></section>
@@ -130,7 +130,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET wiki · as of version 1.11.0 · texts under the same licence as leyoNET (AGPL-3.0).</p>
+      <p>leyoNET wiki · as of version 1.12.0 · texts under the same licence as leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://patreon.com/leyonet">Patreon</a></li>

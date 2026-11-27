@@ -107,6 +107,30 @@ export const CHECK_FIELDS: Record<Check['type'], FieldSpec[]> = {
     { key: 'min', kind: 'number', optional: true },
   ],
   budget: [{ key: 'max', kind: 'number', label: 'budgetMax' }],
+  failover: [
+    { key: 'from', kind: 'device' },
+    { key: 'to', kind: 'device', label: 'pingTo' },
+    { key: 'a', kind: 'device', label: 'cutA' },
+    { key: 'b', kind: 'device', label: 'cutB' },
+    { key: 'within', kind: 'number', optional: true, label: 'withinMs' },
+    { key: 'url', kind: 'text', optional: true },
+  ],
+  rstp: [{ key: 'devices', kind: 'devices' }],
+  vrrp: [
+    { key: 'device', kind: 'device' },
+    { key: 'ip', kind: 'text', label: 'virtualIp' },
+    { key: 'state', kind: 'choice', optional: true, label: 'vrrpState', options: ['master', 'backup'] },
+  ],
+  ecmp: [
+    { key: 'device', kind: 'device' },
+    { key: 'network', kind: 'text' },
+    { key: 'min', kind: 'number', optional: true },
+  ],
+  balanced: [
+    { key: 'from', kind: 'device' },
+    { key: 'to', kind: 'device', label: 'loadBalancer' },
+    { key: 'min', kind: 'number', optional: true },
+  ],
   linkUp: [
     { key: 'a', kind: 'device' },
     { key: 'b', kind: 'device' },

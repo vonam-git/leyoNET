@@ -69,6 +69,19 @@ export type Check =
   | { type: 'groupLeases'; device: string; min?: number }
   /** Gesamtkosten höchstens so viele CHF. */
   | { type: 'budget'; max: number }
+  /**
+   * Ausfallsicherheit: Ping (oder mit `url` Webseite) von `from` nach `to` klappt; dann fallen alle Kabel
+   * zwischen `a` und `b` aus, und nach `within` ms (Standard 5000) klappt es wieder.
+   */
+  | { type: 'failover'; from: string; to: string; a: string; b: string; within?: number; url?: string }
+  /** Diese Switches haben Spanning Tree in der Variante RSTP. */
+  | { type: 'rstp'; devices: string[] }
+  /** Das Gerät ist für diese virtuelle Adresse VRRP-Master (bzw. mit `state` Backup). */
+  | { type: 'vrrp'; device: string; ip: string; state?: 'master' | 'backup' }
+  /** Das Gerät hat mindestens `min` (Standard 2) gleich gute Routen ins Netz (ECMP). */
+  | { type: 'ecmp'; device: string; network: string; min?: number }
+  /** Von `from` aus verteilt der Load Balancer `to` mehrere Aufrufe auf mindestens `min` (Standard 2) Server. */
+  | { type: 'balanced'; from: string; to: string; min?: number }
   /** Direkte Verbindung zwischen zwei Geräten ist aktiv (optional mit bestimmtem Medium). */
   | { type: 'linkUp'; a: string; b: string; medium?: Medium }
   /** VLAN ist mit Farbe dokumentiert. */
@@ -140,6 +153,11 @@ export const CHECK_TYPES = [
   'verbundVpn',
   'groupLeases',
   'budget',
+  'failover',
+  'rstp',
+  'vrrp',
+  'ecmp',
+  'balanced',
   'linkUp',
   'vlanDocumented',
   'hostVlan',
@@ -670,6 +688,93 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       const min = check.min ?? members.length;
       return members.length > 0 && withIp >= min ? { id, passed: true } : fail(id, 'groupWithoutLease', { name: device.name, count: withIp, total: members.length });
     }
+    case 'failover': {
+      const from = need(check.from);
+      if (!from) return missing(check.from);
+      const target = need(check.to);
+      if (!target) return missing(check.to);
+      const a = need(check.a);
+      const b = need(check.b);
+      if (!a) return missing(check.a);
+      if (!b) return missing(check.b);
+      const address = staticIpv4(target);
+      if (!address && !check.url) return fail(id, 'noAddress', { name: target.name });
+      const sim = new Simulation(topology);
+      sim.runUntil(BOOT_MS);
+      // Erreichbar? Ping: die erste Antwort innerhalb von 1,5 s; Webseite: Status 200.
+      const reaches = (at: number): boolean => {
+        if (check.url) {
+          sim.browse(from.id, check.url);
+          sim.runUntil(at + 6000);
+          const browser = sim.getDeviceState(from.id).browser;
+          return browser?.status === 'done' && browser.response?.status === 200;
+        }
+        const before = sim.getDeviceState(from.id).console.length;
+        sim.ping(from.id, address!);
+        sim.runUntil(at + 1500);
+        return sim.getDeviceState(from.id).console.slice(before).some((l) => l.code === 'ping.reply');
+      };
+      if (!reaches(BOOT_MS)) return fail(id, 'failoverBefore', { from: from.name, to: target.name });
+      sim.interrupt(from.id);
+      const cut = Math.max(sim.now, BOOT_MS + 6000);
+      sim.runUntil(cut);
+      const cables = cablesOf(topology, a.id).filter((c) => otherEnd(c, a.id).device === b.id);
+      if (!cables.length) return fail(id, 'notConnected', { a: a.name, b: b.name });
+      const ids = new Set(cables.map((c) => c.id));
+      sim.updateTopology({ ...topology, cables: topology.cables.filter((c) => !ids.has(c.id)) });
+      const within = check.within ?? 5000;
+      sim.runUntil(cut + within);
+      return reaches(cut + within) ? { id, passed: true } : fail(id, 'failoverAfter', { from: from.name, to: target.name, a: a.name, b: b.name, seconds: within / 1000 });
+    }
+    case 'rstp': {
+      for (const name of check.devices) {
+        const device = need(name);
+        if (!device) return missing(name);
+        if (!device.stp || device.stpMode !== 'rstp') return fail(id, 'notRstp', { name: device.name });
+      }
+      return { id, passed: true };
+    }
+    case 'vrrp': {
+      const device = need(check.device);
+      if (!device) return missing(check.device);
+      if (!device.vrrp?.some((g) => g.ip === check.ip)) return fail(id, 'noVrrp', { name: device.name, ip: check.ip });
+      const sim = new Simulation(topology);
+      sim.runUntil(BOOT_MS);
+      const state = sim.getDeviceState(device.id).vrrp?.find((g) => g.ip === check.ip)?.state ?? 'init';
+      const wanted = check.state ?? 'master';
+      return state === wanted ? { id, passed: true } : fail(id, 'vrrpState', { name: device.name, ip: check.ip, state, wanted });
+    }
+    case 'ecmp': {
+      const device = need(check.device);
+      if (!device) return missing(check.device);
+      const [netText = '', prefixText = ''] = check.network.split('/');
+      const network = parseIp(netText);
+      const prefix = parseMask(prefixText);
+      if (network === null || prefix === null) return fail(id, 'noRoute', { name: device.name, network: check.network });
+      const sim = new Simulation(topology);
+      sim.runUntil(CONVERGE_MS);
+      const count = sim.getRoutes(device.id).filter((r) => r.network === networkOf(network, prefix) && r.prefix === prefix && r.via !== null).length;
+      const min = check.min ?? 2;
+      return count >= min ? { id, passed: true } : fail(id, 'noEcmp', { name: device.name, network: check.network, count, min });
+    }
+    case 'balanced': {
+      const from = need(check.from);
+      if (!from) return missing(check.from);
+      const lb = need(check.to);
+      if (!lb) return missing(check.to);
+      const address = staticIpv4(lb);
+      if (!lb.loadBalancer || !address) return fail(id, 'noLoadBalancer', { name: lb.name });
+      const sim = new Simulation(topology);
+      sim.runUntil(BOOT_MS);
+      const min = check.min ?? 2;
+      const rounds = Math.max(min, lb.loadBalancer.backends.length) + 1;
+      for (let i = 0; i < rounds; i++) {
+        sim.browse(from.id, `http://${address}:${lb.loadBalancer.port}/`);
+        sim.runUntil(BOOT_MS + (i + 1) * 2000);
+      }
+      const used = sim.getDeviceState(lb.id).loadBalancer?.backends.filter((b) => b.total > 0).length ?? 0;
+      return used >= min ? { id, passed: true } : fail(id, 'notBalanced', { name: lb.name, count: used, min });
+    }
     case 'budget': {
       const total = costOf(topology).total;
       return total <= check.max ? { id, passed: true } : fail(id, 'overBudget', { total, max: check.max });
@@ -985,6 +1090,33 @@ export function readTasks(value: unknown, invalid: (path: string) => never, read
         case 'budget':
           check = { type, max: optNum(c.max, `${cp}.max`) ?? invalid(`${cp}.max`) };
           break;
+        case 'failover': {
+          const within = optNum(c.within, `${cp}.within`);
+          if (within !== undefined && (within < 0 || within > 30_000)) invalid(`${cp}.within`);
+          const url = optStr(c.url, `${cp}.url`);
+          check = { type, from: str(c.from, `${cp}.from`), to: str(c.to, `${cp}.to`), a: str(c.a, `${cp}.a`), b: str(c.b, `${cp}.b`), ...(within !== undefined ? { within } : {}), ...(url ? { url } : {}) };
+          break;
+        }
+        case 'rstp':
+          check = { type, devices: names(c.devices, `${cp}.devices`) };
+          break;
+        case 'vrrp': {
+          if (c.state !== undefined && c.state !== 'master' && c.state !== 'backup') invalid(`${cp}.state`);
+          check = { type, device: str(c.device, `${cp}.device`), ip: str(c.ip, `${cp}.ip`), ...(c.state ? { state: c.state as 'master' | 'backup' } : {}) };
+          break;
+        }
+        case 'ecmp': {
+          const min = optNum(c.min, `${cp}.min`);
+          if (min !== undefined && (min < 2 || min > 4)) invalid(`${cp}.min`);
+          check = { type, device: str(c.device, `${cp}.device`), network: str(c.network, `${cp}.network`), ...(min !== undefined ? { min } : {}) };
+          break;
+        }
+        case 'balanced': {
+          const min = optNum(c.min, `${cp}.min`);
+          if (min !== undefined && (min < 1 || min > 16)) invalid(`${cp}.min`);
+          check = { type, from: str(c.from, `${cp}.from`), to: str(c.to, `${cp}.to`), ...(min !== undefined ? { min } : {}) };
+          break;
+        }
         case 'linkUp': {
           if (c.medium !== undefined && !(MEDIA as readonly unknown[]).includes(c.medium)) invalid(`${cp}.medium`);
           check = { type, a: str(c.a, `${cp}.a`), b: str(c.b, `${cp}.b`), ...(c.medium ? { medium: c.medium as Medium } : {}) };

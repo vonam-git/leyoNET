@@ -5,6 +5,7 @@ reihenfolge: 26
 schicht: 4 (Transport) bis 7 (Anwendung)
 hilfe: [loadbalancer]
 demos: [loadBalancer]
+uebungen: [lb-webfarm]
 normen: [RFC 9293]
 protokolle: [Load Balancer]
 verwandt: [server, http, tcp, ecmp, vrrp]

@@ -106,6 +106,12 @@ function settings(d: Device): string[] {
   if (d.synCookies) lines.push('Sicherheit: SYN-Cookies eingeschaltet');
   if (d.wlan) lines.push(`WLAN «${d.wlan.ssid}»${d.wlan.password ? ' mit Passwort' : ' offen'}, Kanal ${d.wlan.channel}`);
   if (d.wifi) lines.push(`verbunden mit WLAN «${d.wifi.ssid}»`);
+  const lb = d.loadBalancer;
+  if (lb) {
+    const method = { roundRobin: 'Round Robin', leastConn: 'Least Connections', sourceHash: 'Source Hash' }[lb.method];
+    lines.push(`Load Balancer: Port ${lb.port}, ${method}, Health Check ${lb.healthCheck === false ? 'aus' : 'ein'}`);
+    for (const b of lb.backends) lines.push(`  Server ${b.ip}:${b.port ?? lb.port}`);
+  }
   return lines;
 }
 
@@ -136,8 +142,8 @@ function otherChanges(before: Device | undefined, after: Device, shown: Set<stri
   return changed.length ? [`weitere Einstellungen: ${changed.join(', ')}`] : [];
 }
 
-const SETTINGS_FIELDS = ['gateway', 'dns', 'dhcp', 'ipv6Auto', 'gateway6', 'routes', 'dhcpServer', 'dnsServer', 'webServer', 'mailServer', 'wlan', 'wifi', 'scanner', 'arpGuard', 'synCookies'];
-const CLI_FIELDS = ['routes', 'vlans', 'vlanNames', 'svis', 'subinterfaces', 'loopbacks', 'vrfs', 'vxlan', 'acls', 'dhcpPools', 'dhcpExcluded', 'ospf', 'rip', 'bgp', 'stp', 'stpPriority', 'ipRouting', 'routingMode'];
+const SETTINGS_FIELDS = ['gateway', 'dns', 'dhcp', 'ipv6Auto', 'gateway6', 'routes', 'dhcpServer', 'dnsServer', 'webServer', 'mailServer', 'wlan', 'wifi', 'scanner', 'arpGuard', 'synCookies', 'loadBalancer'];
+const CLI_FIELDS = ['routes', 'vlans', 'vlanNames', 'svis', 'subinterfaces', 'loopbacks', 'vrfs', 'vxlan', 'acls', 'dhcpPools', 'dhcpExcluded', 'ospf', 'rip', 'bgp', 'stp', 'stpPriority', 'stpMode', 'vrrp', 'ipRouting', 'routingMode'];
 
 /** Konfigurationsänderungen der Musterlösung, je Gerät, als Textzeilen. */
 export function solutionLines(start: Topology, solved: Topology): string[] {
@@ -150,7 +156,14 @@ export function solutionLines(start: Topology, solved: Topology): string[] {
     if (hasCli(d.type)) {
       const a = before ? stanzas(runningConfig(before)) : new Map<string, string[]>();
       const b = stanzas(runningConfig(d));
-      for (const [head, stanza] of b) if (a.get(head)?.join('\n') !== stanza.join('\n') && !(stanza.length === 1 && /^interface /.test(head))) lines.push(...stanza);
+      for (const [head, stanza] of b) {
+        const old = a.get(head);
+        if (old?.join('\n') === stanza.join('\n')) continue;
+        // Weggefallene Zeilen im Abschnitt als «no …» (z.B. «no ip ospf cost»).
+        const gone = (old ?? []).slice(1).filter((l) => !stanza.includes(l)).map((l) => ` no ${l.trim().replace(/ \d+$/, '')}`);
+        if (stanza.length === 1 && /^interface /.test(head) && !gone.length) continue;
+        lines.push(...stanza, ...gone);
+      }
       for (const head of a.keys()) if (!b.has(head) && !/^interface /.test(head)) lines.push(`no ${head}`);
       lines.push(...otherChanges(before, d, new Set(CLI_FIELDS)));
     } else {

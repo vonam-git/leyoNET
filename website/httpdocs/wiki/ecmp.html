@@ -9,13 +9,13 @@
   <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/ecmp.html">
   <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/ecmp.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.11.0">
-  <link rel="stylesheet" href="farben.css?v=1.11.0">
-  <link rel="stylesheet" href="aufbau.css?v=1.11.0">
-  <link rel="stylesheet" href="wiki.css?v=1.11.0">
-  <script src="../js/site.js?v=1.11.0" defer></script>
-  <script src="suche.js?v=1.11.0" defer></script>
-  <script src="wiki.js?v=1.11.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.12.0">
+  <link rel="stylesheet" href="farben.css?v=1.12.0">
+  <link rel="stylesheet" href="aufbau.css?v=1.12.0">
+  <link rel="stylesheet" href="wiki.css?v=1.12.0">
+  <script src="../js/site.js?v=1.12.0" defer></script>
+  <script src="suche.js?v=1.12.0" defer></script>
+  <script src="wiki.js?v=1.12.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -87,7 +87,7 @@
       <div class="page-head"><div><h1>ECMP (gleich gute Wege)</h1>
       <p class="lead">Führen mehrere Wege mit gleichen Kosten zum Ziel, nutzt der Router alle. Er verteilt nicht jedes Paket, sondern jeden Datenfluss.</p></div></div>
       <dl class="facts"><div><dt>Schicht</dt><dd>3 (Vermittlung)</dd></div><div><dt>Norm</dt><dd>RFC 2992, RFC 2328</dd></div><div><dt>Beispiel ansehen</dt><dd><a href="#beispiel">Demo ansehen</a></dd></div></dl>
-      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#zwei-wege-gleich-gut">Zwei Wege, gleich gut</a></li><li><a href="#je-datenfluss-nicht-je-paket">Je Datenfluss, nicht je Paket</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#zwei-wege-gleich-gut">Zwei Wege, gleich gut</a></li><li><a href="#je-datenfluss-nicht-je-paket">Je Datenfluss, nicht je Paket</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
       <article class="prose">
 <h2 id="zwei-wege-gleich-gut">Zwei Wege, gleich gut</h2>
 <p>Normalerweise wählt ein Router für ein Ziel genau eine Route: längstes Präfix, dann kleinste administrative Distanz, dann kleinste Metrik. Sind danach immer noch zwei oder mehr Routen gleich gut, spricht man von <strong>Equal-Cost Multi-Path</strong> (ECMP). Der Router trägt alle ein und verteilt die Last. Fällt ein Weg aus, laufen die Pakete über die übrigen.</p>
@@ -103,7 +103,9 @@
 <ul><li><strong>Statisch</strong>: zwei Routen zum selben Netz mit gleicher Distanz, aber verschiedenem Gateway (<code>ip route 10.4.0.0/24 10.0.12.2</code> und <code>ip route 10.4.0.0/24 10.0.13.3</code>). Gleiche Route zweimal geht nicht; mit anderer Distanz wird es eine Reserve-Route.</li><li><strong>OSPF</strong>: gleich lange Wege nach den Kosten trägt OSPF alle ein (RFC 2328).</li><li>Verteilt wird <strong>je Datenfluss</strong>, nicht je Paket: Ein Hash über Absender, Ziel, Protokoll und Ports wählt den Weg (Hash-Threshold, RFC 2992). So bleibt die Reihenfolge der Pakete einer Verbindung erhalten; Pings verschiedener Rechner können verschiedene Wege nehmen.</li></ul>
 <p><code>show ip route</code> markiert alle aktiven Wege mit <code>&gt;*</code>. Fällt ein Weg aus, laufen die Flüsse über die übrigen.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>ECMP: zwei gleich gute Wege</strong><p>Router 1 erreicht das Servernetz über Router 2 oder Router 3, beide Wege kosten gleich viel. OSPF trägt beide ein, und der Router verteilt die Datenflüsse nach einem Hash (RFC 2992).</p><p class="muted">Routing-Tabelle von Router 1: zwei O-Routen zu 10.4.0.0/24. Die Traceroutes von PC 1 und PC 2 können verschiedene Wege nehmen. Ein Kabel zu Router 2 entfernen: alles läuft über Router 3.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ecmp">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ecmp.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
+<ul class="cards"><li class="card"><strong>ECMP: zwei gleich gute Wege</strong><p>Router 1 erreicht das Servernetz über Router 2 oder Router 3, beide Wege kosten gleich viel. OSPF trägt beide ein, und der Router verteilt die Datenflüsse nach einem Hash (RFC 2992).</p><p class="muted">Routing-Tabelle von Router 1: zwei O-Routen zu 10.4.0.0/24. Die Traceroutes von PC 1 und PC 2 können verschiedene Wege nehmen. Ein Kabel zu Router 2 entfernen: alles läuft über Router 3.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ecmp">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ecmp.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Zwei Wege nutzen (ECMP)</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_ecmp-ospf.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
 <div class="table-wrap"><table><thead><tr><th>Protokoll</th><th>Schicht</th><th>Vereinfachung in der Simulation</th></tr></thead><tbody><tr><td>ECMP (gleich gute Wege)</td><td>3</td><td>Bis 4 Wege für statische Routen (gleiche Distanz, anderes Gateway) und OSPFv2 (gleiche Kosten); Weg je Datenfluss nach Hash-Threshold über Adressen, Protokoll und Ports bzw. ICMP-Kennung; nicht für RIP, BGP, IPv6</td></tr></tbody></table></div></section>
 <section aria-labelledby="normen"><h2 id="normen">Normen</h2>
@@ -120,7 +122,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.11.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.12.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://patreon.com/leyonet">Patreon</a></li>

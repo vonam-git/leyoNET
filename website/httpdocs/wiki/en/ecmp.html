@@ -9,13 +9,13 @@
   <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/ecmp.html">
   <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/ecmp.html">
   <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../../css/site.css?v=1.11.0">
-  <link rel="stylesheet" href="../farben.css?v=1.11.0">
-  <link rel="stylesheet" href="../aufbau.css?v=1.11.0">
-  <link rel="stylesheet" href="../wiki.css?v=1.11.0">
-  <script src="../../js/site.js?v=1.11.0" defer></script>
-  <script src="suche.js?v=1.11.0" defer></script>
-  <script src="../wiki.js?v=1.11.0" defer></script>
+  <link rel="stylesheet" href="../../css/site.css?v=1.12.0">
+  <link rel="stylesheet" href="../farben.css?v=1.12.0">
+  <link rel="stylesheet" href="../aufbau.css?v=1.12.0">
+  <link rel="stylesheet" href="../wiki.css?v=1.12.0">
+  <script src="../../js/site.js?v=1.12.0" defer></script>
+  <script src="suche.js?v=1.12.0" defer></script>
+  <script src="../wiki.js?v=1.12.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Skip to content</a>
@@ -87,7 +87,7 @@
       <div class="page-head"><div><h1>ECMP (equal-cost paths)</h1>
       <p class="lead">If several paths with the same cost lead to the destination, the router uses all of them. It does not spread each packet but each flow.</p></div></div>
       <dl class="facts"><div><dt>Layer</dt><dd>3 (Vermittlung)</dd></div><div><dt>Standard</dt><dd>RFC 2992, RFC 2328</dd></div><div><dt>See an example</dt><dd><a href="#beispiel">See demo</a></dd></div></dl>
-      <nav class="toc" aria-label="On this page"><strong>On this page</strong><ol><li><a href="#two-paths-equally-good">Two paths, equally good</a></li><li><a href="#per-flow-not-per-packet">Per flow, not per packet</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">How to do it in leyoNET</a></li><li><a href="#beispiel">See an example</a></li><li><a href="#vereinfachungen">What leyoNET simplifies</a></li><li><a href="#normen">Standards</a></li><li><a href="#weiter">Read on</a></li></ol></nav>
+      <nav class="toc" aria-label="On this page"><strong>On this page</strong><ol><li><a href="#two-paths-equally-good">Two paths, equally good</a></li><li><a href="#per-flow-not-per-packet">Per flow, not per packet</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">How to do it in leyoNET</a></li><li><a href="#beispiel">See an example</a></li><li><a href="#ueben">Practise</a></li><li><a href="#vereinfachungen">What leyoNET simplifies</a></li><li><a href="#normen">Standards</a></li><li><a href="#weiter">Read on</a></li></ol></nav>
       <article class="prose">
 <h2 id="two-paths-equally-good">Two paths, equally good</h2>
 <p>Normally a router picks exactly one route for a destination: longest prefix, then smallest administrative distance, then smallest metric. If two or more routes are still equally good, this is called <strong>equal-cost multi-path</strong> (ECMP). The router installs all of them and spreads the load. If one path fails, the packets use the remaining ones.</p>
@@ -103,7 +103,9 @@
 <ul><li><strong>Static</strong>: two routes to the same network with the same distance but a different gateway (<code>ip route 10.4.0.0/24 10.0.12.2</code> and <code>ip route 10.4.0.0/24 10.0.13.3</code>). The same route twice is not allowed; with another distance it becomes a backup route.</li><li><strong>OSPF</strong>: paths with equal cost are all installed (RFC 2328).</li><li>Traffic is spread <strong>per flow</strong>, not per packet: a hash over source, destination, protocol and ports picks the path (hash threshold, RFC 2992). This keeps the packets of a connection in order; pings from different computers may take different paths.</li></ul>
 <p><code>show ip route</code> marks every active path with <code>&gt;*</code>. If a path fails, the flows use the remaining ones.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">See an example</h2>
-<ul class="cards"><li class="card"><strong>ECMP: two equal paths</strong><p>Router 1 reaches the server network via Router 2 or Router 3, both paths cost the same. OSPF installs both, and the router spreads the flows by a hash (RFC 2992).</p><p class="muted">Routing table of Router 1: two O routes to 10.4.0.0/24. The traceroutes from PC 1 and PC 2 may take different paths. Remove a cable to Router 2: everything uses Router 3.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ecmp">Watch live</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ecmp.json">Project file</a></p></li></ul><p class="muted">“Watch live” opens the network in leyoNET, the simulation runs in a loop. In the app you find it under File → Demo networks, ready to present.</p></section>
+<ul class="cards"><li class="card"><strong>ECMP: two equal paths</strong><p>Router 1 reaches the server network via Router 2 or Router 3, both paths cost the same. OSPF installs both, and the router spreads the flows by a hash (RFC 2992).</p><p class="muted">Routing table of Router 1: two O routes to 10.4.0.0/24. The traceroutes from PC 1 and PC 2 may take different paths. Remove a cable to Router 2: everything uses Router 3.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=ecmp">Watch live</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/ecmp.json">Project file</a></p></li></ul><p class="muted">“Watch live” opens the network in leyoNET, the simulation runs in a loop. In the app you find it under File → Demo networks, with a step-by-step tour.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Practise</h2>
+<ul class="exercises"><li><span class="stars" aria-label="4 of 5 stars">★★★★☆</span> <strong>Use two paths (ECMP)</strong> <span class="muted">· 3 goals</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_ecmp-ospf.pdf">Worksheet</a> (German)</li></ul><p class="muted">In leyoNET under Tools → Exercise catalogue. Every exercise checks itself.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">What leyoNET simplifies</h2>
 <div class="table-wrap"><table><thead><tr><th>Protocol</th><th>Layer</th><th>Simplification in the simulation</th></tr></thead><tbody><tr><td>ECMP (equal-cost paths)</td><td>3</td><td>Up to 4 paths for static routes (same distance, other gateway) and OSPFv2 (same cost); path per flow by hash threshold over addresses, protocol and ports or ICMP identifier; not for RIP, BGP, IPv6</td></tr></tbody></table></div></section>
 <section aria-labelledby="normen"><h2 id="normen">Standards</h2>
@@ -120,7 +122,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET wiki · as of version 1.11.0 · texts under the same licence as leyoNET (AGPL-3.0).</p>
+      <p>leyoNET wiki · as of version 1.12.0 · texts under the same licence as leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://patreon.com/leyonet">Patreon</a></li>

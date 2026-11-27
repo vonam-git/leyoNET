@@ -9,13 +9,13 @@
   <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/rstp.html">
   <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/rstp.html">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../css/site.css?v=1.11.0">
-  <link rel="stylesheet" href="farben.css?v=1.11.0">
-  <link rel="stylesheet" href="aufbau.css?v=1.11.0">
-  <link rel="stylesheet" href="wiki.css?v=1.11.0">
-  <script src="../js/site.js?v=1.11.0" defer></script>
-  <script src="suche.js?v=1.11.0" defer></script>
-  <script src="wiki.js?v=1.11.0" defer></script>
+  <link rel="stylesheet" href="../css/site.css?v=1.12.0">
+  <link rel="stylesheet" href="farben.css?v=1.12.0">
+  <link rel="stylesheet" href="aufbau.css?v=1.12.0">
+  <link rel="stylesheet" href="wiki.css?v=1.12.0">
+  <script src="../js/site.js?v=1.12.0" defer></script>
+  <script src="suche.js?v=1.12.0" defer></script>
+  <script src="wiki.js?v=1.12.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Zum Inhalt</a>
@@ -87,7 +87,7 @@
       <div class="page-head"><div><h1>Rapid Spanning Tree (RSTP)</h1>
       <p class="lead">Die schnelle Variante von STP: Vorschlag und Zustimmung statt Wartezeit, ein vorbereiteter Reserveport und Umschalten in Millisekunden.</p></div></div>
       <dl class="facts"><div><dt>Schicht</dt><dd>2 (Sicherung)</dd></div><div><dt>Norm</dt><dd>IEEE 802.1Q, IEEE 802.1D</dd></div><div><dt>Beispiel ansehen</dt><dd><a href="#beispiel">Demo ansehen</a></dd></div></dl>
-      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#warum-schneller">Warum schneller?</a></li><li><a href="#vorschlag-und-zustimmung">Vorschlag und Zustimmung</a></li><li><a href="#rollen-und-zustaende">Rollen und Zustände</a></li><li><a href="#das-rst-bpdu">Das RST BPDU</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
+      <nav class="toc" aria-label="Auf dieser Seite"><strong>Auf dieser Seite</strong><ol><li><a href="#warum-schneller">Warum schneller?</a></li><li><a href="#vorschlag-und-zustimmung">Vorschlag und Zustimmung</a></li><li><a href="#rollen-und-zustaende">Rollen und Zustände</a></li><li><a href="#das-rst-bpdu">Das RST BPDU</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">So geht es in leyoNET</a></li><li><a href="#beispiel">Beispiel ansehen</a></li><li><a href="#ueben">Üben</a></li><li><a href="#vereinfachungen">Was leyoNET vereinfacht</a></li><li><a href="#normen">Normen</a></li><li><a href="#weiter">Weiterlesen</a></li></ol></nav>
       <article class="prose">
 <h2 id="warum-schneller">Warum schneller?</h2>
 <p>Klassisches <a href="stp.html">Spanning Tree (STP)</a> lässt einen neuen Weg erst nach der Weiterleitungsverzögerung zu (in echten Netzen bis 50 Sekunden). So lange stehen Telefonate und Verbindungen still. <strong>RSTP</strong> (früher IEEE 802.1w, heute Teil von IEEE 802.1Q) wählt die Root-Bridge gleich, schaltet aber in Millisekunden um.</p>
@@ -109,7 +109,9 @@
 <ul><li>Ein neuer Designated-Port schickt einen <strong>Vorschlag</strong> (Proposal). Der Nachbar sperrt kurz seine eigenen Ports (Synchronisation) und <strong>stimmt zu</strong> (Agreement); danach leiten beide sofort weiter – in Millisekunden statt Sekunden.</li><li>Ein <strong>Alternate-Port</strong> ist die vorbereitete Reserve: Fällt der Root-Port aus, übernimmt er ohne Wartezeit.</li><li>Gesperrte Ports heissen <strong>discarding</strong> (statt blocking/listening).</li><li>Eine <strong>Topologieänderung</strong> (TC-Flag) melden die Switches einander, damit alle ihre MAC-Tabellen leeren.</li><li>Hängt ein Switch mit klassischem STP dran, spricht der Port mit ihm wieder STP (Version 0) und wartet wie dort.</li></ul>
 <p>Einschalten im Switch unter <strong>Switching → Spanning Tree → Variante</strong> oder <code>spanning-tree mode rstp</code>. In der Paketliste filtert <code>rstp</code> die RST BPDUs.</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">Beispiel ansehen</h2>
-<ul class="cards"><li class="card"><strong>RSTP: Umschalten ohne Warten</strong><p>Drei Switches im Dreieck mit Rapid Spanning Tree. Der Core ist Root-Bridge, die Verbindung Switch A–Switch B ist als Reserve gesperrt (Alternate, discarding). Vorschlag und Zustimmung (Proposal/Agreement) schalten Ports in Millisekunden frei.</p><p class="muted">PC 1 pingt dauernd PC 2. Kabel Core–Switch B entfernen: Der Alternate-Port übernimmt sofort, der Ping läuft ohne Unterbruch weiter. Paketliste mit Filter «rstp»: Flags Proposal, Agreement und TC. Zum Vergleich im Switch die Variante auf STP stellen.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=rstp">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/rstp.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, zum Vorführen.</p></section>
+<ul class="cards"><li class="card"><strong>RSTP: Umschalten ohne Warten</strong><p>Drei Switches im Dreieck mit Rapid Spanning Tree. Der Core ist Root-Bridge, die Verbindung Switch A–Switch B ist als Reserve gesperrt (Alternate, discarding). Vorschlag und Zustimmung (Proposal/Agreement) schalten Ports in Millisekunden frei.</p><p class="muted">PC 1 pingt dauernd PC 2. Kabel Core–Switch B entfernen: Der Alternate-Port übernimmt sofort, der Ping läuft ohne Unterbruch weiter. Paketliste mit Filter «rstp»: Flags Proposal, Agreement und TC. Zum Vergleich im Switch die Variante auf STP stellen.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=rstp">Live ansehen</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/rstp.json">Projektdatei</a></p></li></ul><p class="muted">«Live ansehen» öffnet das Netz in leyoNET, die Simulation läuft in einer Schleife. In der App findest du es unter Datei → Demo-Netze, mit Führung Schritt für Schritt.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Üben</h2>
+<ul class="exercises"><li><span class="stars" aria-label="4 von 5 Sternen">★★★★☆</span> <strong>Umschalten ohne Warten (RSTP)</strong> <span class="muted">· 3 Ziele</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_rstp-fast.pdf">Arbeitsblatt</a></li></ul><p class="muted">In leyoNET unter Werkzeuge → Aufgaben-Katalog. Jede Übung prüft sich selbst.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">Was leyoNET vereinfacht</h2>
 <div class="table-wrap"><table><thead><tr><th>Protokoll</th><th>Schicht</th><th>Vereinfachung in der Simulation</th></tr></thead><tbody><tr><td>RSTP</td><td>2</td><td>RST BPDU (Version 2) mit Proposal/Agreement, Rollen und TC-Flag; Root-Port leitet sofort weiter, Designated-Port nach der Zustimmung, sonst nach der Weiterleitungsverzögerung (2 s, Hälfte discarding, Hälfte learning); Edge-Ports automatisch (Endgerät angeschlossen); Ausfall einer direkten Verbindung wirkt sofort; Nachbar mit STP: Version 0 wie dort; kein Backup-Port, kein MSTP, keine Port-Prioritäten</td></tr></tbody></table></div></section>
 <section aria-labelledby="normen"><h2 id="normen">Normen</h2>
@@ -126,7 +128,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET Wiki · Stand Version 1.11.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
+      <p>leyoNET Wiki · Stand Version 1.12.0 · Texte unter derselben Lizenz wie leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://patreon.com/leyonet">Patreon</a></li>

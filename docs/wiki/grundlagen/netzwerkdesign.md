@@ -28,7 +28,7 @@ Im Rechenzentrum fliesst viel Verkehr zwischen Servern («Ost-West»). Dafür ei
 
 ## Im Schaufenster
 
-Der [Rechenzentren-Verbund](https://app.leyonet.ch/?schaufenster) zeigt alle drei Bauarten nebeneinander: Zürich dreistufig, Bern mit Core und Distribution in einem Rack, Basel als Collapsed Core. Die Standorte hängen über Modems am Provider und sind mit [[ipsec-vpn|IPsec]] verbunden.
+Der [Rechenzentren-Verbund](https://app.leyonet.ch/?schaufenster) zeigt alle drei Bauarten nebeneinander: Zürich dreistufig, Bern mit Core und Distribution in einem Rack, Basel als Collapsed Core. Die Standorte hängen über Modems am Provider und sind mit [[ipsec-vpn|IPsec]] verbunden. Redundanz: Port-Channels, [[rstp|Rapid Spanning Tree]] für die doppelten Access-Uplinks und in Zürich ein [[load-balancer|Load Balancer]] vor zwei Webservern.
 
 ## Redundanz
 

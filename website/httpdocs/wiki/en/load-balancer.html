@@ -9,13 +9,13 @@
   <link rel="alternate" hreflang="en" href="https://leyonet.ch/wiki/en/load-balancer.html">
   <link rel="alternate" hreflang="de" href="https://leyonet.ch/wiki/load-balancer.html">
   <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../../css/site.css?v=1.11.0">
-  <link rel="stylesheet" href="../farben.css?v=1.11.0">
-  <link rel="stylesheet" href="../aufbau.css?v=1.11.0">
-  <link rel="stylesheet" href="../wiki.css?v=1.11.0">
-  <script src="../../js/site.js?v=1.11.0" defer></script>
-  <script src="suche.js?v=1.11.0" defer></script>
-  <script src="../wiki.js?v=1.11.0" defer></script>
+  <link rel="stylesheet" href="../../css/site.css?v=1.12.0">
+  <link rel="stylesheet" href="../farben.css?v=1.12.0">
+  <link rel="stylesheet" href="../aufbau.css?v=1.12.0">
+  <link rel="stylesheet" href="../wiki.css?v=1.12.0">
+  <script src="../../js/site.js?v=1.12.0" defer></script>
+  <script src="suche.js?v=1.12.0" defer></script>
+  <script src="../wiki.js?v=1.12.0" defer></script>
 </head>
 <body class="wiki">
   <a class="skip" href="#inhalt">Skip to content</a>
@@ -87,7 +87,7 @@
       <div class="page-head"><div><h1>Load balancer</h1>
       <p class="lead">A load balancer spreads the clients' connections over several identical servers and takes failed ones out of the game.</p></div></div>
       <dl class="facts"><div><dt>Layer</dt><dd>4 (Transport) bis 7 (Anwendung)</dd></div><div><dt>Standard</dt><dd>RFC 9293</dd></div><div><dt>See an example</dt><dd><a href="#beispiel">See demo</a></dd></div></dl>
-      <nav class="toc" aria-label="On this page"><strong>On this page</strong><ol><li><a href="#what-for">What for?</a></li><li><a href="#methods">Methods</a></li><li><a href="#health-checks">Health checks</a></li><li><a href="#reverse-proxy-on-layer-4">Reverse proxy on layer 4</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">How to do it in leyoNET</a></li><li><a href="#beispiel">See an example</a></li><li><a href="#vereinfachungen">What leyoNET simplifies</a></li><li><a href="#normen">Standards</a></li><li><a href="#weiter">Read on</a></li></ol></nav>
+      <nav class="toc" aria-label="On this page"><strong>On this page</strong><ol><li><a href="#what-for">What for?</a></li><li><a href="#methods">Methods</a></li><li><a href="#health-checks">Health checks</a></li><li><a href="#reverse-proxy-on-layer-4">Reverse proxy on layer 4</a></li><li><a href="#in-leyonet">In leyoNET</a></li><li><a href="#in-leyonet">How to do it in leyoNET</a></li><li><a href="#beispiel">See an example</a></li><li><a href="#ueben">Practise</a></li><li><a href="#vereinfachungen">What leyoNET simplifies</a></li><li><a href="#normen">Standards</a></li><li><a href="#weiter">Read on</a></li></ol></nav>
       <article class="prose">
 <h2 id="what-for">What for?</h2>
 <p>A single web server has limits: it handles only so many requests, and if it fails, the site is gone. If you set up several identical servers, someone has to distribute the clients. That is the <strong>load balancer</strong>: clients only know its address (e.g. via DNS <code>www.firma.example</code>), and it passes each connection to one of the servers behind it.</p>
@@ -107,7 +107,9 @@
 <ul><li>In the shop under <strong>Servers → Load balancer</strong>, or on a server under <strong>Services → Load balancer</strong>: enter the port (e.g. 80) and the servers behind it.</li><li><strong>Round robin</strong>: in turn. <strong>Least connections</strong>: to the server with the fewest open connections. <strong>Source hash</strong>: the same client always to the same server.</li><li><strong>Health check</strong>: every 2 s the load balancer opens a TCP connection to each server. After 2 failures a server gets no new connections, after 2 successes it is back.</li><li>The load balancer works as a <strong>reverse proxy on layer 4</strong>: it accepts the connection itself and opens a second one to the server. The packet list therefore shows two TCP connections, and the web server reports the load balancer as its client.</li></ul>
 <p>If the servers deliver different pages (e.g. «Server 1», «Server 2»), the browser shows the distribution. See also <a href="ecmp.html">Equal-cost paths (ECMP)</a> (spreading in routing) and <a href="vrrp.html">Redundant gateway (VRRP)</a> (redundant gateway).</p></div></section>
 <section aria-labelledby="beispiel"><h2 id="beispiel">See an example</h2>
-<ul class="cards"><li class="card"><strong>Load balancer in front of three web servers</strong><p>The PCs always open the same address (192.168.1.80). The load balancer passes each connection in turn to Web 1, Web 2 or Web 3 (round robin) and checks every 2 s whether the servers answer.</p><p class="muted">The browser shows «Web 1», «Web 2», «Web 3» in turn. Load balancer → Services shows the connections per server. Remove the cable of Web 2: after the health check it gets no new connections. Packet list: two TCP connections per request.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=loadBalancer">Watch live</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/loadbalancer.json">Project file</a></p></li></ul><p class="muted">“Watch live” opens the network in leyoNET, the simulation runs in a loop. In the app you find it under File → Demo networks, ready to present.</p></section>
+<ul class="cards"><li class="card"><strong>Load balancer in front of three web servers</strong><p>The PCs always open the same address (192.168.1.80). The load balancer passes each connection in turn to Web 1, Web 2 or Web 3 (round robin) and checks every 2 s whether the servers answer.</p><p class="muted">The browser shows «Web 1», «Web 2», «Web 3» in turn. Load balancer → Services shows the connections per server. Remove the cable of Web 2: after the health check it gets no new connections. Packet list: two TCP connections per request.</p><p class="card-actions"><a class="btn btn-small btn-ink" href="https://app.leyonet.ch/?schaufenster=loadBalancer">Watch live</a> <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/beispiele/loadbalancer.json">Project file</a></p></li></ul><p class="muted">“Watch live” opens the network in leyoNET, the simulation runs in a loop. In the app you find it under File → Demo networks, with a step-by-step tour.</p></section>
+<section aria-labelledby="ueben"><h2 id="ueben">Practise</h2>
+<ul class="exercises"><li><span class="stars" aria-label="3 of 5 stars">★★★☆☆</span> <strong>Web servers in pairs (load balancer)</strong> <span class="muted">· 2 goals</span> · <a class="link" href="https://github.com/vonam-git/leyoNET/blob/main/docs/arbeitsblaetter/Uebung_lb-webfarm.pdf">Worksheet</a> (German)</li></ul><p class="muted">In leyoNET under Tools → Exercise catalogue. Every exercise checks itself.</p></section>
 <section aria-labelledby="vereinfachungen"><h2 id="vereinfachungen">What leyoNET simplifies</h2>
 <div class="table-wrap"><table><thead><tr><th>Protocol</th><th>Layer</th><th>Simplification in the simulation</th></tr></thead><tbody><tr><td>Load balancer</td><td>4–7</td><td>Reverse proxy on layer 4 (like HAProxy in TCP mode) for one port: round robin, least connections, source hash; health check every 2 s by TCP connection setup (2 failures = out, 2 successes = back); if a server does not answer, another one is tried once; no «X-Forwarded-For» header, no weights, no TLS</td></tr></tbody></table></div></section>
 <section aria-labelledby="normen"><h2 id="normen">Standards</h2>
@@ -124,7 +126,7 @@
   </div>
   <footer class="foot">
     <div class="wrap foot-row">
-      <p>leyoNET wiki · as of version 1.11.0 · texts under the same licence as leyoNET (AGPL-3.0).</p>
+      <p>leyoNET wiki · as of version 1.12.0 · texts under the same licence as leyoNET (AGPL-3.0).</p>
       <ul>
         <li><a href="https://github.com/vonam-git/leyoNET">GitHub</a></li>
         <li><a href="https://patreon.com/leyonet">Patreon</a></li>
