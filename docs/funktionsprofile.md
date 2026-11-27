@@ -65,7 +65,7 @@ Die Richtlinie gilt sofort für alle Sitzungen. In der lokalen Datei und der Des
 |---|---|
 | Geräte | `device.notebook`, `device.pc`, `device.switch`, `device.router`, `device.firewall`, `device.server`, `device.ipphone`, `device.camera`, `device.accesspoint`, `device.internet`, `device.clientgroup`, `device.modem`, `device.cpe`, `device.l3switch` |
 | Verbindungen | `medium.fiber`, `medium.wireless`, `medium.access` (Koax, DSL, Mobilfunk), `medium.serial` |
-| Dienste | `service.dhcp`, `service.dns`, `service.web`, `service.mail`, `service.voip` |
-| Netzwerk | `net.portShutdown`, `net.macEdit`, `net.cableDamage`, `net.vlan`, `net.stp`, `net.poe`, `net.qos`, `net.wlanMesh`, `net.dhcpRelay`, `net.nat`, `net.subinterfaces`, `net.staticNat`, `net.cgnat`, `net.firewall`, `net.acl`, `net.vpn`, `net.ipv6`, `net.dsLite`, `net.cli`, `net.ssh` |
+| Dienste | `service.dhcp`, `service.dns`, `service.web`, `service.mail`, `service.voip`, `service.loadbalancer` |
+| Netzwerk | `net.portShutdown`, `net.macEdit`, `net.cableDamage`, `net.vlan`, `net.stp`, `net.vrrp`, `net.poe`, `net.qos`, `net.wlanMesh`, `net.dhcpRelay`, `net.nat`, `net.subinterfaces`, `net.staticNat`, `net.cgnat`, `net.firewall`, `net.acl`, `net.vpn`, `net.ipv6`, `net.dsLite`, `net.cli`, `net.ssh` |
 | Routing | `routing.auto`, `routing.static`, `routing.rip`, `routing.ospf`, `routing.bgp` |
 | Werkzeuge | `tool.sniffer`, `tool.osi`, `tool.hex`, `tool.frame`, `tool.pcap`, `tool.scanner`, `tool.security`, `tool.ipCalculator`, `tool.areas`, `tool.snapshots`, `tool.addressBadges`, `tool.floors`, `tool.costs`, `tool.prices`, `tool.racks`, `tool.taskEditor` |

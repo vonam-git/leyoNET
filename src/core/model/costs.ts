@@ -12,6 +12,7 @@ export const PRICES = {
   pc: 1100,
   server: 2800,
   serverRack: 4500,
+  loadBalancer: 4900,
   groupMember: 900,
   switchBase: 120,
   switchPort: 20,
@@ -64,7 +65,7 @@ export function devicePrice(device: Pick<Device, 'type' | 'interfaces' | 'varian
     case 'camera':
       return PRICES.camera;
     case 'server':
-      return device.variant === 'rack' ? PRICES.serverRack : PRICES.server;
+      return device.variant === 'rack' ? PRICES.serverRack : device.variant === 'loadbalancer' ? PRICES.loadBalancer : PRICES.server;
     case 'clientgroup':
       return (device.groupSize ?? 0) * PRICES.groupMember;
     case 'switch':

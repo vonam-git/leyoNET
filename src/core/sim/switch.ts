@@ -5,7 +5,7 @@ import type { NetInterface } from '../model/types';
 import type { ModemKind } from '../model/types';
 import { ACCESS_PROFILES, nextSteps, stepIndex } from './access';
 import { toLink, wlanRun, wlanStepIndex, wlanSteps } from './wlan';
-import { BROADCAST_MAC, LACP_MAC, STP_MAC, type EthernetFrame, type LacpPdu, type LinkControl, type StpBpdu } from './frames';
+import { BROADCAST_MAC, LACP_MAC, STP_MAC, type EthernetFrame, type LacpPdu, type LinkControl, type RstpFlags, type StpBpdu } from './frames';
 import type { NodeContext, SimNode } from './simulation';
 import { aclVerdict } from './firewall';
 
@@ -76,7 +76,9 @@ export interface Overlay {
 
 /** Rolle eines Ports im Spanning Tree; "edge" = Endgerät angeschlossen (wie PortFast). */
 export type PortRole = 'root' | 'designated' | 'alternate' | 'edge';
-export type PortState = 'forwarding' | 'learning' | 'blocking';
+/** STP: blocking, learning, forwarding; RSTP fasst disabled, blocking und listening zu «discarding» zusammen. */
+export type PortState = 'forwarding' | 'learning' | 'blocking' | 'discarding';
+export type StpMode = 'stp' | 'rstp';
 
 export interface StpPortInfo {
   port: number;
@@ -92,6 +94,7 @@ export interface StormState {
 }
 
 export interface StpState {
+  mode: StpMode;
   bridgeId: string;
   rootId: string;
   rootPort: number | null;
@@ -130,6 +133,8 @@ function compareVector(a: Vector, b: Vector): number {
 export interface LocalPort {
   mac: string;
   has(vlan: number): boolean;
+  /** Weitere eigene MAC-Adressen im VLAN (virtuelle MAC als VRRP-Master). */
+  owns?(vlan: number, mac: string): boolean;
   deliver(vlan: number, frame: EthernetFrame): void;
 }
 
@@ -158,6 +163,16 @@ export class SwitchNode implements SimNode {
   /** Zuletzt gemeldeter Zustand je Channel-Port (für Konsolenmeldungen bei Änderungen). */
   #channelNoted = new Map<number, string>();
   #lacpRunning = false;
+  /** RSTP: Ports, deren Vorschlag (Proposal) die Gegenseite bestätigt hat (Agreement). */
+  #agreed = new Set<number>();
+  /** RSTP: Ports, an denen ein Switch mit klassischem STP hängt (BPDU Version 0). */
+  #legacy = new Set<number>();
+  /** RSTP: Root-Port, für den die Synchronisation schon gelaufen ist. */
+  #syncedRoot: number | null = null;
+  /** RSTP: bis dann gilt eine gemeldete Topologieänderung als in Arbeit (nicht nochmals weitergeben). */
+  #tcUntil = 0;
+  /** RSTP: je Port, bis wann eigene BPDUs das TC-Flag tragen (nie zurück zum Port, von dem die Meldung kam). */
+  #tcPorts = new Map<number, number>();
 
   constructor(protected readonly ctx: NodeContext) {}
 
@@ -199,6 +214,11 @@ export class SwitchNode implements SimNode {
 
   get #stp(): boolean {
     return !!this.#device?.stp;
+  }
+
+  /** Rapid Spanning Tree (IEEE 802.1Q, Klausel 13; früher 802.1w). */
+  get #rstp(): boolean {
+    return this.#stp && this.#device?.stpMode === 'rstp';
   }
 
   #bridgeId(): string {
@@ -249,6 +269,8 @@ export class SwitchNode implements SimNode {
   boot() {
     this.start();
     this.#startLacp();
+    // RSTP reagiert sofort auf eine ausgefallene oder neue Verbindung, nicht erst beim nächsten Hello.
+    if (this.#rstp && this.#helloRunning) this.#recompute();
   }
 
   /** Startet die regelmässigen BPDUs (beim Start der Simulation). */
@@ -260,8 +282,8 @@ export class SwitchNode implements SimNode {
         this.#helloRunning = false;
         return;
       }
-      this.#recompute();
-      this.#sendBpdus();
+      // RSTP sendet bei einer Änderung schon selbst; sonst das regelmässige Hello.
+      if (!this.#recompute() || !this.#rstp) this.#sendBpdus();
       this.ctx.schedule(STP_HELLO, hello);
     };
     this.ctx.schedule(0, hello);
@@ -270,20 +292,47 @@ export class SwitchNode implements SimNode {
   #sendBpdus() {
     const device = this.#device;
     if (!device) return;
-    const bridgeId = this.#bridgeId();
     for (const port of device.interfaces) {
       if (this.#roles.get(port.index) !== 'designated' || !this.#isLogical(port.index)) continue;
-      const bpdu: StpBpdu = { kind: 'stp', rootId: this.#rootId, cost: this.#rootCost, bridgeId, portId: port.index };
-      this.ctx.transmit(port.index, { src: port.mac, dst: STP_MAC, payload: bpdu });
+      this.#sendBpdu(port.index);
     }
   }
 
-  #recompute() {
+  /** Ein BPDU an einem Port; RSTP mit Flags (Rolle, Zustand, Vorschlag), an STP-Nachbarn als Version 0. */
+  #sendBpdu(port: number, extra: RstpFlags = {}) {
+    const mac = this.#device?.interfaces[port]?.mac;
+    if (mac === undefined) return;
+    const bpdu: StpBpdu = { kind: 'stp', rootId: this.#rootId, cost: this.#rootCost, bridgeId: this.#bridgeId(), portId: port };
+    if (this.#rstp && !this.#legacy.has(port)) {
+      const role = this.#roles.get(port);
+      const state = this.#state(port);
+      const flags: RstpFlags = {
+        role: role === 'root' || role === 'alternate' ? role : 'designated',
+        ...(role === 'designated' && state !== 'forwarding' ? { proposal: true } : {}),
+        ...(state === 'learning' || state === 'forwarding' ? { learning: true } : {}),
+        ...(state === 'forwarding' ? { forwarding: true } : {}),
+        ...(this.ctx.now < (this.#tcPorts.get(port) ?? 0) ? { tc: true } : {}),
+        ...extra,
+      };
+      bpdu.version = 2;
+      bpdu.flags = flags;
+    }
+    this.ctx.transmit(port, { src: mac, dst: STP_MAC, payload: bpdu });
+  }
+
+  #recompute(): boolean {
     const device = this.#device;
-    if (!device) return;
+    if (!device) return false;
     const now = this.ctx.now;
     for (const [port, info] of this.#received) {
       if (info.expires <= now || !this.ctx.isConnected(port)) this.#received.delete(port);
+    }
+    // Ausgesteckte Ports vergessen ihre Rolle (RSTP: auch Zustimmung und STP-Nachbar).
+    for (const port of [...this.#roles.keys()]) {
+      if (this.ctx.isConnected(port) && this.#isLogical(port)) continue;
+      this.#roles.delete(port);
+      this.#agreed.delete(port);
+      this.#legacy.delete(port);
     }
     const me = this.#bridgeId();
     let best: Vector = [me, 0, me, -1];
@@ -297,6 +346,7 @@ export class SwitchNode implements SimNode {
     }
     this.#rootId = best[0];
     this.#rootCost = rootPort === null ? 0 : best[1];
+    if (this.#rootPort !== rootPort) this.#syncedRoot = null;
     this.#rootPort = rootPort;
 
     let changed = false;
@@ -315,13 +365,21 @@ export class SwitchNode implements SimNode {
         changed = true;
         this.#roles.set(port.index, role);
         this.#since.set(port.index, now);
+        this.#agreed.delete(port.index);
       }
     }
     if (changed) {
       // Vereinfachte Topologieänderung: gelernte Adressen könnten auf blockierte Ports zeigen.
       this.#table.clear();
-      this.ctx.print('stp.changed', { root: this.#rootId, rootPort: this.#rootPort === null ? '–' : this.#rootPort + 1 });
+      this.ctx.print(this.#rstp ? 'rstp.changed' : 'stp.changed', { root: this.#rootId, rootPort: this.#rootPort === null ? '–' : this.#rootPort + 1 });
+      if (this.#rstp) {
+        // RSTP: Topologieänderung melden (TC) und neue Rollen sofort bekanntgeben, nicht erst beim nächsten Hello.
+        this.#markTc(null);
+        this.#sendBpdus();
+        if (this.#rootPort !== null) this.#sendBpdu(this.#rootPort);
+      }
     }
+    return changed;
   }
 
   #state(member: number): PortState {
@@ -330,16 +388,70 @@ export class SwitchNode implements SimNode {
     if (!this.#stp) return 'forwarding';
     const role = this.#roles.get(port) ?? (this.#isEdge(port) ? 'edge' : undefined);
     if (role === 'edge') return 'forwarding';
+    const waited = this.ctx.now - (this.#since.get(port) ?? 0);
+    if (this.#rstp) {
+      if (role === undefined || role === 'alternate') return 'discarding';
+      // RSTP: Der Root-Port leitet sofort weiter, ein Designated-Port nach der Zustimmung (Agreement)
+      // der Gegenseite. Ohne Zustimmung (z.B. Nachbar mit STP) wie bei STP nach der Weiterleitungsverzögerung.
+      if (role === 'root' || this.#agreed.has(port)) return 'forwarding';
+      return waited >= STP_FORWARD_DELAY ? 'forwarding' : waited >= STP_FORWARD_DELAY / 2 ? 'learning' : 'discarding';
+    }
     if (role === undefined || role === 'alternate') return 'blocking';
     // Neue Root- und Designated-Ports warten die Weiterleitungsverzögerung ab, bevor sie weiterleiten.
-    return this.ctx.now - (this.#since.get(port) ?? 0) >= STP_FORWARD_DELAY ? 'forwarding' : 'learning';
+    return waited >= STP_FORWARD_DELAY ? 'forwarding' : 'learning';
   }
 
   #onBpdu(member: number, bpdu: StpBpdu) {
     if (this.#suspendedPort(member)) return;
     const port = this.#rep(member);
-    this.#received.set(port, { ...bpdu, expires: this.ctx.now + STP_MAX_AGE });
+    this.#received.set(port, { rootId: bpdu.rootId, cost: bpdu.cost, bridgeId: bpdu.bridgeId, portId: bpdu.portId, expires: this.ctx.now + STP_MAX_AGE });
+    if (!this.#rstp) {
+      this.#recompute();
+      return;
+    }
+    // Nachbar mit klassischem STP: an diesem Port ebenfalls STP sprechen (Kompatibilität, ohne Vorschlag).
+    if (bpdu.version === 2) this.#legacy.delete(port);
+    else this.#legacy.add(port);
+    const flags = bpdu.version === 2 ? (bpdu.flags ?? {}) : {};
+    if (flags.tc) this.#topologyChange(port);
     this.#recompute();
+    const role = this.#roles.get(port);
+    // Zustimmung zum eigenen Vorschlag: Der Designated-Port darf sofort weiterleiten.
+    if (flags.agreement && role === 'designated' && !this.#agreed.has(port)) {
+      this.#agreed.add(port);
+      this.ctx.print('rstp.agreed', { port: port + 1 });
+    }
+    if (flags.proposal && (role === 'root' || role === 'alternate')) {
+      if (role === 'root' && this.#syncedRoot !== port) {
+        // Synchronisation: Eigene Designated-Ports zuerst sperren und ihrerseits einen Vorschlag schicken,
+        // erst dann dem oberen Switch zustimmen. So entsteht auch während des Wechsels keine Schleife.
+        this.#syncedRoot = port;
+        const now = this.ctx.now;
+        for (const [p, r] of this.#roles) {
+          if (r !== 'designated' || p === port) continue;
+          this.#agreed.delete(p);
+          this.#since.set(p, now);
+        }
+        this.#sendBpdus();
+      }
+      this.#sendBpdu(port, { agreement: true, proposal: false });
+    }
+  }
+
+  /** RSTP: Topologieänderung vom Nachbarn: Adressen an den übrigen Ports vergessen und weitergeben. */
+  #topologyChange(from: number) {
+    for (const [key, entry] of this.#table) if (entry.port !== from) this.#table.delete(key);
+    if (this.ctx.now < this.#tcUntil) return;
+    for (const p of this.#markTc(from)) this.#sendBpdu(p);
+  }
+
+  /** RSTP: Root- und Designated-Ports (ausser `from`) melden zwei Hello-Intervalle lang die Topologieänderung. */
+  #markTc(from: number | null): number[] {
+    const until = this.ctx.now + 2 * STP_HELLO;
+    this.#tcUntil = until;
+    const ports = [...this.#roles].filter(([p, r]) => p !== from && (r === 'designated' || r === 'root')).map(([p]) => p);
+    for (const p of ports) this.#tcPorts.set(p, until);
+    return ports;
   }
 
   // --- Weiterleiten -------------------------------------------------------------
@@ -365,7 +477,7 @@ export class SwitchNode implements SimNode {
     if (!this.#admit(frame)) return;
 
     const inState = this.#state(inPort);
-    if (inState === 'blocking') return;
+    if (inState === 'blocking' || inState === 'discarding') return;
     // Getaggte Rahmen gehören nur auf Trunks.
     if (!this.#isTrunk(inPort) && frame.vlan !== undefined) return;
     const vlan = this.#isTrunk(inPort) ? (frame.vlan ?? this.#native(inPort)) : this.#vlanOf(inPort);
@@ -390,7 +502,7 @@ export class SwitchNode implements SimNode {
     // Layer-3-Switch: Rahmen an die eigene SVI gehen nach oben, Broadcasts und
     // Multicasts (z.B. IPv6 Neighbor Discovery, DHCPv6) zusätzlich; die SVI prüft selbst, ob sie die Gruppe hört.
     if (this.local?.has(vlan)) {
-      if (frame.dst === this.local.mac) return this.local.deliver(vlan, frame);
+      if (frame.dst === this.local.mac || this.local.owns?.(vlan, frame.dst)) return this.local.deliver(vlan, frame);
       if (frame.dst === BROADCAST_MAC || (isGroupMac(frame.dst) && frame.dst !== STP_MAC)) this.local.deliver(vlan, frame);
     }
 
@@ -484,7 +596,7 @@ export class SwitchNode implements SimNode {
     if (!this.#exists(vlan)) return this.#noteVlan(OVERLAY_PORT, vlan);
     this.#table.set(`${vlan}|${frame.src}`, { mac: frame.src, port: OVERLAY_PORT, vlan, expires: this.ctx.now + MAC_TTL, vtep });
     if (this.local?.has(vlan)) {
-      if (frame.dst === this.local.mac) return this.local.deliver(vlan, frame);
+      if (frame.dst === this.local.mac || this.local.owns?.(vlan, frame.dst)) return this.local.deliver(vlan, frame);
       if (frame.dst === BROADCAST_MAC || (isGroupMac(frame.dst) && frame.dst !== STP_MAC)) this.local.deliver(vlan, frame);
     }
     this.#forwardLocal(OVERLAY_PORT, vlan, frame, false);
@@ -732,9 +844,8 @@ export class SwitchNode implements SimNode {
     const device = this.#device;
     const ports = (device?.interfaces ?? [])
       .filter((p) => this.ctx.isConnected(p.index))
-      .filter((p) => this.ctx.isConnected(p.index))
-      .map((p) => ({ port: p.index, role: this.#roles.get(this.#rep(p.index)) ?? 'designated', state: this.#state(p.index) }));
-    const stp: StpState = { bridgeId: this.#bridgeId(), rootId: this.#rootId || this.#bridgeId(), rootPort: this.#rootPort, rootCost: this.#rootCost, ports };
+      .map((p) => ({ port: p.index, role: this.#roles.get(this.#rep(p.index)) ?? (this.#isEdge(p.index) ? 'edge' : 'designated'), state: this.#state(p.index) }));
+    const stp: StpState = { mode: this.#rstp ? 'rstp' : 'stp', bridgeId: this.#bridgeId(), rootId: this.#rootId || this.#bridgeId(), rootPort: this.#rootPort, rootCost: this.#rootCost, ports };
     return { macTable, stp, ...extra };
   }
 }

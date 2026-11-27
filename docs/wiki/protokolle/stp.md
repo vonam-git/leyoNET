@@ -8,7 +8,7 @@ demos: [vlanStp, storm]
 uebungen: [stp-loop, m145-ue11]
 normen: [IEEE 802.1D, IEEE 802.3, IEEE 802.2]
 protokolle: [STP]
-verwandt: [switch, vlan, lacp]
+verwandt: [switch, vlan, lacp, rstp]
 ---
 ## Das Problem: Schleifen
 
@@ -24,7 +24,7 @@ Das Spanning Tree Protocol macht aus dem vermaschten Netz einen Baum ohne Schlei
 2. Jeder andere Switch bestimmt seinen **Root-Port**: den Weg mit den geringsten Kosten zur Root.
 3. Auf jeder Leitung gibt es einen **Designated Port**; alle übrigen Ports werden **blockiert**.
 
-Fällt ein Kabel aus, rechnen die Switches neu, und ein blockierter Port übernimmt.
+Fällt ein Kabel aus, rechnen die Switches neu, und ein blockierter Port übernimmt. Bei klassischem STP dauert das, bis die Weiterleitungsverzögerung abgelaufen ist; [[rstp]] schaltet in Millisekunden um.
 
 | Rolle | Zustand |
 |---|---|

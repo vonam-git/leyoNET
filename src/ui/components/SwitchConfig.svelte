@@ -87,6 +87,13 @@
 </label>
 {#if device.stp}
   <label class="row">
+    <span>{t('switch.stpMode')}</span>
+    <select value={device.stpMode ?? 'stp'} disabled={!editor.editable} onchange={(e) => editor.setStpMode(device.id, e.currentTarget.value as 'stp' | 'rstp')}>
+      <option value="stp">{t('switch.stpMode.stp')}</option>
+      <option value="rstp">{t('switch.stpMode.rstp')}</option>
+    </select>
+  </label>
+  <label class="row">
     <span>{t('switch.priority')}</span>
     <select value={device.stpPriority ?? 32768} disabled={!editor.editable} onchange={(e) => editor.setStpPriority(device.id, Number(e.currentTarget.value))}>
       {#each PRIORITIES as p (p)}

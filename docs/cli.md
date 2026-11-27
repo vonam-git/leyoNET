@@ -73,7 +73,8 @@ Switch(config-ext-nacl)#
 | `show etherchannel summary` | Port-Channels mit Zustand der Ports: P gebündelt, s ausgestellt, D ohne Link (Switch) |
 | `show interfaces trunk` | Trunks mit Native VLAN, erlaubten und aktiven VLANs (Switch) |
 | `show interfaces status` | Ports mit Status und VLAN (Switch) |
-| `show spanning-tree` | Root-Bridge, Port-Rollen und -Zustände (Switch) |
+| `show spanning-tree` | Variante (STP/RSTP), Root-Bridge, Port-Rollen und -Zustände (Switch) |
+| `show vrrp`, `show vrrp brief` | VRRP-Gruppen mit Zustand, Priorität und Master (Router, Firewall, Layer-3-Switch) |
 | `show power inline` | PoE-Budget, Verbrauch und gespeiste Geräte je Port (Switch mit PoE) |
 | `show access-lists` (auch `show ip access-lists`) | Zugriffslisten mit Ports und Treffern (Switch) |
 | `show firewall` | Firewall-Regeln mit Trefferzählern, blockierte Pakete, gemerkte Verbindungen (Router, Firewall) |
@@ -129,7 +130,18 @@ ip route 172.16.0.0 255.255.0.0 eth1
 no ip route 172.16.0.0/16
 no ip route 0.0.0.0/0 10.0.1.2    ! genau diese (bei Reserve-Routen mit demselben Ziel)
 logging host 192.168.1.50         ! Ereignisse per Syslog (RFC 5424, UDP 514) melden
+ip route 10.4.0.0/24 10.0.12.2    ! zwei Routen gleicher Distanz, anderes Gateway:
+ip route 10.4.0.0/24 10.0.13.3    ! beide aktiv (ECMP), Verteilung je Datenfluss
+interface eth0
+ vrrp 1 ip 192.168.1.1            ! VRRP-Gruppe 1 mit virtueller Gateway-Adresse (RFC 9568)
+ vrrp 1 priority 110              ! 1–254, Standard 100; höchste = Master
+ vrrp 1 track eth1 decrement 20   ! Uplink weg: Priorität −20, Backup übernimmt
+ vrrp 1 accept-mode               ! Master antwortet auch auf Ping an die virtuelle Adresse
+ no vrrp 1 preempt                ! stärkerer Router übernimmt nicht von einem laufenden Master
+ no vrrp 1                        ! Gruppe löschen
 ```
+
+Bei gleich guten Wegen (gleiches Ziel, gleiche Distanz und Metrik, statisch oder OSPF) nimmt der Router bis zu vier; jeder Datenfluss bleibt nach einem Hash über Adressen, Protokoll und Ports auf seinem Weg (RFC 2992). `show ip route` markiert alle aktiven Wege mit `>*`. VRRP gibt es auch auf Firewall und Layer-3-Switch (dort im `interface vlan`).
 
 Die Routingtabelle zeigt bei jeder Route `[Distanz/Metrik]`. Gewählt wird nach RFC 1812: das genaueste Netz, dann die kleinere administrative Distanz, dann die kleinere Metrik. Statische Routen über einen Anschluss ohne Verbindung fallen weg; so springt eine Reserve-Route mit grösserer Distanz ein (Floating Static Route). Distanz 255 heisst «nie verwenden».
 
@@ -219,6 +231,7 @@ Ein Netz wird nur angekündigt, wenn es in der Routingtabelle steht.
 
 ```
 spanning-tree                  ! Spanning Tree ein
+spanning-tree mode rstp        ! Rapid Spanning Tree (auch rapid-pvst); zurück mit «mode stp»
 spanning-tree priority 4096
 vlan 10                        ! VLAN anlegen
  name Verwaltung

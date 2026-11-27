@@ -32,7 +32,13 @@ export type DemoCheck =
   /** Telefongespräch endet mit guter Qualität («voip.ended.good»). */
   | { kind: 'call'; device: string }
   /** Der Syslog-Server hat eine Meldung mit dieser MSGID erhalten. */
-  | { kind: 'syslog'; device: string; msgid: string };
+  | { kind: 'syslog'; device: string; msgid: string }
+  /** Das Gerät ist Master der VRRP-Gruppe. */
+  | { kind: 'vrrp'; device: string; vrid: number }
+  /** Der Load Balancer hat Verbindungen an mindestens `min` verschiedene Server gegeben. */
+  | { kind: 'balanced'; device: string; min: number }
+  /** Das Gerät hat mehrere gleich gute Routen (ECMP) ins Netz. */
+  | { kind: 'ecmp'; device: string; network: string };
 
 /**
  * Schritt einer geführten Demo. Den Text spricht der Avatar
@@ -115,6 +121,7 @@ export const DEMOS: readonly Demo[] = [
       { highlight: 'Webserver' },
       { pause: false, highlight: 'Notebook 1' },
     ] },
+  { id: 'loadBalancer', file: 'loadbalancer.json', topic: 'services', layers: [4, 7], actions: [{ at: 600, device: 'PC 1', browse: 'http://192.168.1.80/' }, { at: 1500, device: 'PC 2', browse: 'http://192.168.1.80/' }, { at: 2500, device: 'PC 1', browse: 'http://192.168.1.80/' }], check: { kind: 'balanced', device: 'Load Balancer', min: 3 }, until: 6000 },
   { id: 'dns', file: 'dns.json', topic: 'services', layers: [7], actions: [{ at: 600, device: 'PC 1', command: 'nslookup intranet.schule.example' }, { at: 1500, device: 'PC 1', command: 'nslookup -type=MX schule.example' }, { at: 2500, device: 'PC 1', browse: 'http://www.provider.example/' }], check: { kind: 'browser', device: 'PC 1', contains: 'Provider' }, until: 8000,
     tour: [
       { sim: false, highlight: 'Schul-DNS', window: { device: 'Schul-DNS', tab: 'services' } },
@@ -147,6 +154,7 @@ export const DEMOS: readonly Demo[] = [
     until: 6000,
   },
   // Switching
+  { id: 'rstp', file: 'rstp.json', topic: 'switching', layers: [2], actions: [{ at: 1000, device: 'PC 1', command: 'ping -t 192.168.1.20' }], check: { kind: 'ping', device: 'PC 1', min: 5 }, until: 10_000 },
   { id: 'vlanStp', file: 'vlan-stp.json', topic: 'switching', layers: [2], actions: [{ at: 6500, device: 'Verwaltung 1', command: 'ping 10.0.10.12' }], check: { kind: 'ping', device: 'Verwaltung 1' }, until: 15_000 },
   { id: 'duplicateMac', file: 'doppelte-mac.json', topic: 'switching', layers: [2], actions: [{ at: 600, device: 'PC 1', command: 'ping 192.168.1.11' }, { at: 900, device: 'Notebook', command: 'ping 192.168.1.10' }], check: { kind: 'macFlap', device: 'Switch' }, until: 8000,
     tour: [
@@ -179,6 +187,8 @@ export const DEMOS: readonly Demo[] = [
     ] },
   { id: 'static', file: 'statische-routen.json', topic: 'routing', layers: [3], actions: [{ at: 600, device: 'PC A', command: 'tracert 192.168.20.10' }], check: { kind: 'trace', device: 'PC A' }, until: 10_000 },
   { id: 'ospf', file: 'ospf.json', topic: 'routing', layers: [3], actions: [{ at: 9000, device: 'PC 1', command: 'tracert 192.168.2.10' }], check: { kind: 'trace', device: 'PC 1' }, until: 20_000 },
+  { id: 'ecmp', file: 'ecmp.json', topic: 'routing', layers: [3], actions: [{ at: 12_000, device: 'PC 1', command: 'tracert 10.4.0.10' }, { at: 12_500, device: 'PC 2', command: 'tracert 10.4.0.10' }], check: { kind: 'ecmp', device: 'Router 1', network: '10.4.0.0' }, until: 25_000 },
+  { id: 'vrrp', file: 'vrrp.json', topic: 'routing', layers: [3], actions: [{ at: 5000, device: 'PC 1', command: 'ping -t 10.0.0.10' }], check: { kind: 'vrrp', device: 'Router 1', vrid: 1 }, until: 12_000 },
   { id: 'rip', file: 'rip.json', topic: 'routing', layers: [3, 4], actions: [{ at: 9000, device: 'PC 1', command: 'tracert 192.168.2.10' }], check: { kind: 'trace', device: 'PC 1' }, until: 20_000 },
   { id: 'ospfv3', file: 'ospfv3.json', topic: 'routing', layers: [3], actions: [{ at: 9000, device: 'PC 1', command: 'tracert 2001:db8:2::10' }], check: { kind: 'trace', device: 'PC 1' }, until: 20_000,
     tour: [

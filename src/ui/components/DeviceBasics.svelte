@@ -46,7 +46,7 @@
 </label>
 <dl class="facts">
   <dt>{t('inspector.type')}</dt>
-  <dd>{isAttacker(device) ? t('shop.attacker') : typeLabel(device.type)}{device.variant === 'rack' ? ` (${t('shop.serverRack')})` : ''}</dd>
+  <dd>{isAttacker(device) ? t('shop.attacker') : typeLabel(device.type)}{device.variant === 'rack' ? ` (${t('shop.serverRack')})` : device.variant === 'loadbalancer' ? ` (${t('shop.serverLb')})` : ''}</dd>
   <dt>{t('inspector.role')}</dt>
   <dd>{roleLabel(device.type)}</dd>
   {#if ui.showPrices && devicePrice(device) > 0}

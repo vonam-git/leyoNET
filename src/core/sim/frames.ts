@@ -230,6 +230,26 @@ export interface OspfPacket {
   lsas?: OspfLsa[];
 }
 
+/**
+ * VRRP-Advertisement (RFC 9568, Version 3), IP-Protokoll 112 an 224.0.0.18 mit TTL 255. Der Master
+ * schickt es jede Sekunde mit der virtuellen MAC als Absender; bleibt es aus, übernimmt ein Backup.
+ */
+export interface VrrpPacket {
+  kind: 'vrrp';
+  vrid: number;
+  /** 255 = Besitzer der Adresse, 0 = Master tritt zurück (Backups übernehmen sofort). */
+  priority: number;
+  /** Max Advertise Interval in Hundertstelsekunden (100 = 1 s). */
+  interval: number;
+  addresses: string[];
+}
+export const VRRP_MULTICAST = '224.0.0.18';
+export const VRRP_PROTOCOL = 112;
+/** Virtuelle MAC-Adresse einer VRRP-Gruppe für IPv4 (RFC 9568, Abschnitt 7.3). */
+export function vrrpMac(vrid: number): string {
+  return `00:00:5E:00:01:${vrid.toString(16).toUpperCase().padStart(2, '0')}`;
+}
+
 export interface Ipv4Packet {
   kind: 'ipv4';
   src: string;
@@ -238,7 +258,7 @@ export interface Ipv4Packet {
   id: number;
   /** Differentiated Services Code Point (RFC 2474); fehlt = 0 (Best Effort). */
   dscp?: number;
-  payload: IcmpMessage | UdpDatagram | TcpSegment | OspfPacket | EspPacket;
+  payload: IcmpMessage | UdpDatagram | TcpSegment | OspfPacket | EspPacket | VrrpPacket;
 }
 
 /**
@@ -321,6 +341,20 @@ export interface StpBpdu {
   bridgeId: string;
   /** Port des Absenders (Index). */
   portId: number;
+  /** RSTP (IEEE 802.1Q, Klausel 13): RST BPDU, Protokollversion 2; fehlt = STP (Version 0). */
+  version?: 2;
+  /** RSTP: Flags des RST BPDU (Vorschlag, Zustimmung, Topologieänderung, Rolle und Zustand des Ports). */
+  flags?: RstpFlags;
+}
+
+export interface RstpFlags {
+  proposal?: boolean;
+  agreement?: boolean;
+  /** Topology Change: Empfänger vergessen gelernte MAC-Adressen. */
+  tc?: boolean;
+  learning?: boolean;
+  forwarding?: boolean;
+  role?: 'root' | 'designated' | 'alternate';
 }
 
 /**

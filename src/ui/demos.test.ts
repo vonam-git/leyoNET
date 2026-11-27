@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Simulation, parseProject, type Topology } from '../core';
+import { Simulation, formatIp, parseProject, type Topology } from '../core';
 import de from '../i18n/de.json';
 import en from '../i18n/en.json';
 import { DEMOS, demoProject, type Demo } from './demos';
@@ -89,6 +89,15 @@ describe('Demo-Netze', () => {
         break;
       case 'storm':
         expect(sim.stormingDevices().length).toBeGreaterThan(0);
+        break;
+      case 'vrrp':
+        expect(sim.getDeviceState(id(check.device)).vrrp?.find((g) => g.vrid === check.vrid)?.state).toBe('master');
+        break;
+      case 'balanced':
+        expect(sim.getDeviceState(id(check.device)).loadBalancer?.backends.filter((b) => b.total > 0).length ?? 0).toBeGreaterThanOrEqual(check.min);
+        break;
+      case 'ecmp':
+        expect(sim.getRoutes(id(check.device)).filter((r) => formatIp(r.network) === check.network).length).toBeGreaterThanOrEqual(2);
         break;
       case 'syslog':
         expect((sim.getDeviceState(id(check.device)) as { syslog?: { msgid: string }[] }).syslog?.map((m) => m.msgid)).toContain(check.msgid);

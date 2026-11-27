@@ -60,8 +60,11 @@ import type {
   SerialEncapsulation,
   StaticNat,
   VlanDef,
+  VrrpGroup,
+  LoadBalancerConfig,
+  LbBackend,
 } from './types';
-import { ATTACK_KINDS } from './types';
+import { ATTACK_KINDS, LB_METHODS } from './types';
 import { CHANNEL_MODES, MAX_CHANNEL, MAX_VNI } from './types';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
 
@@ -207,7 +210,20 @@ export type ErrorCode =
   | 'invalidCost'
   | 'duplicateNat'
   | 'fileTooLarge'
-  | 'invalidVlanColor';
+  | 'invalidVlanColor'
+  | 'notVrrpCapable'
+  | 'invalidVrid'
+  | 'vrrpNoAddress'
+  | 'vrrpOutsideSubnet'
+  | 'invalidVrrpPriority'
+  | 'invalidVrrpTrack'
+  | 'vrrpDuplicate'
+  | 'tooManyVrrp'
+  | 'unknownVrrp'
+  | 'tooManyBackends'
+  | 'duplicateBackend'
+  | 'backendIsSelf'
+  | 'invalidLbMethod';
 
 /** Fehler tragen nur Code und Parameter; die Oberfläche übersetzt sie. */
 export interface TopologyError {
@@ -782,6 +798,13 @@ export function setStp(t: Topology, id: string, enabled: boolean): Result<Topolo
   return ok(next);
 }
 
+/** Spanning-Tree-Variante: klassisches STP oder Rapid Spanning Tree (RSTP). */
+export function setStpMode(t: Topology, id: string, mode: 'stp' | 'rstp'): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  return ok(updateDevice(t, id, (d) => (mode === 'rstp' ? { ...d, stpMode: 'rstp' as const } : without(d, 'stpMode'))));
+}
+
 /** Höchstzahl MAC-Adressen bei der Port-Sicherheit. */
 export const MAX_PORT_MACS = 64;
 
@@ -818,6 +841,86 @@ export function setSyslog(t: Topology, id: string, target: string): Result<Topol
   if (!value) return ok(updateDevice(t, id, (d) => without(d, 'syslog')));
   if (parseIp(value) === null) return fail('invalidIp', { value });
   return ok(updateDevice(t, id, (d) => ({ ...d, syslog: value })));
+}
+
+/** Geräte mit VRRP (redundantes Gateway): Router, Firewall, Layer-3-Switch. */
+export function canVrrp(type: DeviceType): boolean {
+  return isRouterLike(type) || type === 'l3switch';
+}
+
+export const MAX_VRRP_GROUPS = 16;
+
+/**
+ * VRRP-Gruppe anlegen oder ändern (gleiche VRID am selben Interface wird ersetzt). Die virtuelle
+ * Adresse muss im Netz des Interfaces liegen; ist sie die eigene Interface-Adresse, ist das Gerät
+ * ihr Besitzer (Priorität 255).
+ */
+export function setVrrpGroup(t: Topology, id: string, group: VrrpGroup): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canVrrp(device.type)) return fail('notVrrpCapable');
+  const own = interfaceAddresses(device).find((i) => i.index === group.iface && decodeIface(i.index).kind !== 'loopback');
+  if (!logicalInterfaces(device).includes(group.iface) || decodeIface(group.iface).kind === 'loopback') return fail('unknownInterface');
+  if (!own) return fail('vrrpNoAddress', { iface: cliIfaceName(device, group.iface) });
+  if (!Number.isInteger(group.vrid) || group.vrid < 1 || group.vrid > 255) return fail('invalidVrid');
+  const ip = parseIp(group.ip.trim());
+  if (ip === null) return { ok: false, error: { code: 'invalidIp', params: { value: group.ip }, field: 'ip' } };
+  if (networkOf(ip, own.prefix) !== networkOf(own.ip, own.prefix) || ip === networkOf(own.ip, own.prefix)) return fail('vrrpOutsideSubnet', { ip: group.ip, iface: cliIfaceName(device, group.iface) });
+  if (group.priority !== undefined && (!Number.isInteger(group.priority) || group.priority < 1 || group.priority > 254)) return fail('invalidVrrpPriority');
+  if (group.track && (!logicalInterfaces(device).includes(group.track.iface) && !device.interfaces.some((i) => i.index === group.track!.iface) || !Number.isInteger(group.track.decrement) || group.track.decrement < 1 || group.track.decrement > 253)) return fail('invalidVrrpTrack');
+  const others = (device.vrrp ?? []).filter((g) => !(g.iface === group.iface && g.vrid === group.vrid));
+  if (others.some((g) => g.iface === group.iface && parseIp(g.ip) === ip)) return fail('vrrpDuplicate', { ip: group.ip });
+  if (others.length >= MAX_VRRP_GROUPS) return fail('tooManyVrrp', { max: MAX_VRRP_GROUPS });
+  const clean: VrrpGroup = {
+    iface: group.iface,
+    vrid: group.vrid,
+    ip: formatIp(ip),
+    ...(group.priority !== undefined && group.priority !== 100 ? { priority: group.priority } : {}),
+    ...(group.preempt === false ? { preempt: false as const } : {}),
+    ...(group.accept ? { accept: true } : {}),
+    ...(group.track ? { track: { iface: group.track.iface, decrement: group.track.decrement } } : {}),
+  };
+  const list = [...others, clean].sort((a, b) => a.iface - b.iface || a.vrid - b.vrid);
+  return ok(updateDevice(t, id, (d) => ({ ...d, vrrp: list })));
+}
+
+export function removeVrrpGroup(t: Topology, id: string, iface: number, vrid: number): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!device.vrrp?.some((g) => g.iface === iface && g.vrid === vrid)) return fail('unknownVrrp', { vrid });
+  const list = device.vrrp.filter((g) => !(g.iface === iface && g.vrid === vrid));
+  return ok(updateDevice(t, id, (d) => (list.length ? { ...d, vrrp: list } : without(d, 'vrrp'))));
+}
+
+export const MAX_LB_BACKENDS = 16;
+
+/** Load Balancer auf einem Server einrichten (null schaltet ihn aus). */
+export function setLoadBalancer(t: Topology, id: string, config: LoadBalancerConfig | null): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (device.type !== 'server') return fail('notAServer');
+  if (!config) return ok(updateDevice(t, id, (d) => without(d, 'loadBalancer')));
+  const validPort = (p: number) => Number.isInteger(p) && p >= 1 && p <= 65535;
+  if (!validPort(config.port)) return { ok: false, error: { code: 'invalidPort', field: 'port' } };
+  if (!LB_METHODS.includes(config.method)) return fail('invalidLbMethod');
+  if (config.backends.length > MAX_LB_BACKENDS) return fail('tooManyBackends', { max: MAX_LB_BACKENDS });
+  const own = device.interfaces.map((i) => i.ip).filter(Boolean);
+  const seen = new Set<string>();
+  const backends: LbBackend[] = [];
+  for (const b of config.backends) {
+    const text = b.ip.trim();
+    const ip = parseIp(text) !== null ? formatIp(parseIp(text)!) : parseIp6(text) !== null ? formatIp6(parseIp6(text)!) : null;
+    if (ip === null) return { ok: false, error: { code: 'invalidIp', params: { value: b.ip }, field: 'backend' } };
+    if (b.port !== undefined && !validPort(b.port)) return { ok: false, error: { code: 'invalidPort', field: 'backend' } };
+    const port = b.port ?? config.port;
+    if (own.includes(ip) && port === config.port) return fail('backendIsSelf', { ip });
+    const key = `${ip}|${port}`;
+    if (seen.has(key)) return fail('duplicateBackend', { ip, port });
+    seen.add(key);
+    backends.push({ ip, ...(b.port !== undefined && b.port !== config.port ? { port: b.port } : {}) });
+  }
+  const clean: LoadBalancerConfig = { port: config.port, method: config.method, backends, ...(config.healthCheck === false ? { healthCheck: false as const } : {}) };
+  return ok(updateDevice(t, id, (d) => ({ ...d, loadBalancer: clean })));
 }
 
 /** Syslog-Server-Dienst auf einem Rechner ein- oder ausschalten. */

@@ -50,12 +50,14 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('service.web', 'services', 2),
   f('service.mail', 'services', 3),
   f('service.voip', 'services', 3),
+  f('service.loadbalancer', 'services', 4),
   // Netzwerk
   f('net.portShutdown', 'network', 2),
   f('net.macEdit', 'network', 3),
   f('net.cableDamage', 'network', 3),
   f('net.vlan', 'network', 3),
   f('net.stp', 'network', 3),
+  f('net.vrrp', 'network', 4),
   f('net.poe', 'network', 3),
   f('net.qos', 'network', 4),
   f('net.wlanMesh', 'network', 3),
@@ -144,6 +146,8 @@ export function usedFeatures(t: Topology): string[] {
     if (d.attack || d.arpGuard || d.synCookies || d.variant === 'attacker') used.add('tool.security');
     if (d.mailServer || d.mailAccount) used.add('service.mail');
     if (d.stp) used.add('net.stp');
+    if (d.vrrp?.length) used.add('net.vrrp');
+    if (d.loadBalancer || d.variant === 'loadbalancer') used.add('service.loadbalancer');
     if (d.poe || d.power === 'poe') used.add('net.poe');
     if (d.qos || d.interfaces.some((i) => i.rate)) used.add('net.qos');
     if (d.voip || d.sipServer) used.add('service.voip');

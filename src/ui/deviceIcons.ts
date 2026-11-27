@@ -24,6 +24,8 @@ const ICONS: Record<string, IconShape[]> = {
   'notebook:attacker': [rect(-17, -18, 34, 23, 2), path('M-24 8 H24 L20 15 H-20 Z'), { tag: 'path', cls: 'warn', attrs: { d: 'M0 -16 L11 3 H-11 Z' } }, { tag: 'path', cls: 'mark', attrs: { d: 'M0 -9 V-4 M0 -0.5 V0' } }],
   pc: [rect(-24, -18, 30, 22, 2), line('M-9 4 V10 M-15 11 H-3'), rect(11, -18, 13, 30, 2), line('M14 -12 H21 M14 -7 H21')],
   'server:rack': [rect(-24, -13, 48, 11, 2), rect(-24, 1, 48, 11, 2), line('M-18 -7.5 H-6 M-18 6.5 H-6'), circle(17, -7.5, 1.8, 'fill'), circle(17, 6.5, 1.8, 'fill')],
+  // Load Balancer: flaches Gehäuse, von einem Eingang verzweigen drei Wege.
+  'server:loadbalancer': [rect(-24, -16, 48, 32, 3), circle(-13, 0, 3, 'fill'), line('M-10 0 H-2 M-2 0 L12 -9 M-2 0 H12 M-2 0 L12 9'), circle(15, -9, 2.2, 'fill'), circle(15, 0, 2.2, 'fill'), circle(15, 9, 2.2, 'fill')],
   server: [rect(-13, -20, 26, 40, 3), line('M-8 -13 H8 M-8 -7 H8 M-8 -1 H8'), circle(0, 12, 2.2, 'fill')],
   // IP-Telefon: Hörer links, Gehäuse mit Anzeige und Tasten.
   ipphone: [path('M-24 -13 Q-24 -18 -19 -18 H-14 Q-9 -18 -9 -13 V11 Q-9 16 -14 16 H-19 Q-24 16 -24 11 Z'), rect(-4, -15, 28, 31, 3), rect(1, -11, 18, 7, 1), circle(4, 3, 1.5, 'fill'), circle(10, 3, 1.5, 'fill'), circle(16, 3, 1.5, 'fill'), circle(4, 9, 1.5, 'fill'), circle(10, 9, 1.5, 'fill'), circle(16, 9, 1.5, 'fill')],

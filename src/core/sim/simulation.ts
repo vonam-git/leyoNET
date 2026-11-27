@@ -23,6 +23,8 @@ import type { PppStatus } from './ppp';
 import type { Ip6State } from './ip6';
 import type { FirewallState } from './firewall';
 import type { VpnState } from './vpn';
+import type { VrrpGroupState } from './vrrp';
+import type { LoadBalancerState } from './loadbalancer';
 import { EventQueue } from './queue';
 import { QUEUE_COUNT, QUEUE_LIMIT, pcpOfDscp, queueOf } from '../net/qos';
 import { frameBytes } from './size';
@@ -108,6 +110,10 @@ export interface DeviceState {
   modem?: ModemState;
   ospf?: OspfState;
   ospf6?: OspfState;
+  /** VRRP-Gruppen des Routers bzw. Layer-3-Switches mit Zustand (Master, Backup). */
+  vrrp?: VrrpGroupState[];
+  /** Server mit Load Balancer: Server dahinter (Health Check, Verbindungen). */
+  loadBalancer?: LoadBalancerState;
   bgp?: BgpPeerInfo[];
   /** Wirksame Routingtabelle (Router, Layer-3-Switches), inklusive gelernter Routen. */
   routes?: Route[];
@@ -191,7 +197,7 @@ export class Simulation {
   #bootDhcpClients() {
     const order = (d: Device) => (DEVICE_SPECS[d.type].role === 'endpoint' ? 1 : 0);
     for (const device of [...this.#topology.devices].sort((a, b) => order(a) - order(b))) {
-      if (DEVICE_SPECS[device.type].role === 'endpoint' && !device.dhcp && !device.wifi && !device.voip && !device.attack) continue;
+      if (DEVICE_SPECS[device.type].role === 'endpoint' && !device.dhcp && !device.wifi && !device.voip && !device.attack && !device.loadBalancer) continue;
       this.#node(device.id)?.boot?.();
     }
   }

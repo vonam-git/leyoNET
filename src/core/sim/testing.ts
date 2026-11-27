@@ -169,6 +169,7 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
   }
   const inner = p.payload;
   if (inner.kind === 'ospf') return `${route} OSPF ${inner.type} ${inner.routerId}`;
+  if (inner.kind === 'vrrp') return `${route} VRRP vrid=${inner.vrid} prio=${inner.priority} ${p.src}>${p.dst}`;
   if (inner.kind === 'esp') return `${route} ESP spi=0x${inner.spi.toString(16)} seq=${inner.seq} ${p.src}>${p.dst}`;
   if (inner.kind === 'tcp') {
     const data = inner.data ? ` "${inner.data.split('\r\n')[0]}"` : '';

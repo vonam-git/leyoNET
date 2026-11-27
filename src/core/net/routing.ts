@@ -147,6 +147,44 @@ export function lookupRoute(routes: readonly Route[], dst: number): Route | unde
   return best;
 }
 
+/** Höchstens so viele gleich gute Wege je Ziel (ECMP), wie «maximum-paths 4» bei Cisco IOS. */
+export const MAX_PATHS = 4;
+
+/** Quellen, deren gleich gute Wege sich die Last teilen: statische Routen und OSPF (RFC 2328, 16.1). */
+const ECMP_KINDS: ReadonlySet<RouteKind> = new Set(['static', 'ospf']);
+
+/** Gleich gut: gleicher Präfix, gleiche Quelle, Distanz und Metrik, aber ein anderer nächster Hop. */
+export function equalCost(a: Route, b: Route): boolean {
+  return a.network === b.network && a.prefix === b.prefix && a.kind === b.kind && ECMP_KINDS.has(a.kind) && (a.distance ?? 0) === (b.distance ?? 0) && (a.metric ?? 0) === (b.metric ?? 0) && (a.via !== b.via || a.iface !== b.iface);
+}
+
+/** Beste Route und alle gleich guten (ECMP), in der Reihenfolge der Tabelle, höchstens MAX_PATHS. */
+export function lookupRoutes(routes: readonly Route[], dst: number): Route[] {
+  const best = lookupRoute(routes, dst);
+  if (!best) return [];
+  return [best, ...routes.filter((r) => r !== best && equalCost(r, best))].slice(0, MAX_PATHS);
+}
+
+/**
+ * Weg für einen Datenfluss nach dem Hash-Threshold-Verfahren (RFC 2992): Der Hash über Absender,
+ * Ziel, Protokoll und Ports teilt den Zahlenraum in gleich grosse Bereiche, einer je Weg. Pakete
+ * derselben Verbindung nehmen so immer denselben Weg (keine Vertauschung der Reihenfolge).
+ */
+export function pickPath<T>(paths: readonly T[], hash: number): T | undefined {
+  if (paths.length <= 1) return paths[0];
+  return paths[Math.min(paths.length - 1, Math.floor(((hash >>> 0) * paths.length) / 2 ** 32))];
+}
+
+/** FNV-1a (32 Bit) über die Kennung eines Datenflusses. */
+export function flowHash(key: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) {
+    hash ^= key.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash;
+}
+
 /** Ist `a` besser als `b` (gleiches Ziel vorausgesetzt)? */
 export function betterRoute(a: Route, b: Route): boolean {
   if (a.prefix !== b.prefix) return a.prefix > b.prefix;
@@ -235,8 +273,9 @@ export function checkStaticRoute(device: Device, route: StaticRoute, vrf?: strin
   if (!route.gateway && route.iface === undefined) return { code: 'routeNeedsTarget', field: 'gateway' };
   if (route.distance !== undefined && (!Number.isInteger(route.distance) || route.distance < 1 || route.distance > UNUSED_DISTANCE)) return { code: 'invalidDistance', field: 'distance' as RouteIssue['field'] };
   const existing = vrf ? (device.vrfs?.find((v) => v.name === vrf)?.routes ?? []) : (device.routes ?? []);
-  // Dasselbe Ziel ein zweites Mal nur als Reserve mit anderer Distanz (Floating Static Route).
-  const duplicate = existing.some((r) => r.network === route.network && parseMask(r.mask) === prefix && (r.distance ?? 1) === (route.distance ?? 1));
+  // Dasselbe Ziel ein zweites Mal: als Reserve mit anderer Distanz (Floating Static Route) oder über einen
+  // anderen nächsten Hop mit gleicher Distanz (gleich gute Wege, ECMP). Doppelt ist nur derselbe Weg.
+  const duplicate = existing.some((r) => r.network === route.network && parseMask(r.mask) === prefix && (r.distance ?? 1) === (route.distance ?? 1) && (r.gateway ?? '') === (route.gateway?.trim() ?? '') && r.iface === route.iface);
   if (duplicate) return { code: 'duplicateRoute', field: 'network', params: { net: `${route.network}/${prefix}` } };
   return null;
 }

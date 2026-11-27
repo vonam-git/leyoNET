@@ -126,6 +126,10 @@
       "titel": "Reserved Top Level DNS Names",
       "verwendung": "Beispieldomains .example"
     },
+    "2992": {
+      "titel": "Analysis of an Equal-Cost Multi-Path Algorithm",
+      "verwendung": "ECMP: Weg je Datenfluss nach Hash-Threshold (statische Routen, OSPF)"
+    },
     "3022": {
       "titel": "Traditional IP Network Address Translator",
       "verwendung": "NAT"
@@ -334,6 +338,10 @@
       "titel": "Transmission Control Protocol (TCP)",
       "verwendung": "TCP"
     },
+    "9568": {
+      "titel": "Virtual Router Redundancy Protocol (VRRP) Version 3 for IPv4 and IPv6",
+      "verwendung": "VRRP: redundantes Gateway (Advertisements, virtuelle MAC, Master/Backup, Preempt, Accept Mode)"
+    },
     "9915": {
       "titel": "Dynamic Host Configuration Protocol for IPv6 (DHCPv6)",
       "verwendung": "DHCPv6: Solicit, Advertise, Request, Reply"
@@ -359,14 +367,15 @@
     {
       "id": "IEEE 802.1Q",
       "organisation": "IEEE",
-      "verwendung": "VLAN-Tags, Trunks, Bridging, Priority Code Point (PCP, 802.1p) für QoS",
+      "verwendung": "VLAN-Tags, Trunks, Bridging, Priority Code Point (PCP, 802.1p) für QoS, Rapid Spanning Tree (RSTP, Klausel 13 und 14)",
       "aktuell": "IEEE 802.1Q-2022",
-      "geprueft": "2026-10-30",
+      "geprueft": "2026-11-27",
       "titel": "Bridges and Bridged Networks",
       "auch": [
-        "IEEE 802.1p"
+        "IEEE 802.1p",
+        "IEEE 802.1w"
       ],
-      "bemerkung": " 802.1p (Prioritäten, PCP) ist seit 1998 Teil von 802.1D/802.1Q."
+      "bemerkung": " 802.1p (Prioritäten, PCP) ist seit 1998 Teil von 802.1D/802.1Q. RSTP (früher 802.1w) steht seit 802.1D-2004 in der Norm, heute in 802.1Q-2022 Klausel 13 (Ablauf) und 14 (RST BPDU, Version 2)."
     },
     {
       "id": "IEEE 802.2",

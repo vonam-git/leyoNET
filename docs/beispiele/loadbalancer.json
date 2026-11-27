@@ -1,0 +1,268 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "title": "Load Balancer",
+    "devices": [
+      {
+        "id": "d1",
+        "type": "pc",
+        "name": "PC 1",
+        "position": {
+          "x": -320,
+          "y": -90
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:01:00",
+            "ip": "192.168.1.10",
+            "mask": "255.255.255.0"
+          }
+        ]
+      },
+      {
+        "id": "d2",
+        "type": "pc",
+        "name": "PC 2",
+        "position": {
+          "x": -320,
+          "y": 90
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "192.168.1.11",
+            "mask": "255.255.255.0"
+          }
+        ]
+      },
+      {
+        "id": "d3",
+        "type": "server",
+        "name": "Load Balancer",
+        "position": {
+          "x": 0,
+          "y": -170
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ip": "192.168.1.80",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "variant": "loadbalancer",
+        "loadBalancer": {
+          "port": 80,
+          "method": "roundRobin",
+          "backends": [
+            {
+              "ip": "192.168.1.81"
+            },
+            {
+              "ip": "192.168.1.82"
+            },
+            {
+              "ip": "192.168.1.83"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d4",
+        "type": "server",
+        "name": "Web 1",
+        "position": {
+          "x": 300,
+          "y": -130
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00",
+            "ip": "192.168.1.81",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Web 1</h1><p>Diese Seite kommt von Web 1 (192.168.1.81).</p>"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d5",
+        "type": "server",
+        "name": "Web 2",
+        "position": {
+          "x": 300,
+          "y": 0
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ip": "192.168.1.82",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Web 2</h1><p>Diese Seite kommt von Web 2 (192.168.1.82).</p>"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d6",
+        "type": "server",
+        "name": "Web 3",
+        "position": {
+          "x": 300,
+          "y": 130
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:06:00",
+            "ip": "192.168.1.83",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "webServer": {
+          "files": [
+            {
+              "path": "/index.html",
+              "content": "<h1>Web 3</h1><p>Diese Seite kommt von Web 3 (192.168.1.83).</p>"
+            }
+          ]
+        }
+      },
+      {
+        "id": "d7",
+        "type": "switch",
+        "name": "Switch",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:07:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:07:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:07:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:07:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:07:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:07:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:07:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:07:07"
+          }
+        ],
+        "vlanDb": []
+      }
+    ],
+    "cables": [
+      {
+        "id": "c8",
+        "a": {
+          "device": "d1",
+          "iface": 0
+        },
+        "b": {
+          "device": "d7",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c9",
+        "a": {
+          "device": "d2",
+          "iface": 0
+        },
+        "b": {
+          "device": "d7",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c10",
+        "a": {
+          "device": "d3",
+          "iface": 0
+        },
+        "b": {
+          "device": "d7",
+          "iface": 2
+        }
+      },
+      {
+        "id": "c11",
+        "a": {
+          "device": "d4",
+          "iface": 0
+        },
+        "b": {
+          "device": "d7",
+          "iface": 3
+        }
+      },
+      {
+        "id": "c12",
+        "a": {
+          "device": "d5",
+          "iface": 0
+        },
+        "b": {
+          "device": "d7",
+          "iface": 4
+        }
+      },
+      {
+        "id": "c13",
+        "a": {
+          "device": "d6",
+          "iface": 0
+        },
+        "b": {
+          "device": "d7",
+          "iface": 5
+        }
+      }
+    ],
+    "nextId": 14
+  },
+  "configuration": {}
+}
+

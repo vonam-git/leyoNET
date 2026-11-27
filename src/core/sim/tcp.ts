@@ -260,6 +260,13 @@ export class TcpStack {
     this.#listeners.set(port, accept);
   }
 
+  #anyPort: ((conn: TcpConnection) => TcpHandlers | null)[] = [];
+
+  /** Dienst mit einstellbarem Port (Load Balancer): wird vor den festen Diensten gefragt. */
+  listenAny(accept: (conn: TcpConnection) => TcpHandlers | null) {
+    this.#anyPort.push(accept);
+  }
+
   connect(remoteText: string, remotePort: number, handlers: TcpHandlers): TcpConnection | null {
     // IPv6 in Kurzform (RFC 5952), damit die Antworten zur Verbindung passen.
     const remoteIp = normalizeIp6(remoteText) ?? remoteText;
@@ -282,7 +289,8 @@ export class TcpStack {
     const conn = this.#connections.get(this.#key(segment.dstPort, remote));
     if (conn) return conn.receive(segment);
     const isSyn = segment.flags.includes('SYN') && !segment.flags.includes('ACK');
-    const accept = isSyn ? this.#listeners.get(segment.dstPort) : undefined;
+    const fixed = this.#listeners.get(segment.dstPort);
+    const accept = isSyn && (fixed || this.#anyPort.length) ? (conn: TcpConnection) => this.#anyPort.reduce<TcpHandlers | null>((found, a) => found ?? a(conn), null) ?? fixed?.(conn) ?? null : undefined;
     if (accept) {
       const half = this.connections().filter((c) => c.state === 'SYN_RECEIVED');
       if (half.length >= MAX_HALF_OPEN) {

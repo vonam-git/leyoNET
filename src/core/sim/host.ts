@@ -13,6 +13,7 @@ import { DnsResolver, DnsServer, type DnsCacheEntry } from './dns';
 import { ALERT_MSGID, MAX_SYSLOG, SYSLOG_PORT, SYSLOG_SEVERITY, type SyslogEntry, type SyslogMessage } from './syslog';
 import { DHCP_CLIENT_PORT, DHCP_SERVER_PORT, DNS_PORT, IPERF_PORT, type IcmpMessage, type Ipv4Packet, type Ipv6Packet, type TcpSegment, type UdpDatagram } from './frames';
 import { HttpClient, HttpServer, type BrowserState } from './http';
+import { LoadBalancer, type LoadBalancerState } from './loadbalancer';
 import { IpNode, asIpv4View, type ArpEntry } from './ip';
 import { MailClient, MailServer, type MailClientState } from './mail';
 import { AttackRun, type AttackState } from './attack';
@@ -49,6 +50,8 @@ export interface HostState {
   dhcpLeases?: LeaseRecord[];
   /** Syslog-Server: empfangene Meldungen. */
   syslog?: SyslogEntry[];
+  /** Load Balancer: Server dahinter mit Zustand und Verbindungen. */
+  loadBalancer?: LoadBalancerState;
   dnsCache: DnsCacheEntry[];
   connections: ConnectionInfo[];
   /** Dauerping oder Ping läuft noch (Stopp mit Strg+C). */
@@ -98,6 +101,8 @@ export class HostNode extends IpNode {
   readonly dnsService: DnsServer;
   readonly tcp: TcpStack;
   readonly browser: HttpClient;
+  /** Load Balancer (nur Server mit eingerichtetem Dienst). */
+  readonly loadBalancer: LoadBalancer;
   readonly mailServer: MailServer;
   readonly mail: MailClient;
   readonly ssh: SshClient;
@@ -136,6 +141,7 @@ export class HostNode extends IpNode {
     this.tcp = new TcpStack(this, seq);
     this.browser = new HttpClient(this);
     new HttpServer(this);
+    this.loadBalancer = new LoadBalancer(this);
     this.tcp.onBacklog = (halfOpen, port) => this.#alert('synFlood', { port, halfOpen });
     this.mailServer = new MailServer(this);
     this.mail = new MailClient(this);
@@ -402,6 +408,7 @@ export class HostNode extends IpNode {
     this.attacker.boot();
     this.ensureDhcp();
     this.v6.boot();
+    this.loadBalancer.boot();
     if (this.ctx.device()?.type === 'ipphone') this.phone.boot();
   }
 
@@ -608,6 +615,7 @@ export class HostNode extends IpNode {
       connections: this.connections(),
       ...(device?.dhcpServer ? { dhcpLeases: this.dhcpServer.leases() } : {}),
       ...(device?.syslogServer ? { syslog: [...this.#syslog] } : {}),
+      ...(device?.loadBalancer ? { loadBalancer: this.loadBalancer.state()! } : {}),
       // Kopien, damit die Oberfläche eine unveränderliche Momentaufnahme erhält.
       ...(browser ? { browser: { ...browser, steps: [...browser.steps] } } : {}),
       mail: { ...mail, steps: [...mail.steps], inbox: [...mail.inbox], sent: [...mail.sent] },

@@ -62,7 +62,7 @@
     return ([['a', a], ['b', b]] as const).some(([end, device]) => {
       if (!isSwitchType(device.type) || !device.stp) return false;
       const port = simStore.sim?.getDeviceState(device.id).stp?.ports.find((p) => p.port === cable[end].iface);
-      return port?.state === 'blocking';
+      return port?.state === 'blocking' || port?.state === 'discarding';
     });
   });
 
