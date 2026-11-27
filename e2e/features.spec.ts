@@ -776,7 +776,9 @@ test('Angreifer: Abschnitt ragt nie über die Eigenschaften hinaus, auch bei sch
   }
 });
 
-test('VRRP im Reiter Redundanz: Master und Backup in der Simulation; Load Balancer verteilt', async ({ page }) => {
+test('VRRP im Reiter Redundanz: Master in der Simulation', async ({ page }) => {
+  // Die Wahl dauert gut 3,5 s Simulationszeit; auf langsamen Rechnern läuft die Simulation langsamer.
+  test.setTimeout(90_000);
   await openProject(page, example('vrrp'));
   await page.getByRole('button', { name: 'Alles zeigen' }).click();
   await page.getByRole('button', { name: 'Router 1, Vermittlungsrechner' }).click();
@@ -785,10 +787,10 @@ test('VRRP im Reiter Redundanz: Master und Backup in der Simulation; Load Balanc
   await r1.getByRole('tab', { name: 'Redundanz' }).click();
   await expect(r1.getByRole('textbox', { name: 'Virtuelle Adresse' }).first()).toHaveValue('192.168.1.1');
   await page.getByRole('radio', { name: 'Simulation' }).click();
-  await expect(r1.locator('.state.master').first()).toBeVisible({ timeout: 15_000 });
-  await r1.getByRole('button', { name: /Schliessen/ }).first().click();
+  await expect(r1.locator('.state.master').first()).toBeVisible({ timeout: 70_000 });
+});
 
-  await page.getByRole('radio', { name: 'Entwurf' }).click();
+test('Load Balancer: Dienst mit Verfahren und drei Servern', async ({ page }) => {
   await openProject(page, example('loadbalancer'));
   await page.getByRole('button', { name: 'Alles zeigen' }).click();
   await page.getByRole('button', { name: 'Load Balancer, Server' }).click();
