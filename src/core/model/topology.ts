@@ -126,9 +126,12 @@ export type ErrorCode =
   | 'networkHasHostBits'
   | 'routeNeedsTarget'
   | 'duplicateRoute'
+  | 'invalidDistance'
   | 'dhcpServerNeedsStatic'
   | 'notAServer'
   | 'notAComputer'
+  | 'invalidPortSecurity'
+  | 'notSyslogCapable'
   | 'notAnAttacker'
   | 'badAttack'
   | 'notPoeCapable'
@@ -777,6 +780,57 @@ export function setStp(t: Topology, id: string, enabled: boolean): Result<Topolo
   });
   // Ohne STP bleibt eine Schleife erlaubt; die Simulation zeigt dann den Broadcast-Sturm.
   return ok(next);
+}
+
+/** Höchstzahl MAC-Adressen bei der Port-Sicherheit. */
+export const MAX_PORT_MACS = 64;
+
+/** DHCP-Snooping am Switch ein- oder ausschalten. */
+export function setDhcpSnooping(t: Topology, id: string, enabled: boolean): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  return ok(updateDevice(t, id, (d) => (enabled ? { ...d, dhcpSnooping: true } : without(d, 'dhcpSnooping'))));
+}
+
+/** Port als vertrauenswürdig für DHCP-Snooping markieren (dort hängt der DHCP-Server oder der Uplink). */
+export function setDhcpTrusted(t: Topology, id: string, iface: number, trusted: boolean): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  if (!device.value.interfaces.some((i) => i.index === iface)) return fail('unknownInterface');
+  return ok(updateDevice(t, id, (d) => ({ ...d, interfaces: d.interfaces.map((i) => (i.index !== iface ? i : trusted ? { ...i, dhcpTrusted: true } : without(i, 'dhcpTrusted'))) })));
+}
+
+/** Port-Sicherheit: höchstens `max` MAC-Adressen am Port; null schaltet sie aus. */
+export function setPortSecurity(t: Topology, id: string, iface: number, max: number | null): Result<Topology> {
+  const device = switchDevice(t, id);
+  if (!device.ok) return device;
+  if (!device.value.interfaces.some((i) => i.index === iface)) return fail('unknownInterface');
+  if (max !== null && (!Number.isInteger(max) || max < 1 || max > MAX_PORT_MACS)) return fail('invalidPortSecurity', { max: MAX_PORT_MACS });
+  return ok(updateDevice(t, id, (d) => ({ ...d, interfaces: d.interfaces.map((i) => (i.index !== iface ? i : max === null ? without(i, 'portSecurity') : { ...i, portSecurity: max })) })));
+}
+
+/** Syslog-Server, an den das Gerät seine Meldungen schickt; leer schaltet es aus. */
+export function setSyslog(t: Topology, id: string, target: string): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canLog(device.type)) return fail('notSyslogCapable');
+  const value = target.trim();
+  if (!value) return ok(updateDevice(t, id, (d) => without(d, 'syslog')));
+  if (parseIp(value) === null) return fail('invalidIp', { value });
+  return ok(updateDevice(t, id, (d) => ({ ...d, syslog: value })));
+}
+
+/** Syslog-Server-Dienst auf einem Rechner ein- oder ausschalten. */
+export function setSyslogServer(t: Topology, id: string, on: boolean): Result<Topology> {
+  const device = getDevice(t, id);
+  if (!device) return fail('unknownDevice');
+  if (!canInstall(device.type) || isAttacker(device)) return fail('notAComputer');
+  return ok(updateDevice(t, id, (d) => (on ? { ...d, syslogServer: true } : without(d, 'syslogServer'))));
+}
+
+/** Geräte, die Syslog-Meldungen senden können. */
+export function canLog(type: DeviceType): boolean {
+  return canInstall(type) || ['router', 'firewall', 'l3switch', 'switch'].includes(type);
 }
 
 /** STP-Priorität in Schritten von 4096 (0–61440); die kleinste wird Root-Bridge. */

@@ -90,6 +90,9 @@ describe('Demo-Netze', () => {
       case 'storm':
         expect(sim.stormingDevices().length).toBeGreaterThan(0);
         break;
+      case 'syslog':
+        expect((sim.getDeviceState(id(check.device)) as { syslog?: { msgid: string }[] }).syslog?.map((m) => m.msgid)).toContain(check.msgid);
+        break;
     }
   });
 });

@@ -4,7 +4,8 @@
 # CSRF, Admin-Sperre, Eingaben (kaputtes JSON, Prototype Pollution, Grösse), keine Cookies,
 # keine fremden Ressourcen, Impressum/Datenschutz vorhanden. Legt keine Daten an.
 # Läuft wöchentlich, nach jedem Desktop-Release und von Hand (Actions → «Sicherheitsprüfung live»).
-# Bei einem Befund: Issue «Sicherheitsprüfung live: Befund» (eröffnet oder ergänzt).
+# Bei einem Befund: Issue «Sicherheitsprüfung live: Befund» (eröffnet oder ergänzt); ohne
+# Befund schliesst der nächste Lauf es selbst.
 name: Sicherheitsprüfung live
 
 on:
@@ -84,3 +85,22 @@ jobs:
           else
             gh issue create --title "$titel" --body-file meldung.md
           fi
+
+  # Ohne Befund: ein noch offenes Issue mit Verweis auf diesen Lauf schliessen.
+  erledigt:
+    needs: pruefen
+    if: needs.pruefen.result == 'success' && needs.pruefen.outputs.befund == 'nein'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Offenes Issue schliessen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          LAUF: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          titel="Sicherheitsprüfung live: Befund"
+          for nummer in $(gh issue list --state open --search "in:title \"$titel\"" --json number --jq '.[].number'); do
+            gh issue close "$nummer" --comment "Erledigt: Die Sicherheitsprüfung von aussen lief ohne Befund ([Lauf]($LAUF))."
+          done

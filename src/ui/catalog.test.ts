@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Simulation, evaluateTasks, federate, parseProject, serializeProject, type PacketLogEntry, type Topology } from '../core';
 import { setLocale } from '../i18n';
 import { CATALOG } from './catalog';
-import { ANSWERS, SOLUTIONS } from './catalogSolutions';
+import { ANSWERS, SOLUTIONS, VERBUND_PEERS } from './catalogSolutions';
 import { verbundInfra } from './verbundTemplate';
 
 setLocale('de');
@@ -12,7 +12,7 @@ const passed = (t: Topology, id: string, log: readonly PacketLogEntry[] = [], an
   const entry = CATALOG.find((e) => e.id === id)!;
   const { tasks } = entry.build();
   // Verbund-Aufgaben laufen im zusammengesetzten Netz (Vorlage der Lehrperson, Platz 1).
-  const net = entry.verbund ? federate(verbundInfra(), [{ seat: 1, topology: t, own: true }]).topology : t;
+  const net = entry.verbund ? federate(verbundInfra(), [{ seat: 1, topology: t, own: true }, ...(VERBUND_PEERS[id]?.() ?? [])]).topology : t;
   return evaluateTasks(net, answers ? { ...tasks, answers } : tasks, log);
 };
 

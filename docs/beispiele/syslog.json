@@ -1,0 +1,207 @@
+{
+  "meta": {
+    "format": "netzwerk-simulator",
+    "version": 1
+  },
+  "topology": {
+    "devices": [
+      {
+        "id": "d2",
+        "type": "pc",
+        "name": "PC Büro",
+        "position": {
+          "x": -440,
+          "y": -140
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:02:00",
+            "ip": "192.168.10.11",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.10.1",
+        "arpGuard": true,
+        "syslog": "192.168.10.50"
+      },
+      {
+        "id": "d3",
+        "type": "server",
+        "name": "Log-Server",
+        "position": {
+          "x": -440,
+          "y": 130
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:03:00",
+            "ip": "192.168.10.50",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "gateway": "192.168.10.1",
+        "syslogServer": true
+      },
+      {
+        "id": "d4",
+        "type": "switch",
+        "name": "Switch",
+        "position": {
+          "x": -180,
+          "y": 0
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:04:00"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:04:01"
+          },
+          {
+            "index": 2,
+            "mac": "02:00:00:00:04:02"
+          },
+          {
+            "index": 3,
+            "mac": "02:00:00:00:04:03"
+          },
+          {
+            "index": 4,
+            "mac": "02:00:00:00:04:04"
+          },
+          {
+            "index": 5,
+            "mac": "02:00:00:00:04:05"
+          },
+          {
+            "index": 6,
+            "mac": "02:00:00:00:04:06"
+          },
+          {
+            "index": 7,
+            "mac": "02:00:00:00:04:07"
+          }
+        ],
+        "vlanDb": []
+      },
+      {
+        "id": "d5",
+        "type": "router",
+        "name": "Router",
+        "position": {
+          "x": 60,
+          "y": 0
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:05:00",
+            "ip": "192.168.10.1",
+            "mask": "255.255.255.0"
+          },
+          {
+            "index": 1,
+            "mac": "02:00:00:00:05:01"
+          }
+        ],
+        "cli": {
+          "ssh": true,
+          "users": [
+            {
+              "name": "admin",
+              "password": "Zug-nach-Sursee-17"
+            }
+          ]
+        },
+        "syslog": "192.168.10.50"
+      },
+      {
+        "id": "d6",
+        "type": "notebook",
+        "name": "Angreifer",
+        "position": {
+          "x": -180,
+          "y": 200
+        },
+        "interfaces": [
+          {
+            "index": 0,
+            "mac": "02:00:00:00:06:00",
+            "ip": "192.168.10.66",
+            "mask": "255.255.255.0"
+          }
+        ],
+        "variant": "attacker",
+        "gateway": "192.168.10.1",
+        "attack": {
+          "kind": "sshGuess",
+          "delay": 3
+        }
+      }
+    ],
+    "cables": [
+      {
+        "id": "c7",
+        "a": {
+          "device": "d2",
+          "iface": 0
+        },
+        "b": {
+          "device": "d4",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c8",
+        "a": {
+          "device": "d3",
+          "iface": 0
+        },
+        "b": {
+          "device": "d4",
+          "iface": 1
+        }
+      },
+      {
+        "id": "c9",
+        "a": {
+          "device": "d4",
+          "iface": 2
+        },
+        "b": {
+          "device": "d5",
+          "iface": 0
+        }
+      },
+      {
+        "id": "c10",
+        "a": {
+          "device": "d6",
+          "iface": 0
+        },
+        "b": {
+          "device": "d4",
+          "iface": 3
+        }
+      }
+    ],
+    "nextId": 11,
+    "areas": [
+      {
+        "id": "a1",
+        "title": "Firma 192.168.10.0/24",
+        "color": "blue",
+        "x": -560,
+        "y": -260,
+        "width": 700,
+        "height": 560,
+        "network": "192.168.10.0/24"
+      }
+    ]
+  },
+  "configuration": {}
+}

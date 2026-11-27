@@ -7,6 +7,7 @@ hilfe: [routing]
 demos: [static]
 uebungen: [static-routes, m117-ue04-a2, m117-ue05, m129-routing-a1, serial-wan]
 verwandt: [routing-grundlagen, router, ospf]
+normen: [RFC 1812]
 ---
 ## Eine Route
 
@@ -36,6 +37,10 @@ Beide Routen sind nötig: R1 für den Hinweg, R2 für den **Rückweg** der Antwo
 
 ## Vor- und Nachteile
 
-Statische Routen sind übersichtlich, sicher und brauchen keine Rechenleistung. Aber sie reagieren nicht auf Ausfälle, und in grossen Netzen muss jede Änderung auf vielen Routern nachgeführt werden. Dort übernehmen dynamische Protokolle wie [[ospf]]. In Firmen findet man oft beides: OSPF im Innern, eine statische Standardroute zum Provider.
+Statische Routen sind übersichtlich, sicher und brauchen keine Rechenleistung. Aber sie reagieren kaum auf Ausfälle (nur eine **Reserve-Route** springt ein, siehe unten), und in grossen Netzen muss jede Änderung auf vielen Routern nachgeführt werden. Dort übernehmen dynamische Protokolle wie [[ospf]]. In Firmen findet man oft beides: OSPF im Innern, eine statische Standardroute zum Provider.
+
+## Reserve-Route (Floating Static Route)
+
+Jede Route hat eine **administrative Distanz**, statische normalerweise 1. Trägt man dasselbe Ziel ein zweites Mal mit grösserer Distanz ein (z.B. 200, auf der Befehlszeile `ip route 0.0.0.0/0 10.0.1.2 200`), gilt die zweite erst, wenn die erste wegfällt: Hat ihr Anschluss keine Verbindung mehr, nimmt der Router sie aus der Tabelle (RFC 1812). Die Routingtabelle zeigt bei jeder Route `[Distanz/Metrik]`.
 
 > Fehlersuche mit `tracert`: Wo hört die Liste auf? Der letzte Router, der antwortet, kennt den nächsten Schritt nicht.

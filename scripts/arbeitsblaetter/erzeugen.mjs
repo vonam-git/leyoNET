@@ -397,10 +397,12 @@ class Writer {
   }
 
   question(q, prefix) {
-    // Frage und Antwortfeld bleiben zusammen auf einer Seite.
+    // Frage und Antwortfeld bleiben zusammen auf einer Seite. Freiwillige Fragen (z.B. Befehlszeile)
+    // tragen «(optional)», damit sie bei der Bewertung nicht als Pflicht zählen.
+    const text = q.optional ? `${q.text} **(optional)**` : q.text;
     const h = (q.lines ?? 2) * 14 + 8;
-    this.need(this.wrap(q.text, 10.5, WIDTH).length * 10.5 * 1.38 + 3 + h + 12);
-    this.paragraph(q.text, { size: 10.5, gap: 3 });
+    this.need(this.wrap(text, 10.5, WIDTH).length * 10.5 * 1.38 + 3 + h + 12);
+    this.paragraph(text, { size: 10.5, gap: 3 });
     this.field(`${prefix}.${q.name}`, MARGIN.left, this.y - h, WIDTH, h, q.answer, (q.lines ?? 2) > 1);
     this.y -= h + 12;
   }

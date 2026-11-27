@@ -64,6 +64,7 @@ export class L3SwitchNode extends SwitchNode {
     super(ctx);
     const router = new SviRouter(ctx, this);
     this.router = router;
+    this.syslog = (severity, msgid, text, params) => router.syslog(severity, msgid, text, params);
     this.local = {
       get mac() {
         const device = ctx.device();

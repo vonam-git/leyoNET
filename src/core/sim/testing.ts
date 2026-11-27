@@ -188,6 +188,7 @@ export function describe(topology: Topology, entry: PacketLogEntry): string {
     if (msg.kind === 'sip') return `${route} SIP ${msg.method ?? msg.status} ${p.src}>${p.dst}`;
     if (msg.kind === 'rtp') return `${route} RTP seq=${msg.seq} ${p.src}>${p.dst}`;
     if (msg.kind === 'data') return `${route} iperf ${msg.bytes} ${p.src}>${p.dst}`;
+    if (msg.kind === 'syslog') return `${route} Syslog ${msg.msgid} ${p.src}>${p.dst}`;
     return `${route} DHCP ${msg.op} ${p.src}>${p.dst}`;
   }
   return `${route} ICMP ${inner.type} ${p.src}>${p.dst}`;

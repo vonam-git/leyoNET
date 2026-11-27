@@ -4,7 +4,8 @@
 #    installierten Werkzeugen und aktuellem Browser.
 #  - Normenprüfung: Abgleich aller zitierten RFCs mit dem offiziellen RFC-Index
 #    und Erinnerung an fällige Prüfungen von IEEE-, ITU-T- und CableLabs-Normen.
-# Bei Handlungsbedarf eröffnet der Workflow ein Issue (oder ergänzt das offene).
+# Bei Handlungsbedarf eröffnet der Workflow ein Issue (oder ergänzt das offene); läuft
+# eine Prüfung danach ohne Befund, schliesst er es selbst.
 # Manuell: Actions → «Wöchentliche Prüfung» → «Run workflow».
 name: Wöchentliche Prüfung
 
@@ -89,3 +90,22 @@ jobs:
           else
             gh issue create --title "$titel" --body-file meldung.md
           fi
+
+  # Alles in Ordnung: ein noch offenes Issue mit Verweis auf diesen Lauf schliessen.
+  erledigt:
+    needs: [funktion, normen]
+    if: needs.funktion.result == 'success' && needs.normen.result == 'success' && needs.normen.outputs.handlungsbedarf == 'nein'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Offenes Issue schliessen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          LAUF: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          titel="Wöchentliche Prüfung: Handlungsbedarf"
+          for nummer in $(gh issue list --state open --search "in:title \"$titel\"" --json number --jq '.[].number'); do
+            gh issue close "$nummer" --comment "Erledigt: Die wöchentliche Prüfung lief ohne Befund ([Lauf]($LAUF))."
+          done

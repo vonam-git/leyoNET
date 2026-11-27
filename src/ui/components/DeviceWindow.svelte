@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_SPECS, configSaved, hasCli, runningConfig, setStartupConfig, canQos, canBePowered, canSupplyPoe, needsPoe, canAccessList, canAutoRoute, canFirewall, canVrf, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterLike, isRouterType, isSwitchType } from '../../core';
+  import { DEVICE_SPECS, canLog, configSaved, hasCli, runningConfig, setStartupConfig, canQos, canBePowered, canSupplyPoe, needsPoe, canAccessList, canAutoRoute, canFirewall, canVrf, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterLike, isRouterType, isSwitchType } from '../../core';
   import { t } from '../../i18n';
   import { typeLabel } from '../labels';
   import { dialogs, type DeviceWindowState } from '../state/dialogs.svelte';
@@ -37,6 +37,8 @@
   import Services from './Services.svelte';
   import SviConfig from './SviConfig.svelte';
   import SwitchConfig from './SwitchConfig.svelte';
+  import L2SecurityConfig from './L2SecurityConfig.svelte';
+  import SyslogConfig from './SyslogConfig.svelte';
   import WifiClientForm from './WifiClientForm.svelte';
   import VpnConfig from './VpnConfig.svelte';
   import WlanConfig from './WlanConfig.svelte';
@@ -66,7 +68,7 @@
   );
   const position = $derived(device ? order.findIndex((d) => d.id === device.id) : -1);
 
-  type TabId = 'general' | 'addresses' | 'ports' | 'routing' | 'nat' | 'relay' | 'dhcp' | 'switching' | 'wlan' | 'mail' | 'services' | 'modem' | 'group' | 'state' | 'firewall' | 'acl' | 'vrf' | 'vpn' | 'poe' | 'qos' | 'voip';
+  type TabId = 'general' | 'addresses' | 'ports' | 'routing' | 'nat' | 'relay' | 'dhcp' | 'switching' | 'wlan' | 'mail' | 'services' | 'modem' | 'group' | 'state' | 'firewall' | 'acl' | 'vrf' | 'vpn' | 'poe' | 'qos' | 'voip' | 'security';
 
   const tabs = $derived.by((): TabId[] => {
     if (!device) return [];
@@ -87,6 +89,10 @@
     if (canVrf(d.type) && ui.has('net.vrf')) list.push('vrf');
     if (isRouterLike(d.type) && ui.has('net.vpn')) list.push('vpn');
     if (isSwitchType(d.type)) list.push('switching');
+    // Port-Schutz am Switch und Syslog an Netzgeräten.
+    const l2 = isSwitchType(d.type) && d.type !== 'accesspoint' && (ui.has('net.l2security') || d.dhcpSnooping || d.interfaces.some((i) => i.portSecurity));
+    const logs = role !== 'endpoint' && canLog(d.type) && (ui.has('net.syslog') || !!d.syslog);
+    if (l2 || logs) list.push('security');
     if (canQos(d.type) && (ui.has('net.qos') || d.qos || d.interfaces.some((i) => i.rate))) list.push('qos');
     if (d.type === 'ipphone' || (canHostServices(d.type) && (ui.has('service.voip') || d.sipServer))) list.push('voip');
     if ((canSupplyPoe(d.type) && (ui.has('net.poe') || d.poe)) || (canBePowered(d.type) && (ui.has('net.poe') || needsPoe(d)))) list.push('poe');
@@ -102,7 +108,7 @@
     return wanted && tabs.includes(wanted) ? wanted : (tabs[0] ?? 'general');
   });
 
-  const HELP: Partial<Record<TabId, string>> = { routing: 'routing', nat: 'nat', relay: 'dhcp', dhcp: 'dhcp', wlan: 'wlan', mail: 'mail', switching: 'vlan', services: 'dhcp', firewall: 'firewall', acl: 'acl', vrf: 'vrf', vpn: 'vpn', poe: 'poe', qos: 'qos', voip: 'voip' };
+  const HELP: Partial<Record<TabId, string>> = { routing: 'routing', nat: 'nat', relay: 'dhcp', dhcp: 'dhcp', wlan: 'wlan', mail: 'mail', switching: 'vlan', services: 'dhcp', firewall: 'firewall', acl: 'acl', vrf: 'vrf', vpn: 'vpn', poe: 'poe', qos: 'qos', voip: 'voip', security: 'l2security' };
 
   // Gerät gelöscht oder Projekt gewechselt: schliessen.
   $effect(() => {
@@ -127,12 +133,32 @@
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     event.preventDefault();
   }
+  /**
+   * Oberste erlaubte Lage: unter der Menüleiste (und den Leisten darüber, z.B. beim Ansehen einer
+   * Session in der Admin-Konsole). Die Menüleiste liegt über den Fenstern, damit ihre Menüs sichtbar
+   * bleiben; ein Fenster darf darum nie mit dem Kopf darunter rutschen, sonst lässt es sich nicht mehr fassen.
+   */
+  function topLimit(): number {
+    const bar = document.querySelector('.menubar');
+    return bar ? Math.max(0, Math.ceil(bar.getBoundingClientRect().bottom)) : 0;
+  }
   function onHeadMove(event: PointerEvent) {
     if (!drag) return;
     // Immer ein Stück des Kopfes sichtbar lassen.
     win.x = Math.min(window.innerWidth - 120, Math.max(-dialog.offsetWidth + 160, event.clientX - drag.dx));
-    win.y = Math.min(window.innerHeight - 48, Math.max(0, event.clientY - drag.dy));
+    win.y = Math.min(window.innerHeight - 48, Math.max(topLimit(), event.clientY - drag.dy));
   }
+  /** Beim Öffnen und wenn sich das Fenster der App ändert: Kopf unter der Menüleiste halten. */
+  function keepVisible() {
+    const top = topLimit();
+    if (win.y < top) win.y = top + 4;
+    if (win.y > window.innerHeight - 48) win.y = Math.max(top, window.innerHeight - 48);
+  }
+  $effect(() => {
+    keepVisible();
+    window.addEventListener('resize', keepVisible);
+    return () => window.removeEventListener('resize', keepVisible);
+  });
   function onHeadUp() {
     drag = null;
   }
@@ -302,6 +328,9 @@
         {:else if tab === 'switching'}
           <SwitchConfig {device} />
           {#if device.type === 'l3switch' && ui.has('net.vxlan')}<VxlanConfig {device} />{/if}
+        {:else if tab === 'security'}
+          {#if isSwitchType(device.type) && device.type !== 'accesspoint' && (ui.has('net.l2security') || device.dhcpSnooping || device.interfaces.some((i) => i.portSecurity))}<L2SecurityConfig {device} />{/if}
+          {#if canLog(device.type) && (ui.has('net.syslog') || device.syslog)}<SyslogConfig {device} />{/if}
         {:else if tab === 'qos'}
           <QosConfig {device} />
         {:else if tab === 'voip'}

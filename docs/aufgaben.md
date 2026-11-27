@@ -90,7 +90,10 @@ Statische Prüfungen schauen nur auf das gebaute Netz. **Dynamische** Prüfungen
 | `answer` | `kind`? (`"choice"`), `options`? (Auswahl), `accept`? (richtige Antworten) | die Antwort der Lernenden (`tasks.answers`) einer der richtigen entspricht; ohne `accept` (Prüfungsdatei) wertet erst der Schlüssel aus |
 | `manual` | – | nie automatisch: Die Lehrperson vergibt die Punkte bei der Nachkorrektur |
 | `port` ⚡ | `from`, `to` (Gerätename oder IP), `port`, `state`? (`open` Standard, `closed`, `filtered`, `blocked` = nicht offen) | der TCP-Port, von `from` aus gesehen, in diesem Zustand ist (SYN-Scan: SYN/ACK, RST oder keine Antwort) |
-| `resist` ⚡ | `attack` (`arpSpoof`, `synFlood`, `portScan`, `sshGuess`) | ein virtueller Angreifer, der nur für die Prüfung angeschlossen wird, keinen Schaden anrichtet; der angegriffene Dienst muss laufen (siehe [verbund.md](verbund.md#sicherheits-szenarien)) |
+| `resist` ⚡ | `attack` (`arpSpoof`, `synFlood`, `portScan`, `sshGuess`, `dhcpRogue`) | ein virtueller Angreifer, der nur für die Prüfung angeschlossen wird, keinen Schaden anrichtet; der angegriffene Dienst muss laufen (siehe [verbund.md](verbund.md#sicherheits-szenarien)) |
+| `logged` ⚡ | `attack` (wie bei `resist`) | derselbe virtuelle Angreifer erscheint beim Syslog-Server im Netz (Meldung von Wächter, Switch oder Router, RFC 5424) |
+| `verbundWeb` ⚡ | `from` | im Klassen-Verbund: `from` ruft die Webseite eines anderen Standorts über dessen WAN-Adresse ab |
+| `verbundVpn` ⚡ | `from` | im Klassen-Verbund: Der Anschluss-Router hat einen IPsec-Tunnel zur WAN-Adresse eines anderen Standorts, und `from` erreicht ein Gerät im privaten Netz dahinter |
 | `packetSeen` | `protocol` (z.B. `"DNS"`, `"ICMP"`, `"HTTP"`), `from`?, `to`? | in der Simulation bereits ein solches Paket gesendet wurde |
 
 `packetSeen` ist die einzige Prüfung, die auf das Handeln der Lernenden schaut. Beispiel: «Du hast selbst eine DNS-Anfrage ausgelöst» → `{ "type": "packetSeen", "protocol": "DNS" }`.

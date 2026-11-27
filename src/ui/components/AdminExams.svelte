@@ -146,7 +146,7 @@
 
   function errorText(error: unknown): string {
     const code = (error as { code?: string }).code ?? 'other';
-    return t(`admin.exams.error.${['notAnExam', 'labelRequired', 'badSeats', 'badMinutes', 'keyMismatch', 'alreadyStarted', 'notStarted', 'unknownExam', 'tooLarge', 'examEnded', 'timeOver', 'notSubmitted', 'badUnlockPolicy', 'sebOff'].includes(code) ? code : 'other'}`);
+    return t(`admin.exams.error.${['notAnExam', 'labelRequired', 'badSeats', 'badMinutes', 'keyMismatch', 'alreadyStarted', 'notStarted', 'unknownExam', 'tooLarge', 'examEnded', 'timeOver', 'notSubmitted', 'badUnlockPolicy', 'sebOff', 'quotaExceeded'].includes(code) ? code : 'other'}`);
   }
 
   async function create(event: SubmitEvent) {

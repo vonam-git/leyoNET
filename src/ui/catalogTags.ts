@@ -24,6 +24,8 @@ const BY_FEATURE: Record<string, string> = {
   'net.nat': 'nat',
   'net.cgnat': 'nat',
   'net.acl': 'acl',
+  'net.l2security': 'dhcp',
+  'net.syslog': 'syslog',
   'net.firewall': 'firewall',
   'device.firewall': 'firewall',
   'net.stp': 'stp',

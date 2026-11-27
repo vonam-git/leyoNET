@@ -54,7 +54,7 @@
         prefix,
         via: r.gateway ?? t('routing.direct'),
         iface: r.iface !== undefined ? interfaceLabel(device, r.iface) : t('router.ifaceAuto'),
-        metric: '[1/0]',
+        metric: `[${r.distance ?? 1}/0]`,
         index,
         unusable: unusable.has(index),
       };
@@ -65,11 +65,11 @@
   });
 
   const used = $derived(new Set(rows.map((r) => r.kind)));
-  const showMetric = $derived(rows.some((r) => r.metric));
+  const showMetric = $derived(rows.some((r) => r.metric) || (editor.editable && !auto));
 
   // --- Neue statische Route (letzte Zeile der Tabelle) -------------------------
 
-  let draft = $state({ network: '', mask: '', gateway: '', iface: '' });
+  let draft = $state({ network: '', mask: '', gateway: '', iface: '', distance: '' });
   let error = $state<{ field?: string; text: string } | null>(null);
   const canAdd = $derived(editor.editable && !!draft.network.trim() && !!draft.mask.trim());
 
@@ -86,9 +86,10 @@
     const input: StaticRoute = { network: draft.network.trim(), mask: draft.mask.trim() };
     if (draft.gateway.trim()) input.gateway = draft.gateway.trim();
     if (draft.iface !== '') input.iface = Number(draft.iface);
+    if (String(draft.distance).trim()) input.distance = Number(draft.distance);
     const failure = editor.addStaticRoute(device.id, input);
     error = failure ? { field: failure.field, text: t(`error.${failure.code}`, failure.params) } : null;
-    if (!failure) draft = { network: '', mask: '', gateway: '', iface: '' };
+    if (!failure) draft = { network: '', mask: '', gateway: '', iface: '', distance: '' };
   }
 
   /** Standardroute vorbereiten: 0.0.0.0/0. */
@@ -159,7 +160,7 @@
               {#each logicalInterfaces(device) as id (id)}<option value={String(id)}>{interfaceLabel(device, id)}</option>{/each}
             </select>
           </td>
-          {#if showMetric}<td></td>{/if}
+          {#if showMetric}<td><input class="ad-in" type="number" min="1" max="255" placeholder="1" bind:value={draft.distance} aria-label={t('routing.distance')} title={t('routing.distanceHint')} aria-invalid={error?.field === 'distance'} /></td>{/if}
           <td class="act"><button type="submit" class="primary" disabled={!canAdd} title={t('router.addRoute')} aria-label={t('router.addRoute')}>+</button></td>
         </tr>
       {/if}
@@ -326,5 +327,8 @@
     margin: 6px 0 0;
     font-size: 0.8rem;
     color: var(--danger);
+  }
+  .ad-in {
+    width: 4.5em;
   }
 </style>

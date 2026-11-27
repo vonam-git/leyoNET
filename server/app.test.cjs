@@ -511,9 +511,19 @@ test('Klassen-Verbund: Plätze, Infrastruktur, Standorte nur bei Freigabe, Nachr
   // Nachrichten: nur mit Schreibrecht einer Session der Klasse.
   assert.equal((await foreign('POST', `/api/classes/${klasse.code}/messages`, { session: a.code, to: 7, text: 'Hallo' })).status, 403);
   assert.equal((await foreign('POST', `/api/classes/${klasse.code}/messages`, { session: a.code, to: 7, text: 'Hallo Genf' }, { 'X-Leyonet-Writer': a.writer })).status, 201);
-  const list = (await foreign('GET', `/api/classes/${klasse.code}/messages`)).data;
+  // Lesen: nicht ohne eigene Session, nicht mit fremdem Code ohne Schreibrecht.
+  assert.equal((await foreign('GET', `/api/classes/${klasse.code}/messages`)).status, 403);
+  assert.equal((await foreign('GET', `/api/classes/${klasse.code}/messages?session=${b.code}`)).status, 403);
+  const list = (await foreign('GET', `/api/classes/${klasse.code}/messages?session=${b.code}`, undefined, { 'X-Leyonet-Writer': b.writer })).data;
   assert.deepEqual(list.map((m) => [m.from, m.to, m.text]), [[3, 7, 'Hallo Genf']]);
-  assert.equal((await foreign('GET', `/api/classes/${klasse.code}/messages?after=${list[0].id}`)).data.length, 0);
+  assert.equal((await foreign('GET', `/api/classes/${klasse.code}/messages?after=${list[0].id}&session=${b.code}`, undefined, { 'X-Leyonet-Writer': b.writer })).data.length, 0);
+  // Nachricht an einen dritten Standort: Genf sieht nur, dass sie unterwegs ist, nicht den Inhalt.
+  assert.equal((await foreign('POST', `/api/classes/${klasse.code}/messages`, { session: a.code, to: 12, subject: 'Geheim', text: 'Nur für 12' }, { 'X-Leyonet-Writer': a.writer })).status, 201);
+  const seen = (await foreign('GET', `/api/classes/${klasse.code}/messages?session=${b.code}`, undefined, { 'X-Leyonet-Writer': b.writer })).data.at(-1);
+  assert.deepEqual([seen.from, seen.to, seen.hidden, 'text' in seen, 'subject' in seen], [3, 12, true, false, false]);
+  // Die Lehrperson (Zentrale) liest alles in der Admin-Konsole.
+  const all = (await call('GET', `/api/admin/classes/${klasse.code}/messages`, undefined, token)).data;
+  assert.equal(all.at(-1).text, 'Nur für 12');
   // An alle (-1) geht, unbekannte Ziele nicht.
   assert.equal((await foreign('POST', `/api/classes/${klasse.code}/messages`, { session: a.code, to: -1, text: 'An alle' }, { 'X-Leyonet-Writer': a.writer })).status, 201);
   assert.equal((await foreign('POST', `/api/classes/${klasse.code}/messages`, { session: a.code, to: -2, text: 'x' }, { 'X-Leyonet-Writer': a.writer })).status, 400);
@@ -779,4 +789,28 @@ test('Klasse: ein Gerät tritt nur einmal bei (Gerätekennung), sonst kommt die 
   const solo2 = await call('POST', '/api/sessions', { project: project(1), device });
   assert.notEqual(solo1.data.code, solo2.data.code);
   await call('DELETE', `/api/admin/classes/${cls.code}`, null, token);
+});
+
+test('Prüfung: Beenden-Code mit PBKDF2 (neues Format) und Deckel für die Runden', async () => {
+  // Eigene Adresse: Die Anmeldungen der anderen Tests zählen nicht mit.
+  const login = await fetch(`${base}/api/admin/login`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '192.0.2.77' }, body: JSON.stringify({ password: 'test-admin-passwort' }) });
+  const { token } = await login.json();
+  const crypto = require('node:crypto');
+  const salt = crypto.randomBytes(16);
+  const value = crypto.pbkdf2Sync('leyonet-pruefung:K7Q2MXPA', salt, 2000, 32, 'sha256').toString('hex');
+  const unlock = ['pbkdf2-sha256', 2000, salt.toString('hex'), value].join('$');
+  const learner = { ...project(0), tasks: { title: 'Code2', goals: [], exam: { id: 'P-PBKDF2', variant: '1', unlock } } };
+  const created = await call('POST', '/api/admin/exams', { label: 'PBKDF2', learner, seats: 1, minutes: 20, unlock: { attempts: 5, lockMinutes: 1 } }, token);
+  assert.equal(created.status, 201, JSON.stringify(created.data));
+  const exam = created.data;
+  await call('POST', `/api/admin/exams/${exam.id}/start`, {}, token);
+  const join = (await call('POST', '/api/exams/join', { seatCode: exam.seats[0].code })).data;
+  assert.equal((await call('POST', `/api/sessions/${join.session}/unlock`, { code: 'K7Q2MXPB' })).status, 403);
+  assert.equal((await call('POST', `/api/sessions/${join.session}/unlock`, { code: 'k7q2 mxpa' })).status, 200);
+  // Zu viele Runden in einer präparierten Datei: nie gültig (der Server rechnet nicht ewig).
+  const huge = ['pbkdf2-sha256', 9999999, salt.toString('hex'), value].join('$');
+  const other = (await call('POST', '/api/admin/exams', { label: 'Gross', learner: { ...learner, tasks: { ...learner.tasks, exam: { id: 'P-HUGE', variant: '1', unlock: huge } } }, seats: 1, minutes: 20 }, token)).data;
+  await call('POST', `/api/admin/exams/${other.id}/start`, {}, token);
+  const j2 = (await call('POST', '/api/exams/join', { seatCode: other.seats[0].code })).data;
+  assert.equal((await call('POST', `/api/sessions/${j2.session}/unlock`, { code: 'K7Q2MXPA' })).status, 403);
 });

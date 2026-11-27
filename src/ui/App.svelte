@@ -43,6 +43,7 @@
   import { session } from './state/session.svelte';
   import { simStore } from './state/sim.svelte';
   import { normalizePolicy, ui } from './state/ui.svelte';
+  import { reportActivity } from './activity';
 
   /** Alle paar Minuten automatisch einen Zwischenstand sichern (nur bei Änderungen). */
   const AUTO_SNAPSHOT_MS = 5 * 60_000;
@@ -266,7 +267,12 @@
   }
 </script>
 
-<svelte:window {onkeydown} {onpagehide} />
+<svelte:window
+  {onkeydown}
+  {onpagehide}
+  onpointerdowncapture={() => (reportActivity(), session.noteInput())}
+  onkeydowncapture={() => (reportActivity(), session.noteInput())}
+/>
 <svelte:document {onvisibilitychange} onpointerdowncapture={onpointerdowncapture} />
 
 {#if adminPage}

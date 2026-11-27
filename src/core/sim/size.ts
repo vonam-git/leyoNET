@@ -12,6 +12,7 @@ function udpApp(d: UdpDatagram): number {
   if (m.kind === 'data') return m.bytes;
   if (m.kind === 'sip') return m.sdp ? 600 : 400;
   if (m.kind === 'dhcp') return 300;
+  if (m.kind === 'syslog') return 60 + m.text.length + JSON.stringify(m.params).length;
   if (m.kind === 'vxlan') return 8 + frameBytes(m.frame) - 4;
   return 80;
 }

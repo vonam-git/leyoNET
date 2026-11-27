@@ -158,19 +158,21 @@ export function runCommand(host: HostNode, line: string) {
   }
 }
 
-/** «nmap [-sn] [-Pn] [-p Ports] <Ziel>»: Netzscanner in der Befehlszeile (muss installiert sein). */
+/** «nmap [-sn] [-Pn] [-sU] [-6] [-p Ports] <Ziel>»: Netzscanner in der Befehlszeile (muss installiert sein). */
 function scan(host: HostNode, args: string[]) {
   const ctx = host.ctx;
   if (!ctx.device()?.scanner) return ctx.print('scan.notInstalled');
   const targets: string[] = [];
   let discoverOnly = false;
   let skipDiscovery = false;
+  let udp = false;
   let ports: number[] | undefined;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '-sn') discoverOnly = true;
     else if (arg === '-Pn') skipDiscovery = true;
-    else if (arg === '-sS') continue;
+    else if (arg === '-sS' || arg === '-6') continue;
+    else if (arg === '-sU') udp = true;
     else if (/^-p/.test(arg)) {
       const parsed = parsePorts(arg === '-p' ? (args[++i] ?? '') : arg.slice(2));
       if ('error' in parsed) return ctx.print(`scan.${parsed.error}`);
@@ -180,14 +182,15 @@ function scan(host: HostNode, args: string[]) {
   }
   if (!targets.length || (discoverOnly && (skipDiscovery || ports))) return ctx.print('cmd.usage.nmap');
   const run = (target: string) => {
-    const error = host.scanner.start({ target, discoverOnly, skipDiscovery, ...(ports ? { ports } : {}) }, true);
+    const error = host.scanner.start({ target, discoverOnly, skipDiscovery, ...(udp ? { udp } : {}), ...(ports ? { ports } : {}) }, true);
     if (error) ctx.print(`scan.${error}`);
   };
   // Ein einzelner Name wird per DNS aufgelöst.
-  const name = targets.length === 1 && /[a-z]/i.test(targets[0]!) ? targets[0]! : null;
+  // IPv6-Adressen enthalten Buchstaben (a–f), aber immer einen Doppelpunkt.
+  const name = targets.length === 1 && /[a-z]/i.test(targets[0]!) && !targets[0]!.includes(':') ? targets[0]! : null;
   if (!name) return run(targets.join(','));
   host.resolver.resolveAddress(name, (result) => {
-    if (result.ok && result.type === 'A') run(result.ip);
+    if (result.ok) run(result.ip);
     else ctx.print('scan.unknownHost', { name });
   });
 }

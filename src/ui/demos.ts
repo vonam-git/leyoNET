@@ -30,7 +30,9 @@ export type DemoCheck =
   | { kind: 'macFlap'; device: string }
   | { kind: 'trace'; device: string }
   /** Telefongespräch endet mit guter Qualität («voip.ended.good»). */
-  | { kind: 'call'; device: string };
+  | { kind: 'call'; device: string }
+  /** Der Syslog-Server hat eine Meldung mit dieser MSGID erhalten. */
+  | { kind: 'syslog'; device: string; msgid: string };
 
 /**
  * Schritt einer geführten Demo. Den Text spricht der Avatar
@@ -450,6 +452,22 @@ export const DEMOS: readonly Demo[] = [
       { sim: true, pause: false, action: { at: 0, device: 'Team Rot: PC', command: 'ping 198.51.100.10' }, highlight: 'Zentrale' },
       { action: { at: 0, device: 'Zentrale', browse: 'http://203.0.113.10/' }, highlight: 'Team Blau: Webserver' },
       { action: { at: 0, device: 'Zentrale', command: 'ping 203.0.113.18' }, highlight: 'Team Gelb: Router' },
+    ],
+  },
+  {
+    id: 'syslog',
+    file: 'syslog.json',
+    topic: 'security',
+    layers: [4, 7],
+    actions: [{ at: 1000, device: 'PC Büro', command: 'ping 192.168.10.50' }],
+    check: { kind: 'syslog', device: 'Log-Server', msgid: 'SSHFAIL' },
+    until: 15_000,
+    tour: [
+      { sim: false, highlight: 'Log-Server', window: { device: 'Log-Server', tab: 'services' } },
+      { highlight: 'Router', window: { device: 'Router', tab: 'security' } },
+      { sim: true, pause: false, highlight: 'Angreifer' },
+      { highlight: 'Log-Server', window: { device: 'Log-Server', tab: 'services' } },
+      { highlight: 'Router' },
     ],
   },
   { id: 'vpn', file: 'vpn.json', topic: 'security', layers: [3, 4], actions: [{ at: 1000, device: 'PC Zürich', command: 'ping 192.168.2.20' }], check: { kind: 'ping', device: 'PC Zürich', min: 3 }, until: 10_000,

@@ -36,6 +36,8 @@ Rechner (du)  ──git push──►  GitHub: develop  ──Plesk Git (Pull)�
      | `MAX_SESSIONS` | optional, Standard `5000` | höchstens so viele Sessions gleichzeitig (Schutz vor Überlastung) |
      | `LEYONET_CHANNEL` | nur für die Testumgebung: `beta` | zeigt oben «Testversion» und hält Suchmaschinen fern (`noindex`, `robots.txt`) |
      | `MAX_STORAGE_MB` | optional, Standard `1024` | höchstens so viel Platz für Sessions und Rückmeldungen; Prüfungen sind ausgenommen |
+     | `MAX_CLASSES_PER_TENANT`, `MAX_EXAMS_PER_TENANT`, `MAX_EXAM_MB_PER_TENANT` | optional, Standard `100`, `40`, `200` | Mengengrenzen je Schule bzw. Lehrperson (Klassen, Prüfungen, MB Prüfungsdateien); der Hauptadmin ist ausgenommen |
+     | `MAX_SESSIONS_PER_CLASS` | optional, Standard `200` | höchstens so viele Sessions in einer Klasse |
      | `STATS_ORIGINS` | optional, Standard `https://leyonet.ch,https://www.leyonet.ch` | Adressen der Website, deren anonyme Besucherzählung dieser Server annimmt (Admin-Konsole → *Website und Downloads*). Auf beta leer setzen (`STATS_ORIGINS=` ohne Wert), dann zählt nur app.leyonet.ch |
      | `STATS_GITHUB_REPO` | optional, Standard `vonam-git/leyoNET`; `off` schaltet ab | Repository, dessen Download-Zähler die Admin-Konsole zeigt (öffentliche GitHub-Schnittstelle, höchstens einmal pro Stunde; der Server braucht dafür ausgehend HTTPS zu `api.github.com`) |
      | `ADMIN_MFA_RESET` | nur im Notfall: `1` | schaltet beim Start die Zwei-Faktor-Anmeldung des Hauptadmins aus (Handy und Wiederherstellungscodes verloren); danach Variable wieder entfernen und App neu starten |

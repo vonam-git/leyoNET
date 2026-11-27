@@ -13,6 +13,7 @@
   import { examMode } from '../state/exam.svelte';
   import { dialogs } from '../state/dialogs.svelte';
   import { api, ApiError, session } from '../state/session.svelte';
+  import { onActivity } from '../activity';
   import { FEATURES, FEATURE_GROUPS, PROFILE_LEVELS } from '../features';
   import { featureName } from '../labels';
   import { normalizePolicy, ui } from '../state/ui.svelte';
@@ -166,6 +167,8 @@
    */
   let lastInput = Date.now();
   const touched = () => (lastInput = Date.now());
+  // Arbeit im Editor (anderer Tab oder dieser Tab, während die Konsole verborgen ist) zählt auch.
+  $effect(() => onActivity(touched));
 
   async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
     try {
@@ -395,7 +398,13 @@
   async function createClass(event: SubmitEvent) {
     event.preventDefault();
     const days = Math.round(Number(classDays));
-    const created = await call<ClassInfo>('POST', 'classes', { label, ...(days >= 1 && days <= 180 ? { days } : {}) });
+    let created: ClassInfo;
+    try {
+      created = await call<ClassInfo>('POST', 'classes', { label, ...(days >= 1 && days <= 180 ? { days } : {}) });
+    } catch (error) {
+      notify('error', error instanceof ApiError && error.code === 'quotaExceeded' ? t('admin.quotaClasses') : t('admin.loadFailed'));
+      return;
+    }
     label = '';
     await refresh();
     notify('ok', t('admin.classCreated', { label: created.label, code: created.code }));
@@ -613,7 +622,7 @@
   });
 </script>
 
-<svelte:window onpointerdown={touched} onkeydown={touched} />
+<svelte:window onpointerdown={touched} onkeydown={touched} oninput={touched} onwheel={touched} />
 <div class="admin-page admin-look" class:gone={hidden}>
   {#if examMode.active || !ui.online || !token}
     <div class="login-wrap">

@@ -54,6 +54,15 @@ const MAX_FEEDBACK_TEXT = 2000;
 const MAX_SESSIONS = Math.max(1, Number(process.env.MAX_SESSIONS) || 5000);
 const MAX_STORAGE_BYTES = Math.max(1, Number(process.env.MAX_STORAGE_MB) || 1024) * 1024 * 1024;
 const MAX_FEEDBACK = 500;
+/**
+ * Mengengrenzen je Zugang (Schule oder Lehrperson; der Hauptadmin ist ausgenommen): So kann ein
+ * Zugangsschlüssel, der in falsche Hände gerät, den Speicher nicht mit Klassen oder Prüfungen füllen.
+ * Dazu eine Grenze für Sessions je Klasse (der Klassencode ist unter den Lernenden bekannt).
+ */
+const MAX_CLASSES_PER_TENANT = Math.max(1, Number(process.env.MAX_CLASSES_PER_TENANT) || 100);
+const MAX_EXAMS_PER_TENANT = Math.max(1, Number(process.env.MAX_EXAMS_PER_TENANT) || 40);
+const MAX_EXAM_MB_PER_TENANT = Math.max(1, Number(process.env.MAX_EXAM_MB_PER_TENANT) || 200);
+const MAX_SESSIONS_PER_CLASS = Math.max(1, Number(process.env.MAX_SESSIONS_PER_CLASS) || 200);
 /** Neue Sessions je Adresse und Minute (eine Klasse tritt auf einmal bei). */
 const NEW_SESSIONS_PER_MINUTE = 60;
 const ADMIN_TOKEN_HOURS = 8;
@@ -587,7 +596,7 @@ const IDENTIFY_MS = 12_000;
 const IDENTIFY_SECONDS = { min: 3, max: 15, standard: 7 };
 const TEACHER_EDIT_MS = 30_000;
 /** Simulierte Angriffe (laufen nur im Browser der Lernenden): erlaubte Arten, Ergebnis, Dauer. */
-const ATTACK_KINDS = ['arpSpoof', 'synFlood', 'portScan', 'sshGuess'];
+const ATTACK_KINDS = ['arpSpoof', 'synFlood', 'portScan', 'sshGuess', 'dhcpRogue'];
 const ATTACK_EFFECTS = ['effective', 'blocked', 'noTarget'];
 const ATTACK_MS = 45 * 60_000;
 let attackId = 0;
@@ -1240,6 +1249,25 @@ function seatFor(classCode, wanted) {
   return null;
 }
 
+/**
+ * Beenden-Code der Prüfung prüfen: PBKDF2-HMAC-SHA-256 mit Salz (RFC 8018), Format
+ * `pbkdf2-sha256$<Runden>$<Salz hex>$<Wert hex>` wie im Kern (src/core/tasks/exam.ts); ältere
+ * Dateien nur SHA-256. Asynchron im Thread-Pool, damit der Server nicht blockiert; die Runden
+ * sind gedeckelt, eine präparierte Datei kann den Server nicht beliebig lange rechnen lassen.
+ */
+const MAX_UNLOCK_ITERATIONS = 1_200_000;
+async function unlockMatches(given, wanted) {
+  const input = `leyonet-pruefung:${given}`;
+  const m = /^pbkdf2-sha256\$(\d{1,7})\$([0-9a-f]{16,64})\$([0-9a-f]{64})$/.exec(wanted);
+  if (m) {
+    const rounds = Number(m[1]);
+    if (rounds < 1 || rounds > MAX_UNLOCK_ITERATIONS) return false;
+    const derived = await new Promise((resolve, reject) => crypto.pbkdf2(input, Buffer.from(m[2], 'hex'), rounds, 32, 'sha256', (e, key) => (e ? reject(e) : resolve(key))));
+    return sameHash(derived.toString('hex'), m[3]);
+  }
+  return /^[0-9a-f]{64}$/.test(wanted) && sameHash(crypto.createHash('sha256').update(input).digest('hex'), wanted);
+}
+
 function classMessages(code, now = Date.now()) {
   const list = (messages.get(code) || []).filter((m) => now - m.time < MESSAGE_TTL_MS);
   messages.set(code, list);
@@ -1286,6 +1314,7 @@ async function api(req, res, url) {
         }
       }
       if (!fits(projectSize(body.project), 1)) return fail(res, 507, 'storageFull');
+      if (classCode && entries('sessions').filter((m) => m.classCode === classCode).length >= MAX_SESSIONS_PER_CLASS) return fail(res, 507, 'classFull');
       let code = newCode();
       while (indexes.sessions.has(code) || fs.existsSync(fileFor(dirs.sessions, code))) code = newCode();
       const now = Date.now();
@@ -1437,9 +1466,8 @@ async function api(req, res, url) {
       if (lock.lockedUntil !== 0) return json(res, 423, { error: 'unlockLocked', exam: seatStatus(exam, seat) });
       const wanted = exam.learner && exam.learner.tasks && exam.learner.tasks.exam && exam.learner.tasks.exam.unlock;
       const given = typeof body.code === 'string' ? body.code.replace(/\s+/g, '').toUpperCase().slice(0, 40) : '';
-      const hash = crypto.createHash('sha256').update(`leyonet-pruefung:${given}`).digest('hex');
       // Ohne Code in der Prüfungsdatei lässt sich der Modus nicht hier beenden (nur durch Ende der Prüfung).
-      if (typeof wanted === 'string' && given && sameHash(hash, wanted)) {
+      if (typeof wanted === 'string' && given && (await unlockMatches(given, wanted))) {
         delete seat.unlockFails;
         delete seat.unlockLast;
         saveExam(exam);
@@ -1606,8 +1634,22 @@ async function api(req, res, url) {
     const item = code && loadClass(code);
     if (!item || !verbundOf(item).enabled) return fail(res, 404, 'unknownClass');
     if (method === 'GET') {
-      const after = Number(new URL(req.url, 'http://x').searchParams.get('after')) || 0;
-      return json(res, 200, classMessages(code).filter((m) => m.id > after));
+      // Lesen nur mit einer eigenen Session der Klasse (Schreibrecht). Nachrichten an andere Standorte
+      // erscheinen ohne Betreff und Text (nur für die Funkspur auf der Karte); die Zentrale liest alles
+      // über die Admin-Konsole (`/api/admin/classes/<code>/messages`).
+      const q = new URL(req.url, 'http://x').searchParams;
+      const after = Number(q.get('after')) || 0;
+      const own = normalizeCode(q.get('session'));
+      const reader = own && loadSession(own);
+      if (!reader || reader.classCode !== code || !reader.site || !isWriter(reader, writerOf(req))) return fail(res, 403, 'notInClass');
+      const seat = reader.site.seat;
+      return json(
+        res,
+        200,
+        classMessages(code)
+          .filter((m) => m.id > after)
+          .map((m) => (m.to === seat || m.to === -1 || m.from === seat ? m : { id: m.id, time: m.time, from: m.from, fromLabel: m.fromLabel, to: m.to, hidden: true })),
+      );
     }
     if (method === 'POST') {
       const body = await readBody(req);
@@ -1863,13 +1905,13 @@ async function admin(req, res, parts, method) {
     const t = loadTenant(parts[1]);
     if (!t || !mine(t)) return fail(res, 404, 'unknownTenant');
     // Zwei-Faktor zurücksetzen (Handy verloren): Hauptadmin für alle, Schule für ihre Lehrpersonen.
-    if (parts[2] === 'mfa' && method === 'DELETE') {
+    if (parts[2] === 'mfa' && parts.length === 3 && method === 'DELETE') {
       const { mfa: _m, ...rest } = t.security || {};
       saveTenant({ ...t, security: rest });
       for (const [k, e] of tokens) if (e.tenant === t.id) tokens.delete(k);
       return json(res, 200, tenantView({ ...t, security: rest }));
     }
-    if (parts[2] === 'key' && method === 'POST') {
+    if (parts[2] === 'key' && parts.length === 3 && method === 'POST') {
       // Neuer Schlüssel: der alte gilt sofort nicht mehr, Anmeldungen damit enden.
       const secret = newTenantSecret();
       saveTenant({ ...t, secret: secretHash(secret) });
@@ -1933,7 +1975,7 @@ async function admin(req, res, parts, method) {
     if (parts.length === 1 && method === 'GET') {
       return json(res, 200, entries('feedback').sort((a, b) => b.created - a.created).map(({ size, ...f }) => f));
     }
-    const id = /^[0-9a-f-]{36}$/.test(parts[1] || '') ? parts[1] : null;
+    const id = parts.length === 2 && /^[0-9a-f-]{36}$/.test(parts[1] || '') ? parts[1] : null;
     const item = id && readJson(fileFor(dirs.feedback, id));
     if (!item) return fail(res, 404, 'notFound');
     if (method === 'GET') return json(res, 200, item);
@@ -1955,6 +1997,7 @@ async function admin(req, res, parts, method) {
       const body = await readBody(req);
       const label = typeof body.label === 'string' ? body.label.trim().slice(0, 40) : '';
       if (!label) return fail(res, 400, 'labelRequired');
+      if (who.role !== 'super' && list(dirs.classes).filter((c) => c.owner === who.tenant).length >= MAX_CLASSES_PER_TENANT) return fail(res, 507, 'quotaExceeded');
       const s = settings();
       let code = newCode();
       while (fs.existsSync(fileFor(dirs.classes, code))) code = newCode();
@@ -1970,6 +2013,8 @@ async function admin(req, res, parts, method) {
     const body = code && method !== 'GET' && method !== 'DELETE' ? await readBody(req) : {};
     const item = code && loadClass(code);
     if (!item || !canSee(who, item.owner)) return fail(res, 404, 'unknownClass');
+    // Nur bekannte Pfade: «classes/<code>/<beliebig>» wirkt nicht wie «classes/<code>».
+    if (parts.length > 3 || (parts.length === 3 && !['sessions', 'infra', 'status', 'messages'].includes(parts[2]))) return fail(res, 404, 'notFound');
     if (parts[2] === 'sessions' && method === 'GET') {
       const withProjects = new URL(req.url, 'http://x').searchParams.get('projects') === '1';
       const sessions = entries('sessions')
@@ -2010,6 +2055,10 @@ async function admin(req, res, parts, method) {
       const next = { ...item, verbund: { ...verbundOf(item), infra: body.project || null, infraUpdated: Date.now() } };
       writeJson(fileFor(dirs.classes, code), next);
       return json(res, 200, classView(next, entries('sessions')));
+    }
+    if (parts[2] === 'messages' && parts.length === 3 && method === 'GET') {
+      const after = Number(new URL(req.url, 'http://x').searchParams.get('after')) || 0;
+      return json(res, 200, classMessages(code).filter((m) => m.id > after));
     }
     // Status vom Dashboard der Lehrperson (berechnet in ihrem Browser), für die Karte der Lernenden.
     if (parts[2] === 'status' && method === 'POST') {
@@ -2089,6 +2138,8 @@ async function admin(req, res, parts, method) {
     // Zugänge sehen nur Sessions ihrer Klassen und Prüfungen, der Hauptadmin alle.
     const visible = item && (who.role === 'super' || (item.classCode && canSee(who, loadClass(item.classCode)?.owner)) || (item.exam && canSee(who, loadExam(item.exam.id)?.owner)));
     if (!visible) return fail(res, 404, 'unknownSession');
+    // Nur bekannte Pfade: «sessions/<code>/<beliebig>» wirkt nicht wie «sessions/<code>».
+    if (parts.length > 3 || (parts.length === 3 && !['identify', 'help', 'edit', 'attack'].includes(parts[2]))) return fail(res, 404, 'notFound');
     if (method === 'GET' && parts.length === 2) return json(res, 200, { code, project: item.project, classCode: item.classCode, site: item.site || null, updated: item.updated, connected: connected(code), locked: !!item.lock, help: helpOf(code) });
     // Klassen: Bildschirm der Lernenden kurz aufblinken lassen, Hilfe-Anfrage erledigen,
     // Session bearbeiten (solange sehen die Lernenden nur zu). Nie für Prüfungsplätze.
@@ -2141,7 +2192,7 @@ async function admin(req, res, parts, method) {
     }
     if (method === 'GET') return fail(res, 404, 'notFound');
     // Verlängern (nicht für Prüfungsplätze: die gelten so lange wie die Prüfung).
-    if (method === 'PATCH') {
+    if (method === 'PATCH' && parts.length === 2) {
       const body = await readBody(req, 1024);
       if (item.exam) return fail(res, 409, 'examSession');
       if (!(Number.isInteger(body.extendHours) && body.extendHours >= 1 && body.extendHours <= 24 * 30)) return fail(res, 400, 'badHours');
@@ -2151,7 +2202,7 @@ async function admin(req, res, parts, method) {
       store('sessions', code, { ...latest, expires });
       return json(res, 200, { code, expires });
     }
-    if (method === 'DELETE') {
+    if (method === 'DELETE' && parts.length === 2) {
       // Prüfungsabgaben nur mit der Prüfung löschen (nie versehentlich einzeln).
       if (item.exam) return fail(res, 409, 'examSession');
       leases.delete(code);
@@ -2174,6 +2225,11 @@ async function adminExams(req, res, parts, method, who) {
     if (!validProject(learner) || !info || typeof info.id !== 'string') return fail(res, 400, 'notAnExam');
     const label = typeof body.label === 'string' ? body.label.trim().slice(0, 60) : '';
     if (!label) return fail(res, 400, 'labelRequired');
+    if (who.role !== 'super') {
+      const own = list(dirs.exams).filter((e) => e.owner === who.tenant);
+      const bytes = own.reduce((sum, e) => sum + Buffer.byteLength(JSON.stringify(e)), 0) + Buffer.byteLength(JSON.stringify(learner));
+      if (own.length >= MAX_EXAMS_PER_TENANT || bytes > MAX_EXAM_MB_PER_TENANT * 1024 * 1024) return fail(res, 507, 'quotaExceeded');
+    }
     // Plätze: je Variante einer, bei nur einer Variante so viele wie gewünscht.
     const variants = Array.isArray(info.variants) ? info.variants.map((v) => String(v.id)) : null;
     const count = variants ? variants.length : Number.isInteger(body.seats) && body.seats >= 1 && body.seats <= MAX_EXAM_SEATS ? body.seats : 0;
@@ -2248,7 +2304,7 @@ async function adminExams(req, res, parts, method, who) {
     return json(res, 200, examSummary(exam, true));
   }
   // Gesperrten Platz wieder freigeben (Fehlversuche zurücksetzen).
-  if (parts[1] === 'seats' && parts[3] === 'unlock-reset' && method === 'POST') {
+  if (parts[1] === 'seats' && parts[3] === 'unlock-reset' && parts.length === 4 && method === 'POST') {
     const seat = exam.seats.find((s) => s.id === parts[2]);
     if (!seat) return fail(res, 404, 'unknownSeat');
     delete seat.unlockFails;
@@ -2256,14 +2312,14 @@ async function adminExams(req, res, parts, method, who) {
     saveExam(exam);
     return json(res, 200, examSummary(exam, true));
   }
-  if (parts[1] === 'start' && method === 'POST') {
+  if (parts[1] === 'start' && parts.length === 2 && method === 'POST') {
     if (exam.started) return fail(res, 409, 'alreadyStarted');
     exam.started = now;
     for (const s of exam.seats) s.until = now + (exam.minutes + (s.extra || 0)) * 60_000;
     saveExam(exam);
     return json(res, 200, examSummary(exam, true));
   }
-  if (parts[1] === 'end' && method === 'POST') {
+  if (parts[1] === 'end' && parts.length === 2 && method === 'POST') {
     if (!exam.started) return fail(res, 409, 'notStarted');
     for (const s of exam.seats) s.until = Math.min(s.until, now);
     // Der SEB-Schlüssel gilt nur, solange die Prüfung läuft.
@@ -2272,7 +2328,7 @@ async function adminExams(req, res, parts, method, who) {
     return json(res, 200, examSummary(exam, true));
   }
   // Nachteilsausgleich: Minuten für einen Platz dazugeben (vor dem Start oder später; ein abgegebener Platz öffnet wieder).
-  if (parts[1] === 'seats' && parts[3] === 'extra' && method === 'POST') {
+  if (parts[1] === 'seats' && parts[3] === 'extra' && parts.length === 4 && method === 'POST') {
     const seat = exam.seats.find((s) => s.id === parts[2]);
     if (!seat) return fail(res, 404, 'unknownSeat');
     const minutes = Number.isInteger(body.minutes) && Math.abs(body.minutes) <= MAX_EXAM_MINUTES && body.minutes !== 0 ? body.minutes : null;
@@ -2295,7 +2351,7 @@ async function adminExams(req, res, parts, method, who) {
   // Versehentlich abgegeben: Platz wieder öffnen, mit der Zeit, die ihm regulär noch bleibt
   // (Prüfungszeit plus Nachteilsausgleich ab Start). Ist sie schon um, braucht es «+ Minuten».
   // Das Gerät der Person lädt den abgegebenen Stand von selbst wieder (oder ein anderes mit dem Platz-Code).
-  if (parts[1] === 'seats' && parts[3] === 'reopen' && method === 'POST') {
+  if (parts[1] === 'seats' && parts[3] === 'reopen' && parts.length === 4 && method === 'POST') {
     const seat = exam.seats.find((s) => s.id === parts[2]);
     if (!seat) return fail(res, 404, 'unknownSeat');
     if (!exam.started || !seat.submitted) return fail(res, 409, 'notSubmitted');
@@ -2314,7 +2370,7 @@ async function adminExams(req, res, parts, method, who) {
     return json(res, 200, examSummary(exam, true));
   }
   // Platz freigeben: z.B. Browser abgestürzt, die Person arbeitet an einem anderen Gerät weiter.
-  if (parts[1] === 'seats' && parts[3] === 'release' && method === 'POST') {
+  if (parts[1] === 'seats' && parts[3] === 'release' && parts.length === 4 && method === 'POST') {
     const seat = exam.seats.find((s) => s.id === parts[2]);
     if (!seat) return fail(res, 404, 'unknownSeat');
     const known = entries('sessions').find((x) => x.exam && x.exam.id === exam.id && x.exam.seat === seat.id);
@@ -2346,7 +2402,7 @@ async function adminExams(req, res, parts, method, who) {
       }),
     });
   }
-  if (parts[1] === 'submissions' && method === 'GET') {
+  if (parts[1] === 'submissions' && parts.length === 2 && method === 'GET') {
     const key = exam.key ? decryptKey(exam.key) : null;
     const submissions = entries('sessions')
       .filter((s) => s.exam && s.exam.id === exam.id)

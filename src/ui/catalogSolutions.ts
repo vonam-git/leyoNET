@@ -50,7 +50,10 @@ import {
   setWlan,
   type Result,
   type Topology,
+  type VerbundSite,
+  verbundAddresses,
 } from '../core';
+import { CATALOG } from './catalog';
 import { LAB_ANSWERS, solveLab2, solveLab4, solveLab5, solveOspf, solveRip, solveRouting1Saved, solveRouting2, solveRouting3, solveSub1, solveSub2, solveSub3 } from './catalogM129';
 import { ADVANCED_ANSWERS, solveDatacenter, solveGuest, solveLoopback, solveVrf } from './catalogAdvanced';
 import { M145_ANSWERS, solveFaults, solveLag, solveMgmt, solveUe02, solveUe03, solveUe04, solveUe06, solveUe07, solveUe07b, solveUe08, solveUe09, solveUe10, solveUe11 } from './catalogM145';
@@ -219,6 +222,12 @@ export const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
     t = unwrap(applyVerbundAddresses(t, r, 1));
     return unwrap(setDhcpPool(t, r, 'LAN', { name: 'LAN', network: '192.168.50.0', mask: '255.255.255.0', gateway: '192.168.50.1', dns: '198.51.100.10' }));
   },
+  'verbund-nachbar-web': (t) => {
+    const r = byName(t, 'Standort-Router');
+    t = unwrap(applyVerbundAddresses(t, r, 1));
+    return unwrap(addPortForward(t, r, { protocol: 'tcp', port: 80, to: '192.168.50.80', toPort: 80 }));
+  },
+  'verbund-vpn': (t) => vpnSite(t, 1, 2),
   // Musterlösung: der Standort ohne eingebaute Fehler (Platz 1 wie im Test).
   'verbund-fehlersuche': () => verbundFaultSite(1),
   'port-forward': (t) => unwrap(addPortForward(t, byName(t, 'Heimrouter'), { protocol: 'tcp', port: 8080, to: '192.168.1.20', toPort: 80 })),
@@ -344,3 +353,26 @@ export const SOLUTIONS: Record<string, (t: Topology) => Topology> = {
   },
 };
 
+
+/** VPN-Standort auf Platz `seat` mit Tunnel zum Partner auf Platz `partner` (Schlüssel «verbund-geheim»). */
+function vpnSite(t: Topology, seat: number, partner: number): Topology {
+  const r = byName(t, 'Standort-Router');
+  t = unwrap(applyVerbundAddresses(t, r, seat));
+  return unwrap(addVpnTunnel(t, r, { name: `Platz ${partner}`, peer: verbundAddresses(partner).site, local: `10.10.${seat}.0/24`, remote: `10.10.${partner}.0/24`, key: 'verbund-geheim' }));
+}
+
+const CATALOG_BY_ID = (id: string, seat = 1): Topology => CATALOG.find((e) => e.id === id)!.build({ seat }).topology;
+
+/** Andere Standorte für die Musterlösungen der Verbund-Übungen (im Test neben Platz 1). */
+export const VERBUND_PEERS: Record<string, () => VerbundSite[]> = {
+  'verbund-nachbar-web': () => {
+    let t = CATALOG_BY_ID('verbund-webserver');
+    const r = byName(t, 'Standort-Router');
+    t = unwrap(applyVerbundAddresses(t, r, 2));
+    return [{ seat: 2, label: 'Nachbar', topology: unwrap(addPortForward(t, r, { protocol: 'tcp', port: 80, to: '192.168.50.80', toPort: 80 })) }];
+  },
+  'verbund-vpn': () => {
+    const partner = CATALOG_BY_ID('verbund-vpn', 2);
+    return [{ seat: 2, label: 'Partner', topology: vpnSite(partner, 2, 1) }];
+  },
+};

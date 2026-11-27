@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { addArea, configureHost, setDhcpServer } from '../model/topology';
 import { parseProject, serializeProject } from '../io/project';
 import { NetBuilder, unwrap } from '../sim/testing';
-import { buildExam, chooseVariant, hashCode, keyVariantFor, learnerGoals, parseExamKey, randomCode, serializeExamKey } from './exam';
+import { buildExam, chooseVariant, checkCode, hashCode, legacyHashCode, keyVariantFor, learnerGoals, parseExamKey, randomCode, serializeExamKey } from './exam';
 import { answerMatches, evaluateTasks, readTasks, scoreOf, type TaskSet } from './tasks';
 
 /** PC 1 — Router — PC 2, Router mit Bereich «LAN 1». */
@@ -90,7 +90,7 @@ describe('Prüfungsdatei und Schlüssel', () => {
       { label: 'Fragen', points: 2 },
       { label: 'Dokumentation', points: 6 },
     ]);
-    expect(learner.tasks.exam?.unlock).toBe(await hashCode('AB12CD'));
+    expect(await checkCode('AB12CD', learner.tasks.exam!.unlock!)).toBe(true);
     const parsed = parseProject(text);
     expect(parsed.ok && parsed.tasks?.exam?.id).toBe('P-TEST');
     // Schlüssel: Datei lesen, Variante zur Abgabe finden, auswerten.
@@ -132,8 +132,15 @@ describe('Prüfungsdatei und Schlüssel', () => {
   });
 
   it('Code: ohne verwechselbare Zeichen, Prüfwert unabhängig von Gross/klein', async () => {
-    expect(randomCode()).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
-    expect(await hashCode('k7q 2mx')).toBe(await hashCode('K7Q2MX'));
-    expect(await hashCode('K7Q2MX')).not.toBe(await hashCode('K7Q2MY'));
+    expect(randomCode()).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
+    const stored = await hashCode('K7Q2MX', 1000);
+    expect(stored).toMatch(/^pbkdf2-sha256\$1000\$[0-9a-f]{32}\$[0-9a-f]{64}$/);
+    expect(await checkCode('k7q 2mx', stored)).toBe(true);
+    expect(await checkCode('K7Q2MY', stored)).toBe(false);
+    // Gleicher Code, anderes Salz: anderer Prüfwert (keine vorberechneten Tabellen).
+    expect(await hashCode('K7Q2MX', 1000)).not.toBe(stored);
+    // Ältere Dateien (SHA-256 ohne Salz) lassen sich weiterhin beenden.
+    expect(await checkCode('K7Q2MX', await legacyHashCode('K7Q2MX'))).toBe(true);
+    expect(await checkCode('K7Q2MX', 'pbkdf2-sha256$9999999$0000000000000000$' + '0'.repeat(64))).toBe(false);
   });
 });

@@ -132,15 +132,32 @@ export function vrfOfIface(device: Device, id: number): string | undefined {
 export const VRF_NAME = /^[A-Za-z0-9_-]{1,32}$/;
 export const MAX_VRFS = 16;
 
-/** Längster Präfix gewinnt; bei Gleichstand die kleinere administrative Distanz, dann die zuerst eingetragene. */
+/**
+ * Auswahl der Route nach RFC 1812, Abschnitt 5.2.4.3: zuerst der längste Präfix («Longest Match»),
+ * bei Gleichstand die kleinere administrative Distanz (Vorrang der Quelle, z.B. statisch vor OSPF),
+ * dann die kleinere Metrik («Best Metric», nur innerhalb derselben Quelle vergleichbar),
+ * zuletzt die zuerst eingetragene.
+ */
 export function lookupRoute(routes: readonly Route[], dst: number): Route | undefined {
   let best: Route | undefined;
   for (const route of routes) {
     if (networkOf(dst, route.prefix) !== route.network) continue;
-    if (!best || route.prefix > best.prefix || (route.prefix === best.prefix && (route.distance ?? 0) < (best.distance ?? 0))) best = route;
+    if (!best || betterRoute(route, best)) best = route;
   }
   return best;
 }
+
+/** Ist `a` besser als `b` (gleiches Ziel vorausgesetzt)? */
+export function betterRoute(a: Route, b: Route): boolean {
+  if (a.prefix !== b.prefix) return a.prefix > b.prefix;
+  const da = a.distance ?? 0;
+  const db = b.distance ?? 0;
+  if (da !== db) return da < db;
+  return (a.metric ?? 0) < (b.metric ?? 0);
+}
+
+/** Administrative Distanz 255: Die Route wird nie verwendet (Quelle gilt als nicht vertrauenswürdig). */
+export const UNUSED_DISTANCE = 255;
 
 /**
  * Routingtabelle eines Geräts: direkt verbundene Netze, dazu bei Endgeräten
@@ -185,14 +202,16 @@ export function buildRoutes(device: Device, vrf?: string): { routes: Route[]; un
     const iface = gateway !== null ? (r.iface ?? lookupRoute(connected, gateway)?.iface) : r.iface;
     const ifaceOk = iface !== undefined && connected.some((c) => c.iface === iface);
     if (!ifaceOk) return void unusable.push(n);
-    routes.push({ network: networkOf(network, prefix), prefix, iface, via: gateway, kind: 'static', distance: ADMIN_DISTANCE.static });
+    const distance = r.distance ?? ADMIN_DISTANCE.static;
+    if (distance >= UNUSED_DISTANCE) return;
+    routes.push({ network: networkOf(network, prefix), prefix, iface, via: gateway, kind: 'static', distance, metric: 0 });
   });
   return { routes, unusable };
 }
 
 export interface RouteIssue {
   code: string;
-  field: 'network' | 'mask' | 'gateway' | 'iface';
+  field: 'network' | 'mask' | 'gateway' | 'iface' | 'distance';
   params?: Record<string, string | number>;
 }
 
@@ -214,8 +233,10 @@ export function checkStaticRoute(device: Device, route: StaticRoute, vrf?: strin
   }
   if (route.iface !== undefined && !logicalInterfaces(device).includes(route.iface)) return { code: 'unknownInterface', field: 'iface' };
   if (!route.gateway && route.iface === undefined) return { code: 'routeNeedsTarget', field: 'gateway' };
+  if (route.distance !== undefined && (!Number.isInteger(route.distance) || route.distance < 1 || route.distance > UNUSED_DISTANCE)) return { code: 'invalidDistance', field: 'distance' as RouteIssue['field'] };
   const existing = vrf ? (device.vrfs?.find((v) => v.name === vrf)?.routes ?? []) : (device.routes ?? []);
-  const duplicate = existing.some((r) => r.network === route.network && parseMask(r.mask) === prefix);
+  // Dasselbe Ziel ein zweites Mal nur als Reserve mit anderer Distanz (Floating Static Route).
+  const duplicate = existing.some((r) => r.network === route.network && parseMask(r.mask) === prefix && (r.distance ?? 1) === (route.distance ?? 1));
   if (duplicate) return { code: 'duplicateRoute', field: 'network', params: { net: `${route.network}/${prefix}` } };
   return null;
 }
@@ -226,5 +247,6 @@ export function normalizeRoute(route: StaticRoute): StaticRoute {
   const result: StaticRoute = { network: route.network.trim(), mask: maskToText(prefix) };
   if (route.gateway?.trim()) result.gateway = route.gateway.trim();
   if (route.iface !== undefined) result.iface = route.iface;
+  if (route.distance !== undefined && route.distance !== ADMIN_DISTANCE.static) result.distance = route.distance;
   return result;
 }

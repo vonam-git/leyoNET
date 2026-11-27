@@ -225,7 +225,7 @@ export const M129_SHEETS = [
         ],
         widths: [1.6, 4],
       },
-      { h: 'Zusatz (freiwillig): die Befehlszeile eines Routers' },
+      { h: 'Zusatz (optional): die Befehlszeile eines Routers' },
       { p: 'Echte Router werden oft auf der Befehlszeile eingerichtet (Doppelklick auf den Router). Die Befehle unten zeigen den Aufbau mit **anderen Beispieladressen** (10.0.0.0/8). Hilfe gibt es mit `?` oder der Taste Tab und mit **F1** in leyoNET. Befehle lassen sich abkürzen, z.B. `conf t`, `sh ip ro`, `int e0`, `wr`.' },
       {
         table: [
@@ -269,10 +269,11 @@ export const M129_SHEETS = [
               { label: 'Router3', name: 'r3_route', answer: '192.168.1.0/24, 192.168.2.0/30 und 192.168.3.0/24 über 172.16.12.94', wide: true },
             ],
           },
-          { h: 'Zusatz (freiwillig): dieselbe Konfiguration als Befehle' },
+          { h: 'Zusatz (optional): dieselbe Konfiguration als Befehle' },
           {
             question: {
               name: 'cmd_r1',
+              optional: true,
               lines: 4,
               text: 'Router1: Befehle für die Anschlüsse, die Route(n) und das Speichern.',
               answer: 'interface eth0, ip address 192.168.1.254/24; interface eth1, ip address 192.168.2.1/30; ip route 0.0.0.0/0 192.168.2.2; copy running-config startup-config',
@@ -281,6 +282,7 @@ export const M129_SHEETS = [
           {
             question: {
               name: 'cmd_r2',
+              optional: true,
               lines: 4,
               text: 'Router2: Befehle für die Anschlüsse, die Route(n) und das Speichern.',
               answer: 'interface eth0, ip address 192.168.3.254/24; interface eth1, ip address 192.168.2.2/30; interface eth2, ip address 172.16.12.94/28; ip route 192.168.1.0/24 192.168.2.1; ip route 0.0.0.0/0 172.16.12.81; copy running-config startup-config',
@@ -289,6 +291,7 @@ export const M129_SHEETS = [
           {
             question: {
               name: 'cmd_r3',
+              optional: true,
               lines: 4,
               text: 'Router3: Befehle für die Anschlüsse, die Route(n) und das Speichern.',
               answer: 'interface eth0, ip address 172.16.12.81/28; interface eth1, ip address 203.0.113.1/24; ip route 192.168.1.0/24 172.16.12.94; ip route 192.168.2.0/30 172.16.12.94; ip route 192.168.3.0/24 172.16.12.94; copy running-config startup-config',
@@ -336,7 +339,7 @@ export const M129_SHEETS = [
               { label: 'Router3: Anschluss mit NAT (Masquerade)', name: 'nat_if', answer: 'eth1 (zum Provider)', wide: true },
             ],
           },
-          { h: 'Zusatz (freiwillig): Befehlszeile' },
+          { h: 'Zusatz (optional): Befehlszeile' },
           {
             table: [
               ['Zweck', 'Beispiel (nicht dein Netz)'],
@@ -348,6 +351,7 @@ export const M129_SHEETS = [
           {
             question: {
               name: 'cmd_nat',
+              optional: true,
               lines: 3,
               text: 'Router3: Deine Befehle für die Standardroute, NAT und das Speichern.',
               answer: 'ip route 0.0.0.0/0 203.0.113.2; interface eth1, ip nat outside; copy running-config startup-config',
@@ -392,7 +396,7 @@ export const M129_SHEETS = [
         catalog: 'Statisches Routing – Auftrag 3: Verwaltungsnetz und SSH',
         blocks: [
           { p: 'Router werden selten an der Konsole eingerichtet, sondern über das Netz. Dafür bekommen sie einen eigenen Anschluss in einem **Verwaltungsnetz** 192.168.56.0/24. Verbinde die neuen Anschlüsse mit dem Switch Verwaltung und trage die Adressen im Reiter «Adressen» ein (Router1 eth2 .101, Router2 eth3 .102, Router3 eth2 .103, Admin-Notebook .10/24).' },
-          { h: 'Zusatz (freiwillig): Anmeldung per SSH' },
+          { h: 'Zusatz (optional): Anmeldung per SSH' },
           { p: 'Das Admin-Notebook kann sich per **SSH** auf der Befehlszeile der Router anmelden. Dafür braucht der Router einen Benutzer und eingeschaltetes SSH, beides auf der Befehlszeile.' },
           {
             table: [
@@ -406,8 +410,9 @@ export const M129_SHEETS = [
           {
             question: {
               name: 'cmd_ssh',
+              optional: true,
               lines: 4,
-              text: 'Freiwillig – deine Befehle für Router1: Anschluss ins Verwaltungsnetz, Benutzer admin, SSH, Speichern, und die Anmeldung vom Admin-Notebook.',
+              text: 'Deine Befehle für Router1: Anschluss ins Verwaltungsnetz, Benutzer admin, SSH, Speichern, und die Anmeldung vom Admin-Notebook.',
               answer: 'interface eth2, ip address 192.168.56.101/24; username admin password …; ip ssh; line vty, transport input ssh, login local; copy running-config startup-config; Admin-Notebook: ssh admin@192.168.56.101 (Router2: eth3 .102, Router3: eth2 .103)',
             },
           },
@@ -448,7 +453,7 @@ export const M129_SHEETS = [
     entries: ['m129-dyn-a1', 'm129-dyn-a2'],
     projects: ['M129_Dyn_A1', 'M129_Dyn_A2'],
     intro: [
-      { p: 'Dasselbe Netz wie beim statischen Routing. Alle Adressen sind schon eingerichtet, aber **kein Router hat eine Route**. Statt jede Route von Hand einzutragen, lässt du die Router ihre Netze selbst austauschen: mit einem **Routingprotokoll**.' },
+      { p: 'Dasselbe Netz wie beim statischen Routing. Alle Adressen sind schon eingerichtet, aber **kein Router hat eine Route**. Statt jede Route von Hand einzutragen, lässt du die Router ihre Netze selbst austauschen: mit einem **Routingprotokoll**. Du richtest es im **Fenster des Routers** ein: Router anklicken, «Erweitert …» (Taste E). Die **Befehlszeile** ist eine freiwillige Zusatzaufgabe.' },
       {
         table: [
           ['Netz', 'Adressbereich', 'Router', 'Adresse'],
@@ -465,15 +470,32 @@ export const M129_SHEETS = [
         table: [
           ['', 'RIP (Version 2)', 'OSPF'],
           ['Art', 'Distanzvektor: «Netz X ist n Sprünge entfernt»', 'Link-State: jeder Router kennt die ganze Karte des Netzes'],
-          ['Metrik', 'Anzahl Router (Hops), höchstens 15', 'Kosten, abhängig von der Bandbreite'],
+          ['Metrik', 'Anzahl Router (Hops), höchstens 15 (16 = unerreichbar)', 'Kosten je Anschluss (Standard 10), zusammengezählt'],
+          ['Administrative Distanz', '120', '110'],
           ['Updates', 'ganze Tabelle alle 30 Sekunden', 'Hello-Pakete, Änderungen sofort'],
           ['Einsatz', 'kleine, einfache Netze', 'grössere Netze, schnelle Umschaltung'],
           ['Kennzeichen in show ip route', 'R', 'O'],
         ],
         widths: [1.5, 2.3, 2.6],
       },
-      { p: 'Bei beiden gibst du mit **network** an, welche **eigenen, direkt angeschlossenen Netze** der Router ankündigen und auf welchen Anschlüssen er mit Nachbarn sprechen soll. Fremde Netze trägst du nicht ein: Die lernt der Router von den Nachbarn.' },
-      { p: 'Die Befehle unten zeigen den Aufbau mit **anderen Beispieladressen** (10.0.0.0/8). Die Befehle für dein Netz erarbeitest du selbst. Hilfe gibt es mit `?` oder Tab auf der Befehlszeile und mit **F1** in leyoNET.' },
+      { p: 'Bei beiden gibst du an, welche **eigenen, direkt angeschlossenen Netze** der Router ankündigen und auf welchen Anschlüssen er mit Nachbarn sprechen soll. Fremde Netze trägst du nicht ein: Die lernt der Router von den Nachbarn.' },
+      { h: 'Theorie: Metrik und administrative Distanz' },
+      { p: 'Die Routingtabelle zeigt bei jeder gelernten Route zwei Zahlen, z.B. **[120/2]**. Die erste ist die **administrative Distanz**: Wie sehr traut der Router dieser Quelle? Kleiner gewinnt (direkt 0, statisch 1, OSPF 110, RIP 120). Die zweite ist die **Metrik** des Protokolls: bei RIP die Hops, bei OSPF die Kosten. Der Router wählt nach RFC 1812: zuerst das genaueste Netz (längster Präfix), dann die kleinere Distanz, dann die kleinere Metrik.' },
+      { h: 'So geht es im Fenster des Routers' },
+      {
+        table: [
+          ['Zweck', 'Wo in leyoNET'],
+          ['Routingprotokoll wählen', 'Reiter «Routing»: Routing-Art «Dynamisch (OSPF, RIP, BGP)»'],
+          ['RIP einschalten', 'Reiter «Routing», Teil RIP: «RIP einschalten», dann «Eigene Netze eintragen» (Netze prüfen)'],
+          ['OSPF einschalten', 'Reiter «Routing», Teil OSPF: «OSPF einschalten», Netze mit Area 0'],
+          ['Standardroute weitergeben', 'Reiter «Routing», Teil OSPF: «Standardroute verteilen» (nur auf dem Router mit der Standardroute)'],
+          ['Kontrolle', 'Reiter «Routing» in der Simulation: Routingtabelle mit [AD/Metrik], Reiter «Zustand» (Nachbarn)'],
+          ['Speichern', 'Reiter «Allgemein»: «Konfiguration speichern»'],
+        ],
+        widths: [1.8, 4],
+      },
+      { h: 'Zusatz (optional): die Befehlszeile eines Routers' },
+      { p: 'Die Befehle unten zeigen den Aufbau mit **anderen Beispieladressen** (10.0.0.0/8). Hilfe gibt es mit `?` oder Tab auf der Befehlszeile und mit **F1** in leyoNET.' },
       {
         table: [
           ['Zweck', 'Beispiel (nicht dein Netz)'],
@@ -487,7 +509,7 @@ export const M129_SHEETS = [
         ],
         widths: [1.8, 4],
       },
-      { tip: 'Ein Routingprotokoll ersetzt nur die Routen, nicht die Adressen. Funktioniert etwas nicht, prüfe zuerst mit «show ip interface brief», ob alle Anschlüsse eine Adresse haben, und mit «ping», ob der direkte Nachbar antwortet.' },
+      { tip: 'Ein Routingprotokoll ersetzt nur die Routen, nicht die Adressen. Funktioniert etwas nicht, prüfe zuerst im Reiter «Adressen» (oder mit «show ip interface brief»), ob alle Anschlüsse eine Adresse haben, und mit einem Ping, ob der direkte Nachbar antwortet.' },
     ],
     sections: [
       {
@@ -496,7 +518,7 @@ export const M129_SHEETS = [
         stars: 3,
         catalog: 'Dynamisches Routing – Auftrag 1: Automatisch routen mit RIP',
         blocks: [
-          { p: 'Schalte auf allen drei Routern **RIP** ein und kündige die eigenen Netze an. Das Provider-Netz 203.0.113.0/24 gehört nicht dazu. Prüfe danach die Routingtabellen und speichere die Konfiguration.' },
+          { p: 'Schalte auf allen drei Routern im Fenster (Reiter «Routing») **RIP** ein und kündige die eigenen Netze an. Das Provider-Netz 203.0.113.0/24 gehört nicht dazu. Prüfe danach in der Simulation die Routingtabellen und speichere die Konfiguration jedes Routers (Reiter «Allgemein»).' },
           { h: 'Planen: Welche Netze kündigt jeder Router an?' },
           {
             fields: [
@@ -505,10 +527,18 @@ export const M129_SHEETS = [
               { label: 'Router3', name: 'rip_r3', answer: '172.16.12.80/28', wide: true },
             ],
           },
-          { h: 'Deine Befehle (selbst erarbeitet)' },
+          { h: 'Kontrolle in der Routingtabelle (Reiter «Routing», Simulation läuft)' },
+          {
+            fields: [
+              { label: 'R1: Next Hop zu LAN3', name: 'rip_nh', answer: '192.168.2.2' },
+              { label: 'R3: [AD/Metrik] zu LAN1', name: 'rip_hops', answer: '[120/2]: Distanz 120 (RIP), 2 Hops' },
+            ],
+          },
+          { h: 'Zusatz (optional): dieselbe Konfiguration als Befehle' },
           {
             question: {
               name: 'rip_cmd_r1',
+              optional: true,
               lines: 3,
               text: 'Router1:',
               answer: 'configure terminal; router rip; version 2; network 192.168.1.0/24; network 192.168.2.0/30; end; copy running-config startup-config',
@@ -517,6 +547,7 @@ export const M129_SHEETS = [
           {
             question: {
               name: 'rip_cmd_r2',
+              optional: true,
               lines: 3,
               text: 'Router2:',
               answer: 'configure terminal; router rip; version 2; network 192.168.2.0/30; network 192.168.3.0/24; network 172.16.12.80/28; end; copy running-config startup-config',
@@ -525,17 +556,11 @@ export const M129_SHEETS = [
           {
             question: {
               name: 'rip_cmd_r3',
+              optional: true,
               lines: 3,
               text: 'Router3:',
               answer: 'configure terminal; router rip; version 2; network 172.16.12.80/28; end; copy running-config startup-config',
             },
-          },
-          { h: 'Kontrolle mit «show ip route»' },
-          {
-            fields: [
-              { label: 'R1: Next Hop zu LAN3', name: 'rip_nh', answer: '192.168.2.2' },
-              { label: 'R3: Hops zu LAN1', name: 'rip_hops', answer: '2' },
-            ],
           },
           {
             question: {
@@ -554,11 +579,20 @@ export const M129_SHEETS = [
         stars: 4,
         catalog: 'Dynamisches Routing – Auftrag 2: OSPF mit Standardroute',
         blocks: [
-          { p: 'Router1 und Router2 haben wieder keine Routen. Router3 hat bereits eine **Standardroute zum Provider** (203.0.113.2) und NAT auf eth1. Richte **OSPF** in der Area 0 ein. Router3 soll seine Standardroute an die anderen Router weitergeben, damit alle LANs ins Internet kommen.' },
-          { h: 'Deine Befehle (selbst erarbeitet)' },
+          { p: 'Router1 und Router2 haben wieder keine Routen. Router3 hat bereits eine **Standardroute zum Provider** (203.0.113.2) und NAT auf eth1. Richte im Fenster der Router (Reiter «Routing») **OSPF** in der Area 0 ein. Router3 soll seine Standardroute an die anderen Router weitergeben («Standardroute verteilen»), damit alle LANs ins Internet kommen. Speichere zum Schluss jede Konfiguration.' },
+          { h: 'Planen: Welche Netze nimmt jeder Router in die Area 0?' },
+          {
+            fields: [
+              { label: 'Router1', name: 'ospf_r1', answer: '192.168.1.0/24, 192.168.2.0/30', wide: true },
+              { label: 'Router2', name: 'ospf_r2', answer: '192.168.2.0/30, 192.168.3.0/24, 172.16.12.80/28', wide: true },
+              { label: 'Router3', name: 'ospf_r3', answer: '172.16.12.80/28, dazu «Standardroute verteilen»', wide: true },
+            ],
+          },
+          { h: 'Zusatz (optional): dieselbe Konfiguration als Befehle' },
           {
             question: {
               name: 'ospf_cmd_r1',
+              optional: true,
               lines: 3,
               text: 'Router1:',
               answer: 'configure terminal; router ospf; network 192.168.1.0/24 area 0; network 192.168.2.0/30 area 0; end; copy running-config startup-config',
@@ -567,6 +601,7 @@ export const M129_SHEETS = [
           {
             question: {
               name: 'ospf_cmd_r2',
+              optional: true,
               lines: 3,
               text: 'Router2:',
               answer: 'configure terminal; router ospf; network 192.168.2.0/30 area 0; network 192.168.3.0/24 area 0; network 172.16.12.80/28 area 0; end; copy running-config startup-config',
@@ -575,6 +610,7 @@ export const M129_SHEETS = [
           {
             question: {
               name: 'ospf_cmd_r3',
+              optional: true,
               lines: 3,
               text: 'Router3:',
               answer: 'configure terminal; router ospf; network 172.16.12.80/28 area 0; default-information originate; end; copy running-config startup-config',
@@ -585,6 +621,7 @@ export const M129_SHEETS = [
             fields: [
               { label: 'Router2: OSPF-Nachbarn', name: 'ospf_nb', answer: '2 (Router1 und Router3)', wide: true },
               { label: 'Router1: Code Standardroute', name: 'ospf_def', answer: 'O (von OSPF gelernt)', wide: true },
+              { label: 'Router1: [AD/Metrik] zu LAN3', name: 'ospf_metric', answer: '[110/20]: Distanz 110 (OSPF), Kosten 10 + 10', wide: true },
               { label: 'Absender am Webserver', name: 'ospf_src', answer: '203.0.113.1', wide: true },
             ],
           },

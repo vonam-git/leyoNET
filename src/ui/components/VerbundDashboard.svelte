@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Simulation, federate, parseProject, probeSites, siteName, type Topology } from '../../core';
+  import { Simulation, federate, parseProject, probeSites, siteName, type AttackEffect, type AttackKind, type Topology } from '../../core';
   import { locale, t } from '../../i18n';
   import { api } from '../state/session.svelte';
   import type { VerbundMessage } from '../state/verbund.svelte';
@@ -19,6 +19,8 @@
     progress: { goals: number; total: number; faults?: { fixed: number; total: number } } | null;
     connected: boolean;
     help?: number | null;
+    /** Sicherheits-Szenario der Lehrperson: Angriff und seine Wirkung (vom Browser der Lernenden gemeldet). */
+    attack?: { kind: AttackKind; effect: AttackEffect | null } | null;
     project?: unknown;
   }
   let {
@@ -39,7 +41,10 @@
   const MESSAGES_MS = 6_000;
 
   let view = $state<'map' | 'tiles' | 'both'>('both');
-  let sites = $state<(MapSite & { code: string })[]>([]);
+  let sites = $state<(MapSite & { code: string; attack?: { kind: AttackKind; effect: AttackEffect | null } | null })[]>([]);
+  const attacked = $derived(sites.filter((s) => s.attack));
+  const defended = $derived(attacked.filter((s) => s.attack?.effect === 'blocked').length);
+  const attackSeen = new Map<number, string>();
   let events = $state<{ id: number; time: number; text: string; kind: string }[]>([]);
   let flights = $state<Flight[]>([]);
   let messages = $state<VerbundMessage[]>([]);
@@ -98,7 +103,7 @@
           let level: MapSite['level'] = p?.level ?? (fed?.sites.find((s) => s.seat === m.site.seat)?.uplink ? 'connected' : 'offline');
           if ((level === 'online' || level === 'services') && total > 0 && goals === total) level = 'done';
           const faults = m.progress?.faults;
-          return { seat: m.site.seat, code: m.code, name: siteName(m.site.seat, m.site.label), level, goals, total, present: m.connected, help: !!m.help, ...(faults ? { faults } : {}) };
+          return { seat: m.site.seat, code: m.code, name: siteName(m.site.seat, m.site.label), level, goals, total, present: m.connected, help: !!m.help, attack: m.attack ?? null, ...(faults ? { faults } : {}) };
         })
         .sort((a, b) => a.seat - b.seat);
       const first = previous.size === 0;
@@ -106,6 +111,11 @@
         if (s.help && !helpSeen.has(s.seat)) event(t('classLive.help.event', { name: s.name }), 'help');
         if (s.help) helpSeen.add(s.seat);
         else helpSeen.delete(s.seat);
+        // Angriff: abgewehrt bzw. wirkt wieder (nur Wechsel melden).
+        const effect = s.attack?.effect ?? '';
+        if (effect && attackSeen.get(s.seat) !== effect && (effect === 'blocked' || attackSeen.has(s.seat))) event(t(effect === 'blocked' ? 'verbund.dash.attackBlocked' : 'verbund.dash.attackEffective', { name: s.name, kind: t(`attack.kind.${s.attack!.kind}`) }), effect === 'blocked' ? 'up' : 'down');
+        if (effect) attackSeen.set(s.seat, effect);
+        else attackSeen.delete(s.seat);
         const before = previous.get(s.seat);
         if (before !== undefined && before !== s.level) event(t(rank[s.level] > rank[before] ? 'verbund.dash.up' : 'verbund.dash.down', { name: s.name, level: t(`verbund.level.${s.level}`) }), rank[s.level] > rank[before] ? 'up' : 'down');
         if (before === undefined && !first) event(t('verbund.dash.joined', { name: s.name }), 'join');
@@ -128,13 +138,13 @@
     polling = true;
     try {
       const after = messages.at(-1)?.id ?? 0;
-      const fresh = (await api<VerbundMessage[]>('GET', `classes/${encodeURIComponent(classCode)}/messages?after=${after}`)).filter((m) => m.id > (messages.at(-1)?.id ?? 0));
+      const fresh = (await call<VerbundMessage[]>('GET', `classes/${encodeURIComponent(classCode)}/messages?after=${after}`)).filter((m) => m.id > (messages.at(-1)?.id ?? 0));
       if (!fresh.length) return;
       messages = [...messages, ...fresh].slice(-100);
       for (const m of fresh) {
         const from = siteName(m.from, m.fromLabel);
         const to = m.to === 0 ? t('verbund.hub') : (sites.find((s) => s.seat === m.to)?.name ?? siteName(m.to));
-        event(t('verbund.dash.message', { from, to, subject: m.subject }), 'message');
+        event(t('verbund.dash.message', { from, to, subject: m.subject ?? '' }), 'message');
         flights = [...flights, { id: m.id, from: m.from, to: m.to }].slice(-20);
       }
     } catch {
@@ -195,6 +205,7 @@
       <div class="counter svc"><strong>{counts.services}</strong><span>{t('verbund.level.services')}</span></div>
       <div class="counter gold"><strong>{counts.done}</strong><span>{t('verbund.level.done')}</span></div>
       <div class="counter helpc" class:active={counts.help > 0}><strong>{counts.help}</strong><span>{t('classLive.help.pill')}</span></div>
+      {#if attacked.length}<div class="counter attackc" class:active={defended < attacked.length}><strong>{defended}/{attacked.length}</strong><span>{t('verbund.dash.defended')}</span></div>{/if}
       <div class="counter"><strong>{counts.total}</strong><span>{t('verbund.dash.sites')}</span></div>
     </div>
     <div class="tools">
@@ -230,6 +241,7 @@
                 <b aria-hidden="true">{s.faults.fixed}/{s.faults.total}</b>
               </span>
             {:else if s.total}<span class="tile-goals">{t('verbund.goals', { n: s.goals ?? 0, total: s.total })}</span>{/if}
+            {#if s.attack}<span class="tile-attack {s.attack.effect ?? 'pending'}" title={t(`attack.kind.${s.attack.kind}`)}>{s.attack.effect === 'blocked' ? '🛡' : '⚠'} {t(`attack.admin.state.${s.attack.effect ?? 'pending'}`)}</span>{/if}
             {#if s.present}<span class="tile-present" title={t('verbund.dash.present')}>●</span>{/if}
           </button>
         {:else}
@@ -587,5 +599,19 @@
     .spin {
       animation: none;
     }
+  }
+  .tile-attack {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #b45309;
+  }
+  .tile-attack.effective {
+    color: #b91c1c;
+  }
+  .tile-attack.blocked {
+    color: #15803d;
+  }
+  .counter.attackc.active strong {
+    color: #f59e0b;
   }
 </style>

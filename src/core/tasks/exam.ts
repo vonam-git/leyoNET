@@ -6,7 +6,9 @@
 //
 // Die Prüfungsdatei sperrt in leyoNET Katalog, Aufgabeneditor, Generator und
 // Auswertung, bis die Lehrperson den Prüfungsmodus mit ihrem Code beendet.
-// Gespeichert wird nur ein Prüfwert (SHA-256) des Codes, nicht der Code.
+// Gespeichert wird nur ein Prüfwert des Codes, nicht der Code: PBKDF2-HMAC-SHA-256 mit Salz
+// (RFC 8018), damit sich der Code aus der Datei nicht in kurzer Zeit erraten lässt. Ältere Dateien
+// mit einfachem SHA-256-Prüfwert lassen sich weiterhin beenden.
 
 import { emptyTopology } from '../model/topology';
 import type { Topology } from '../model/types';
@@ -41,7 +43,7 @@ export interface ExamInfo {
   variant?: string;
   /** Varianten zur Auswahl; nach der Wahl entfernt. */
   variants?: ExamVariant[];
-  /** SHA-256 (hex) des Codes, mit dem die Lehrperson den Prüfungsmodus beendet. */
+  /** Prüfwert des Codes, mit dem die Lehrperson den Prüfungsmodus beendet: `pbkdf2-sha256$<Runden>$<Salz>$<Wert>` (hex), in älteren Dateien nur SHA-256 (hex). */
   unlock?: string;
   /** Vorgesehene Dauer in Minuten (nur Anzeige). */
   minutes?: number;
@@ -200,12 +202,19 @@ const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 /** Web Crypto und TextEncoder (Browser und Node.js); der Kern kennt die DOM-Typen nicht. */
 const platform = globalThis as unknown as {
-  crypto: { getRandomValues(a: Uint8Array): Uint8Array; subtle: { digest(algorithm: string, data: Uint8Array): Promise<ArrayBuffer> } };
+  crypto: {
+    getRandomValues(a: Uint8Array): Uint8Array;
+    subtle: {
+      digest(algorithm: string, data: Uint8Array): Promise<ArrayBuffer>;
+      importKey(format: 'raw', key: Uint8Array, algorithm: string, extractable: false, usages: string[]): Promise<unknown>;
+      deriveBits(algorithm: { name: 'PBKDF2'; hash: string; salt: Uint8Array; iterations: number }, key: unknown, length: number): Promise<ArrayBuffer>;
+    };
+  };
   TextEncoder: new () => { encode(text: string): Uint8Array };
 };
 
 /** Zufälliger Code ohne verwechselbare Zeichen, z.B. «K7Q2MX». */
-export function randomCode(length = 6): string {
+export function randomCode(length = 8): string {
   const bytes = new Uint8Array(length);
   platform.crypto.getRandomValues(bytes);
   return [...bytes].map((b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
@@ -216,11 +225,40 @@ export function randomExamId(): string {
   return `P-${randomCode(8)}`;
 }
 
-/** Prüfwert des Codes (SHA-256, hex); Gross-/Kleinschreibung und Leerzeichen egal. */
-export async function hashCode(code: string): Promise<string> {
-  const data = new platform.TextEncoder().encode(`leyonet-pruefung:${code.replace(/\s+/g, '').toUpperCase()}`);
-  const digest = await platform.crypto.subtle.digest('SHA-256', data);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+const hex = (bytes: Uint8Array) => [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+const fromHex = (text: string) => new Uint8Array((text.match(/../g) ?? []).map((h) => parseInt(h, 16)));
+const normal = (code: string) => code.replace(/\s+/g, '').toUpperCase();
+
+/** Runden für PBKDF2-HMAC-SHA-256 (Empfehlung von OWASP); beim Prüfen höchstens das Doppelte. */
+export const CODE_ITERATIONS = 600_000;
+const MAX_CODE_ITERATIONS = 2 * CODE_ITERATIONS;
+
+async function pbkdf2(code: string, salt: Uint8Array, iterations: number): Promise<string> {
+  const key = await platform.crypto.subtle.importKey('raw', new platform.TextEncoder().encode(`leyonet-pruefung:${normal(code)}`), 'PBKDF2', false, ['deriveBits']);
+  return hex(new Uint8Array(await platform.crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, key, 256)));
+}
+
+/** Alter Prüfwert (SHA-256, hex) ohne Salz: nur noch zum Prüfen älterer Dateien. */
+export async function legacyHashCode(code: string): Promise<string> {
+  const digest = await platform.crypto.subtle.digest('SHA-256', new platform.TextEncoder().encode(`leyonet-pruefung:${normal(code)}`));
+  return hex(new Uint8Array(digest));
+}
+
+/** Prüfwert des Codes (PBKDF2 mit zufälligem Salz); Gross-/Kleinschreibung und Leerzeichen egal. */
+export async function hashCode(code: string, iterations = CODE_ITERATIONS): Promise<string> {
+  const salt = platform.crypto.getRandomValues(new Uint8Array(16));
+  return `pbkdf2-sha256$${iterations}$${hex(salt)}$${await pbkdf2(code, salt, iterations)}`;
+}
+
+/** Stimmt der Code zum Prüfwert (neues oder altes Format)? */
+export async function checkCode(code: string, stored: string): Promise<boolean> {
+  const m = /^pbkdf2-sha256\$(\d{1,7})\$([0-9a-f]{16,64})\$([0-9a-f]{64})$/.exec(stored);
+  if (m) {
+    const iterations = Number(m[1]);
+    if (iterations < 1 || iterations > MAX_CODE_ITERATIONS) return false;
+    return (await pbkdf2(code, fromHex(m[2]!), iterations)) === m[3];
+  }
+  return /^[0-9a-f]{64}$/.test(stored) && (await legacyHashCode(code)) === stored;
 }
 
 // --- Dateien ------------------------------------------------------------------------
@@ -294,7 +332,7 @@ export function readExamInfo(
         )
       : invalid(path);
   const minutes = e.minutes === undefined ? undefined : typeof e.minutes === 'number' && Number.isInteger(e.minutes) && e.minutes > 0 && e.minutes <= MAX_EXAM_MINUTES ? e.minutes : invalid('tasks.exam.minutes');
-  const unlock = e.unlock === undefined ? undefined : typeof e.unlock === 'string' && /^[0-9a-f]{64}$/.test(e.unlock) ? e.unlock : invalid('tasks.exam.unlock');
+  const unlock = e.unlock === undefined ? undefined : typeof e.unlock === 'string' && /^([0-9a-f]{64}|pbkdf2-sha256\$\d{1,7}\$[0-9a-f]{16,64}\$[0-9a-f]{64})$/.test(e.unlock) ? e.unlock : invalid('tasks.exam.unlock');
   const variants =
     e.variants === undefined
       ? undefined

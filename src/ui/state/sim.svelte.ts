@@ -189,8 +189,13 @@ class SimStore {
     this.#record((sim) => sim.runCommand(deviceId, line));
   }
 
-  ping(deviceId: string, target: string, vrf?: string) {
-    this.#record((sim) => sim.ping(deviceId, target, 1, vrf));
+  ping(deviceId: string, target: string, vrf?: string, options: { count?: number; source?: string } = {}) {
+    this.#record((sim) => sim.ping(deviceId, target, 1, vrf, options));
+  }
+
+  /** Traceroute aus der Befehlszeile eines Routers. */
+  traceroute(deviceId: string, target: string, vrf?: string) {
+    this.#record((sim) => sim.traceroute(deviceId, target, 1, vrf));
   }
 
   /** Strg+C in der Befehlszeile. */

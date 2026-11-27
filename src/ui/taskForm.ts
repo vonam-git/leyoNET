@@ -65,6 +65,7 @@ export const CHECK_FIELDS: Record<Check['type'], FieldSpec[]> = {
     { key: 'state', kind: 'choice', optional: true, label: 'portState', options: PORT_CHECK_STATES },
   ],
   resist: [{ key: 'attack', kind: 'choice', options: ATTACK_KINDS }],
+  logged: [{ key: 'attack', kind: 'choice', options: ATTACK_KINDS }],
   packetSeen: [
     { key: 'protocol', kind: 'protocol' },
     { key: 'from', kind: 'device', optional: true, label: 'fromOptional' },
@@ -99,6 +100,8 @@ export const CHECK_FIELDS: Record<Check['type'], FieldSpec[]> = {
     { key: 'maxLoss', kind: 'number', optional: true },
   ],
   verbundSite: [{ key: 'level', kind: 'choice', optional: true, label: 'verbundLevel', options: ['online', 'services'] }],
+  verbundWeb: [{ key: 'from', kind: 'device' }],
+  verbundVpn: [{ key: 'from', kind: 'device' }],
   groupLeases: [
     { key: 'device', kind: 'device' },
     { key: 'min', kind: 'number', optional: true },

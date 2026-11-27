@@ -66,6 +66,8 @@ export const FEATURES: readonly FeatureSpec[] = [
   f('net.cgnat', 'network', 4),
   f('net.firewall', 'network', 3),
   f('net.acl', 'network', 4),
+  f('net.l2security', 'network', 4),
+  f('net.syslog', 'network', 4),
   f('net.loopback', 'network', 3),
   f('net.lag', 'network', 4),
   f('net.vrf', 'network', 5),
@@ -159,6 +161,8 @@ export function usedFeatures(t: Topology): string[] {
     if (d.dsLite || d.aftr) used.add('net.dsLite');
     if (d.firewall && d.type !== 'firewall') used.add('net.firewall');
     if (d.acls?.length) used.add('net.acl');
+    if (d.dhcpSnooping || d.interfaces.some((i) => i.portSecurity || i.dhcpTrusted)) used.add('net.l2security');
+    if (d.syslog || d.syslogServer) used.add('net.syslog');
     if (d.loopbacks?.length) used.add('net.loopback');
     if (d.vrfs?.length) used.add('net.vrf');
     if (d.vxlan) used.add('net.vxlan');

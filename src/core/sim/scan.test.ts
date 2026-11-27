@@ -204,3 +204,104 @@ describe('Prüfbaustein «port»', () => {
     for (const bad of [{ port: 0 }, { port: 70000 }, { port: 1.5 }, {}, { port: 80, state: 'x' }]) expect(() => goal({ type: 'port', from: 'a', to: 'b', ...bad })).toThrow();
   });
 });
+
+describe('Netzscanner: UDP und IPv6', () => {
+  it('UDP: Antwort = offen, «Port unreachable» = geschlossen, keine Antwort = offen oder gefiltert', () => {
+    const t = example('dns');
+    const sim = new Simulation(t);
+    sim.runUntil(5000);
+    expect(sim.scan(id(t, 'PC 1'), { target: '192.168.10.2', udp: true, ports: [53, 69, 514, 5201] })).toBeNull();
+    sim.runUntil(30_000);
+    const ports = sim.getDeviceState(id(t, 'PC 1')).scan!.hosts[0]!.ports;
+    expect(ports.map((p) => [p.port, p.protocol, p.state, p.service])).toEqual([
+      [53, 'udp', 'open', 'domain'],
+      [69, 'udp', 'closed', 'tftp'],
+      [514, 'udp', 'closed', 'syslog'],
+      [5201, 'udp', 'openFiltered', 'iperf'],
+    ]);
+    // Auf der Leitung: ICMP Typ 3 Code 3.
+    const icmp = sim.getPacketLog().find((e) => e.frame.payload.kind === 'ipv4' && e.frame.payload.payload.kind === 'icmp' && e.frame.payload.payload.code === 'port');
+    expect(icmp).toBeDefined();
+  });
+
+  it('nmap -sU in der Befehlszeile', () => {
+    const t = setScannerOn(example('dns'), 'PC 1');
+    const sim = new Simulation(t);
+    sim.runUntil(5000);
+    sim.runCommand(id(t, 'PC 1'), 'nmap -sU -p 53,69 192.168.10.2');
+    sim.runUntil(30_000);
+    const lines = sim.getDeviceState(id(t, 'PC 1')).console;
+    expect(lines.some((l) => l.code === 'scan.port' && String(l.params?.port).startsWith('53/udp'))).toBe(true);
+    expect(lines.some((l) => l.code === 'scan.closed')).toBe(true);
+  });
+
+  it('IPv6-Ziele: Adresse, Bereich in der letzten Gruppe und kleine Netze', () => {
+    expect(parseTargets('2001:db8::10')).toEqual({ ips: ['2001:db8::10'] });
+    expect(parseTargets('2001:db8::a-c')).toEqual({ ips: ['2001:db8::a', '2001:db8::b', '2001:db8::c'] });
+    expect('ips' in parseTargets('2001:db8::/120') && (parseTargets('2001:db8::/120') as { ips: string[] }).ips.length).toBe(256);
+    expect(parseTargets('2001:db8::/64')).toEqual({ error: 'tooManyHosts' });
+    expect(parseTargets('2001:db8::zz')).toEqual({ error: 'badTarget' });
+  });
+
+  it('IPv6: findet Geräte per ICMPv6-Echo und prüft TCP und UDP', () => {
+    const t = example('ipv6-dienste');
+    const sim = new Simulation(t);
+    sim.runUntil(8000);
+    const pc = id(t, 'PC 1');
+    expect(sim.scan(pc, { target: '2001:db8:b::80, 2001:db8:b::81', ports: [22, 80] })).toBeNull();
+    sim.runUntil(30_000);
+    const scan = sim.getDeviceState(pc).scan!;
+    expect(scan.hosts.map((h) => [h.ip, h.via])).toEqual([['2001:db8:b::80', 'icmp']]);
+    expect(scan.hosts[0]!.hops).toBe(1);
+    expect(scan.hosts[0]!.ports.map((p) => [p.port, p.state])).toEqual([
+      [22, 'closed'],
+      [80, 'open'],
+    ]);
+    expect(sim.scan(pc, { target: '2001:db8:a::53', udp: true, ports: [53, 69] })).toBeNull();
+    sim.runUntil(60_000);
+    expect(sim.getDeviceState(pc).scan!.hosts[0]!.ports.map((p) => [p.port, p.state])).toEqual([
+      [53, 'open'],
+      [69, 'closed'],
+    ]);
+  });
+});
+
+function setScannerOn(t: Topology, name: string): Topology {
+  const r = setScanner(t, id(t, name), true);
+  if (!r.ok) throw new Error(r.error.code);
+  return r.value;
+}
+
+describe('Router-Befehlszeile: ping mit Optionen und traceroute', () => {
+  it('ping repeat und source, traceroute zeigt die Router auf dem Weg', async () => {
+    const { execute, startSession } = await import('../cli/cli');
+    const t = example('statische-routen');
+    const router = t.devices.find((d) => d.type === 'router')!;
+    let { session } = startSession(router);
+    const run = (line: string) => {
+      const out = execute(session, line, { topology: t });
+      session = out.session;
+      return out;
+    };
+    run('enable');
+    const far = t.devices.filter((d) => d.type === 'pc' && d.interfaces[0]?.ip && d.gateway).map((d) => d.interfaces[0]!.ip!).at(-1)!;
+    expect(run(`ping ${far} repeat 2`).action).toEqual({ kind: 'ping', target: far, count: 2 });
+    expect(run(`ping ${far} repeat 0`).lines[0]).toMatch(/Invalid repeat/);
+    expect(run(`ping ${far} source 10.99.99.99`).lines[0]).toMatch(/Invalid source/);
+    const own = router.interfaces.find((i) => i.ip)!.ip!;
+    expect(run(`ping ${far} source ${own} repeat 3`).action).toEqual({ kind: 'ping', target: far, count: 3, source: own });
+    expect(run(`traceroute ${far}`).action).toEqual({ kind: 'traceroute', target: far });
+
+    const sim = new Simulation(t);
+    sim.runUntil(5000);
+    sim.ping(router.id, far, 1, undefined, { count: 2, source: own });
+    sim.runUntil(20_000);
+    expect(codes(sim, router.id).filter((c) => c === 'ping.reply')).toHaveLength(2);
+    sim.traceroute(router.id, far);
+    sim.runUntil(40_000);
+    const hops = sim.getDeviceState(router.id).console.filter((l) => l.code === 'tracert.hop');
+    expect(hops.length).toBeGreaterThanOrEqual(1);
+    expect(hops.at(-1)!.params!.from).toBe(far);
+    expect(codes(sim, router.id)).toContain('tracert.done');
+  });
+});

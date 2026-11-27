@@ -1,7 +1,7 @@
 import { formatIp, networkOf, parseIp, parseMask, sameSubnet } from '../net/ipv4';
 import type { Device, Topology } from '../model/types';
 import { ATTACK_KINDS, type AttackKind } from '../model/types';
-import type { ArpPacket, EthernetFrame, TcpSegment } from './frames';
+import { BROADCAST_MAC, DHCP_CLIENT_PORT, DHCP_SERVER_PORT, type ArpPacket, type DhcpMessage, type EthernetFrame, type TcpSegment } from './frames';
 import type { IfaceAddress } from '../net/routing';
 import type { SendError, SendOptions } from './ip';
 import type { NetScan } from './scan';
@@ -15,14 +15,28 @@ import type { NodeContext } from './simulation';
  *   synFlood  Denial of Service: halb offene TCP-Verbindungen füllen die Warteschlange (RFC 4987)
  *   portScan  Information Disclosure: offene Ports suchen
  *   sshGuess  Elevation of Privilege: einfache Passwörter am SSH-Zugang probieren
+ *   dhcpRogue Tampering: erst den Adressvorrat des DHCP-Servers mit erfundenen MAC-Adressen
+ *             aufbrauchen («DHCP Starvation»), dann selbst als DHCP-Server antworten und sich als
+ *             Gateway und DNS-Server eintragen. Abwehr: DHCP-Snooping (RFC 7513) und Port-Sicherheit.
  */
 export { ATTACK_KINDS, type AttackKind };
-export const STRIDE: Record<AttackKind, 'S' | 'D' | 'I' | 'E'> = { arpSpoof: 'S', synFlood: 'D', portScan: 'I', sshGuess: 'E' };
+export const STRIDE: Record<AttackKind, 'S' | 'T' | 'D' | 'I' | 'E'> = { arpSpoof: 'S', synFlood: 'D', portScan: 'I', sshGuess: 'E', dhcpRogue: 'T' };
 
 /** Häufige schwache Passwörter (nur diese probiert der Angreifer). */
 export const WEAK_PASSWORDS: readonly string[] = ['admin', 'cisco', 'password', 'passwort', '1234', '12345678', 'geheim', 'schule', 'test'];
 const WEAK_USERS: readonly string[] = ['admin', 'root', 'cisco'];
-const TICK = { arpSpoof: 500, synFlood: 25, portScan: 20_000, sshGuess: 1500 } as const;
+const TICK = { arpSpoof: 500, synFlood: 25, portScan: 20_000, sshGuess: 1500, dhcpRogue: 200 } as const;
+/** DHCP Starvation: so viele erfundene Clients höchstens, je Takt so viele neue. */
+const STARVE_MAX = 1024;
+const STARVE_PER_TICK = 16;
+/** Nach dem ersten Schwall weiter fragen (frei gewordene Adressen sofort wieder belegen), aber langsamer. */
+const STARVE_FAST = 254;
+const STARVE_SLOW_PER_TICK = 2;
+
+/** Erfundene, lokal verwaltete MAC-Adresse Nummer n (z.B. «02:BA:D0:00:00:2A»). */
+export function fakeMac(n: number): string {
+  return `02:BA:D0:00:${((n >> 8) & 255).toString(16).padStart(2, '0')}:${(n & 255).toString(16).padStart(2, '0')}`.toUpperCase();
+}
 
 export interface AttackState {
   kind: AttackKind;
@@ -34,6 +48,8 @@ export interface AttackState {
   captured: number;
   /** SSH-Zugang erraten: «benutzer». */
   compromised?: string;
+  /** DHCP: vom echten Server ergatterte Adressen (Starvation). */
+  starved?: number;
 }
 
 /** Was der Angreifer vom Endgerät braucht. */
@@ -66,6 +82,7 @@ export class AttackRun {
     if (key === this.#config) return;
     this.#config = key;
     this.#state = null;
+    this.#fakes.clear();
     if (!config) return;
     this.#state = { kind: config.kind, running: true, target: '', sent: 0, captured: 0 };
     const state = this.#state;
@@ -75,6 +92,37 @@ export class AttackRun {
   /** Fremdes Paket ist beim Angreifer gelandet. */
   onForeign() {
     if (this.#state?.kind === 'arpSpoof') this.#state.captured++;
+  }
+
+  /** Läuft der falsche DHCP-Server? */
+  get rogueDhcp(): boolean {
+    return this.#state?.kind === 'dhcpRogue' && this.#state.running;
+  }
+
+  /** Der falsche DHCP-Server hat einem echten Client eine Adresse gegeben. */
+  onRogueLease() {
+    if (this.#state?.kind === 'dhcpRogue') this.#state.captured++;
+  }
+
+  /** DHCP-Antwort des echten Servers an einen erfundenen Client: Adresse anfordern (Starvation). */
+  onDhcp(msg: DhcpMessage) {
+    const state = this.#state;
+    if (state?.kind !== 'dhcpRogue' || !this.#fakes.has(msg.clientMac)) return;
+    const iface = this.node.interfaces()[0];
+    if (!iface) return;
+    if (msg.op === 'offer' && msg.yourIp && msg.serverIp) this.#dhcpFrom(iface.index, msg.clientMac, { kind: 'dhcp', op: 'request', xid: msg.xid, clientMac: msg.clientMac, requestedIp: msg.yourIp, serverIp: msg.serverIp });
+    else if (msg.op === 'ack') state.starved = (state.starved ?? 0) + 1;
+  }
+
+  #fakes = new Set<string>();
+
+  /** DHCP-Nachricht eines erfundenen Clients: Absender-MAC und Client-MAC sind die erfundene Adresse. */
+  #dhcpFrom(index: number, mac: string, msg: DhcpMessage) {
+    this.node.sendRaw(index, {
+      src: mac,
+      dst: BROADCAST_MAC,
+      payload: { kind: 'ipv4', src: '0.0.0.0', dst: '255.255.255.255', ttl: 64, id: 0, payload: { kind: 'udp', srcPort: DHCP_CLIENT_PORT, dstPort: DHCP_SERVER_PORT, payload: msg } },
+    });
   }
 
   #tick(state: AttackState) {
@@ -117,6 +165,17 @@ export class AttackRun {
           state.sent++;
         }
         return;
+      case 'dhcpRogue': {
+        // Erst den Vorrat aufbrauchen, der falsche Server antwortet von Anfang an (HostNode).
+        const batch = this.#fakes.size < STARVE_FAST ? STARVE_PER_TICK : STARVE_SLOW_PER_TICK;
+        for (let i = 0; i < batch && this.#fakes.size < STARVE_MAX; i++) {
+          const mac = fakeMac(this.#fakes.size + 1);
+          this.#fakes.add(mac);
+          this.#dhcpFrom(iface.index, mac, { kind: 'dhcp', op: 'discover', xid: 0x0bad0000 + this.#fakes.size, clientMac: mac });
+          state.sent++;
+        }
+        return;
+      }
       case 'sshGuess': {
         const n = state.sent;
         const user = WEAK_USERS[Math.floor(n / WEAK_PASSWORDS.length)];
@@ -167,6 +226,8 @@ export function resolveTarget(t: Topology, attacker: Device, kind: AttackKind): 
   const outside = !!own?.ip && !isPrivate(own.ip);
   const reach = (ip: string | undefined, port: number) => (!ip ? undefined : outside && isPrivate(ip) ? forwardedAs(t, ip, port) : ip);
   if (kind === 'arpSpoof') return attacker.gateway ?? null;
+  // Falscher DHCP-Server: lohnt sich nur, wenn Geräte im Netz ihre Adresse per DHCP beziehen.
+  if (kind === 'dhcpRogue') return ownDevices(t).some((d) => d.dhcp) ? (own?.ip ?? null) : null;
   if (kind === 'sshGuess') {
     for (const d of ownDevices(t)) {
       if (!d.cli?.ssh || !['router', 'firewall', 'l3switch'].includes(d.type)) continue;

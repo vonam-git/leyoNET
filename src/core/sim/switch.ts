@@ -1,4 +1,5 @@
 import { MODEM_WAN } from '../model/links';
+import { SYSLOG_SEVERITY } from './syslog';
 import { cableAt, channelMembers, getDevice, otherEnd, trunkAllows, vlanExists } from '../model/topology';
 import type { NetInterface } from '../model/types';
 import type { ModemKind } from '../model/types';
@@ -371,6 +372,8 @@ export class SwitchNode implements SimNode {
     // Unbekanntes VLAN (nicht angelegt) oder auf diesem Trunk nicht erlaubt: verwerfen.
     if (!this.#member(inPort, vlan)) return this.#noteVlan(inPort, vlan);
     const now = this.ctx.now;
+    // Port-Sicherheit und DHCP-Snooping: verdächtige Rahmen gar nicht erst lernen.
+    if (!this.#portSecurityAllows(inPort, vlan, frame) || !this.#snoopingAllows(inPort, frame)) return;
     // Dieselbe Absender-MAC an einem anderen Port: doppelte MAC oder Schleife («MAC flapping»).
     const before = this.#table.get(`${vlan}|${frame.src}`);
     if (before && before.port !== inPort && before.expires > now && this.ctx.isConnected(before.port)) {
@@ -392,6 +395,64 @@ export class SwitchNode implements SimNode {
     }
 
     this.#forwardLocal(inPort, vlan, frame, true);
+  }
+
+  /** Zuletzt gemeldete Verletzung je Port und Art (höchstens alle 5 s eine Meldung). */
+  #violationNoted = new Map<string, number>();
+  /** Verworfene Rahmen je Port (Port-Sicherheit) bzw. DHCP-Nachrichten (Snooping), für die Anzeige. */
+  #violations = new Map<number, { portSecurity: number; dhcp: number }>();
+
+  /** Meldung an den Syslog-Server (nur Switches mit Verwaltungs-Interface, siehe L3SwitchNode). */
+  protected syslog(_severity: number, _msgid: string, _text: string, _params: Record<string, string>) {}
+
+  #violation(port: number, kind: 'portSecurity' | 'dhcp', code: string, params: Record<string, string | number>, msgid: string, text: string) {
+    const count = this.#violations.get(port) ?? { portSecurity: 0, dhcp: 0 };
+    count[kind]++;
+    this.#violations.set(port, count);
+    const key = `${kind}|${port}`;
+    if (this.ctx.now - (this.#violationNoted.get(key) ?? -Infinity) < 5000) return;
+    this.#violationNoted.set(key, this.ctx.now);
+    this.ctx.print(code, params);
+    this.syslog(SYSLOG_SEVERITY.warning, msgid, text, Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])));
+  }
+
+  /**
+   * Port-Sicherheit («switchport port-security maximum n», Verletzung «restrict»): Ist die Höchstzahl
+   * MAC-Adressen am Port erreicht, verwirft der Switch Rahmen mit weiteren Absendern und meldet es.
+   */
+  #portSecurityAllows(port: number, vlan: number, frame: EthernetFrame): boolean {
+    const max = this.#device?.interfaces[port]?.portSecurity;
+    if (!max) return true;
+    const now = this.ctx.now;
+    const known = this.#table.get(`${vlan}|${frame.src}`);
+    if (known && known.port === port && known.expires > now) return true;
+    let count = 0;
+    for (const e of this.#table.values()) if (e.port === port && e.expires > now) count++;
+    if (count < max) return true;
+    this.#violation(port, 'portSecurity', 'switch.portSecurity', { port: port + 1, mac: frame.src, max }, 'PORTSEC', `port-security violation port ${port + 1} mac ${frame.src}`);
+    return false;
+  }
+
+  /**
+   * DHCP-Snooping (RFC 7513, SAVI-DHCP): Antworten von DHCP-Servern (Offer, Ack, Nak) nur von
+   * vertrauenswürdigen Ports; Anfragen von Clients nur, wenn die Client-MAC im DHCP-Paket die
+   * Absender-MAC des Rahmens ist (gegen erfundene Clients, «verify mac-address»).
+   */
+  #snoopingAllows(port: number, frame: EthernetFrame): boolean {
+    const device = this.#device;
+    if (!device?.dhcpSnooping || device.interfaces[port]?.dhcpTrusted) return true;
+    const ip = frame.payload;
+    if (ip.kind !== 'ipv4' || ip.payload.kind !== 'udp' || ip.payload.payload.kind !== 'dhcp') return true;
+    const msg = ip.payload.payload;
+    if (msg.op === 'offer' || msg.op === 'ack' || msg.op === 'nak') {
+      this.#violation(port, 'dhcp', 'switch.dhcpSnoopServer', { port: port + 1, server: msg.serverIp ?? ip.src }, 'DHCPSNOOP', `untrusted dhcp server ${msg.serverIp ?? ip.src} on port ${port + 1}`);
+      return false;
+    }
+    if (msg.clientMac.toUpperCase() !== frame.src.toUpperCase()) {
+      this.#violation(port, 'dhcp', 'switch.dhcpSnoopMac', { port: port + 1, mac: msg.clientMac }, 'DHCPSNOOP', `dhcp client mac ${msg.clientMac} differs from source ${frame.src} on port ${port + 1}`);
+      return false;
+    }
+    return true;
   }
 
   /** Weiterleiten im VLAN: bekannter Port, bekannter VTEP oder an alle (ohne den Eingang). */
@@ -665,7 +726,8 @@ export class SwitchNode implements SimNode {
     const storm = this.storm;
     const acls = this.#aclState();
     const channels = this.#channelState();
-    const extra = { ...(storm ? { storm } : {}), ...(acls.length ? { acls } : {}), ...(channels.length ? { channels } : {}) };
+    const violations = [...this.#violations.entries()].sort((a, b) => a[0] - b[0]).map(([port, v]) => ({ port, ...v }));
+    const extra = { ...(storm ? { storm } : {}), ...(acls.length ? { acls } : {}), ...(channels.length ? { channels } : {}), ...(violations.length ? { violations } : {}) };
     if (!this.#stp) return { macTable, ...extra };
     const device = this.#device;
     const ports = (device?.interfaces ?? [])

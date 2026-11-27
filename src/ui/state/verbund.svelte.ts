@@ -42,8 +42,10 @@ export interface VerbundMessage {
   from: number;
   fromLabel: string;
   to: number;
-  subject: string;
-  text: string;
+  subject?: string;
+  text?: string;
+  /** Nachricht zwischen anderen Standorten: nur Absender und Ziel (für die Funkspur), ohne Inhalt. */
+  hidden?: boolean;
 }
 
 const POLL_MS = 8000;
@@ -125,7 +127,10 @@ class VerbundStore {
       if (data.now) this.#since = data.now;
       const after = this.messages.at(-1)?.id ?? 0;
       // Zwei Abfragen können sich überholen: nur wirklich neue übernehmen.
-      const fresh = (await api<VerbundMessage[]>('GET', `classes/${encodeURIComponent(code)}/messages?after=${after}`)).filter((m) => m.id > (this.messages.at(-1)?.id ?? 0));
+      // Nur mit eigener Session der Klasse; fremde Nachrichten kommen ohne Inhalt.
+      const fresh = session.code && !session.watching
+        ? (await api<VerbundMessage[]>('GET', `classes/${encodeURIComponent(code)}/messages?after=${after}&session=${encodeURIComponent(session.code)}`, undefined, undefined, session.writerHeaders())).filter((m) => m.id > (this.messages.at(-1)?.id ?? 0))
+        : [];
       if (fresh.length) {
         // Beim ersten Laden nicht melden, nur danach neu eingetroffene an mich oder an alle.
         const seat = session.viewSite?.seat;
@@ -133,7 +138,7 @@ class VerbundStore {
           const mine = fresh.filter((m) => m.from !== seat && (m.to === seat || m.to === -1));
           if (mine.length) this.unread += mine.length;
           const last = mine.at(-1);
-          if (last) editor.notify(t('verbund.msg.incoming', { from: siteName(last.from, last.fromLabel), subject: last.subject }));
+          if (last) editor.notify(t('verbund.msg.incoming', { from: siteName(last.from, last.fromLabel), subject: last.subject ?? '' }));
         }
         this.messages = [...this.messages, ...fresh].slice(-200);
       }

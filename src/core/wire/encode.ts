@@ -27,6 +27,7 @@ import {
   type SipMessage,
   type RtpPacket,
   type DataBlock,
+  type SyslogMessage,
   RTP_PAYLOAD_BYTES,
   type TcpSegment,
   type UdpDatagram,
@@ -34,6 +35,7 @@ import {
 import { Part, crc32, fcs16, hex, internetChecksum, ipBytes, latin1, le, macBytes, u16, u32, utf8, type WireField, type WireLayer } from './part';
 import { ip6Bytes } from '../net/ipv6';
 import { dscpName } from '../net/qos';
+import { formatSyslog } from '../sim/syslog';
 
 export type { WireField, WireLayer, OsiLayer } from './part';
 
@@ -193,6 +195,15 @@ function data(m: DataBlock): Part {
   return p;
 }
 
+/** Syslog (RFC 5424) als Text in einem UDP-Datagramm (RFC 5426). */
+function syslog(m: SyslogMessage): Part {
+  const p = new Part();
+  const text = formatSyslog(m);
+  p.field('app.data', text, utf8(text));
+  p.close(7, 'Syslog', 0, { text });
+  return p;
+}
+
 function rip(m: RipMessage): Part {
   const p = new Part();
   p.u8('rip.command', m.command === 'request' ? 1 : 2, m.command === 'request' ? '1 (Request)' : '2 (Response)');
@@ -292,7 +303,7 @@ function readable(data: string): string {
 }
 
 function portName(port: number): string {
-  const names: Record<number, string> = { 5060: 'SIP', 5201: 'iperf', 53: 'DNS', 67: 'DHCP Server', 68: 'DHCP Client', 500: 'IKE', 520: 'RIP', 521: 'RIPng', 546: 'DHCPv6 Client', 547: 'DHCPv6 Server', ...TCP_APPS };
+  const names: Record<number, string> = { 5060: 'SIP', 5201: 'iperf', 514: 'Syslog', 53: 'DNS', 67: 'DHCP Server', 68: 'DHCP Client', 500: 'IKE', 520: 'RIP', 521: 'RIPng', 546: 'DHCPv6 Client', 547: 'DHCPv6 Server', ...TCP_APPS };
   return names[port] ? `${port} (${names[port]})` : String(port);
 }
 
@@ -309,7 +320,7 @@ function udp(d: UdpDatagram, srcIp: string, dstIp: string, v6 = false): Part {
   const p = new Part();
   const m = d.payload;
   const inner =
-    m.kind === 'dhcp' ? dhcp(m) : m.kind === 'dns' ? dns(m) : m.kind === 'dhcpv6' ? dhcp6(m) : m.kind === 'ike' ? ike(m) : m.kind === 'ripng' ? ripng(m) : m.kind === 'vxlan' ? vxlan(m) : m.kind === 'sip' ? sip(m) : m.kind === 'rtp' ? rtp(m) : m.kind === 'data' ? data(m) : rip(m);
+    m.kind === 'dhcp' ? dhcp(m) : m.kind === 'dns' ? dns(m) : m.kind === 'dhcpv6' ? dhcp6(m) : m.kind === 'ike' ? ike(m) : m.kind === 'ripng' ? ripng(m) : m.kind === 'vxlan' ? vxlan(m) : m.kind === 'sip' ? sip(m) : m.kind === 'rtp' ? rtp(m) : m.kind === 'data' ? data(m) : m.kind === 'syslog' ? syslog(m) : rip(m);
   p.u16('udp.srcPort', d.srcPort, portName(d.srcPort));
   p.u16('udp.dstPort', d.dstPort, portName(d.dstPort));
   p.u16('udp.length', 8 + inner.length);
@@ -373,8 +384,8 @@ function icmpv6(m: Icmpv6Message, src: string, dst: string): Part {
   const p = new Part();
   const type = ICMP6_TYPES[m.type];
   p.u8('icmp6.type', type, `${type} (${m.type})`);
-  const code = m.type === 'destUnreachable' ? (m.code === 'host' ? 3 : 0) : 0;
-  p.u8('icmp6.code', code, m.type === 'destUnreachable' ? `${code} (${m.code === 'host' ? 'address unreachable' : 'no route to destination'})` : code);
+  const code = m.type === 'destUnreachable' ? (m.code === 'host' ? 3 : m.code === 'port' ? 4 : 0) : 0;
+  p.u8('icmp6.code', code, m.type === 'destUnreachable' ? `${code} (${m.code === 'host' ? 'address unreachable' : m.code === 'port' ? 'port unreachable' : 'no route to destination'})` : code);
   p.u16('icmp6.checksum', 0);
   switch (m.type) {
     case 'echoRequest':
@@ -469,7 +480,7 @@ function icmp(m: IcmpMessage): Part {
   const p = new Part();
   const type = ICMP_TYPES[m.type];
   p.u8('icmp.type', type, `${type} (${m.type})`);
-  const code = m.type === 'destUnreachable' ? (m.code === 'host' ? 1 : 0) : 0;
+  const code = m.type === 'destUnreachable' ? (m.code === 'host' ? 1 : m.code === 'port' ? 3 : 0) : 0;
   p.u8('icmp.code', code);
   p.u16('icmp.checksum', 0);
   if (m.original) {
