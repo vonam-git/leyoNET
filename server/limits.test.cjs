@@ -71,8 +71,20 @@ test('Verzeichnis beim Start: vorhandene Sessions gezählt, abgelaufene gelösch
 });
 
 test('zu grosse Projekte werden abgewiesen (413)', async () => {
-  const res = await call('POST', '/api/sessions', { project: project(1, 1_100_000) }, { 'X-Forwarded-For': '192.0.2.10' });
-  assert.equal(res.status, 413);
+  // Der Server antwortet sofort mit 413 und schliesst die Verbindung, ohne den Rest zu lesen. Sendet der
+  // Client dann noch, meldet sein Betriebssystem manchmal EPIPE/ECONNRESET statt der Antwort (oft auf macOS):
+  // Auch das heisst «abgewiesen». Gespeichert wurde in jedem Fall nichts.
+  const before = (await call('GET', '/api/config')).status;
+  assert.equal(before, 200);
+  let status;
+  try {
+    status = (await call('POST', '/api/sessions', { project: project(1, 1_100_000) }, { 'X-Forwarded-For': '192.0.2.10' })).status;
+  } catch (error) {
+    const code = error?.cause?.code;
+    assert.ok(code === 'EPIPE' || code === 'ECONNRESET', `unerwarteter Fehler: ${code ?? error}`);
+    status = 413;
+  }
+  assert.equal(status, 413);
 });
 
 test('Gesamtgrenze: Platz und Anzahl voll → 507, Löschen gibt wieder frei', async () => {
