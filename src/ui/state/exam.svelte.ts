@@ -1,4 +1,4 @@
-import { hashCode, type TaskSet } from '../../core';
+import { checkCode, type TaskSet } from '../../core';
 
 /**
  * Prüfungsmodus: Sobald eine Prüfungsdatei geöffnet ist, sperrt leyoNET
@@ -160,7 +160,7 @@ class ExamMode {
     if (active.server) {
       // Prüfung über den Server: Nur der Server kennt den Prüfwert des Codes.
       if (!verify || !(await verify(code))) return false;
-    } else if (active.unlock && (await hashCode(code)) !== active.unlock) return false;
+    } else if (active.unlock && !(await checkCode(code, active.unlock))) return false;
     this.#store(null);
     return true;
   }

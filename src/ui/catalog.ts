@@ -36,6 +36,7 @@ import {
   setIpMode,
   setDefaultGateway,
   setVerbund,
+  verbundAddresses,
 } from '../core';
 import { t } from '../i18n';
 import { Start, generalSheet, goal, task, unwrap, type CatalogEntry } from './catalogKit';
@@ -1097,21 +1098,8 @@ const ENTRIES: CatalogEntry[] = [
     features: ['net.verbund', 'net.nat', 'routing.static', 'service.web'],
     level: 3,
     build() {
-      const s = new Start()
-        .add('server', 'Webserver', -360, -60)
-        .add('pc', 'PC Standort', -360, 80)
-        .add('switch', 'Switch', -120, 0)
-        .router('Standort-Router', 140, 0, ['192.168.50.1/24'])
-        .link('Webserver', 'Switch')
-        .link('PC Standort', 'Switch')
-        .link('Switch', 'Standort-Router')
-        .host('Webserver', '192.168.50.80', '24', '192.168.50.1')
-        .host('PC Standort', '192.168.50.10', '24', '192.168.50.1')
-        .web('Webserver', t('catalog.verbundWeb.page'))
-        .apply((t, id) => unwrap(setVerbund(t, id('Standort-Router'), 1)))
-        .area('Mein Standort', 'teal', -460, -170, 720, 330, '192.168.50.0/24');
       return {
-        topology: s.topology,
+        topology: verbundWebSite(),
         tasks: task('verbundWeb', 3, [
           goal('verbundWeb', 1, { type: 'verbundSite' }),
           goal('verbundWeb', 2, { type: 'verbundSite', level: 'services' }),
@@ -1151,6 +1139,44 @@ const ENTRIES: CatalogEntry[] = [
       };
     },
   },
+  {
+    id: 'verbund-nachbar-web',
+    stars: 3,
+    verbund: true,
+    features: ['net.verbund', 'net.nat', 'routing.static', 'service.web'],
+    level: 3,
+    build() {
+      return {
+        topology: verbundWebSite(),
+        tasks: task('verbundNeighbourWeb', 3, [
+          goal('verbundNeighbourWeb', 1, { type: 'verbundSite', level: 'services' }),
+          goal('verbundNeighbourWeb', 2, { type: 'verbundWeb', from: 'PC Standort' }),
+        ]),
+      };
+    },
+  },
+  {
+    id: 'verbund-vpn',
+    stars: 4,
+    verbund: true,
+    features: ['net.verbund', 'net.nat', 'routing.static', 'net.vpn'],
+    level: 4,
+    build(ctx) {
+      // Jeder Platz hat ein eigenes LAN (10.10.<Platz>.0/24): Durch einen Tunnel dürfen sich die Netze nicht überschneiden.
+      const seat = ctx?.seat ?? 1;
+      const s = new Start()
+        .add('pc', 'PC Standort', -360, 0)
+        .add('switch', 'Switch', -120, 0)
+        .router('Standort-Router', 140, 0, [`10.10.${seat}.1/24`])
+        .link('PC Standort', 'Switch')
+        .link('Switch', 'Standort-Router')
+        .host('PC Standort', `10.10.${seat}.10`, '24', `10.10.${seat}.1`)
+        .apply((t, id) => unwrap(setVerbund(t, id('Standort-Router'), 1)))
+        .area('Mein Standort', 'teal', -460, -110, 720, 220, `10.10.${seat}.0/24`);
+      const result = task('verbundVpn', 4, [goal('verbundVpn', 1, { type: 'verbundSite' }), goal('verbundVpn', 2, { type: 'verbundVpn', from: 'PC Standort' })]);
+      return { topology: s.topology, tasks: { ...result, description: t('catalog.verbundVpn.description', { seat, lan: `10.10.${seat}.0/24`, wan: verbundAddresses(seat).site }) } };
+    },
+  },
   ...VERBUND_FAULT_ENTRIES,
   ...ADVANCED,
   ...SECURITY,
@@ -1160,4 +1186,21 @@ const ENTRIES: CatalogEntry[] = [
 ];
 
 /** Alle Übungen; die ohne Modulreihe bekommen ein automatisch erzeugtes Arbeitsblatt (catalogSheets.ts). */
+/** Standort mit Webserver (privat) und PC; der Router ist schon als Anschluss markiert. */
+export function verbundWebSite(): Topology {
+  return new Start()
+    .add('server', 'Webserver', -360, -60)
+    .add('pc', 'PC Standort', -360, 80)
+    .add('switch', 'Switch', -120, 0)
+    .router('Standort-Router', 140, 0, ['192.168.50.1/24'])
+    .link('Webserver', 'Switch')
+    .link('PC Standort', 'Switch')
+    .link('Switch', 'Standort-Router')
+    .host('Webserver', '192.168.50.80', '24', '192.168.50.1')
+    .host('PC Standort', '192.168.50.10', '24', '192.168.50.1')
+    .web('Webserver', t('catalog.verbundWeb.page'))
+    .apply((t, id) => unwrap(setVerbund(t, id('Standort-Router'), 1)))
+    .area('Mein Standort', 'teal', -460, -170, 720, 330, '192.168.50.0/24').topology;
+}
+
 export const CATALOG: CatalogEntry[] = ENTRIES.map((e) => (e.series || e.sheet ? e : { ...e, sheet: generalSheet(e.id) }));

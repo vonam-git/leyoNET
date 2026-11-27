@@ -150,6 +150,7 @@ export function infoOf(frame: EthernetFrame): string {
   }
   if (msg.kind === 'rtp') return access + t('packets.rtp', { seq: msg.seq, ssrc: `0x${(msg.ssrc >>> 0).toString(16).padStart(8, '0')}` });
   if (msg.kind === 'data') return access + t('packets.iperf', { seq: msg.seq, bytes: msg.bytes });
+  if (msg.kind === 'syslog') return access + t('packets.syslog', { host: msg.host, msgid: msg.msgid, severity: msg.severity });
   if (msg.kind === 'dhcpv6') return access + t(`packets.dhcp6.${msg.type}`, { address: msg.address ?? '', xid: hex(msg.xid) });
   return access + t(`packets.dhcp.${msg.op}`, { ip: msg.yourIp ?? msg.requestedIp ?? '', xid: hex(msg.xid) });
 }

@@ -190,7 +190,7 @@ export class SessionStore {
   #lastSave = 0;
   lastSaved = $state<number | null>(null);
   /** Warum das Speichern gerade nicht geht (Server voll, Projekt zu gross). */
-  problem = $state<'storageFull' | 'tooLarge' | null>(null);
+  problem = $state<'storageFull' | 'tooLarge' | 'classFull' | null>(null);
 
   constructor() {
     // Prüfung: alle 20 Sekunden speichern bzw. den Stand des Platzes abfragen (Zeit, Verlängerung, Ende).
@@ -414,6 +414,11 @@ export class SessionStore {
     return this.#headers();
   }
 
+  /** Eingabe der Lehrperson beim Bearbeiten (Klick, Taste): hält «Bearbeiten» offen, auch ohne Änderung am Netz. */
+  noteInput() {
+    if (this.watching?.edit) this.#editAt = Date.now();
+  }
+
   /** Änderungen gesammelt nach kurzer Pause hochladen; leere Projekte legen keine Session an. */
   schedule(projectJson: string, hasContent: boolean) {
     // Lehrperson bearbeitet eine Session ihrer Klasse: dorthin speichern.
@@ -534,7 +539,7 @@ export class SessionStore {
         this.status = 'error';
         return;
       }
-      if (error instanceof ApiError && (error.code === 'storageFull' || error.code === 'tooLarge')) this.problem = error.code;
+      if (error instanceof ApiError && (error.code === 'storageFull' || error.code === 'tooLarge' || error.code === 'classFull')) this.problem = error.code;
       // Abgelaufene Session: mit neuem Code weiterarbeiten.
       if (error instanceof ApiError && error.status === 404 && this.code && !examMode.active?.server) {
         this.#forget();

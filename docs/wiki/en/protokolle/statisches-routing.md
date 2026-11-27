@@ -30,6 +30,10 @@ Both routes are needed: R1 for the outbound path, R2 for the **return path** of 
 
 ## Pros and cons
 
-Static routes are clear, secure and need no computing power. But they do not react to failures, and in large networks every change must be repeated on many routers. There dynamic protocols such as [[ospf]] take over. Companies often have both: OSPF inside, a static default route to the provider.
+Static routes are clear, secure and need no computing power. But they hardly react to failures (only a **backup route** steps in, see below), and in large networks every change must be repeated on many routers. There dynamic protocols such as [[ospf]] take over. Companies often have both: OSPF inside, a static default route to the provider.
 
 > Troubleshooting with `tracert`: where does the list stop? The last router that answers does not know the next step.
+
+## Backup route (floating static route)
+
+Every route has an **administrative distance**, static routes normally 1. If you enter the same destination a second time with a larger distance (e.g. 200, on the command line `ip route 0.0.0.0/0 10.0.1.2 200`), the second one is only used when the first disappears: if its interface has no link any more, the router removes it from the table (RFC 1812). The routing table shows `[distance/metric]` for every route.

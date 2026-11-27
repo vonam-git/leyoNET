@@ -72,6 +72,8 @@ export function startSshServer(node: IpNode & { tcp: TcpStack }, ctx: NodeContex
             const valid = current?.cli?.ssh && current.cli.users?.some((u) => u.name === user && u.password === pw.join(' '));
             authed = !!valid;
             ctx.print(valid ? 'ssh.server.login' : 'ssh.server.denied', { user, from: conn.remote.ip });
+            // Nachweis für später (RFC 5424, Facility «security/authorization»): wer sich wann von wo anmeldete.
+            node.syslog(valid ? 5 : 4, valid ? 'SSHLOGIN' : 'SSHFAIL', `ssh ${valid ? 'login' : 'failed login'} user ${user} from ${conn.remote.ip}`, { user, from: conn.remote.ip });
             conn.write(seal(valid ? `OK ${current!.id}` : 'DENIED') + '\r\n');
             if (!valid) conn.close();
           } else if (kind === 'CMD' && authed) {

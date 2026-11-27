@@ -2,7 +2,7 @@
  * Sicherheits-Szenarien: Ein Angreifer (Gerät aus dem Shop oder der virtuelle Angreifer des
  * Prüfbausteins «resist») stört das Netz; die Lernenden finden die Ursache und wehren ihn ab.
  */
-import { addPortForward, configureHost, connect, setAttack, setCliConfig, setInterfaceAddress, setProtection, setVerbund, applyVerbundAddresses, setWebServerEnabled, type AttackKind, type Topology } from '../core';
+import { addPortForward, cableAt, configureHost, connect, setAttack, setCliConfig, setDhcpServer, setDhcpSnooping, setDhcpTrusted, setInterfaceAddress, setPortSecurity, setProtection, setSyslog, setSyslogServer, setVerbund, applyVerbundAddresses, setWebServerEnabled, type AttackKind, type Topology } from '../core';
 import { t } from '../i18n';
 import { Start, goal, task, unwrap, type CatalogEntry } from './catalogKit';
 
@@ -58,6 +58,55 @@ const site = (): Topology =>
     .apply((x, n) => unwrap(setCliConfig(x, n('Standort-Router'), { ssh: true, users: [{ name: 'admin', password: 'admin' }] })))
     .area('Mein Standort', 'teal', -460, -170, 720, 330, '192.168.50.0/24').topology;
 
+/** Büro mit DHCP: Server vergibt die Adressen, die PCs beziehen sie automatisch; ein Angreifer steckt am Switch. */
+function office(): Start {
+  return new Start()
+    .area('Büro 192.168.20.0/24', 'blue', -520, -240, 620, 520, '192.168.20.0/24')
+    .add('pc', 'PC 1', -420, -120)
+    .add('pc', 'PC 2', -420, 0)
+    .add('server', 'Server', -420, 130)
+    .add('switch', 'Switch', -180, 0)
+    .router('Router', 40, 0, ['192.168.20.1/24'])
+    .link('PC 1', 'Switch')
+    .link('PC 2', 'Switch')
+    .link('Server', 'Switch')
+    .link('Router', 'Switch')
+    .host('Server', '192.168.20.10', '24', '192.168.20.1')
+    .apply((x, n) => unwrap(setDhcpServer(x, n('Server'), { start: '192.168.20.100', end: '192.168.20.150', gateway: '192.168.20.1', dns: '192.168.20.10', leaseTime: 3600 })))
+    .apply((x, n) => unwrap(configureHost(unwrap(configureHost(x, n('PC 1'), { ip: '', mask: '', dhcp: true })), n('PC 2'), { ip: '', mask: '', dhcp: true })))
+    .add('notebook', 'Angreifer', -180, 190, { variant: 'attacker' })
+    .link('Angreifer', 'Switch')
+    .host('Angreifer', '192.168.20.66', '24', '192.168.20.1')
+    .apply((x, n) => unwrap(setAttack(x, n('Angreifer'), { kind: 'dhcpRogue' })));
+}
+
+/** Port des Switches, an dem das Gerät hängt. */
+function portTo(x: Topology, sw: string, device: string): number {
+  const s = id(x, sw);
+  const other = id(x, device);
+  return x.devices.find((d) => d.id === s)!.interfaces.find((i) => {
+    const c = cableAt(x, { device: s, iface: i.index });
+    return c && (c.a.device === other || c.b.device === other);
+  })!.index;
+}
+
+/** Lösung «Falscher DHCP-Server»: Snooping, Server und Router vertrauenswürdig, sonst höchstens 2 MAC-Adressen je Port. */
+function solveDhcp(start: Topology): Topology {
+  const sw = id(start, 'Switch');
+  let x = unwrap(setDhcpSnooping(start, sw, true));
+  const trusted = [portTo(x, 'Switch', 'Server'), portTo(x, 'Switch', 'Router')];
+  for (const p of trusted) x = unwrap(setDhcpTrusted(x, sw, p, true));
+  for (const i of x.devices.find((d) => d.id === sw)!.interfaces) if (!trusted.includes(i.index)) x = unwrap(setPortSecurity(x, sw, i.index, 2));
+  return x;
+}
+
+/** Lösung «Wer war das?»: Log-Server sammelt, Router und PCs melden dorthin. */
+function solveSyslog(start: Topology): Topology {
+  let x = unwrap(setSyslogServer(start, id(start, 'Log-Server'), true));
+  for (const n of ['Router', 'PC 1', 'PC 2']) x = unwrap(setSyslog(x, id(x, n), '192.168.10.50'));
+  return x;
+}
+
 const protect = (x: Topology, names: string[], key: 'arpGuard' | 'synCookies') => names.reduce((acc, n) => unwrap(setProtection(acc, id(acc, n), key, true)), x);
 const strong = (x: Topology, router: string) => unwrap(setCliConfig(x, id(x, router), { ssh: true, users: [{ name: 'admin', password: 'Zug-nach-Sursee-17' }] }));
 
@@ -80,6 +129,8 @@ export const SECURITY_SOLUTIONS: Record<string, (x: Topology) => Topology> = {
   'sec-syn-flood': (x) => protect(x, ['Webserver'], 'synCookies'),
   'sec-ssh': (x) => strong(x, 'Router'),
   'sec-build': solveBuild,
+  'sec-dhcp': solveDhcp,
+  'sec-syslog': solveSyslog,
   'verbund-angriff': (start) => {
     let x = unwrap(applyVerbundAddresses(start, id(start, 'Standort-Router'), 1));
     x = unwrap(addPortForward(x, id(x, 'Standort-Router'), { protocol: 'tcp', port: 80, to: '192.168.50.80', toPort: 80 }));
@@ -90,6 +141,8 @@ export const SECURITY_ANSWERS: Record<string, Record<string, string>> = {
   'sec-arp-spoof': { 'ziel-4': 'Spoofing' },
   'sec-syn-flood': { 'ziel-3': 'Denial of Service' },
   'sec-ssh': { 'ziel-2': 'Elevation of Privilege' },
+  'sec-dhcp': { 'ziel-4': 'Tampering' },
+  'sec-syslog': { 'ziel-3': 'Repudiation' },
 };
 
 const features = ['tool.security', 'tool.sniffer'];
@@ -131,6 +184,39 @@ export const SECURITY: CatalogEntry[] = [
     build: () => ({
       topology: firm().apply((x, n) => unwrap(setCliConfig(x, n('Router'), { ssh: true, users: [{ name: 'admin', password: 'cisco' }] }))).topology,
       tasks: task('secSsh', 3, [goal('secSsh', 1, { type: 'resist', attack: 'sshGuess' }), goal('secSsh', 2, stride('Elevation of Privilege'))]),
+    }),
+  },
+  {
+    id: 'sec-dhcp',
+    stars: 4,
+    level: 4,
+    features: [...features, 'service.dhcp', 'net.l2security', 'net.cli'],
+    build: () => ({
+      topology: office().topology,
+      tasks: task('secDhcp', 4, [
+        goal('secDhcp', 1, { type: 'resist', attack: 'dhcpRogue' }),
+        goal('secDhcp', 2, { type: 'dhcpLease', device: 'PC 1', dns: '192.168.20.10' }),
+        goal('secDhcp', 3, { type: 'linkUp', a: 'Angreifer', b: 'Switch' }),
+        goal('secDhcp', 4, stride('Tampering')),
+      ]),
+    }),
+  },
+  {
+    id: 'sec-syslog',
+    stars: 4,
+    level: 4,
+    features: [...features, 'net.syslog', 'net.ssh', 'device.internet', 'net.nat'],
+    build: () => ({
+      topology: firm()
+        .add('server', 'Log-Server', -180, 200)
+        .link('Log-Server', 'Switch')
+        .host('Log-Server', '192.168.10.50', '24', '192.168.10.1')
+        .apply((x, n) => unwrap(setCliConfig(x, n('Router'), { ssh: true, users: [{ name: 'admin', password: 'cisco' }] }))).topology,
+      tasks: task('secSyslog', 4, [
+        goal('secSyslog', 1, { type: 'logged', attack: 'sshGuess' }),
+        goal('secSyslog', 2, { type: 'logged', attack: 'arpSpoof' }),
+        goal('secSyslog', 3, stride('Repudiation')),
+      ]),
     }),
   },
   {

@@ -22,7 +22,9 @@
   function move(event: PointerEvent) {
     if (!drag) return;
     taskView.x = Math.min(window.innerWidth - 120, Math.max(-(box?.offsetWidth ?? 400) + 160, event.clientX - drag.dx));
-    taskView.y = Math.min(window.innerHeight - 48, Math.max(0, event.clientY - drag.dy));
+    // Nie mit dem Kopf unter die Menüleiste (sie liegt darüber).
+    const top = Math.ceil(document.querySelector('.menubar')?.getBoundingClientRect().bottom ?? 0);
+    taskView.y = Math.min(window.innerHeight - 48, Math.max(top, event.clientY - drag.dy));
   }
   const up = () => (drag = null);
 

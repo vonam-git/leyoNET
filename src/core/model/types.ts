@@ -1,4 +1,4 @@
-export const ATTACK_KINDS = ['arpSpoof', 'synFlood', 'portScan', 'sshGuess'] as const;
+export const ATTACK_KINDS = ['arpSpoof', 'synFlood', 'portScan', 'sshGuess', 'dhcpRogue'] as const;
 export type AttackKind = (typeof ATTACK_KINDS)[number];
 export interface AttackConfig {
   kind: AttackKind;
@@ -126,6 +126,10 @@ export interface NetInterface {
   channelMode?: ChannelMode;
   /** Nur Switch: Name der Zugriffsliste für eingehende Pakete («ip access-group NAME in»). */
   aclIn?: string;
+  /** Nur Switch mit DHCP-Snooping: An diesem Port darf ein DHCP-Server antworten («ip dhcp snooping trust», RFC 7513 «DHCP-Trust»). */
+  dhcpTrusted?: boolean;
+  /** Nur Switch: Port-Sicherheit, höchstens so viele MAC-Adressen an diesem Port («switchport port-security maximum»); weitere werden verworfen. */
+  portSecurity?: number;
   /** Administrativ abgeschaltet («shutdown»): Link ist aus, nichts wird gesendet oder empfangen. */
   shutdown?: boolean;
   /** Nur Switch mit PoE: an diesem Anschluss kein Strom liefern («power inline never»). */
@@ -286,6 +290,15 @@ export interface Device {
   stp?: boolean;
   /** Nur Switch: STP-Priorität (Standard 32768); kleiner = eher Root-Bridge. */
   stpPriority?: number;
+  /**
+   * Nur Switch: DHCP-Snooping. Antworten von DHCP-Servern (Offer, Ack, Nak) nur an vertrauenswürdigen
+   * Ports (`dhcpTrusted`), Anfragen nur mit der eigenen MAC-Adresse als Client (RFC 7513, SAVI-DHCP).
+   */
+  dhcpSnooping?: boolean;
+  /** Router, Switch mit Verwaltungs-Interface, Firewall, Rechner: Meldungen per Syslog (RFC 5424 über UDP, RFC 5426) an diesen Server. */
+  syslog?: string;
+  /** Nur Rechner: Syslog-Server, sammelt die Meldungen anderer Geräte (UDP 514). */
+  syslogServer?: boolean;
   /** Nur Switch, Layer-3-Switch: Power over Ethernet nach IEEE 802.3 (Typ und Leistungsbudget). */
   poe?: PoeConfig;
   /** IP-Telefon, Kamera, Access Point: Stromversorgung; fehlt = PoE bei Telefon und Kamera, Netzteil beim Access Point. */
@@ -623,6 +636,11 @@ export interface StaticRoute {
   gateway?: string;
   /** Ausgangsanschluss; fehlt er, ergibt er sich aus dem Gateway. */
   iface?: number;
+  /**
+   * Administrative Distanz 1–255 («ip route … 200»); fehlt = 1. Eine grössere Distanz ergibt eine
+   * Reserve-Route (Floating Static Route), die erst gilt, wenn die bessere wegfällt; 255 = nie verwenden.
+   */
+  distance?: number;
 }
 
 export interface Endpoint {

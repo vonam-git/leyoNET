@@ -1,4 +1,6 @@
 import type { DnsRecord, DnsType } from '../model/types';
+import type { SyslogMessage } from './syslog';
+export type { SyslogMessage } from './syslog';
 
 export type { DnsRecord, DnsType };
 
@@ -27,8 +29,8 @@ export interface IcmpMessage {
   seq: number;
   /** Nutzdaten in Byte (nur die Länge wird simuliert). */
   size: number;
-  /** Bei "destUnreachable": Netz oder einzelner Host nicht erreichbar. */
-  code?: 'net' | 'host';
+  /** Bei "destUnreachable": Netz, einzelner Host oder UDP-Port (kein Dienst, RFC 792 Code 3) nicht erreichbar. */
+  code?: 'net' | 'host' | 'port';
   /** Bei Fehlermeldungen: Kopfdaten des auslösenden Pakets. */
   original?: { src: string; dst: string; id: number; seq: number };
 }
@@ -175,7 +177,7 @@ export interface DataBlock {
 }
 export const IPERF_PORT = 5201;
 
-export type AppMessage = DhcpMessage | DnsMessage | RipMessage | RipngMessage | Dhcpv6Message | IkeMessage | VxlanMessage | SipMessage | RtpPacket | DataBlock;
+export type AppMessage = DhcpMessage | DnsMessage | RipMessage | RipngMessage | Dhcpv6Message | IkeMessage | VxlanMessage | SipMessage | RtpPacket | DataBlock | SyslogMessage;
 
 export interface UdpDatagram {
   kind: 'udp';
@@ -272,7 +274,7 @@ export interface Icmpv6Message {
   seq: number;
   size: number;
   /** Fehler: «net» = keine Route (Code 0), «host» = Adresse nicht erreichbar (Code 3). */
-  code?: 'net' | 'host';
+  code?: 'net' | 'host' | 'port';
   original?: { src: string; dst: string; id: number; seq: number };
   /** NS/NA: gesuchte bzw. angekündigte Adresse. */
   target?: string;

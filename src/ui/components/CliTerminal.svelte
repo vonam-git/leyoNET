@@ -151,6 +151,15 @@
       case 'ping.hostUnreachableFrom':
       case 'ping.netUnreachableFrom':
         return `Destination unreachable (from ${p.from})`;
+      case 'tracert.hop':
+        return `  ${p.hop} ${p.from} ${p.time} msec`;
+      case 'tracert.timeout':
+        return `  ${p.hop}  *  *  *`;
+      case 'tracert.hostUnreachable':
+      case 'tracert.netUnreachable':
+        return `  ${p.hop} ${p.from} !${code === 'tracert.hostUnreachable' ? 'H' : 'N'}`;
+      case 'tracert.done':
+        return '';
       default:
         return code.startsWith('ping.') && !code.startsWith('ping.start') ? `% ${code}` : null;
     }
@@ -168,18 +177,20 @@
       return text ? [{ text, kind: 'out' as const }] : [];
     });
     if (added.length) lines = [...lines, ...added];
-    if (fresh.some((l) => l.code === 'ping.summary')) pingFrom = null;
+    if (fresh.some((l) => l.code === 'ping.summary' || l.code === 'tracert.done')) pingFrom = null;
   });
 
   function run(text: string, echo: string) {
     const result = execute(session, text, env());
     lines = [...lines, { text: `${prompt}${echo}`, kind: 'in' }, ...result.lines.map((l) => ({ text: l, kind: 'out' as const }))];
-    if (result.action?.kind === 'ping') {
+    if (result.action) {
+      const a = result.action;
       if (editor.acting && simStore.sim) {
         pingFrom = simStore.sim.getDeviceState(deviceId).console.length;
-        simStore.ping(deviceId, result.action.target, result.action.vrf);
+        if (a.kind === 'ping') simStore.ping(deviceId, a.target, a.vrf, { ...(a.count ? { count: a.count } : {}), ...(a.source ? { source: a.source } : {}) });
+        else simStore.traceroute(deviceId, a.target, a.vrf);
       } else {
-        lines = [...lines, { text: '% Ping needs the running simulation (action mode)', kind: 'out' }];
+        lines = [...lines, { text: `% ${a.kind === 'ping' ? 'Ping' : 'Traceroute'} needs the running simulation (action mode)`, kind: 'out' }];
       }
     }
     if (result.topology) {

@@ -28,6 +28,10 @@ import {
   setPortVlan,
   setStartupConfig,
   setStp,
+  setDhcpSnooping,
+  setDhcpTrusted,
+  setPortSecurity,
+  setSyslog,
   setStpPriority,
   setSubinterface,
   removeSubinterface,
@@ -82,7 +86,8 @@ import {
 import { formatAclRule, formatFirewallRule, parseRule } from './rules';
 import type { FirewallConfig } from '../model/security';
 import { ipv6Links } from '../sim/ip6';
-import type { BgpConfig, CliConfig, Device, DhcpPool, DeviceType, Ospf6Config, RipngConfig, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, Topology } from '../model/types';
+import { PING_MAX_COUNT } from '../sim/apps';
+import type { BgpConfig, CliConfig, Device, DhcpPool, DeviceType, Ospf6Config, RipngConfig, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, StaticRoute, Topology } from '../model/types';
 import { formatIp, maskToText, networkOf, parseIp, parseMask } from '../net/ipv4';
 import { formatCidr6, formatIp6, parseCidr6, parseIp6 } from '../net/ipv6';
 import { buildRoutes, decodeIface, logicalInterfaces, vrfOfIface, type Route } from '../net/routing';
@@ -124,7 +129,7 @@ export interface CliOutput {
   /** Sitzung beendet («exit» im obersten Modus). */
   close?: boolean;
   /** Etwas, das die Simulation ausführen soll (z.B. ping). */
-  action?: { kind: 'ping'; target: string; vrf?: string };
+  action?: { kind: 'ping' | 'traceroute'; target: string; vrf?: string; count?: number; source?: string };
 }
 
 /** Gerätetypen mit Befehlszeile. */
@@ -295,7 +300,27 @@ const KEYWORD_HELP: Record<string, string> = {
   rule: 'Firewall rule',
   default: 'Action when no rule matches',
   stateful: 'Let replies to allowed connections back in',
+  snooping: 'DHCP snooping (RFC 7513)',
+  trust: 'Trusted port: DHCP servers may answer here',
+  'port-security': 'Limit the MAC addresses on this port',
+  maximum: 'Maximum number of MAC addresses',
+  logging: 'Syslog (RFC 5424)',
+  host: 'Syslog server',
 };
+
+/** «ping <ziel> [repeat n] [source adresse]» wie bei Cisco IOS. */
+function pingCli(target: string, repeat?: string, source?: string, device?: Device): Partial<CliOutput> {
+  const count = repeat === undefined ? 4 : Number(repeat);
+  if (!Number.isInteger(count) || count < 1 || count > PING_MAX_COUNT) return ok([`% Invalid repeat count (1-${PING_MAX_COUNT})`]);
+  if (source !== undefined && device) {
+    const own = [...device.interfaces.map((i) => i.ip), ...(device.loopbacks ?? []).map((l) => l.ip), ...(device.svis ?? []).map((s) => s.ip), ...(device.subinterfaces ?? []).map((s) => s.ip)];
+    if (!own.includes(source)) return ok([`% Invalid source address ${source} (not an address of this device)`]);
+  }
+  return {
+    lines: [`Sending ${count}, 100-byte ICMP Echos to ${target}${source ? `, source ${source}` : ''}:`],
+    action: { kind: 'ping', target, ...(repeat !== undefined ? { count } : {}), ...(source ? { source } : {}) },
+  };
+}
 
 function ok(lines: string[] = []): Partial<CliOutput> {
   return { lines };
@@ -524,7 +549,26 @@ const COMMANDS: Command[] = [
     types: L3,
     syntax: 'ping <ip>',
     help: 'Send ICMP echo requests',
-    run: ({ args }) => ({ lines: [`Sending 4 ICMP echos to ${args[0]}:`], action: { kind: 'ping', target: args[0]! } }),
+    run: ({ args }) => pingCli(args[0]!),
+  },
+  { modes: EXEC, types: L3, syntax: 'ping <ip> repeat <num>', help: 'Send this many echo requests (1-1000)', run: ({ args }) => pingCli(args[0]!, args[1]) },
+  { modes: EXEC, types: L3, syntax: 'ping <ip> source <ip>', help: 'Send from this own address', run: ({ args, device }) => pingCli(args[0]!, undefined, args[1], device) },
+  { modes: EXEC, types: L3, syntax: 'ping <ip> repeat <num> source <ip>', help: 'Repeat count and source address', run: ({ args, device }) => pingCli(args[0]!, args[1], args[2], device) },
+  { modes: EXEC, types: L3, syntax: 'ping <ip> source <ip> repeat <num>', help: 'Source address and repeat count', run: ({ args, device }) => pingCli(args[0]!, args[2], args[1], device) },
+  {
+    modes: EXEC,
+    types: L3,
+    syntax: 'traceroute <ip>',
+    help: 'Show the routers on the way (TTL 1, 2, 3 …)',
+    run: ({ args }) => ({ lines: ['Type escape sequence to abort.', `Tracing the route to ${args[0]}`, ''], action: { kind: 'traceroute', target: args[0]! } }),
+  },
+  {
+    modes: EXEC,
+    types: L3,
+    syntax: 'traceroute vrf <word> <ip>',
+    help: 'Traceroute using the routing table of a VRF',
+    run: ({ args, device }) =>
+      device.vrfs?.some((v) => v.name === args[0]) ? { lines: ['Type escape sequence to abort.', `Tracing the route to ${args[1]} (VRF ${args[0]})`, ''], action: { kind: 'traceroute', target: args[1]!, vrf: args[0]! } } : ok([`% VRF ${args[0]} does not exist`]),
   },
   { modes: EXEC, syntax: 'show version', help: 'Software version', run: ({ device }) => ok(showVersion(device)) },
   { modes: ['enable'], syntax: 'show running-config', help: 'Current operating configuration', run: ({ device }) => ok(runningConfig(device)) },
@@ -647,8 +691,11 @@ const COMMANDS: Command[] = [
   { modes: ['config'], types: ROUTERS6, syntax: 'no ipv6 route <cidr6>', help: 'Remove a static IPv6 route', run: (call) => removeRoute6(call, call.args[0]!) },
   { modes: ['config'], types: L3, syntax: 'ip route <cidr> <word>', help: 'Static route: prefix, next hop or interface', run: (call) => addRoute(call, call.args[0]!, call.args[1]!) },
   { modes: ['config'], types: L3, syntax: 'ip route <ip> <mask> <word>', help: 'Static route: network, mask, next hop or interface', run: (call) => addRoute(call, `${call.args[0]}/${call.args[1]}`, call.args[2]!) },
-  { modes: ['config'], types: L3, syntax: 'no ip route <cidr> <word>', help: 'Remove a static route', run: (call) => removeRoute(call, call.args[0]!) },
-  { modes: ['config'], types: L3, syntax: 'no ip route <ip> <mask> <word>', help: 'Remove a static route', run: (call) => removeRoute(call, `${call.args[0]}/${call.args[1]}`) },
+  { modes: ['config'], types: L3, syntax: 'ip route <cidr> <word> <num>', help: 'Static route with administrative distance (1-255; larger = backup route)', run: (call) => addRoute(call, call.args[0]!, call.args[1]!, Number(call.args[2])) },
+  { modes: ['config'], types: L3, syntax: 'ip route <ip> <mask> <word> <num>', help: 'Static route with administrative distance (1-255; larger = backup route)', run: (call) => addRoute(call, `${call.args[0]}/${call.args[1]}`, call.args[2]!, Number(call.args[3])) },
+  { modes: ['config'], types: L3, syntax: 'no ip route <cidr> <word>', help: 'Remove a static route', run: (call) => removeRoute(call, call.args[0]!, call.args[1]) },
+  { modes: ['config'], types: L3, syntax: 'no ip route <ip> <mask> <word>', help: 'Remove a static route', run: (call) => removeRoute(call, `${call.args[0]}/${call.args[1]}`, call.args[2]) },
+  { modes: ['config'], types: L3, syntax: 'no ip route <cidr> <word> <num>', help: 'Remove a static route', run: (call) => removeRoute(call, call.args[0]!, call.args[1]) },
   { modes: ['config'], types: L3, syntax: 'no ip route <cidr>', help: 'Remove a static route', run: (call) => removeRoute(call, call.args[0]!) },
   { modes: ['config'], types: ['l3switch'], syntax: 'ip routing', help: 'Route between VLANs', run: ({ device, env }) => apply(setIpRouting(env.topology, device.id, true)) },
   { modes: ['config'], types: ['l3switch'], syntax: 'no ip routing', help: 'Stop routing between VLANs', run: ({ device, env }) => apply(setIpRouting(env.topology, device.id, false)) },
@@ -981,6 +1028,26 @@ const COMMANDS: Command[] = [
   { modes: ['if'], types: SWITCHES, syntax: 'no switchport trunk native vlan', help: 'Native VLAN 1', run: (call) => forPorts(call, (t, p) => setTrunkNative(t, call.device.id, p, 1)) },
   { modes: ['if'], types: SWITCHES, syntax: 'no switchport access vlan', help: 'Back to VLAN 1', run: (call) => forPorts(call, (t, p) => setPortVlan(t, call.device.id, p, 1)) },
   { modes: ['if'], types: SWITCHES, syntax: 'spanning-tree portfast', help: 'Ports with end devices forward at once (always on here)', run: () => ok() },
+  // --- DHCP-Snooping und Port-Sicherheit (Switches) ----------------------------
+  { modes: ['config'], types: SWITCHES, syntax: 'ip dhcp snooping', help: 'Only trusted ports may answer as DHCP server', run: ({ device, env }) => apply(setDhcpSnooping(env.topology, device.id, true)) },
+  { modes: ['config'], types: SWITCHES, syntax: 'no ip dhcp snooping', help: 'Disable DHCP snooping', run: ({ device, env }) => apply(setDhcpSnooping(env.topology, device.id, false)) },
+  { modes: ['if'], types: SWITCHES, syntax: 'ip dhcp snooping trust', help: 'DHCP server (or the way to it) on this port', run: (call) => forPorts(call, (t, p) => setDhcpTrusted(t, call.device.id, p, true)) },
+  { modes: ['if'], types: SWITCHES, syntax: 'no ip dhcp snooping trust', help: 'Port not trusted', run: (call) => forPorts(call, (t, p) => setDhcpTrusted(t, call.device.id, p, false)) },
+  {
+    modes: ['if'],
+    types: SWITCHES,
+    syntax: 'switchport port-security',
+    help: 'Port security (1 MAC address unless a maximum is set)',
+    run: (call) => forPorts(call, (t, p) => setPortSecurity(t, call.device.id, p, t.devices.find((d) => d.id === call.device.id)?.interfaces[p]?.portSecurity ?? 1)),
+  },
+  { modes: ['if'], types: SWITCHES, syntax: 'switchport port-security maximum <num>', help: 'At most this many MAC addresses', run: (call) => forPorts(call, (t, p) => setPortSecurity(t, call.device.id, p, Number(call.args[0]))) },
+  { modes: ['if'], types: SWITCHES, syntax: 'no switchport port-security', help: 'Disable port security', run: (call) => forPorts(call, (t, p) => setPortSecurity(t, call.device.id, p, null)) },
+  { modes: EXEC, types: SWITCHES, syntax: 'show ip dhcp snooping', help: 'DHCP snooping and trusted ports', run: ({ device, env }) => ok(showSnooping(device, env)) },
+  { modes: EXEC, types: SWITCHES, syntax: 'show port-security', help: 'Port security per port', run: ({ device, env }) => ok(showPortSecurity(device, env)) },
+  // --- Syslog --------------------------------------------------------------
+  { modes: ['config'], types: L3_AND_SWITCH, syntax: 'logging host <ip>', help: 'Send events to this syslog server (UDP 514)', run: ({ device, env, args }) => apply(setSyslog(env.topology, device.id, args[0]!)) },
+  { modes: ['config'], types: L3_AND_SWITCH, syntax: 'no logging host', help: 'Stop sending syslog messages', run: ({ device, env }) => apply(setSyslog(env.topology, device.id, '')) },
+  { modes: EXEC, types: L3_AND_SWITCH, syntax: 'show logging', help: 'Syslog settings', run: ({ device }) => ok([device.syslog ? `Syslog logging: enabled\n    Logging to ${device.syslog} (udp port 514, RFC 5424)` : 'Syslog logging: disabled (logging host <ip>)']) },
   // --- Zugriffslisten (Switches) ---------------------------------------------
   { modes: EXEC, types: SWITCHES, syntax: 'show access-lists', help: 'Access lists with hit counters', run: ({ device, env }) => ok(showAccessLists(device, env)) },
   { modes: EXEC, types: SWITCHES, syntax: 'show ip access-lists', help: 'Access lists with hit counters', run: ({ device, env }) => ok(showAccessLists(device, env)) },
@@ -1095,6 +1162,28 @@ function removeAclRule(call: Call, sequence: number): Partial<CliOutput> {
   const index = sequence / 10 - 1;
   if (!Number.isInteger(index) || !acl.rules[index]) return ok([`% No entry with sequence number ${sequence}`]);
   return apply(setAccessList(env.topology, device.id, acl.name, acl.rules.filter((_, i) => i !== index)));
+}
+
+type Violations = { port: number; portSecurity: number; dhcp: number }[];
+
+function showSnooping(device: Device, env: CliEnv): string[] {
+  const live = (env.state as { violations?: Violations } | undefined)?.violations;
+  const lines = [`Switch DHCP snooping is ${device.dhcpSnooping ? 'enabled' : 'disabled'}`, 'Verification of hwaddr field is enabled', 'Interface                  Trusted    Dropped'];
+  for (const p of device.interfaces) {
+    const dropped = live?.find((v) => v.port === p.index)?.dhcp ?? 0;
+    if (p.dhcpTrusted || dropped) lines.push(`${cliIfaceName(device, p.index).padEnd(27)}${(p.dhcpTrusted ? 'yes' : 'no').padEnd(11)}${dropped}`);
+  }
+  return lines;
+}
+
+function showPortSecurity(device: Device, env: CliEnv): string[] {
+  const live = (env.state as { violations?: Violations } | undefined)?.violations;
+  const secured = device.interfaces.filter((p) => p.portSecurity);
+  if (!secured.length) return ['(no port security configured)'];
+  return [
+    'Secure Port   MaxSecureAddr  SecurityViolation  Action',
+    ...secured.map((p) => `${cliIfaceName(device, p.index).padEnd(14)}${String(p.portSecurity).padEnd(15)}${String(live?.find((v) => v.port === p.index)?.portSecurity ?? 0).padEnd(19)}Restrict`),
+  ];
 }
 
 function showAccessLists(device: Device, env: CliEnv): string[] {
@@ -1389,13 +1478,14 @@ function enterRange(call: Call, spec: string): Partial<CliOutput> {
 }
 
 /** Nächster Hop: IP-Adresse oder Interface-Name. */
-function addRoute(call: Call, prefixText: string, via: string): Partial<CliOutput> {
+function addRoute(call: Call, prefixText: string, via: string, distance?: number): Partial<CliOutput> {
   const { device, env } = call;
   const [network, prefix] = splitCidr(prefixText);
-  if (parseIp(via) !== null) return apply(addStaticRoute(env.topology, device.id, { network, mask: prefix, gateway: via }));
+  const ad = distance !== undefined && distance !== 1 ? { distance } : {};
+  if (parseIp(via) !== null) return apply(addStaticRoute(env.topology, device.id, { network, mask: prefix, gateway: via, ...ad }));
   const ref = parseIfaceName(device, via);
   if (!ref) return ok([`% Invalid next hop: ${via}`]);
-  return apply(addStaticRoute(env.topology, device.id, { network, mask: prefix, iface: ifaceIdOf(ref) }));
+  return apply(addStaticRoute(env.topology, device.id, { network, mask: prefix, iface: ifaceIdOf(ref), ...ad }));
 }
 
 function addRoute6(call: Call, prefixText: string, via: string, ifaceName?: string): Partial<CliOutput> {
@@ -1448,11 +1538,14 @@ function showIpv6Brief(device: Device, env: CliEnv): string[] {
   return table(['Interface', 'IPv6-Address', 'Origin'], rows);
 }
 
-function removeRoute(call: Call, prefixText: string): Partial<CliOutput> {
+function removeRoute(call: Call, prefixText: string, via?: string): Partial<CliOutput> {
   const { device, env } = call;
   const [network, prefixRaw] = splitCidr(prefixText);
   const prefix = parseMask(prefixRaw);
-  const index = (device.routes ?? []).findIndex((r) => r.network === network && parseMask(r.mask) === prefix);
+  // Mit Ziel (Gateway oder Anschluss) genau diese Route, sonst die erste zum Netz (Reserve-Routen haben dasselbe Netz).
+  const ref = via !== undefined && parseIp(via) === null ? parseIfaceName(device, via) : null;
+  const sameVia = (r: StaticRoute) => via === undefined || r.gateway === via || (ref !== null && r.iface === ifaceIdOf(ref));
+  const index = (device.routes ?? []).findIndex((r) => r.network === network && parseMask(r.mask) === prefix && sameVia(r));
   if (index < 0) return ok(['% No such route']);
   return apply(removeStaticRoute(env.topology, device.id, index));
 }
@@ -2087,7 +2180,9 @@ export function runningConfig(device: Device): string[] {
       lines.push('!', `vlan ${v}`, ...(name ? [` name ${name}`] : []), ...(vni ? [` vn-segment ${vni}`] : []));
     }
     for (const acl of device.acls ?? []) lines.push('!', `ip access-list extended ${acl.name}`, ...acl.rules.map((r) => ` ${formatAclRule(r)}`));
+    if (device.dhcpSnooping) lines.push('ip dhcp snooping');
   }
+  if (device.syslog) lines.push(`logging host ${device.syslog}`);
   for (const e of device.dhcpExcluded ?? []) lines.push(`ip dhcp excluded-address ${e.start}${e.end ? ` ${e.end}` : ''}`);
   for (const p of device.dhcpPools ?? []) {
     lines.push('!', `ip dhcp pool ${p.name}`);
@@ -2110,6 +2205,8 @@ export function runningConfig(device: Device): string[] {
       else if (p.vlan && p.vlan !== 1) lines.push(' switchport mode access', ` switchport access vlan ${p.vlan}`);
       if (p.channel) lines.push(` channel-group ${p.channel} mode ${p.channelMode ?? 'active'}`);
       if (p.aclIn) lines.push(` ip access-group ${p.aclIn} in`);
+      if (p.dhcpTrusted) lines.push(' ip dhcp snooping trust');
+      if (p.portSecurity) lines.push(' switchport port-security', ...(p.portSecurity > 1 ? [` switchport port-security maximum ${p.portSecurity}`] : []));
     } else {
       if (p.ip && p.mask) lines.push(` ip address ${p.ip}/${parseMask(p.mask)}`);
       if (p.dhcpRelay) lines.push(` ip helper-address ${p.dhcpRelay}`);
@@ -2162,7 +2259,7 @@ export function runningConfig(device: Device): string[] {
   for (const r of device.type === 'switch' ? [] : (device.routes ?? [])) {
     const prefix = parseMask(r.mask);
     const via = r.gateway ?? (r.iface !== undefined ? cliIfaceName(device, r.iface) : '');
-    lines.push(`ip route ${r.network}/${prefix} ${via}`);
+    lines.push(`ip route ${r.network}/${prefix} ${via}${r.distance !== undefined && r.distance !== 1 ? ` ${r.distance}` : ''}`);
   }
   if (device.routes?.length) lines.push('!');
   for (const v of device.vrfs ?? []) {

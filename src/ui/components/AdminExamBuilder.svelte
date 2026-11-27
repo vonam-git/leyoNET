@@ -83,7 +83,7 @@
       oncreated(exam);
     } catch (error) {
       const c = (error as { code?: string }).code ?? '';
-      notify('error', t(`admin.exams.error.${['labelRequired', 'badSeats', 'badMinutes', 'tooLarge'].includes(c) ? c : 'other'}`));
+      notify('error', t(`admin.exams.error.${['labelRequired', 'badSeats', 'badMinutes', 'tooLarge', 'quotaExceeded'].includes(c) ? c : 'other'}`));
     } finally {
       busy = false;
     }

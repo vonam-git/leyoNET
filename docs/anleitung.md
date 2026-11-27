@@ -202,7 +202,11 @@ Zwei Kabel zwischen denselben Switches oder ein Ring bilden eine Schleife. Ohne 
 ## In der Simulation
 
 - **Ping-Optionen:** `ping -t 192.168.2.10` läuft bis Strg+C oder «Stopp», `ping -n 10 …` sendet zehn Anfragen, `ping -i 1 …` startet mit TTL 1 (der erste Router meldet «TTL abgelaufen»).
-- **Netzscanner:** In der Simulation Desktop → **Programme** → «Installieren», danach Reiter **Netzscanner** oder `nmap 192.168.1.0/24`.
+- **Netzscanner:** In der Simulation Desktop → **Programme** → «Installieren», danach Reiter **Netzscanner** oder `nmap 192.168.1.0/24`. UDP mit Protokoll «UDP» bzw. `nmap -sU -p 53,514 …`, IPv6 mit `nmap 2001:db8::1-20`.
+- **Router-Befehlszeile:** `ping 192.168.2.10 repeat 10 source 192.168.1.1` und `traceroute 192.168.2.10` (in der Simulation).
+- **Schutz am Switch:** Switch → Erweitert … → **Schutz**: DHCP-Snooping mit vertrauenswürdigen Ports, Port-Sicherheit (höchstens n MAC-Adressen), Syslog-Server.
+- **Syslog:** Rechner → Erweitert … → Dienste → **Syslog**: «Syslog-Server» einschalten; die anderen Geräte tragen dessen Adresse ein (Router: Reiter «Schutz» oder `logging host …`).
+- **Reserve-Route:** Reiter «Routing», bei einer statischen Route die Distanz (z.B. 200) eintragen; sie gilt erst, wenn der Anschluss der normalen Route keine Verbindung hat. Auf der Befehlszeile `ip route 0.0.0.0/0 10.0.0.2 200`.
 - **Sicherheit:** Desktop → **Sicherheit** zeigt den Wächter und schaltet ARP-Schutz und SYN-Cookies ein; den **Angreifer** gibt es im Shop unter Endgeräte (Funktion «Sicherheits-Szenarien»).
 - **Konsole der Endgeräte:** Gerät wählen und **T** (oder «Konsole öffnen» im Fenster des Geräts) öffnet die Eingabeaufforderung, auch aus dem Entwurf. Dort gehen u.a. `ipconfig`, `ipconfig /release` und `/renew`, `ifdown eth0`/`ifup eth0` (auch `ip link set eth0 down|up` oder `netsh interface set interface Ethernet disable|enable`), `ping`, `tracert`, `nslookup`, `arp -a`; `help` zeigt alle.
 - **Desktops:** Doppelklick auf ein Endgerät öffnet seinen Desktop (Eingabeaufforderung, Browser, Mail). Mehrere können offen sein. Mit **—** minimieren; «Offene Desktops» in der Simulationsleiste holt sie zurück. Inhalte bleiben erhalten. Desktops lassen sich am Kopf verschieben und unten rechts in der Grösse ändern.

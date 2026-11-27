@@ -78,6 +78,10 @@ Switch(config-ext-nacl)#
 | `show access-lists` (auch `show ip access-lists`) | Zugriffslisten mit Ports und Treffern (Switch) |
 | `show firewall` | Firewall-Regeln mit Trefferzählern, blockierte Pakete, gemerkte Verbindungen (Router, Firewall) |
 | `ping 192.168.1.10` | vier Echo-Anfragen vom Gerät aus (Simulation) |
+| `ping 192.168.1.10 repeat 10`, `ping … source 10.0.0.1` | Anzahl (1–1000) bzw. eigene Absenderadresse (beides kombinierbar) |
+| `traceroute 192.168.1.10`, `traceroute vrf NAME …` | Router auf dem Weg, mit steigender TTL (Simulation) |
+| `show ip dhcp snooping`, `show port-security` | vertrauenswürdige Ports und verworfene DHCP-Nachrichten bzw. Port-Sicherheit mit Verletzungen (Switch) |
+| `show logging` | Syslog-Server, an den das Gerät meldet |
 | `copy running-config startup-config`, `write memory`, `write` | Konfiguration speichern: Die laufende Konfiguration (running-config) wird als startup-config abgelegt und mit dem Projekt gespeichert. Änderungen gelten in leyoNET sofort; der Kopf des CLI-Fensters zeigt «gespeichert» oder «nicht gespeichert». Prüfbaustein «Konfiguration gespeichert». |
 | `show startup-config` | gespeicherte Konfiguration anzeigen |
 | `erase startup-config`, `write erase` | gespeicherte Konfiguration löschen |
@@ -120,9 +124,14 @@ interface loopback0            ! Loopback (auch lo0), immer aktiv; auch auf Fire
  ip address 10.255.0.1/32      ! höchste Loopback-Adresse = Router-ID; OSPF kündigt sie als /32 an
 no interface loopback0
 ip route 0.0.0.0/0 10.0.0.2
+ip route 0.0.0.0/0 10.0.1.2 200   ! Reserve-Route: Distanz 200, gilt erst, wenn eth zu 10.0.0.2 ausfällt
 ip route 172.16.0.0 255.255.0.0 eth1
 no ip route 172.16.0.0/16
+no ip route 0.0.0.0/0 10.0.1.2    ! genau diese (bei Reserve-Routen mit demselben Ziel)
+logging host 192.168.1.50         ! Ereignisse per Syslog (RFC 5424, UDP 514) melden
 ```
+
+Die Routingtabelle zeigt bei jeder Route `[Distanz/Metrik]`. Gewählt wird nach RFC 1812: das genaueste Netz, dann die kleinere administrative Distanz, dann die kleinere Metrik. Statische Routen über einen Anschluss ohne Verbindung fallen weg; so springt eine Reserve-Route mit grösserer Distanz ein (Floating Static Route). Distanz 255 heisst «nie verwenden».
 
 Zwei Interfaces desselben Routers (oder Layer-3-Switches) dürfen in derselben Routingtabelle nicht im selben Netz liegen. Wie auf echten Geräten lehnt leyoNET das ab: `% 192.168.1.0/24 overlaps with eth0 (192.168.1.1/24)`; im Formular erscheint eine Erklärung. Das gilt für Anschlüsse, Subinterfaces, SVIs und Loopbacks. In verschiedenen VRFs ist dasselbe Netz erlaubt; darum zuerst `vrf forwarding`, dann `ip address`.
 
@@ -248,6 +257,20 @@ ip default-gateway 192.168.1.1
 ```
 
 **VLAN-Datenbank:** Ein Switch leitet nur angelegte VLANs weiter, auch auf Trunks. `switchport access vlan 30` legt ein fehlendes VLAN an und meldet `% Access VLAN does not exist. Creating vlan 30` (wie Cisco). Ein Switch, der ein VLAN nur über Trunks weitergibt, braucht `vlan 30` trotzdem. Dateien vor Version 1.2 haben keine Liste; dort gelten alle verwendeten VLANs als angelegt, bis man das erste VLAN anlegt oder löscht.
+
+### DHCP-Snooping und Port-Sicherheit (Switch und Layer-3-Switch)
+
+```
+ip dhcp snooping                      ! nur vertrauenswürdige Ports dürfen als DHCP-Server antworten
+interface fa0/1
+ ip dhcp snooping trust               ! hier hängt der echte DHCP-Server (oder der Uplink dorthin)
+interface fa0/2
+ switchport port-security             ! höchstens 1 MAC-Adresse
+ switchport port-security maximum 2  ! oder höchstens 2
+ no switchport port-security
+```
+
+DHCP-Snooping folgt RFC 7513 (SAVI-DHCP): Offer, Ack und Nak von nicht vertrauenswürdigen Ports verwirft der Switch, Anfragen nur, wenn die Client-MAC im DHCP-Paket die Absender-MAC ist. Die Port-Sicherheit verwirft Rahmen weiterer Absender («restrict»). Verstösse erscheinen in der Konsole und mit `logging host` beim Syslog-Server (Switch mit Verwaltungsadresse).
 
 ### Zugriffslisten (Switch und Layer-3-Switch)
 

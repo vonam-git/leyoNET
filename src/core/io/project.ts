@@ -6,7 +6,7 @@ import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME } from '../net/routing';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
 import { MAX_DHCP_EXCLUDED, MAX_DHCP_POOLS, canDhcpPool, checkDhcpPool, normalizePool } from '../net/dhcp';
 import { MAC_PATTERN } from '../model/mac';
-import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, PHONE_NUMBER, MAX_STARTUP_CONFIG, canInstall, isAttacker, canQos, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
+import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, PHONE_NUMBER, MAX_STARTUP_CONFIG, MAX_PORT_MACS, canInstall, isAttacker, canQos, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
 import { ACL_NAME, MAX_ACLS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
 import { MAX_GROUP_SIZE } from '../model/devices';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
@@ -413,6 +413,12 @@ function readDevice(v: unknown, path: string): Device {
       if (!ACL_NAME.test(name)) throw new Invalid(`${p}.aclIn`);
       iface.aclIn = name;
     }
+    if (io.dhcpTrusted !== undefined && bool(io.dhcpTrusted, `${p}.dhcpTrusted`)) iface.dhcpTrusted = true;
+    if (io.portSecurity !== undefined) {
+      const max = int(io.portSecurity, `${p}.portSecurity`);
+      if (max < 1 || max > MAX_PORT_MACS) throw new Invalid(`${p}.portSecurity`);
+      iface.portSecurity = max;
+    }
     if (io.shutdown !== undefined && bool(io.shutdown, `${p}.shutdown`)) iface.shutdown = true;
     if (io.poeOff !== undefined && bool(io.poeOff, `${p}.poeOff`)) iface.poeOff = true;
     if (io.rate !== undefined) {
@@ -584,6 +590,19 @@ function readDevice(v: unknown, path: string): Device {
     if (typeof o.stp !== 'boolean') throw new Invalid(`${path}.stp`);
     if (o.stp) device.stp = true;
   }
+  if (o.dhcpSnooping !== undefined) {
+    if (typeof o.dhcpSnooping !== 'boolean') throw new Invalid(`${path}.dhcpSnooping`);
+    if (o.dhcpSnooping && isSwitchType(device.type)) device.dhcpSnooping = true;
+  }
+  if (o.syslog !== undefined) {
+    const target = str(o.syslog, `${path}.syslog`).trim();
+    if (parseIp(target) === null) throw new Invalid(`${path}.syslog`);
+    device.syslog = target;
+  }
+  if (o.syslogServer !== undefined) {
+    if (typeof o.syslogServer !== 'boolean') throw new Invalid(`${path}.syslogServer`);
+    if (o.syslogServer && canInstall(device.type)) device.syslogServer = true;
+  }
   if (o.stpPriority !== undefined) {
     const priority = int(o.stpPriority, `${path}.stpPriority`);
     if (priority < 0 || priority > 61440) throw new Invalid(`${path}.stpPriority`);
@@ -680,6 +699,11 @@ function readDevice(v: unknown, path: string): Device {
       if (r.iface !== undefined) {
         const iface = int(r.iface, `${p}.iface`);
         route.iface = iface;
+      }
+      if (r.distance !== undefined) {
+        const distance = int(r.distance, `${p}.distance`);
+        if (distance < 1 || distance > 255) throw new Invalid(`${p}.distance`);
+        if (distance !== 1) route.distance = distance;
       }
       return route;
     });

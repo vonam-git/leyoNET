@@ -2,7 +2,7 @@ import { cableAt, deviceSeq, getDevice, otherEnd } from '../model/topology';
 import { toLink, wlanRun, wlanStepIndex, wlanSteps, type WlanStep } from './wlan';
 import type { EthernetFrame } from './frames';
 import type { Device } from '../model/types';
-import { formatIp, parseIp } from '../net/ipv4';
+import { formatIp, networkOf, parseIp } from '../net/ipv4';
 import { lookupRoute } from '../net/routing';
 import { PingRun, TracerouteRun, icmpView, type IcmpApp, type IcmpHost, type PingOptions } from './apps';
 import { formatIp6, parseIp6 } from '../net/ipv6';
@@ -10,7 +10,8 @@ import type { Ip6State } from './ip6';
 import type { FirewallState } from './firewall';
 import { DhcpClient, DhcpServer, type LeaseRecord } from './dhcp';
 import { DnsResolver, DnsServer, type DnsCacheEntry } from './dns';
-import { DHCP_CLIENT_PORT, DHCP_SERVER_PORT, DNS_PORT, type Ipv4Packet, type Ipv6Packet, type TcpSegment, type UdpDatagram } from './frames';
+import { ALERT_MSGID, MAX_SYSLOG, SYSLOG_PORT, SYSLOG_SEVERITY, type SyslogEntry, type SyslogMessage } from './syslog';
+import { DHCP_CLIENT_PORT, DHCP_SERVER_PORT, DNS_PORT, IPERF_PORT, type IcmpMessage, type Ipv4Packet, type Ipv6Packet, type TcpSegment, type UdpDatagram } from './frames';
 import { HttpClient, HttpServer, type BrowserState } from './http';
 import { IpNode, asIpv4View, type ArpEntry } from './ip';
 import { MailClient, MailServer, type MailClientState } from './mail';
@@ -46,6 +47,8 @@ export interface HostState {
   ipv6?: Ip6State;
   address: AddressState;
   dhcpLeases?: LeaseRecord[];
+  /** Syslog-Server: empfangene Meldungen. */
+  syslog?: SyslogEntry[];
   dnsCache: DnsCacheEntry[];
   connections: ConnectionInfo[];
   /** Dauerping oder Ping läuft noch (Stopp mit Strg+C). */
@@ -103,6 +106,19 @@ export class HostNode extends IpNode {
   readonly iperf: Iperf;
   readonly scanner = new NetScan(this);
   readonly attacker = new AttackRun(this, (target, user, password, done) => this.#trySsh(target, user, password, done));
+  /** Falscher DHCP-Server des Angreifers: vergibt oben im eigenen Netz und nennt sich selbst als Gateway und DNS. */
+  readonly #rogue = new DhcpServer(this, {
+    resolve: () => {
+      const own = this.interfaces()[0];
+      if (!own || !this.attacker.rogueDhcp) return null;
+      const size = 2 ** (32 - own.prefix);
+      const base = networkOf(own.ip, own.prefix);
+      const ip = formatIp(own.ip);
+      return { scope: { start: base + Math.max(2, size - 60), end: base + Math.max(2, size - 30), prefix: own.prefix, reserved: new Map(), gateway: ip, dns: ip }, own, leaseTime: 3600 };
+    },
+  });
+  /** Syslog-Server: zuletzt empfangene Meldungen. */
+  #syslog: SyslogEntry[] = [];
   #alerts: Alert[] = [];
   #arpAsks = new Map<string, { since: number; n: number }>();
   #synPorts = new Map<string, { since: number; ports: Set<number> }>();
@@ -187,6 +203,7 @@ export class HostNode extends IpNode {
     if (!view) return;
     this.#ping?.onIcmp(view);
     this.#trace?.onIcmp(view);
+    this.scanner.onIcmp(view);
   }
 
   /** Anwendungs-Sicht auf den IPv6-Stack: Ping/Traceroute senden ICMPv6-Echos. */
@@ -219,8 +236,11 @@ export class HostNode extends IpNode {
 
   protected override onUdp(packet: Ipv4Packet, datagram: UdpDatagram, index: number, srcMac: string) {
     const msg = datagram.payload;
+    if (this.scanner.onUdp(packet, datagram)) return;
     if (msg.kind === 'dns') {
       if (datagram.dstPort === DNS_PORT) {
+        // Kein DNS-Server auf diesem Gerät: Port geschlossen (z.B. UDP-Scan).
+        if (!msg.response && !this.ctx.device()?.dnsServer) return this.portUnreachable(packet, index);
         // Antwort eines Weiterleiters an diesen DNS-Server, sonst eine Anfrage.
         if (msg.response) this.dnsService.onForwardResponse(msg);
         else this.dnsService.onQuery(packet, datagram);
@@ -239,14 +259,30 @@ export class HostNode extends IpNode {
       if (this.ctx.device()?.type === 'ipphone') this.phone.onRtp(msg);
       return;
     }
+    if (msg.kind === 'syslog') {
+      if (datagram.dstPort === SYSLOG_PORT && this.ctx.device()?.syslogServer) this.#storeSyslog(msg, packet.src);
+      else this.portUnreachable(packet, index);
+      return;
+    }
+    // Daten ohne Anwendung (UDP-Scan): Der Lastgenerator nimmt sie an, sonst ist der Port zu.
+    if (msg.kind === 'data') {
+      if (datagram.dstPort !== IPERF_PORT && !(datagram.dstPort === SYSLOG_PORT && this.ctx.device()?.syslogServer)) this.portUnreachable(packet, index);
+      return;
+    }
     if (msg.kind !== 'dhcp') return;
     if (datagram.dstPort === DHCP_CLIENT_PORT) {
+      this.attacker.onDhcp(msg);
       this.dhcpClient.onMessage(msg);
       // Den Server kennen wir aus seinem Ack; Erneuern und Freigeben brauchen so kein ARP.
       // Kam die Antwort über ein Relay, steht der Server in einem anderen Netz: dann nichts lernen.
       if (msg.op === 'ack' && msg.serverIp && !msg.giaddr && this.dhcpClient.lease) this.learnNeighbor(msg.serverIp, srcMac, index);
     } else if (datagram.dstPort === DHCP_SERVER_PORT) {
       this.dhcpServer.onMessage(packet, msg);
+      if (this.attacker.rogueDhcp) {
+        const before = this.#rogue.leases().length;
+        this.#rogue.onMessage(packet, msg);
+        if (this.#rogue.leases().length > before) this.attacker.onRogueLease();
+      }
     }
   }
 
@@ -258,7 +294,7 @@ export class HostNode extends IpNode {
 
   /** DNS über IPv6 (Anfragen an den eigenen Server und Antworten an den Resolver). */
   protected override onUdp6(packet: Ipv6Packet, datagram: UdpDatagram, index: number) {
-    if (datagram.payload.kind === 'dns') this.onUdp(asIpv4View(packet, datagram), datagram, index, '');
+    if (datagram.payload.kind === 'dns' || datagram.payload.kind === 'data' || datagram.payload.kind === 'syslog') this.onUdp(asIpv4View(packet, datagram), datagram, index, '');
   }
 
   #wlan: WlanSession | null = null;
@@ -268,10 +304,20 @@ export class HostNode extends IpNode {
     else this.#start();
   }
 
+  #storeSyslog(msg: SyslogMessage, from: string) {
+    if (this.ctx.device()?.syslogServer) this.#syslog = [...this.#syslog, { ...msg, from, received: this.ctx.now }].slice(-MAX_SYSLOG);
+  }
+
+  protected override ownSyslog(message: SyslogMessage) {
+    this.#storeSyslog(message, this.interfaces()[0] ? formatIp(this.interfaces()[0]!.ip) : '127.0.0.1');
+  }
+
   // --- Wächter und Angreifer ------------------------------------------------------------
 
   #alert(kind: Alert['kind'], params: Alert['params']) {
     const last = this.#alerts.at(-1);
+    // Neue Warnung (nicht nur ein weiterer Zähler) auch an den Syslog-Server, Schweregrad «warning».
+    if (last?.kind !== kind) this.syslog(SYSLOG_SEVERITY.warning, ALERT_MSGID[kind], `${kind} ${Object.entries(params).map(([k, v]) => `${k}=${v}`).join(' ')}`, Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])));
     const { halfOpen: _a, ports: _b, ...id } = params;
     const { halfOpen: _c, ports: _d, ...lastId } = last?.params ?? {};
     if (last?.kind === kind && JSON.stringify(lastId) === JSON.stringify(id)) this.#alerts[this.#alerts.length - 1] = { ...last, params, count: last.count + 1 };
@@ -308,6 +354,11 @@ export class HostNode extends IpNode {
     }
     seen.ports.add(segment.dstPort);
     if (seen.ports.size >= SCAN_ALERT_PORTS) this.#alert('portScan', { ip: packet.src, ports: seen.ports.size });
+  }
+
+  /** ICMPv6-Echo für den Netzscanner. */
+  sendEcho6(dst: string, echo: IcmpMessage, onError: () => void) {
+    this.v6.send(dst, { ...echo, kind: 'icmpv6' }, {}, onError);
   }
 
   sendRaw(index: number, frame: EthernetFrame) {
@@ -556,6 +607,7 @@ export class HostNode extends IpNode {
       dnsCache: this.resolver.cacheEntries(),
       connections: this.connections(),
       ...(device?.dhcpServer ? { dhcpLeases: this.dhcpServer.leases() } : {}),
+      ...(device?.syslogServer ? { syslog: [...this.#syslog] } : {}),
       // Kopien, damit die Oberfläche eine unveränderliche Momentaufnahme erhält.
       ...(browser ? { browser: { ...browser, steps: [...browser.steps] } } : {}),
       mail: { ...mail, steps: [...mail.steps], inbox: [...mail.inbox], sent: [...mail.sent] },

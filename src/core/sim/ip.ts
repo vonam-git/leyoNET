@@ -1,3 +1,4 @@
+import { SYSLOG_FACILITY, SYSLOG_PORT, type SyslogMessage } from './syslog';
 import { DhcpServer, type DhcpHost } from './dhcp';
 import { poolScopeFor } from '../net/dhcp';
 import type { Device, StaticNat, Topology } from '../model/types';
@@ -27,7 +28,7 @@ import { isModemWan } from '../model/links';
 import type { ModemKind } from '../model/types';
 import { BGP_PORT, IKE_PORT, OSPF6_ALL_ROUTERS, OSPF_ALL_ROUTERS, RIPNG_MULTICAST, RIPNG_PORT, RIP_MULTICAST, RIP_PORT } from './frames';
 import { ACCESS_PROFILES, nextSteps, stepIndex } from './access';
-import { PingRun, icmpView, type IcmpApp, type IcmpHost } from './apps';
+import { PingRun, TracerouteRun, icmpView, type IcmpApp, type IcmpHost } from './apps';
 import { SSH_PORT, startSshServer } from './ssh';
 import { TcpStack } from './tcp';
 import { PppLinks } from './ppp';
@@ -136,6 +137,28 @@ export class IpNode implements SimNode {
       () => this.effectiveDevice(),
     );
   }
+
+  #syslogSent = new Map<string, number>();
+
+  /**
+   * Meldung an den Syslog-Server des Geräts (RFC 5424 über UDP, RFC 5426). Dieselbe MSGID höchstens
+   * einmal pro Sekunde, damit ein Angriff den Server nicht mit Meldungen überschwemmt.
+   */
+  syslog(severity: number, msgid: string, text: string, params: Record<string, string> = {}) {
+    const device = this.ctx.device();
+    const target = device?.syslog;
+    if (!device || !target || !this.ipv4On()) return;
+    const last = this.#syslogSent.get(msgid) ?? -Infinity;
+    if (this.ctx.now - last < 1000) return;
+    this.#syslogSent.set(msgid, this.ctx.now);
+    const message: SyslogMessage = { kind: 'syslog', facility: SYSLOG_FACILITY, severity, host: device.name, msgid, text, params };
+    // Der Syslog-Server meldet sich selbst: direkt ablegen.
+    if (this.isOwn(parseIp(target) ?? 0)) return this.ownSyslog(message);
+    this.sendIp(target, { kind: 'udp', srcPort: SYSLOG_PORT, dstPort: SYSLOG_PORT, payload: message });
+  }
+
+  /** Eigene Meldung, wenn das Gerät selbst der Syslog-Server ist. */
+  protected ownSyslog(_message: SyslogMessage) {}
 
   /** IPv4 aktiv? Im Modus «nur IPv6» schweigt der IPv4-Stack. */
   protected ipv4On(): boolean {
@@ -543,6 +566,23 @@ export class IpNode implements SimNode {
     });
   }
 
+  /**
+   * UDP an einen Port ohne Dienst: «Port unreachable» an den Absender (RFC 1122, 4.1.3.1; RFC 792 Code 3).
+   * Nie auf Broadcasts (RFC 1122, 3.2.2). Über IPv6 als ICMPv6 Code 4 (RFC 4443).
+   */
+  protected portUnreachable(packet: Ipv4Packet, index: number) {
+    const datagram = packet.payload;
+    if (datagram.kind !== 'udp' || packet.dst === '255.255.255.255') return;
+    if (parseIp6(packet.src) !== null) {
+      this.v6.send(packet.src, { kind: 'icmpv6', type: 'destUnreachable', code: 'port', id: 0, seq: 0, size: 0, original: { src: packet.src, dst: packet.dst, id: datagram.srcPort, seq: datagram.dstPort } } as Ipv6Packet['payload']);
+      return;
+    }
+    const from = this.interfaces().find((i) => i.index === index) ?? this.interfaces()[0];
+    if (!from || !this.isOwn(parseIp(packet.dst) ?? 0)) return;
+    const message: IcmpMessage = { kind: 'icmp', type: 'destUnreachable', code: 'port', id: 0, seq: 0, size: 0, original: { src: packet.src, dst: packet.dst, id: datagram.srcPort, seq: datagram.dstPort } };
+    this.sendIp(packet.src, message, { src: packet.dst });
+  }
+
   #icmpError(from: IfaceAddress, original: Ipv4Packet, type: 'destUnreachable' | 'timeExceeded', code?: 'net' | 'host') {
     const payload = original.payload;
     // Auf Fehlermeldungen antwortet man nie mit Fehlermeldungen (sonst Ping-Pong).
@@ -916,7 +956,9 @@ export class ForwardingNode extends IpNode {
   }
 
   #combine(except: 'ospf' | 'rip' | 'bgp' | null): Route[] {
-    const routes = [...super.routes()];
+    // Statische Routen über einen Anschluss ohne Verbindung gelten nicht (RFC 1812, 5.2.4: nur Wege über
+    // funktionierende Anschlüsse); so springt eine Reserve-Route mit grösserer Distanz ein.
+    const routes = super.routes().filter((r) => r.kind !== 'static' || this.ifaceUp(r.iface));
     const device = this.ctx.device();
     if (device && routingModeOf(device) === 'auto') {
       routes.push(...autoRoutes(this.ctx.topology(), device.id));
@@ -1113,33 +1155,55 @@ export class RouterNode extends ForwardingNode {
     return this.vpn.state();
   }
 
-  /** «ping» aus der Befehlszeile des Routers; mit VRF über deren Tabelle. */
-  ping(target: string, vrf?: string) {
-    this.#ping?.cancel();
+  /** Weg der Echo-Anfragen: IPv6-Stack, VRF-Tabelle oder normal; optional mit fester Absenderadresse. */
+  #icmpVia(target: string, vrf?: string, source?: string): IcmpHost {
     // IPv6-Ziel: Echo als ICMPv6 über den IPv6-Stack.
+    if (parseIp(target) === null && parseIp6(target) !== null) {
+      return {
+        ctx: this.ctx,
+        sendIp: (dst, payload, options, onError) => {
+          if (payload.kind === 'icmp') this.v6.send(dst, { ...payload, kind: 'icmpv6' }, { ...(options?.ttl !== undefined ? { hopLimit: options.ttl } : {}), ...(source ? { src: source } : {}) }, onError);
+        },
+      };
+    }
+    if (!vrf && !source) return this;
+    return { ctx: this.ctx, sendIp: (dst, payload, options, onError) => this.sendIp(dst, payload, { ...options, ...(vrf ? { vrf } : {}), ...(source ? { src: source } : {}) }, onError) };
+  }
+
+  /**
+   * «ping» aus der Befehlszeile des Routers; mit VRF über deren Tabelle. Optionen wie bei Cisco IOS:
+   * «repeat n» (Anzahl) und «source» (Absenderadresse, eine eigene Adresse des Routers).
+   */
+  ping(target: string, vrf?: string, options: { count?: number; source?: string } = {}) {
+    this.#ping?.cancel();
+    this.#trace?.cancel();
     const v6 = parseIp(target) === null && parseIp6(target) !== null;
-    const via: IcmpHost = v6
-      ? {
-          ctx: this.ctx,
-          sendIp: (dst, payload, options, onError) => {
-            if (payload.kind === 'icmp') this.v6.send(dst, { ...payload, kind: 'icmpv6' }, options?.ttl !== undefined ? { hopLimit: options.ttl } : {}, onError);
-          },
-        }
-      : vrf
-        ? { ctx: this.ctx, sendIp: (dst, payload, options, onError) => this.sendIp(dst, payload, { ...options, vrf }, onError) }
-        : this;
-    const run = new PingRun(via, v6 ? (normalizeIp6(target) ?? target) : target, ++this.#pingId, '');
+    const run = new PingRun(this.#icmpVia(target, vrf, options.source), v6 ? (normalizeIp6(target) ?? target) : target, ++this.#pingId, '', undefined, options.count !== undefined ? { count: options.count } : {});
     this.#ping = run;
     run.start();
   }
 
+  /** «traceroute» aus der Befehlszeile: Echo-Anfragen mit steigender TTL; Router auf dem Weg antworten mit ICMP Time Exceeded (RFC 792). */
+  traceroute(target: string, vrf?: string) {
+    this.#ping?.cancel();
+    this.#trace?.cancel();
+    const v6 = parseIp(target) === null && parseIp6(target) !== null;
+    const run = new TracerouteRun(this.#icmpVia(target, vrf), v6 ? (normalizeIp6(target) ?? target) : target, ++this.#pingId);
+    this.#trace = run;
+    run.start();
+  }
+
+  #trace: TracerouteRun | null = null;
+
   protected override onIcmp(packet: Ipv4Packet) {
     this.#ping?.onIcmp(packet);
+    this.#trace?.onIcmp(packet);
   }
 
   protected override onIcmp6(packet: Ipv6Packet) {
     const view = icmpView(packet);
     if (view) this.#ping?.onIcmp(view);
+    if (view) this.#trace?.onIcmp(view);
   }
 
   /** Verwaltung per SSH (Port 22) und BGP (179); alles andere an den Router selbst verwirft er still, wie Heimrouter. */

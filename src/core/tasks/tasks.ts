@@ -3,7 +3,8 @@
 // Dynamische Prüfungen (Ping, HTTP, DHCP, E-Mail) laufen in einer eigenen,
 // frischen Simulation des aktuellen Netzes und sind deshalb wiederholbar.
 
-import { attackEffect } from './attacks';
+import { attackEffect, attackLogged } from './attacks';
+import { matchesAddress } from '../model/security';
 import { ATTACK_KINDS, type AttackKind } from '../model/types';
 import { DEVICE_TYPES, isSwitchType } from '../model/devices';
 import { cablesOf, otherEnd, vlanColor, vlanExists } from '../model/topology';
@@ -37,6 +38,8 @@ export type Check =
   | { type: 'port'; from: string; to: string; port: number; state?: PortCheckState }
   /** Das Netz widersteht diesem Angriff (virtueller Angreifer, siehe attacks.ts). */
   | { type: 'resist'; attack: AttackKind }
+  /** Der Angriff wird beim Syslog-Server protokolliert (STRIDE: Repudiation, Nachweis). */
+  | { type: 'logged'; attack: AttackKind }
   | { type: 'packetSeen'; protocol: string; from?: string; to?: string }
   /** Router hat ein Netz über ein Routingprotokoll gelernt (oder überhaupt eine Route dorthin). */
   | { type: 'routeLearned'; device: string; network: string; protocol?: 'ospf' | 'rip' | 'bgp' }
@@ -50,6 +53,10 @@ export type Check =
   | { type: 'seenAs'; from: string; to: string; address: string }
   /** Klassen-Verbund: Der eigene Standort ist von der Zentrale aus erreichbar (Ping), bei «services» auch seine Webseite. */
   | { type: 'verbundSite'; level?: 'online' | 'services' }
+  /** Klassen-Verbund: `from` ruft die Webseite eines anderen Standorts über dessen öffentliche Adresse ab. */
+  | { type: 'verbundWeb'; from: string }
+  /** Klassen-Verbund: `from` erreicht über einen IPsec-Tunnel ein Gerät im privaten Netz eines anderen Standorts. */
+  | { type: 'verbundVpn'; from: string }
   /** Modem hat seine Zugangsleitung aufgebaut. */
   | { type: 'modemOnline'; device: string }
   /** Gerät wird per PoE gespeist (IEEE 802.3, Klausel 33/145). */
@@ -117,6 +124,7 @@ export const CHECK_TYPES = [
   'mail',
   'port',
   'resist',
+  'logged',
   'packetSeen',
   'routeLearned',
   'neighbors',
@@ -128,6 +136,8 @@ export const CHECK_TYPES = [
   'configSaved',
   'call',
   'verbundSite',
+  'verbundWeb',
+  'verbundVpn',
   'groupLeases',
   'budget',
   'linkUp',
@@ -437,6 +447,10 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       }
       return fail(id, 'httpFailed', { url: check.url, detail: status ?? browser?.steps.at(-1)?.code ?? '' });
     }
+    case 'logged': {
+      const result = attackLogged(topology, check.attack);
+      return result === 'logged' ? { id, passed: true } : fail(id, result === 'noServer' ? 'noSyslogServer' : result === 'noTarget' ? 'attackNoTarget' : 'attackNotLogged', { attack: check.attack });
+    }
     case 'resist': {
       const effect = attackEffect(topology, check.attack);
       return effect === 'blocked' ? { id, passed: true } : fail(id, effect === 'noTarget' ? 'attackNoTarget' : 'attackEffective', { attack: check.attack });
@@ -530,6 +544,43 @@ export function evaluateGoal(topology: Topology, goal: Goal, liveLog: readonly P
       sim.runUntil(sim.now + ACTION_MS);
       const browser = sim.getDeviceState(hub.id).browser;
       return browser?.status === 'done' && browser.response?.status === 200 ? { id, passed: true } : fail(id, 'verbundNoWeb', { address });
+    }
+    case 'verbundWeb': {
+      const from = need(check.from);
+      if (!from) return missing(check.from);
+      const others = otherSites(topology);
+      if (!others.length) return fail(id, 'verbundNoNeighbour');
+      const sim = bootedSimulation(topology);
+      for (const site of others) {
+        sim.browse(from.id, `http://${site.address}/`);
+        sim.runUntil(sim.now + ACTION_MS);
+        const b = sim.getDeviceState(from.id).browser;
+        if (b?.status === 'done' && b.response?.status === 200) return { id, passed: true };
+      }
+      return fail(id, 'verbundNoNeighbourWeb', { n: others.length });
+    }
+    case 'verbundVpn': {
+      const from = need(check.from);
+      if (!from) return missing(check.from);
+      const own = topology.devices.find((d) => d.verbund && !isForeignId(d.id));
+      const others = otherSites(topology);
+      const tunnels = (own?.vpn ?? []).filter((v) => others.some((s) => s.address === v.peer));
+      if (!tunnels.length) return fail(id, 'verbundNoTunnel');
+      const sim = bootedSimulation(topology);
+      for (const tunnel of tunnels) {
+        // Ein Gerät mit fester Adresse im Netz hinter dem Tunnel (am anderen Standort).
+        const target = topology.devices.find((d) => isForeignId(d.id) && !d.verbund && d.interfaces.some((i) => i.ip && matchesAddress(tunnel.remote, i.ip)));
+        const ip = target?.interfaces.find((i) => i.ip && matchesAddress(tunnel.remote, i.ip))?.ip;
+        if (!ip) continue;
+        // Erster Ping baut den Tunnel auf (IKE), der zweite prüft.
+        sim.ping(from.id, ip);
+        sim.runUntil(sim.now + ACTION_MS);
+        sim.clearConsole(from.id);
+        sim.ping(from.id, ip);
+        sim.runUntil(sim.now + ACTION_MS);
+        if (sim.getDeviceState(from.id).console.some((l) => l.code === 'ping.reply')) return { id, passed: true };
+      }
+      return fail(id, 'verbundVpnFailed', { peer: tunnels.map((v) => v.peer).join(', ') });
     }
     case 'noStorm': {
       const sim = bootedSimulation(topology);
@@ -858,6 +909,7 @@ export function readTasks(value: unknown, invalid: (path: string) => never, read
           break;
         }
         case 'resist':
+        case 'logged':
           if (!(ATTACK_KINDS as readonly unknown[]).includes(c.attack)) invalid(`${cp}.attack`);
           check = { type, attack: c.attack as AttackKind };
           break;
@@ -920,6 +972,10 @@ export function readTasks(value: unknown, invalid: (path: string) => never, read
         case 'verbundSite':
           if (c.level !== undefined && c.level !== 'online' && c.level !== 'services') invalid(`${cp}.level`);
           check = { type, ...(c.level ? { level: c.level as 'online' | 'services' } : {}) };
+          break;
+        case 'verbundWeb':
+        case 'verbundVpn':
+          check = { type, from: str(c.from, `${cp}.from`) };
           break;
         case 'groupLeases': {
           const min = optNum(c.min, `${cp}.min`);
@@ -1040,4 +1096,14 @@ export function readTasks(value: unknown, invalid: (path: string) => never, read
         }
       : {}),
   };
+}
+
+/** Andere Standorte im zusammengesetzten Netz mit ihrer öffentlichen Adresse (Anschluss an den Provider). */
+function otherSites(topology: Topology): { name: string; address: string }[] {
+  return topology.devices
+    .filter((d) => d.verbund && isForeignId(d.id) && !isInfraId(d.id))
+    .flatMap((d) => {
+      const address = d.interfaces[d.verbund!.iface]?.ip;
+      return address ? [{ name: d.name, address }] : [];
+    });
 }

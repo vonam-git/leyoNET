@@ -277,12 +277,12 @@ export class Simulation {
   }
 
   /** Startet "ping <ziel>" auf einem Endgerät oder (aus der Befehlszeile) auf einem Router/Layer-3-Switch. */
-  ping(deviceId: string, target: string, member = 1, vrf?: string) {
+  ping(deviceId: string, target: string, member = 1, vrf?: string, options: { count?: number; source?: string } = {}) {
     const node = this.#node(deviceId);
     if (node instanceof HostNode) node.ping(target);
     else if (node instanceof ClientGroupNode) node.member(member)?.ping(target);
-    else if (node instanceof RouterNode) node.ping(target, vrf);
-    else if (node instanceof L3SwitchNode) node.router.ping(target, vrf);
+    else if (node instanceof RouterNode) node.ping(target, vrf, options);
+    else if (node instanceof L3SwitchNode) node.router.ping(target, vrf, options);
   }
 
   /** Strg+C in der Befehlszeile des Geräts. */
@@ -299,7 +299,11 @@ export class Simulation {
     this.#host(deviceId)?.scanner.stop();
   }
 
-  traceroute(deviceId: string, target: string, member = 1) {
+  /** Traceroute auf einem Endgerät («tracert») oder aus der Befehlszeile eines Routers bzw. Layer-3-Switches. */
+  traceroute(deviceId: string, target: string, member = 1, vrf?: string) {
+    const node = this.#node(deviceId);
+    if (node instanceof RouterNode) return node.traceroute(target, vrf);
+    if (node instanceof L3SwitchNode) return node.router.traceroute(target, vrf);
     this.#host(deviceId, member)?.traceroute(target);
   }
 

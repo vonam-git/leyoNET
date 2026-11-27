@@ -40,7 +40,7 @@ export { rateCall, RTP_PORT, DEFAULT_CALL_SECONDS, type CallState, type CallStat
 export type { LeaseRecord } from './sim/dhcp';
 export { COMMANDS, parseInterfaceCommand } from './sim/commands';
 export { parsePing, PING_MAX_COUNT, type PingOptions } from './sim/apps';
-export { hopsFromTtl, parsePorts, parseTargets, serviceName, SCAN_DEFAULT_PORTS, SCAN_MAX_HOSTS, type PortState, type ScanError, type ScanHost, type ScanPort, type ScanRequest, type ScanState } from './sim/scan';
+export { hopsFromTtl, parsePorts, parseTargets, serviceName, SCAN_DEFAULT_PORTS, SCAN_DEFAULT_UDP_PORTS, SCAN_MAX_HOSTS, type PortState, type ScanError, type ScanHost, type ScanPort, type ScanRequest, type ScanState } from './sim/scan';
 export { MAC_TTL, type MacEntry, type StpState } from './sim/switch';
 export * from './cli/cli';
 export * from './cli/names';

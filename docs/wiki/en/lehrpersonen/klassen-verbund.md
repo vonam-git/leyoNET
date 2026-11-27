@@ -15,6 +15,8 @@ A **seat** is a site in the class network, like a branch office of a company, bu
 | Connect the site to the hub | uplink, WAN address, default route, NAT; the PC opens the hub's web page | online |
 | Site with DHCP and the hub's name | additionally DHCP on the router with the hub's DNS; opens zentrale.verbund.example | online |
 | Publish your own web server in the class network | additionally port forwarding, the hub opens the site's web page | services reachable |
+| Visit the neighbour's web page | publish the web server and open the page of another site via its WAN address | services reachable |
+| VPN to the partner site | own LAN 10.10.<seat>.0/24, IPsec tunnel to a partner, the PC reaches the partner's PC privately ([[ipsec-vpn]]) | online |
 | Troubleshooting a federation site | finished site with 5 faults, different at every seat; find and fix them all | faults fixed n/5, then done |
 
 | Seat n | Transit network | WAN address | Provider (gateway) |

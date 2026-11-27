@@ -29,7 +29,7 @@ export const HELP_GROUPS: { id: string; topics: string[] }[] = [
   { id: 'switching', topics: ['switching', 'vlan', 'trunk', 'stp', 'lag', 'qos', 'vxlan', 'routerOnAStick'] },
   { id: 'routing', topics: ['routing', 'autoRouting', 'ospf', 'rip', 'bgp', 'ospf6', 'ripng', 'vrf', 'loopback'] },
   { id: 'nat', topics: ['nat', 'staticNat', 'portForward', 'cgnat', 'dsLite'] },
-  { id: 'security', topics: ['firewall', 'acl', 'vpn', 'attacks'] },
+  { id: 'security', topics: ['firewall', 'acl', 'l2security', 'syslog', 'vpn', 'attacks'] },
   { id: 'services', topics: ['web', 'mail', 'voip', 'cli', 'ssh'] },
   { id: 'analysis', topics: ['sniffer', 'osi', 'osiStep', 'filter', 'pcap', 'scanner'] },
   { id: 'documentation', topics: ['areas', 'racks', 'floors', 'snapshots', 'netdoc'] },

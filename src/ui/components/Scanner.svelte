@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { networkInfo, parseIp, parsePorts, parseTargets, SCAN_DEFAULT_PORTS, type Device, type ScanError, type ScanHost } from '../../core';
+  import { networkInfo, parseIp, parsePorts, parseTargets, SCAN_DEFAULT_PORTS, SCAN_DEFAULT_UDP_PORTS, type Device, type ScanError, type ScanHost } from '../../core';
   import { t } from '../../i18n';
   import { simStore } from '../state/sim.svelte';
 
   /**
-   * Netzscanner auf dem Desktop: Geräte finden, TCP-Ports prüfen. Aussehen wie der Auftritt von
+   * Netzscanner auf dem Desktop: Geräte finden, TCP- oder UDP-Ports prüfen (IPv4 und IPv6). Aussehen wie der Auftritt von
    * leyoNET: Schreibmaschine für Überschriften, Punktraster, Farben nur mit Bedeutung.
    */
   let { device }: { device: Device } = $props();
@@ -27,6 +27,8 @@
   let target = $state('');
   let mode = $state<'discover' | 'ports' | 'direct'>('ports');
   let portText = $state('');
+  let protocol = $state<'tcp' | 'udp'>('tcp');
+  const defaults = $derived(protocol === 'udp' ? SCAN_DEFAULT_UDP_PORTS : SCAN_DEFAULT_PORTS);
   let error = $state<ScanError | null>(null);
   let selected = $state<string | null>(null);
 
@@ -44,19 +46,20 @@
       ports = parsed.ports;
     }
     selected = null;
-    error = simStore.scan(device.id, { target: text, discoverOnly: mode === 'discover', skipDiscovery: mode === 'direct', ...(ports ? { ports } : {}) });
+    error = simStore.scan(device.id, { target: text, discoverOnly: mode === 'discover', skipDiscovery: mode === 'direct', ...(protocol === 'udp' ? { udp: true } : {}), ...(ports ? { ports } : {}) });
   }
 
   const hosts = $derived(new Map((scan?.hosts ?? []).map((h) => [h.ip, h])));
   const shown = $derived((scan?.hosts ?? []).filter((h) => !selected || h.ip === selected));
   const percent = $derived(scan ? (scan.status === 'running' ? Math.round((100 * scan.done) / Math.max(1, scan.total)) : 100) : 0);
   const open = (h: ScanHost) => h.ports.filter((p) => p.state === 'open');
+  const maybe = (h: ScanHost) => h.ports.filter((p) => p.state === 'openFiltered');
   const count = (h: ScanHost, state: string) => h.ports.filter((p) => p.state === state).length;
   const tone = (ip: string) => {
     const h = hosts.get(ip);
     return !h ? 'off' : open(h).length ? 'open' : 'up';
   };
-  const last = (ip: string) => ip.slice(ip.lastIndexOf('.') + 1);
+  const last = (ip: string) => ip.slice(Math.max(ip.lastIndexOf('.'), ip.lastIndexOf(':')) + 1) || '0';
 </script>
 
 <div class="scanner" data-help="scanner">
@@ -76,9 +79,16 @@
         {#each ['discover', 'ports', 'direct'] as const as m (m)}<option value={m}>{t(`scanner.mode.${m}`)}</option>{/each}
       </select></label
     >
+    <label
+      ><span>{t('scanner.protocol')}</span>
+      <select bind:value={protocol} disabled={mode === 'discover'}>
+        <option value="tcp">TCP</option>
+        <option value="udp">UDP</option>
+      </select></label
+    >
     <label class="ports"
       ><span>{t('scanner.ports')}</span>
-      <input bind:value={portText} disabled={mode === 'discover'} placeholder={SCAN_DEFAULT_PORTS.slice(0, 7).join(', ') + ' …'} maxlength="200" spellcheck="false" autocomplete="off" title={t('scanner.portsHint', { list: SCAN_DEFAULT_PORTS.join(', ') })} /></label
+      <input bind:value={portText} disabled={mode === 'discover'} placeholder={defaults.slice(0, 7).join(', ') + ' …'} maxlength="200" spellcheck="false" autocomplete="off" title={t('scanner.portsHint', { list: defaults.join(', ') })} /></label
     >
     {#if running}
       <button type="button" class="stop" onclick={() => simStore.scanStop(device.id)}>{t('scanner.stop')}</button>
@@ -107,7 +117,8 @@
             </div>
             {#if h.ports.length}
               <div class="chips">
-                {#each open(h) as p (p.port)}<span class="chip open"><b>{p.port}</b> {p.service}</span>{/each}
+                {#each open(h) as p (p.port)}<span class="chip open"><b>{p.port}{p.protocol === 'udp' ? '/udp' : ''}</b> {p.service}</span>{/each}
+                {#each maybe(h) as p (p.port)}<span class="chip maybe" title={t('scanner.state.openFiltered')}><b>{p.port}/udp</b> {p.service}?</span>{/each}
                 {#each h.ports.filter((p) => p.state === 'filtered').slice(0, 8) as p (p.port)}<span class="chip filtered" title={t('scanner.state.filtered')}>{p.port}</span>{/each}
                 {#if count(h, 'filtered') > 8}<span class="chip filtered">{t('scanner.more', { n: count(h, 'filtered') - 8 })}</span>{/if}
                 {#if count(h, 'closed')}<span class="chip closed">{t('scanner.closedCount', { n: count(h, 'closed') })}</span>{/if}
@@ -128,7 +139,7 @@
       {/if}
     </div>
     <p class="legend">
-      <span class="chip open">{t('scanner.state.open')}</span><span class="chip closed">{t('scanner.state.closed')}</span><span class="chip filtered">{t('scanner.state.filtered')}</span>
+      <span class="chip open">{t('scanner.state.open')}</span><span class="chip closed">{t('scanner.state.closed')}</span><span class="chip filtered">{t('scanner.state.filtered')}</span>{#if protocol === 'udp'}<span class="chip maybe">{t('scanner.state.openFiltered')}</span>{/if}
     </p>
   {:else}
     <p class="intro">{t('scanner.intro')}</p>
@@ -360,5 +371,8 @@
     max-width: 60ch;
     color: var(--muted);
     background: var(--surface);
+  }
+  .chip.maybe {
+    border-style: dashed;
   }
 </style>
