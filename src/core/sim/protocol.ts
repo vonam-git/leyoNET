@@ -9,7 +9,7 @@ const LINK_NAMES = { docsis: 'DOCSIS', gpon: 'GPON', dsl: 'DSL', pppoe: 'PPPoE',
 export function protocolOf(frame: EthernetFrame): string {
   const p = frame.payload;
   if (p.kind === 'arp') return 'ARP';
-  if (p.kind === 'stp') return 'STP';
+  if (p.kind === 'stp') return p.version === 2 ? 'RSTP' : 'STP';
   if (p.kind === 'lacp') return 'LACP';
   if (p.kind === 'ppp') return p.protocol === 'lcp' ? 'PPP LCP' : 'PPP IPCP';
   if (p.kind === 'link') return LINK_NAMES[p.tech];
@@ -28,6 +28,7 @@ export function protocolOf(frame: EthernetFrame): string {
   if (inner.kind === 'icmp') return 'ICMP';
   if (inner.kind === 'esp') return 'ESP';
   if (inner.kind === 'ospf') return 'OSPF';
+  if (inner.kind === 'vrrp') return 'VRRP';
   if (inner.kind === 'udp') return inner.payload.kind === 'ike' ? 'IKEv2' : inner.payload.kind === 'data' ? 'iperf' : inner.payload.kind.toUpperCase();
   // TCP-Segmente mit Nutzdaten zählen zum Anwendungsprotokoll, reine Steuersegmente zu TCP.
   const app = TCP_APPS[inner.dstPort] ?? TCP_APPS[inner.srcPort];

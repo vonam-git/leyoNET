@@ -74,6 +74,11 @@ Statische Prüfungen schauen nur auf das gebaute Netz. **Dynamische** Prüfungen
 | `poePowered` | `device` | das Gerät (IP-Telefon, Kamera, Access Point) per PoE Strom bekommt: PoE am Switch eingeschaltet, Klasse passt zum Typ, Budget reicht |
 | `groupLeases` ⚡ | `device` (Client-Gruppe), `min`? (Standard: alle) | so viele Mitglieder der Gruppe eine Adresse per DHCP haben |
 | `budget` | `max` (CHF) | die Richtpreise aller Geräte, Kabel und Module zusammen höchstens `max` ergeben |
+| `failover` ⚡ | `from`, `to`, `a`, `b`, `within`? (ms, Standard 5000), `url`? | der Ping (mit `url`: die Webseite) klappt, dann alle Kabel zwischen `a` und `b` ausfallen und es nach `within` ms wieder klappt (STP, RSTP, VRRP, ECMP, Load Balancer) |
+| `rstp` | `devices` | diese Switches Spanning Tree in der Variante RSTP haben |
+| `vrrp` ⚡ | `device`, `ip` (virtuelle Adresse), `state`? (`master` Standard, `backup`) | das Gerät nach dem Start für diese virtuelle Adresse Master (bzw. Backup) ist |
+| `ecmp` ⚡ | `device`, `network`, `min`? (Standard 2) | nach 25 s mindestens so viele gleich gute Routen ins Netz bestehen |
+| `balanced` ⚡ | `from`, `to` (Load Balancer), `min`? (Standard 2) | mehrere Aufrufe von `from` beim Load Balancer auf mindestens so viele Server verteilt werden |
 | `linkUp` | `a`, `b`, `medium`? (`tp`, `fiber`, `wireless`, `serial`, `coax`, `dsl`, `cellular`) | die beiden Geräte direkt verbunden sind, die Verbindung aktiv ist (keine abgeschalteten Ports, passende Kapselung …) und optional die Art stimmt |
 | `vlanDocumented` | `vlan` (Nummer) | das VLAN unter **Werkzeuge → VLANs** einen Namen und eine Farbe hat |
 | `hostVlan` | `device`, `vlan` | das Endgerät an einem Access-Port in diesem VLAN hängt (VLAN auf dem Switch angelegt) |

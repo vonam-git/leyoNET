@@ -1,4 +1,4 @@
-import { ATTACK_KINDS, type AttackKind } from '../model/types';
+import { ATTACK_KINDS, type AttackKind, type VrrpGroup, type LoadBalancerConfig, type LbMethod } from '../model/types';
 import { MAX_RATE, MIN_RATE } from '../net/qos';
 import { MAX_POE_BUDGET, POE_STANDARDS, canBePowered, canSupplyPoe } from '../model/poe';
 import { DEVICE_SPECS, canAutoRoute, canHostServices, isDeviceType, isRouterLike, isSwitchType } from '../model/devices';
@@ -6,7 +6,7 @@ import { MAX_LOOPBACK, MAX_VRFS, VRF_NAME } from '../net/routing';
 import { maskToText, parseIp, parseMask } from '../net/ipv4';
 import { MAX_DHCP_EXCLUDED, MAX_DHCP_POOLS, canDhcpPool, checkDhcpPool, normalizePool } from '../net/dhcp';
 import { MAC_PATTERN } from '../model/mac';
-import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, PHONE_NUMBER, MAX_STARTUP_CONFIG, MAX_PORT_MACS, canInstall, isAttacker, canQos, canFirewall, checkStaticRoute6, deviceSeq } from '../model/topology';
+import { MAX_NAME_LENGTH, MAX_TITLE_LENGTH, MAX_WEB_FILE, PHONE_NUMBER, MAX_STARTUP_CONFIG, MAX_PORT_MACS, canInstall, isAttacker, canQos, canFirewall, checkStaticRoute6, deviceSeq, setVrrpGroup, setLoadBalancer } from '../model/topology';
 import { ACL_NAME, MAX_ACLS, checkAccessList, checkFirewall, checkVpnTunnel, type AccessList, type FirewallConfig, type FirewallRule, type VpnTunnel } from '../model/security';
 import { MAX_GROUP_SIZE } from '../model/devices';
 import { checkBgp, checkOspf, checkOspf6, checkRip, checkRipng, normalizeBgp, normalizeOspf, normalizeOspf6, normalizeRip, normalizeRipng } from '../net/dynamic';
@@ -603,6 +603,10 @@ function readDevice(v: unknown, path: string): Device {
     if (typeof o.syslogServer !== 'boolean') throw new Invalid(`${path}.syslogServer`);
     if (o.syslogServer && canInstall(device.type)) device.syslogServer = true;
   }
+  if (o.stpMode !== undefined) {
+    if (o.stpMode !== 'rstp' && o.stpMode !== 'stp') throw new Invalid(`${path}.stpMode`);
+    if (o.stpMode === 'rstp' && isSwitchType(device.type)) device.stpMode = 'rstp';
+  }
   if (o.stpPriority !== undefined) {
     const priority = int(o.stpPriority, `${path}.stpPriority`);
     if (priority < 0 || priority > 61440) throw new Invalid(`${path}.stpPriority`);
@@ -1078,6 +1082,42 @@ function readDevice(v: unknown, path: string): Device {
     (v.routes ?? []).forEach((r, i) => {
       if (r.iface !== undefined && !valid.includes(r.iface)) throw new Invalid(`${path}.vrfs[${n}].routes[${i}].iface`);
     });
+  }
+  // VRRP und Load Balancer: dieselben Prüfungen wie beim Einrichten (am fertig gelesenen Gerät).
+  if (o.vrrp !== undefined) {
+    let single: Topology = { devices: [device], cables: [], nextId: 0 };
+    arr(o.vrrp, `${path}.vrrp`).forEach((raw, i) => {
+      const g = obj(raw, `${path}.vrrp[${i}]`);
+      const track = g.track === undefined ? undefined : obj(g.track, `${path}.vrrp[${i}].track`);
+      const group: VrrpGroup = {
+        iface: int(g.iface, `${path}.vrrp[${i}].iface`),
+        vrid: int(g.vrid, `${path}.vrrp[${i}].vrid`),
+        ip: str(g.ip, `${path}.vrrp[${i}].ip`),
+        ...(g.priority !== undefined ? { priority: int(g.priority, `${path}.vrrp[${i}].priority`) } : {}),
+        ...(g.preempt === false ? { preempt: false as const } : {}),
+        ...(g.accept !== undefined && bool(g.accept, `${path}.vrrp[${i}].accept`) ? { accept: true } : {}),
+        ...(track ? { track: { iface: int(track.iface, `${path}.vrrp[${i}].track.iface`), decrement: int(track.decrement, `${path}.vrrp[${i}].track.decrement`) } } : {}),
+      };
+      const r = setVrrpGroup(single, device.id, group);
+      if (!r.ok) throw new Invalid(`${path}.vrrp[${i}]`);
+      single = r.value;
+    });
+    if (single.devices[0]?.vrrp) device.vrrp = single.devices[0].vrrp;
+  }
+  if (o.loadBalancer !== undefined) {
+    const lb = obj(o.loadBalancer, `${path}.loadBalancer`);
+    const config: LoadBalancerConfig = {
+      port: int(lb.port, `${path}.loadBalancer.port`),
+      method: str(lb.method, `${path}.loadBalancer.method`) as LbMethod,
+      backends: arr(lb.backends, `${path}.loadBalancer.backends`).map((raw, i) => {
+        const b = obj(raw, `${path}.loadBalancer.backends[${i}]`);
+        return { ip: str(b.ip, `${path}.loadBalancer.backends[${i}].ip`), ...(b.port !== undefined ? { port: int(b.port, `${path}.loadBalancer.backends[${i}].port`) } : {}) };
+      }),
+      ...(lb.healthCheck === false ? { healthCheck: false as const } : {}),
+    };
+    const r = setLoadBalancer({ devices: [device], cables: [], nextId: 0 }, device.id, config);
+    if (!r.ok || !r.value.devices[0]?.loadBalancer) throw new Invalid(`${path}.loadBalancer`);
+    device.loadBalancer = r.value.devices[0].loadBalancer;
   }
   return device;
 }

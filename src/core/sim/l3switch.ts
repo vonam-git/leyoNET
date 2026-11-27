@@ -71,6 +71,7 @@ export class L3SwitchNode extends SwitchNode {
         return device ? sviMac(device) : '';
       },
       has: (vlan) => !!ctx.device()?.svis?.some((s) => s.vlan === vlan),
+      owns: (vlan, mac) => router.acceptsVirtualMac(sviId(vlan), mac),
       deliver: (vlan, frame) => router.receiveOn(sviId(vlan), frame),
     };
     this.overlay = {

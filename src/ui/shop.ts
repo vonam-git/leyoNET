@@ -10,6 +10,7 @@ import {
   setDnsServerEnabled,
   setMailServerEnabled,
   setWebServerEnabled,
+  setLoadBalancer,
   addMailbox,
   type DeviceOptions,
   type DeviceType,
@@ -128,6 +129,14 @@ export const SHOP: readonly ShopItem[] = [
   device('serverDhcp', 'servers', 'server', { prepare: serverPreset('192.168.1.2', ['dhcp']), features: ['service.dhcp'] }),
   device('serverDns', 'servers', 'server', { prepare: serverPreset('192.168.1.3', ['dns']), features: ['service.dns'] }),
   device('serverWeb', 'servers', 'server', { prepare: serverPreset('192.168.1.80', ['web']), features: ['service.web'] }),
+  device('serverLb', 'servers', 'server', {
+    options: { variant: 'loadbalancer' },
+    prepare: (topology, id) => {
+      const next = step(topology, (t) => configureHost(t, id, { ip: '192.168.1.80', mask: '255.255.255.0', gateway: '192.168.1.1' }));
+      return step(next, (t) => setLoadBalancer(t, id, { port: 80, method: 'roundRobin', backends: [{ ip: '192.168.1.81' }, { ip: '192.168.1.82' }] }));
+    },
+    features: ['service.loadbalancer'],
+  }),
   device('serverMail', 'servers', 'server', { prepare: serverPreset('192.168.1.25', ['mail']), features: ['service.mail'] }),
   device('serverAll', 'servers', 'server', { prepare: serverPreset('192.168.1.2', ['dhcp', 'dns', 'web']), features: ['service.dhcp', 'service.dns', 'service.web'] }),
 

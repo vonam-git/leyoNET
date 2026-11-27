@@ -42,7 +42,7 @@ Auf [leyonet.ch/schulung.html](https://leyonet.ch/schulung.html) führen drei Vi
 | Zugang | NAT, Internet-Box (CPE), serielle Leitung mit PPP, WLAN-Mesh | NAT-Tabelle, DOCSIS-Aufbau, LCP/IPCP, Mesh |
 | Sicherheit | Firewall mit DMZ; Firewall-Gerät und ACL | Webseite erlaubt, Ping blockiert, Trefferzähler je Regel; Zonen WAN/LAN/DMZ, ACL am Switch-Port verwirft Gast-Pings |
 | Sicherheit | VPN zwischen zwei Standorten | IKEv2-Aushandlung, ESP-Pakete im Internet, Tunnelstatus |
-| Routing | Rechenzentren-Verbund | drei Bauarten (dreistufig, Core/Distribution, Collapsed Core), Racks mit VLAN-Farben, Glasfaser/Kabel/VDSL, IPsec-Vollnetz, DNS über alle Standorte |
+| Routing | Rechenzentren-Verbund | drei Bauarten (dreistufig, Core/Distribution, Collapsed Core), Racks mit VLAN-Farben, Glasfaser/Kabel/VDSL, IPsec-Vollnetz, DNS über alle Standorte, RSTP, Load Balancer in Zürich |
 | Routing | Klassen-Verbund | Standorte an der Zentrale, Ping durch NAT, Webseite per Portweiterleitung |
 
 **Schritt für Schritt** (bei ARP/Ping, Gateway, DHCP, DNS/HTTP, SNAT, DNAT, Internet-Box, DS-Lite, Firewall, Firewall-Gerät mit ACL, VPN, VXLAN, Port-Channel und Rechenzentrum): Ein Avatar als Lehrperson erklärt den Testfall in kleinen Schritten. Er hebt Geräte hervor, öffnet die passenden Einstellungen, startet Aktionen und hält die Simulation an, damit die Klasse im Einzelschritt mitgeht. Jede Person kann den Avatar selbst einstellen (Frisur, Bart, Brille, Hautton, Shirt, Headset); gespeichert wird nur das Aussehen, im eigenen Browser.

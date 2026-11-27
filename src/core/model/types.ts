@@ -220,6 +220,28 @@ export interface Vrf {
   routes?: StaticRoute[];
 }
 
+/**
+ * VRRP-Gruppe (RFC 9568, Version 3) auf einem logischen Interface eines Routers, einer Firewall oder
+ * eines Layer-3-Switches: Mehrere Geräte teilen sich eine virtuelle Gateway-Adresse; das mit der
+ * höchsten Priorität ist Master und beantwortet sie, die anderen springen bei einem Ausfall ein.
+ */
+export interface VrrpGroup {
+  /** Logisches Interface (Anschluss, Subinterface oder VLAN-Interface). */
+  iface: number;
+  /** Virtual Router ID 1–255; bestimmt die virtuelle MAC 00:00:5E:00:01:{VRID}. */
+  vrid: number;
+  /** Virtuelle IPv4-Adresse, die Endgeräte als Gateway eintragen. */
+  ip: string;
+  /** Priorität 1–254 (fehlt = 100); der Besitzer der Adresse (eigene Interface-Adresse) hat immer 255. */
+  priority?: number;
+  /** false = ein Backup mit höherer Priorität übernimmt nicht von einem laufenden Master (fehlt = übernimmt, RFC 9568). */
+  preempt?: false;
+  /** Accept Mode: Der Master nimmt auch Pakete an die virtuelle Adresse selbst an, z.B. Ping (fehlt = nein, RFC 9568). */
+  accept?: boolean;
+  /** Fällt dieser Anschluss aus (z.B. der Uplink), sinkt die Priorität um `decrement` (Objekt-Tracking). */
+  track?: { iface: number; decrement: number };
+}
+
 /** Layer-3-Switch: virtuelles Interface eines VLANs (SVI, «interface vlan 10»). */
 export interface Svi {
   vlan: number;
@@ -270,6 +292,8 @@ export interface Device {
   dnsServer?: DnsServerConfig;
   /** Nur Rechner: Webserver mit seinen Seiten. */
   webServer?: WebServerConfig;
+  /** Nur Server: Load Balancer, verteilt Verbindungen auf mehrere Server dahinter. */
+  loadBalancer?: LoadBalancerConfig;
   /** Notebook als Angreifer (nur für Sicherheits-Szenarien in der Simulation). */
   attack?: AttackConfig;
   /** PC, Notebook, Server: ARP-Schutz (unverlangte ARP-Angaben werden ignoriert). */
@@ -290,6 +314,8 @@ export interface Device {
   stp?: boolean;
   /** Nur Switch: STP-Priorität (Standard 32768); kleiner = eher Root-Bridge. */
   stpPriority?: number;
+  /** Nur Switch: «rstp» = Rapid Spanning Tree (IEEE 802.1Q, Klausel 13); fehlt = klassisches STP (IEEE 802.1D). */
+  stpMode?: 'rstp';
   /**
    * Nur Switch: DHCP-Snooping. Antworten von DHCP-Servern (Offer, Ack, Nak) nur an vertrauenswürdigen
    * Ports (`dhcpTrusted`), Anfragen nur mit der eigenen MAC-Adresse als Client (RFC 7513, SAVI-DHCP).
@@ -323,6 +349,8 @@ export interface Device {
   vxlan?: VxlanConfig;
   /** Nur Layer-3-Switch: VLAN-Interfaces mit Adresse. */
   svis?: Svi[];
+  /** Router, Firewall, Layer-3-Switch: VRRP-Gruppen (redundantes Gateway, RFC 9568). */
+  vrrp?: VrrpGroup[];
   /** Nur Layer-3-Switch: false = Routing zwischen VLANs ausgeschaltet («no ip routing»). */
   ipRouting?: boolean;
   /** Nur Access Point: Funknetz, das er ausstrahlt (und Mesh-Verbund). */
@@ -554,6 +582,31 @@ export interface WebFile {
 
 export interface WebServerConfig {
   files: WebFile[];
+}
+
+/** Verteilverfahren des Load Balancers. */
+export type LbMethod = 'roundRobin' | 'leastConn' | 'sourceHash';
+export const LB_METHODS: readonly LbMethod[] = ['roundRobin', 'leastConn', 'sourceHash'];
+
+export interface LbBackend {
+  /** Adresse des Servers dahinter. */
+  ip: string;
+  /** Port des Dienstes auf dem Server; fehlt = derselbe wie beim Load Balancer. */
+  port?: number;
+}
+
+/**
+ * Load Balancer (Reverse Proxy auf Schicht 4, wie HAProxy im TCP-Modus): nimmt Verbindungen an
+ * seinem Port an und leitet jede an einen der Server dahinter weiter. Die Server sehen als
+ * Absender den Load Balancer.
+ */
+export interface LoadBalancerConfig {
+  /** Port, an dem der Load Balancer Verbindungen annimmt (z.B. 80 für HTTP). */
+  port: number;
+  method: LbMethod;
+  backends: LbBackend[];
+  /** false = keine Health Checks; fehlt = alle 2 s ein TCP-Verbindungsaufbau zu jedem Server. */
+  healthCheck?: false;
 }
 
 export interface Mailbox {

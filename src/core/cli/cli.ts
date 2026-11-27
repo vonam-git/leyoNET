@@ -33,6 +33,7 @@ import {
   setPortSecurity,
   setSyslog,
   setStpPriority,
+  setStpMode,
   setSubinterface,
   removeSubinterface,
   setSvi,
@@ -82,15 +83,18 @@ import {
   setDhcpExcluded,
   setFirewall,
   firewallZone,
+  setVrrpGroup,
+  removeVrrpGroup,
 } from '../model/topology';
+import { vrrpMac } from '../sim/frames';
 import { formatAclRule, formatFirewallRule, parseRule } from './rules';
 import type { FirewallConfig } from '../model/security';
 import { ipv6Links } from '../sim/ip6';
 import { PING_MAX_COUNT } from '../sim/apps';
-import type { BgpConfig, CliConfig, Device, DhcpPool, DeviceType, Ospf6Config, RipngConfig, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, StaticRoute, Topology } from '../model/types';
+import type { BgpConfig, CliConfig, Device, DhcpPool, DeviceType, Ospf6Config, RipngConfig, OspfConfig, RedistributeSource, RipConfig, RoutedNetwork, StaticRoute, Topology, VrrpGroup } from '../model/types';
 import { formatIp, maskToText, networkOf, parseIp, parseMask } from '../net/ipv4';
 import { formatCidr6, formatIp6, parseCidr6, parseIp6 } from '../net/ipv6';
-import { buildRoutes, decodeIface, logicalInterfaces, vrfOfIface, type Route } from '../net/routing';
+import { betterRoute, buildRoutes, decodeIface, equalCost, logicalInterfaces, lookupRoutes, subifId, sviId, vrfOfIface, type Route } from '../net/routing';
 import type { DeviceState } from '../sim/simulation';
 import { cliIfaceName, ifaceIdOf, parseIfaceName, usesPortNames } from './names';
 
@@ -366,6 +370,20 @@ function errorLine(error: TopologyError): string {
       return `% Access list ${p.name ?? ''} not found`;
     case 'tooMany':
       return `% Too many entries (max. ${p.max ?? ''})`;
+    case 'unknownVrrp':
+      return `% VRRP group ${p.vrid ?? ''} not configured here: first "vrrp ${p.vrid ?? 'N'} ip A.B.C.D"`;
+    case 'vrrpNoAddress':
+      return '% Configure an IP address on this interface first';
+    case 'vrrpOutsideSubnet':
+      return `% Virtual address ${p.ip ?? ''} is not in the subnet of ${p.iface ?? 'this interface'}`;
+    case 'invalidVrid':
+      return '% VRRP group number must be between 1 and 255';
+    case 'invalidVrrpPriority':
+      return '% VRRP priority must be between 1 and 254 (255 = address owner, automatic)';
+    case 'invalidVrrpTrack':
+      return '% Invalid tracking: unknown interface or decrement not between 1 and 253';
+    case 'vrrpDuplicate':
+      return `% Virtual address ${p.ip ?? ''} already used by another VRRP group on this interface`;
     default:
       return `% Error: ${error.code}`;
   }
@@ -704,6 +722,17 @@ const COMMANDS: Command[] = [
   {
     modes: ['config'],
     types: SWITCHES,
+    syntax: 'spanning-tree mode <word>',
+    help: 'Spanning tree variant: rstp (Rapid STP, also "rapid-pvst") or stp ("pvst")',
+    run: ({ args, device, env }) => {
+      const mode = { rstp: 'rstp', 'rapid-pvst': 'rstp', stp: 'stp', pvst: 'stp' }[args[0]!.toLowerCase()] as 'stp' | 'rstp' | undefined;
+      if (!mode) return ok(['% Invalid mode: use "rstp" (rapid-pvst) or "stp" (pvst)']);
+      return apply(setStpMode(env.topology, device.id, mode));
+    },
+  },
+  {
+    modes: ['config'],
+    types: SWITCHES,
     syntax: 'spanning-tree priority <num>',
     help: 'Bridge priority (0–61440, steps of 4096)',
     run: ({ args, device, env }) => apply(setStpPriority(env.topology, device.id, Number(args[0]))),
@@ -978,6 +1007,7 @@ const COMMANDS: Command[] = [
     help: 'Cisco HDLC on a serial line',
     run: (call) => forPorts(call, (t, p) => setEncapsulation(t, call.device.id, p, 'hdlc')),
   },
+  ...vrrpCommands(),
   { modes: ['if'], types: L3, syntax: 'ip ospf cost <num>', help: 'OSPF cost of this interface (1–65535)', run: (call) => forPorts(call, (t, p) => setOspfCost(t, call.device.id, p, Number(call.args[0]))) },
   { modes: ['if'], types: L3, syntax: 'no ip ospf cost', help: 'Default OSPF cost (10)', run: (call) => forPorts(call, (t, p) => setOspfCost(t, call.device.id, p, null)) },
   { modes: ['if'], syntax: 'shutdown', help: 'Disable the interface', run: (call) => (onlySvis(call) ? ok(['% VLAN interfaces stay up here']) : forPorts(call, (t, p) => setInterfaceShutdown(t, call.device.id, p, true))) },
@@ -1774,12 +1804,18 @@ export function showIpRoute(device: Device, env?: CliEnv, vrf?: string): string[
   const routes = vrf ? buildRoutes(device, vrf).routes : (env?.state?.routes ?? buildRoutes(device).routes);
   const lines = [...(vrf ? [`Routing Table: VRF ${vrf}`] : []), 'Codes: C - connected, S - static, O - OSPF, R - RIP, B - BGP, A - automatic (leyoNET)', '       > - selected route, * - FIB route', ''];
   const sorted = [...routes].sort((a, b) => (a.network >>> 0) - (b.network >>> 0) || a.prefix - b.prefix || (a.distance ?? 0) - (b.distance ?? 0));
-  const selected = new Set<string>();
+  // Beste Route je Ziel; gleich gute Wege (ECMP) sind ebenfalls aktiv.
+  const chosen = new Map<string, Route>();
+  for (const r of sorted) {
+    const net = `${formatIp(r.network)}/${r.prefix}`;
+    const current = chosen.get(net);
+    if (!current || betterRoute(r, current)) chosen.set(net, r);
+  }
   for (const r of sorted) {
     const name = cliIfaceName(device, r.iface);
     const net = `${formatIp(r.network)}/${r.prefix}`;
-    const best = !selected.has(net);
-    selected.add(net);
+    const winner = chosen.get(net)!;
+    const best = r === winner || (equalCost(r, winner) && lookupRoutes(sorted.filter((x) => x.network === r.network && x.prefix === r.prefix), r.network).includes(r));
     const mark = best ? '>*' : '  ';
     if (r.kind === 'connected') lines.push(`C${mark} ${net} is directly connected, ${name}`);
     else {
@@ -2108,12 +2144,103 @@ function showInterfacesStatus(device: Device, env: CliEnv): string[] {
   return table(['Port', 'Name', 'Status', 'Vlan'], rows);
 }
 
+/** VRRP (RFC 9568) im Interface-Modus, Schreibweise wie Cisco IOS («vrrp 1 ip 192.168.1.1»). */
+function vrrpCommands(): Command[] {
+  type Change = (group: VrrpGroup | undefined, iface: number, args: string[], device: Device) => VrrpGroup | null | TopologyError;
+  const edit = (change: Change) => (call: Call) =>
+    applyAll(
+      call.env.topology,
+      (call.session.targets ?? []).map((iface) => (t: Topology): Result<Topology> => {
+        const device = getDevice(t, call.device.id)!;
+        const vrid = Number(call.args[0]);
+        const group = device.vrrp?.find((g) => g.iface === iface && g.vrid === vrid);
+        const next = change(group, iface, call.args, device);
+        if (next === null) return group ? removeVrrpGroup(t, device.id, iface, vrid) : { ok: true, value: t };
+        if ('code' in next) return { ok: false, error: next };
+        return setVrrpGroup(t, device.id, next);
+      }),
+    );
+  const existing = (change: (g: VrrpGroup, args: string[], device: Device) => VrrpGroup | TopologyError): Change => (g, _iface, args, device) => (g ? change(g, args, device) : { code: 'unknownVrrp', params: { vrid: args[0]! } });
+  return [
+    { modes: ['if'], types: L3, syntax: 'vrrp <num> ip <ip>', help: 'VRRP group with this virtual gateway address (RFC 9568)', run: edit((g, iface, args) => ({ ...(g ?? { iface, vrid: Number(args[0]) }), ip: args[1]! })) },
+    { modes: ['if'], types: L3, syntax: 'vrrp <num> priority <num>', help: 'VRRP priority 1-254 (default 100, higher = master)', run: edit(existing((g, args) => ({ ...g, priority: Number(args[1]) }))) },
+    { modes: ['if'], types: L3, syntax: 'vrrp <num> preempt', help: 'Take over from a master with lower priority (default)', run: edit(existing(({ preempt: _p, ...g }) => g)) },
+    { modes: ['if'], types: L3, syntax: 'no vrrp <num> preempt', help: 'Do not take over from a running master', run: edit(existing((g) => ({ ...g, preempt: false }))) },
+    { modes: ['if'], types: L3, syntax: 'vrrp <num> accept-mode', help: 'Master also accepts packets to the virtual address (e.g. ping)', run: edit(existing((g) => ({ ...g, accept: true }))) },
+    { modes: ['if'], types: L3, syntax: 'no vrrp <num> accept-mode', help: 'Packets to the virtual address are dropped (default, RFC 9568)', run: edit(existing(({ accept: _a, ...g }) => g)) },
+    {
+      modes: ['if'],
+      types: L3,
+      syntax: 'vrrp <num> track <word> decrement <num>',
+      help: 'Lower the priority when this interface goes down',
+      run: edit(
+        existing((g, args, device) => {
+          const ref = parseIfaceName(device, args[1]!);
+          return ref ? { ...g, track: { iface: ifaceIdOf(ref), decrement: Number(args[2]) } } : { code: 'unknownInterface' };
+        }),
+      ),
+    },
+    { modes: ['if'], types: L3, syntax: 'no vrrp <num> track', help: 'No interface tracking', run: edit(existing(({ track: _t, ...g }) => g)) },
+    { modes: ['if'], types: L3, syntax: 'no vrrp <num>', help: 'Remove the VRRP group', run: edit(() => null) },
+    { modes: EXEC, types: L3, syntax: 'show vrrp brief', help: 'VRRP groups in short form', run: ({ device, env }) => ok(showVrrp(device, env, true)) },
+    { modes: EXEC, types: L3, syntax: 'show vrrp', help: 'VRRP groups with state and master', run: ({ device, env }) => ok(showVrrp(device, env, false)) },
+  ];
+}
+
+/** VRRP-Zeilen eines Interfaces für «show running-config». */
+function vrrpConfig(device: Device, iface: number): string[] {
+  return (device.vrrp ?? [])
+    .filter((g) => g.iface === iface)
+    .flatMap((g) => [
+      ` vrrp ${g.vrid} ip ${g.ip}`,
+      ...(g.priority !== undefined ? [` vrrp ${g.vrid} priority ${g.priority}`] : []),
+      ...(g.preempt === false ? [` no vrrp ${g.vrid} preempt`] : []),
+      ...(g.accept ? [` vrrp ${g.vrid} accept-mode`] : []),
+      ...(g.track ? [` vrrp ${g.vrid} track ${cliIfaceName(device, g.track.iface)} decrement ${g.track.decrement}`] : []),
+    ]);
+}
+
+function showVrrp(device: Device, env: CliEnv, brief: boolean): string[] {
+  const groups = device.vrrp ?? [];
+  if (!groups.length) return ['% No VRRP groups configured ("vrrp N ip A.B.C.D" in interface mode)'];
+  const live = env.state?.vrrp;
+  const stateOf = (g: VrrpGroup) => live?.find((l) => l.iface === g.iface && l.vrid === g.vrid);
+  const name = (s?: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : 'Init');
+  if (brief) {
+    return table(
+      ['Interface', 'Grp', 'Pri', 'Own', 'Pre', 'State', 'Master addr', 'Group addr'],
+      groups.map((g) => {
+        const l = stateOf(g);
+        return [cliIfaceName(device, g.iface), String(g.vrid), String(l?.priority ?? g.priority ?? 100), l?.priority === 255 ? 'Y' : 'N', g.preempt === false ? 'N' : 'Y', name(l?.state), l?.master ?? '-', g.ip];
+      }),
+    );
+  }
+  const lines: string[] = [];
+  for (const g of groups) {
+    const l = stateOf(g);
+    lines.push(
+      `${cliIfaceName(device, g.iface)} - Group ${g.vrid} (VRRPv3, RFC 9568)`,
+      `  State is ${name(l?.state)}`,
+      `  Virtual IP address is ${g.ip}`,
+      `  Virtual MAC address is ${vrrpMac(g.vrid).toLowerCase()}`,
+      '  Advertisement interval is 1.000 sec',
+      `  Preemption ${g.preempt === false ? 'disabled' : 'enabled'}, accept mode ${g.accept ? 'enabled' : 'disabled'}`,
+      `  Priority is ${l?.priority ?? g.priority ?? 100}${g.track ? `, track ${cliIfaceName(device, g.track.iface)} decrement ${g.track.decrement}` : ''}`,
+      `  Master Router is ${l?.master ?? 'unknown'}${l?.state === 'master' ? ' (local)' : ''}`,
+      '',
+    );
+  }
+  if (!live) lines.push('% State is only available while the simulation runs');
+  return lines;
+}
+
 function showSpanningTree(device: Device, env: CliEnv): string[] {
   if (!device.stp) return ['Spanning tree is disabled. Enable it with "spanning-tree" in configuration mode.'];
   const stp = env.state?.stp;
   if (!stp) return ['% Spanning tree state is only available while the simulation runs (action mode)'];
   const isRoot = stp.rootId === stp.bridgeId;
   return [
+    `Spanning tree enabled protocol ${stp.mode === 'rstp' ? 'rstp (IEEE 802.1Q, Rapid Spanning Tree)' : 'ieee (IEEE 802.1D)'}`,
     `Root ID     ${stp.rootId}${isRoot ? '  (this bridge is the root)' : ''}`,
     `Root cost   ${stp.rootCost}`,
     `Root port   ${stp.rootPort === null ? '-' : cliIfaceName(device, stp.rootPort)}`,
@@ -2172,6 +2299,7 @@ export function runningConfig(device: Device): string[] {
   if (device.type === 'switch' || device.type === 'l3switch') {
     if (device.stp) {
       lines.push('spanning-tree');
+      if (device.stpMode === 'rstp') lines.push('spanning-tree mode rstp');
       if (device.stpPriority !== undefined) lines.push(`spanning-tree priority ${device.stpPriority}`);
     }
     for (const v of vlansOf(device).slice(1)) {
@@ -2216,6 +2344,7 @@ export function runningConfig(device: Device): string[] {
       if (p.ipv6) lines.push(` ipv6 address ${p.ipv6}`);
       if (p.dhcp6) lines.push(' ipv6 nd managed-config-flag');
       if (p.dns6) lines.push(` ipv6 nd ra dns server ${p.dns6}`);
+      lines.push(...vrrpConfig(device, p.index));
     }
     if (p.poeOff) lines.push(' power inline never');
     if (p.shutdown) lines.push(' shutdown');
@@ -2226,6 +2355,7 @@ export function runningConfig(device: Device): string[] {
     if (s.vrf) lines.push(` vrf forwarding ${s.vrf}`);
     if (s.ip && s.mask) lines.push(` ip address ${s.ip}/${parseMask(s.mask)}`);
     if (s.dhcpRelay) lines.push(` ip helper-address ${s.dhcpRelay}`);
+    lines.push(...vrrpConfig(device, subifId(s.parent, s.vlan)));
     lines.push('!');
   }
   for (const l of device.loopbacks ?? []) {
@@ -2250,6 +2380,7 @@ export function runningConfig(device: Device): string[] {
     if (s.ipv6) lines.push(` ipv6 address ${s.ipv6}`);
     if (s.dhcp6) lines.push(' ipv6 nd managed-config-flag');
     if (s.dns6) lines.push(` ipv6 nd ra dns server ${s.dns6}`);
+    lines.push(...vrrpConfig(device, sviId(s.vlan)));
     lines.push('!');
   }
   if (device.type === 'switch') {

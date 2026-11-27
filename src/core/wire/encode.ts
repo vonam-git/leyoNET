@@ -9,6 +9,7 @@ import {
   type DnsMessage,
   type Dhcpv6Message,
   type EspPacket,
+  type VrrpPacket,
   type IkeMessage,
   type Icmpv6Message,
   type Ipv6Packet,
@@ -725,11 +726,32 @@ function esp(m: EspPacket): Part {
   return p;
 }
 
+/**
+ * VRRPv3 (RFC 9568, 5.1): Version 3 und Typ 1 (Advertisement), VRID, Priorität, Anzahl Adressen,
+ * Max Adver Int (12 Bit, Hundertstelsekunden), Prüfsumme über Pseudo-Header (Protokoll 112) und Nachricht.
+ */
+function vrrp(m: VrrpPacket, src: string, dst: string): Part {
+  const p = new Part();
+  p.u8('vrrp.versionType', 0x31, '3, 1 (Advertisement)');
+  p.u8('vrrp.vrid', m.vrid);
+  p.u8('vrrp.priority', m.priority, m.priority === 255 ? '255 (Besitzer der Adresse)' : m.priority === 0 ? '0 (Master tritt zurück)' : m.priority);
+  p.u8('vrrp.count', m.addresses.length);
+  p.u16('vrrp.interval', m.interval & 0x0fff, `${m.interval} (${m.interval / 100} s)`);
+  const checksumAt = p.length;
+  p.u16('vrrp.checksum', 0);
+  for (const a of m.addresses) p.ip('vrrp.address', a);
+  const sum = internetChecksum([...pseudoHeader(src, dst, 112, p.length), ...p.bytes]);
+  p.patch(checksumAt, u16(sum));
+  p.fields.find((f) => f.key === 'vrrp.checksum')!.value = hex(sum, 4);
+  p.close(3, 'VRRP', 0, { note: 'note.vrrp' });
+  return p;
+}
+
 function ipv4(packet: Ipv4Packet): Part {
   const inner = packet.payload;
   const payload =
-    inner.kind === 'icmp' ? icmp(inner) : inner.kind === 'udp' ? udp(inner, packet.src, packet.dst) : inner.kind === 'tcp' ? tcp(inner, packet.src, packet.dst) : inner.kind === 'esp' ? esp(inner) : ospf(inner);
-  const protocol = inner.kind === 'icmp' ? 1 : inner.kind === 'udp' ? 17 : inner.kind === 'tcp' ? 6 : inner.kind === 'esp' ? 50 : 89;
+    inner.kind === 'icmp' ? icmp(inner) : inner.kind === 'udp' ? udp(inner, packet.src, packet.dst) : inner.kind === 'tcp' ? tcp(inner, packet.src, packet.dst) : inner.kind === 'esp' ? esp(inner) : inner.kind === 'vrrp' ? vrrp(inner, packet.src, packet.dst) : ospf(inner);
+  const protocol = inner.kind === 'icmp' ? 1 : inner.kind === 'udp' ? 17 : inner.kind === 'tcp' ? 6 : inner.kind === 'esp' ? 50 : inner.kind === 'vrrp' ? 112 : 89;
   const df = inner.kind === 'tcp';
   const header = ipv4Header(packet, payload.length, protocol, df);
   const p = new Part();
@@ -739,7 +761,7 @@ function ipv4(packet: Ipv4Packet): Part {
   p.field('ip.id', hex(packet.id & 0xffff, 4), header.slice(4, 6));
   p.field('ip.flags', df ? "0x4000 (Don't Fragment)" : '0x0000', header.slice(6, 8));
   p.field('ip.ttl', packet.ttl, [header[8]!]);
-  p.field('ip.protocol', `${protocol} (${{ 1: 'ICMP', 6: 'TCP', 17: 'UDP', 50: 'ESP', 89: 'OSPF' }[protocol]})`, [header[9]!]);
+  p.field('ip.protocol', `${protocol} (${{ 1: 'ICMP', 6: 'TCP', 17: 'UDP', 50: 'ESP', 89: 'OSPF', 112: 'VRRP' }[protocol]})`, [header[9]!]);
   p.field('ip.checksum', hex((header[10]! << 8) | header[11]!, 4), header.slice(10, 12));
   p.field('ip.src', packet.src, header.slice(12, 16));
   p.field('ip.dst', packet.dst, header.slice(16, 20));
@@ -772,9 +794,15 @@ function stp(b: StpBpdu): Part {
   };
   p.field('stp.llc', 'DSAP 0x42, SSAP 0x42, UI', [0x42, 0x42, 0x03]);
   p.u16('stp.protocol', 0, '0 (Spanning Tree)');
-  p.u8('stp.version', 0, '0 (STP, IEEE 802.1D)');
-  p.u8('stp.type', 0, '0x00 (Configuration)');
-  p.u8('stp.flags', 0);
+  const rstp = b.version === 2;
+  p.u8('stp.version', rstp ? 2 : 0, rstp ? '2 (RSTP, IEEE 802.1Q)' : '0 (STP, IEEE 802.1D)');
+  p.u8('stp.type', rstp ? 2 : 0, rstp ? '0x02 (Rapid/Multiple Spanning Tree)' : '0x00 (Configuration)');
+  // RST BPDU (IEEE 802.1Q, 14.2.1): Bit 0 TC, 1 Proposal, 2–3 Rolle, 4 Learning, 5 Forwarding, 6 Agreement.
+  const f = b.flags ?? {};
+  const role = { alternate: 1, root: 2, designated: 3 }[f.role ?? 'designated'];
+  const flags = rstp ? (f.tc ? 1 : 0) | (f.proposal ? 2 : 0) | (role << 2) | (f.learning ? 16 : 0) | (f.forwarding ? 32 : 0) | (f.agreement ? 64 : 0) : 0;
+  const names = rstp ? [f.tc && 'TC', f.proposal && 'Proposal', `${f.role ?? 'designated'}`, f.learning && 'Learning', f.forwarding && 'Forwarding', f.agreement && 'Agreement'].filter(Boolean).join(', ') : '';
+  p.u8('stp.flags', flags, rstp ? `${hex(flags, 2)} (${names})` : 0);
   p.field('stp.rootId', b.rootId, bridge(b.rootId));
   p.u32('stp.rootCost', b.cost);
   p.field('stp.bridgeId', b.bridgeId, bridge(b.bridgeId));
@@ -783,7 +811,8 @@ function stp(b: StpBpdu): Part {
   p.u16('stp.maxAge', 20 * 256, '20 s');
   p.u16('stp.helloTime', 2 * 256, '2 s');
   p.u16('stp.forwardDelay', 15 * 256, '15 s');
-  p.close(2, 'STP', 0, { note: 'note.stp' });
+  if (rstp) p.u8('stp.version1Length', 0);
+  p.close(2, rstp ? 'RSTP' : 'STP', 0, { note: rstp ? 'note.rstp' : 'note.stp' });
   return p;
 }
 

@@ -7,6 +7,7 @@
   import MailServerForm from './MailServerForm.svelte';
   import WebServerForm from './WebServerForm.svelte';
   import SyslogConfig from './SyslogConfig.svelte';
+  import LoadBalancerConfig from './LoadBalancerConfig.svelte';
 
   /** Entwurfsmodus, Rechner: Server-Dienste, jeweils aufklappbar. */
   let { device }: { device: Device } = $props();
@@ -18,13 +19,14 @@
       { key: 'web', active: !!device.webServer },
       { key: 'mail', active: !!device.mailServer },
       { key: 'syslog', active: !!device.syslogServer || !!device.syslog },
+      ...(device.type === 'server' ? [{ key: 'loadbalancer', active: !!device.loadBalancer }] : []),
     ].filter((s) => s.active || ui.has(s.key === 'syslog' ? 'net.syslog' : `service.${s.key}`)),
   );
 </script>
 
 {#if services.length}<h3>{t('services.title')}</h3>{/if}
 {#each services as service (service.key)}
-  <details open={service.active} data-help={service.key === 'dhcp' ? 'dhcp' : service.key === 'dns' ? 'dns' : service.key === 'web' ? 'web' : service.key === 'syslog' ? 'syslog' : 'mail'}>
+  <details open={service.active} data-help={service.key === 'dhcp' ? 'dhcp' : service.key === 'dns' ? 'dns' : service.key === 'web' ? 'web' : service.key === 'syslog' ? 'syslog' : service.key === 'loadbalancer' ? 'loadbalancer' : 'mail'}>
     <summary>
       {t(`services.${service.key}`)}
       <span class="badge" class:on={service.active}>{t(service.active ? 'services.on' : 'services.off')}</span>
@@ -38,6 +40,8 @@
         <WebServerForm {device} />
       {:else if service.key === 'syslog'}
         <SyslogConfig {device} server />
+      {:else if service.key === 'loadbalancer'}
+        <LoadBalancerConfig {device} />
       {:else}
         <MailServerForm {device} />
       {/if}

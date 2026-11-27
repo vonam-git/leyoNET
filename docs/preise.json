@@ -24,6 +24,11 @@
       "max": 7000,
       "beschreibung": "Rack-Server 1 HE"
     },
+    "loadBalancer": {
+      "min": 2500,
+      "max": 9000,
+      "beschreibung": "Load-Balancer-Appliance 1 HE (Schicht 4/7, kleine Firma)"
+    },
     "groupMember": {
       "min": 600,
       "max": 1400,

@@ -46,6 +46,8 @@
     {@const stp = deviceState.stp}
     <h3>{t('switch.stp')}</h3>
     <dl class="facts">
+      <dt>{t('switch.stpMode')}</dt>
+      <dd>{t(`switch.stpMode.${stp.mode}`)}</dd>
       <dt>{t('switch.bridgeId')}</dt>
       <dd class="mono">{stp.bridgeId}</dd>
       <dt>{t('switch.rootId')}</dt>
@@ -63,7 +65,7 @@
       </thead>
       <tbody>
         {#each stp.ports as port (port.port)}
-          <tr class:blocked={port.state === 'blocking'}>
+          <tr class:blocked={port.state === 'blocking' || port.state === 'discarding'}>
             <td>{interfaceLabel(device, port.port)}</td>
             <td>{t(`switch.role.${port.role}`)}</td>
             <td>{t(`switch.state.${port.state}`)}</td>

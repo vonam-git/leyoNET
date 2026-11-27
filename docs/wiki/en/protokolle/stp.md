@@ -16,7 +16,7 @@ The Spanning Tree Protocol turns the meshed network into a tree without loops:
 2. Every other switch determines its **root port**: the path with the lowest cost to the root.
 3. Every link has one **designated port**; all other ports are **blocked**.
 
-If a cable fails, the switches recompute and a blocked port takes over.
+If a cable fails, the switches recompute and a blocked port takes over. With classic STP this takes until the forward delay has expired; [[rstp]] switches over in milliseconds.
 
 | Role | State |
 |---|---|

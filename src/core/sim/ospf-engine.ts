@@ -1,6 +1,7 @@
 import type { RedistributeSource } from '../model/types';
 import type { OspfLsa, OspfPacket } from './frames';
 import type { NodeContext } from './simulation';
+import { MAX_PATHS } from '../net/routing';
 
 // Verkürzte Zeiten (Standard: Hello 10 s, Dead 40 s), damit man im Unterricht nicht warten muss.
 export const OSPF_HELLO = 2000;
@@ -345,14 +346,20 @@ export class OspfEngine<R> {
     return result;
   }
 
-  /** Dijkstra über die Router-LSAs: kürzeste Wege und erster Nachbar auf dem Weg. */
+  /**
+   * Dijkstra über die Router-LSAs: kürzeste Wege und erste Nachbarn auf dem Weg. Bei OSPFv2 zählen
+   * gleich lange Wege über verschiedene Nachbarn alle (ECMP, RFC 2328, 16.1), höchstens MAX_PATHS.
+   */
   #spf() {
     const me = this.routerId();
+    const multi = this.family.version === 2;
+    const limit = multi ? MAX_PATHS : 1;
     const routerLsa = (id: string) => this.#lsdb.get(lsaKey('router', id));
     const dist = new Map<string, number>([[me, 0]]);
-    const firstHop = new Map<string, OspfNeighbor | null>([[me, null]]);
+    const firstHop = new Map<string, OspfNeighbor[]>([[me, []]]);
     const done = new Set<string>();
     const ownLinks = this.family.links();
+    const merge = (a: OspfNeighbor[], b: OspfNeighbor[]) => [...a, ...b.filter((n) => !a.some((m) => m.iface === n.iface && m.ip === n.ip))].slice(0, limit);
     for (;;) {
       let current: string | undefined;
       for (const [id, d] of dist) if (!done.has(id) && (current === undefined || d < dist.get(current)!)) current = id;
@@ -363,25 +370,33 @@ export class OspfEngine<R> {
         // Nur Verbindungen, die beide Seiten melden (Zwei-Wege-Prüfung).
         if (!routerLsa(link.id)?.links.some((l) => l.kind === 'p2p' && l.id === current)) continue;
         const d = dist.get(current)! + link.cost;
-        if (dist.has(link.id) && dist.get(link.id)! <= d) continue;
+        const known = dist.get(link.id);
+        if (done.has(link.id) || (known !== undefined && known < d)) continue;
+        const neighbor = current === me ? [...this.#neighbors.values()].find((n) => n.routerId === link.id && n.state === 'full' && ownLinks.find((l) => l.index === n.iface)?.address === link.data) : undefined;
+        const hops = current === me ? (neighbor ? [neighbor] : []) : firstHop.get(current)!;
+        if (known === d) {
+          firstHop.set(link.id, merge(firstHop.get(link.id)!, hops));
+          continue;
+        }
         dist.set(link.id, d);
-        const hop =
-          current === me
-            ? ([...this.#neighbors.values()].find((n) => n.routerId === link.id && n.state === 'full' && ownLinks.find((l) => l.index === n.iface)?.address === link.data) ?? null)
-            : firstHop.get(current)!;
-        firstHop.set(link.id, hop);
+        firstHop.set(link.id, hops.slice(0, limit));
       }
     }
-    const best = new Map<string, { route: R; metric: number }>();
+    const best = new Map<string, { routes: R[]; hops: OspfNeighbor[]; metric: number }>();
     const own = this.family.ownPrefixes();
-    const offer = (p: Prefix | null, metric: number, hop: OspfNeighbor | null | undefined) => {
-      if (!p || !hop) return;
+    const offer = (p: Prefix | null, metric: number, hops: OspfNeighbor[] | undefined) => {
+      if (!p || !hops?.length) return;
       const key = `${p.network}/${p.prefix}`;
       if (own.has(key)) return;
       const existing = best.get(key);
-      if (existing && existing.metric <= metric) return;
-      const route = this.family.route(p, hop.iface, hop.ip, Math.round(metric));
-      if (route) best.set(key, { route, metric });
+      if (existing && existing.metric < metric) return;
+      // Gleich gut (ECMP): weitere erste Nachbarn ergänzen; besser: ersetzen.
+      const all = existing && existing.metric === metric ? merge(existing.hops, hops) : hops.slice(0, limit);
+      const routes = all.flatMap((hop) => {
+        const route = this.family.route(p, hop.iface, hop.ip, Math.round(metric));
+        return route ? [route] : [];
+      });
+      if (routes.length) best.set(key, { routes, hops: all, metric });
     };
     for (const [id, d] of dist) {
       if (id === me) continue;
@@ -389,7 +404,7 @@ export class OspfEngine<R> {
       for (const link of prefixLinks) if (link.kind === 'stub') offer(this.family.decode(link), d + link.cost, firstHop.get(id));
       for (const link of this.#lsdb.get(lsaKey('external', id))?.links ?? []) offer(this.family.decode(link), link.cost + d / 1000, firstHop.get(id));
     }
-    const routes = [...best.values()].map((b) => b.route);
+    const routes = [...best.values()].flatMap((b) => b.routes);
     if (JSON.stringify(routes, (_k, v) => (typeof v === 'bigint' ? v.toString() : v)) !== JSON.stringify(this.#routes, (_k, v) => (typeof v === 'bigint' ? v.toString() : v))) {
       this.#routes = routes;
       this.family.routesChanged();

@@ -74,6 +74,11 @@ export function infoOf(frame: EthernetFrame): string {
     const gratuitous = p.op === 'request' && p.senderIp === p.targetIp;
     return tag + (gratuitous ? t('packets.arp.gratuitous', { ...p }) : t(`packets.arp.${p.op}`, { ...p }));
   }
+  if (p.kind === 'stp' && p.version === 2) {
+    const f = p.flags ?? {};
+    const flags = [f.proposal && 'Proposal', f.agreement && 'Agreement', f.tc && 'TC'].filter(Boolean).join(', ');
+    return t('packets.rstp', { root: p.rootId, cost: p.cost, bridge: p.bridgeId, role: t(`switch.role.${f.role ?? 'designated'}`), flags: flags ? ` · ${flags}` : '' });
+  }
   if (p.kind === 'stp') return t('packets.stp', { root: p.rootId, cost: p.cost, bridge: p.bridgeId });
   if (p.kind === 'lacp') return t('packets.lacp', { system: p.actorSystem.toLowerCase(), key: p.actorKey, port: p.actorPort, partner: p.partnerSystem === '00:00:00:00:00:00' ? '–' : p.partnerSystem.toLowerCase() });
   if (p.kind === 'ppp') return `${p.protocol.toUpperCase()} ${p.code}${p.ip ? ` ${p.ip}` : ''}${p.magic !== undefined ? ` magic=${hex(p.magic)}` : ''}`;
@@ -98,6 +103,7 @@ export function infoOf(frame: EthernetFrame): string {
             : inner.type.toUpperCase();
     return `${access}OSPF ${inner.routerId} · ${detail}`;
   }
+  if (inner.kind === 'vrrp') return access + t('packets.vrrp', { vrid: inner.vrid, priority: inner.priority, ip: inner.addresses.join(', ') });
   if (inner.kind === 'icmp') {
     return (
       access +
@@ -276,7 +282,9 @@ const PROTOCOL_WORDS: Record<string, (proto: string, frame: EthernetFrame) => bo
   ospf6: (p) => p === 'OSPFv3',
   rip: (p) => p === 'RIP' || p === 'RIPng',
   ripng: (p) => p === 'RIPng',
-  stp: (p) => p === 'STP',
+  stp: (p) => p === 'STP' || p === 'RSTP',
+  vrrp: (p) => p === 'VRRP',
+  rstp: (p) => p === 'RSTP',
   lacp: (p) => p === 'LACP',
   vxlan: (p) => p === 'VXLAN',
   ppp: (p) => p.startsWith('PPP'),

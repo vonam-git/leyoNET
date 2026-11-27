@@ -775,3 +775,29 @@ test('Angreifer: Abschnitt ragt nie über die Eigenschaften hinaus, auch bei sch
     expect(await overflow('.desktop .security'), `Sicherheit ${width}`).toBeLessThanOrEqual(1);
   }
 });
+
+test('VRRP im Reiter Redundanz: Master in der Simulation', async ({ page }) => {
+  // Die Wahl dauert gut 3,5 s Simulationszeit; auf langsamen Rechnern läuft die Simulation langsamer.
+  test.setTimeout(90_000);
+  await openProject(page, example('vrrp'));
+  // Zuerst in die Simulation: Auf schmalen Bildschirmen verdeckt das Gerätefenster sonst den Umschalter.
+  await page.getByRole('radio', { name: 'Simulation' }).click();
+  await page.getByRole('button', { name: 'Alles zeigen' }).click();
+  await page.getByRole('button', { name: 'Router 1, Vermittlungsrechner' }).click();
+  await page.keyboard.press('e');
+  const r1 = page.getByRole('dialog', { name: 'Router 1' });
+  await r1.getByRole('tab', { name: 'Redundanz' }).click();
+  await expect(r1.getByRole('textbox', { name: 'Virtuelle Adresse' }).first()).toHaveValue('192.168.1.1');
+  await expect(r1.locator('.state.master').first()).toBeVisible({ timeout: 60_000 });
+});
+
+test('Load Balancer: Dienst mit Verfahren und drei Servern', async ({ page }) => {
+  await openProject(page, example('loadbalancer'));
+  await page.getByRole('button', { name: 'Alles zeigen' }).click();
+  await page.getByRole('button', { name: 'Load Balancer, Server' }).click();
+  await page.keyboard.press('e');
+  const lb = page.getByRole('dialog', { name: 'Load Balancer' });
+  await lb.getByRole('tab', { name: 'Dienste' }).click();
+  await expect(lb.getByRole('combobox', { name: /Verfahren/ })).toHaveValue('roundRobin');
+  await expect(lb.locator('td.mono')).toHaveCount(3);
+});

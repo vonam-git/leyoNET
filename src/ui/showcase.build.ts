@@ -31,7 +31,9 @@ import {
   setProjectTitle,
   setSfpModule,
   setStp,
+  setStpMode,
   setStpPriority,
+  setLoadBalancer,
   setSvi,
   setVlanDef,
   setWebServerEnabled,
@@ -69,7 +71,7 @@ interface Site {
   layout: 'three-tier' | 'core-dist' | 'collapsed';
   x: number;
   color: TagColor;
-  servers: { name: string; vlan: number; host: number; web?: string }[];
+  servers: { name: string; vlan: number; host: number; web?: string; lb?: number[] }[];
 }
 
 const SITES: Site[] = [
@@ -82,7 +84,10 @@ const SITES: Site[] = [
     x: -1660,
     color: 'blue',
     servers: [
-      { name: 'Web ZH', vlan: 10, host: 20, web: 'Zürich' },
+      // Load Balancer auf der bekannten Adresse .20, dahinter zwei Webserver (.21, .22).
+      { name: 'LB ZH', vlan: 10, host: 20, lb: [21, 22] },
+      { name: 'Web ZH 1', vlan: 10, host: 21, web: 'Zürich' },
+      { name: 'Web ZH 2', vlan: 10, host: 22, web: 'Zürich' },
       { name: 'DNS ZH', vlan: 10, host: 53 },
       { name: 'NAS ZH', vlan: 20, host: 10 },
       { name: 'Backup ZH', vlan: 30, host: 10 },
@@ -137,8 +142,9 @@ class Net {
     this.ids.set(name, r.id);
     // Switches: VLAN-Datenbank mit Namen wie im VLAN-Plan.
     if (type === 'switch' || type === 'l3switch') {
-      // Spanning Tree überall: Die Access-Switches hängen redundant an zwei Switches.
+      // Rapid Spanning Tree überall: Die Access-Switches hängen redundant an zwei Switches; fällt ein Uplink aus, übernimmt der Reserve-Uplink sofort.
       this.t = u(setStp(this.t, r.id, true));
+      this.t = u(setStpMode(this.t, r.id, 'rstp'));
       for (const v of VLANS) {
         this.t = u(createVlan(this.t, r.id, v.id));
         this.t = u(setVlanName(this.t, r.id, v.id, v.name));
@@ -270,18 +276,19 @@ function buildSite(net: Net, s: Site) {
       net.bundle(core, a, 1);
     }
     for (const srv of group) {
-      net.add('server', srv.name, x0, place(), { variant: 'rack' });
+      net.add('server', srv.name, x0, place(), { variant: srv.lb ? 'loadbalancer' : 'rack' });
       const ip = `10.${n}.${VLANS.find((v) => v.id === srv.vlan)!.third}.${srv.host}`;
       const gw = `10.${n}.${VLANS.find((v) => v.id === srv.vlan)!.third}.1`;
       net.t = u(configureHost(net.t, net.id(srv.name), { ip, mask: '255.255.255.0', gateway: gw, dns: DNS }));
       const { pa } = net.link(a, srv.name, { color: COLOR[srv.vlan], descA: `${srv.name} (VLAN ${srv.vlan})`, descB: `Uplink ${a}` });
       net.t = u(setPortVlan(net.t, net.id(a), pa, srv.vlan));
+      if (srv.lb) net.t = u(setLoadBalancer(net.t, net.id(srv.name), { port: 80, method: 'roundRobin', backends: srv.lb.map((h) => ({ ip: `10.${n}.10.${h}` })) }));
       if (srv.web) {
         net.t = u(setWebServerEnabled(net.t, net.id(srv.name), true));
         const page =
           srv.web === 'Monitoring'
             ? `<h1>Monitoring ${s.city}</h1><p>Alle drei Rechenzentren erreichbar: Zürich, Bern und Basel sind über IPsec-Tunnel verbunden.</p><ul><li>RZ Zürich: Glasfaser</li><li>RZ Bern: Kabel (DOCSIS)</li><li>RZ Basel: VDSL</li></ul>`
-            : `<h1>Rechenzentrum ${s.city}</h1><p>Diese Seite liegt im VLAN 10 (SERVER) des Rechenzentrums ${s.city}, Netz 10.${n}.10.0/24.</p><p>Erreicht über den IPsec-Tunnel zwischen den Standorten.</p>`;
+            : `<h1>Rechenzentrum ${s.city}</h1><p>Diese Seite liegt im VLAN 10 (SERVER) des Rechenzentrums ${s.city}, Netz 10.${n}.10.0/24.</p><p>Erreicht über den IPsec-Tunnel zwischen den Standorten.</p>${srv.name.startsWith('Web ZH ') ? `<p>Geliefert von <b>${srv.name}</b> hinter dem Load Balancer 10.${n}.10.20.</p>` : ''}`;
         net.t = u(saveWebFile(net.t, net.id(srv.name), { path: '/index.html', content: page }));
       }
     }
@@ -319,7 +326,7 @@ function buildSite(net: Net, s: Site) {
     note: `${layoutText}. Anschluss: ${s.modem === 'fiber' ? 'Glasfaser' : s.modem === 'cable' ? 'Kabel (DOCSIS)' : 'VDSL'}, WAN ${wanIp(n)}/30.`,
   });
   const plan = VLANS.map((v) => `- **VLAN ${v.id} ${v.name}:** ${v.id === 900 ? `10.${n}.255.0/30` : `10.${n}.${v.third}.0/24`}, Gateway ${v.id === 900 ? `10.${n}.255.1` : `10.${n}.${v.third}.1`}`).join('\n');
-  net.area(`VLAN-Plan ${s.city}`, 'gray', x0 + 30, y0 + 530, width - 60, 260, { kind: 'note', note: `${plan}\n\nPortfarben im Rack = VLAN, Türkis = Trunk, Rot = WAN. Redundanz: Po = Port-Channel (LACP), «Reserve» = von Spanning Tree blockiert.` });
+  net.area(`VLAN-Plan ${s.city}`, 'gray', x0 + 30, y0 + 530, width - 60, 260, { kind: 'note', note: `${plan}\n\nPortfarben im Rack = VLAN, Türkis = Trunk, Rot = WAN. Redundanz: Po = Port-Channel (LACP), «Reserve» = von Rapid Spanning Tree gesperrt (Alternate).${n === 1 ? ' web.zuerich: Load Balancer 10.1.10.20 vor Web ZH 1 und 2.' : ''}` });
   return { edge, modem };
 }
 
@@ -350,7 +357,7 @@ export function buildShowcase(): Topology {
   net.area('Provider (Internet)', 'yellow', -560, -900, 920, 300, { public: true, note: 'Öffentliche Transitnetze 203.0.113.0/24 (RFC 5737), je Standort ein /30. Zwischen den Rechenzentren laufen IPsec-Tunnel (Vollvermaschung).' });
   net.area('Über dieses Netz', 'gray', -1660, -900, 1000, 300, {
     kind: 'note',
-    note: '**Schaufenster leyoNET.** Drei Rechenzentren, drei Bauarten:\n- **Zürich:** dreistufig (Core, Distribution, Access), Glasfaser\n- **Bern:** Core/Distribution zusammen, Kabelmodem\n- **Basel:** Collapsed Core, VDSL\n\nRedundant: doppelte Leitungen im Port-Channel (LACP) und Access-Switches an zwei Switches mit Spanning Tree.\n\nIn der Simulation: Ping, Webseiten und DNS über die VPN-Tunnel. Alle Racks mit Frontplatten: Ansicht → Rack-Ansicht (Taste R).',
+    note: '**Schaufenster leyoNET.** Drei Rechenzentren, drei Bauarten:\n- **Zürich:** dreistufig (Core, Distribution, Access), Glasfaser\n- **Bern:** Core/Distribution zusammen, Kabelmodem\n- **Basel:** Collapsed Core, VDSL\n\nRedundant: doppelte Leitungen im Port-Channel (LACP), Access-Switches an zwei Switches mit Rapid Spanning Tree (RSTP) und in Zürich ein Load Balancer vor zwei Webservern.\n\nIn der Simulation: Ping, Webseiten und DNS über die VPN-Tunnel. Alle Racks mit Frontplatten: Ansicht → Rack-Ansicht (Taste R).',
   });
   return net.t;
 }

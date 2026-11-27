@@ -24,4 +24,4 @@ verwandt: [crashkurs, webversion]
 
 **Ist das ein Ersatz für echte Geräte?** Nein, eine Ergänzung. leyoNET zeigt, was in den Paketen passiert, was im Rack selten sichtbar ist. Die Bedienung echter Geräte (Konsole, Firmware, Verkabelung) bleibt eigener Unterricht.
 
-**Was fehlt bewusst?** HTTPS/TLS mit echter Verschlüsselung, Multicast-Routing, Rapid-STP, VRRP/HSRP und Bitfehler auf der Leitung. Welche Protokolle wie vereinfacht sind, steht auf jeder Protokollseite unter «Was leyoNET vereinfacht».
+**Was fehlt bewusst?** HTTPS/TLS mit echter Verschlüsselung, Multicast-Routing, MSTP, HSRP (VRRP als offener Standard ist dabei) und Bitfehler auf der Leitung. Welche Protokolle wie vereinfacht sind, steht auf jeder Protokollseite unter «Was leyoNET vereinfacht».

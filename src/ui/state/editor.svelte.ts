@@ -3,6 +3,7 @@ import {
   setPortVlan,
   setStp,
   setStpPriority,
+  setStpMode,
   addPortForward,
   removePortForward,
   setInterfaceNat,
@@ -582,6 +583,12 @@ class Editor {
   /** Auch in der Simulation: Spanning Tree einschalten beendet einen laufenden Broadcast-Sturm. */
   setStp(id: string, enabled: boolean) {
     const next = this.#check(setStp(this.topology, id, enabled));
+    if (next) this.#commit(next);
+  }
+
+  setStpMode(id: string, mode: 'stp' | 'rstp') {
+    if (!this.editable) return;
+    const next = this.#check(setStpMode(this.topology, id, mode));
     if (next) this.#commit(next);
   }
 

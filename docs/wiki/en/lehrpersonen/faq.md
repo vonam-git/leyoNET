@@ -22,4 +22,4 @@ kurz: Privacy, internet access, saving, devices in the classroom and what leyoNE
 
 **Does it replace real devices?** No, it complements them. leyoNET shows what happens in the packets, which is rarely visible in the rack. Operating real devices (console, firmware, cabling) remains a lesson of its own.
 
-**What is deliberately missing?** HTTPS/TLS with real encryption, multicast routing, rapid STP, VRRP/HSRP and bit errors on the line. How each protocol is simplified is listed on every protocol page under “What leyoNET simplifies”.
+**What is deliberately missing?** HTTPS/TLS with real encryption, multicast routing, MSTP, HSRP (VRRP, the open standard, is included) and bit errors on the line. How each protocol is simplified is listed on every protocol page under “What leyoNET simplifies”.

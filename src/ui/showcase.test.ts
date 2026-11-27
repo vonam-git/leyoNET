@@ -19,19 +19,25 @@ describe('Schaufenster Rechenzentren-Verbund', () => {
     const sim = new Simulation(topology);
     const id = (name: string) => topology.devices.find((d) => d.name === name)!.id;
     sim.runUntil(8000);
-    sim.ping(id('Web ZH'), '10.2.20.10');
+    sim.ping(id('Web ZH 1'), '10.2.20.10');
     sim.ping(id('Monitoring BS'), '10.1.99.10');
     sim.runUntil(20_000);
     const replies = (name: string) => sim.getDeviceState(id(name)).console.filter((l) => l.code === 'ping.reply').length;
-    expect(replies('Web ZH')).toBeGreaterThan(0);
+    expect(replies('Web ZH 1')).toBeGreaterThan(0);
     expect(replies('Monitoring BS')).toBeGreaterThan(0);
     sim.browse(id('Monitoring ZH'), 'http://web.basel.rz.example/');
     sim.runUntil(sim.now + 8000);
     expect(sim.getDeviceState(id('Monitoring ZH')).browser?.response?.body ?? '').toContain('Basel');
     expect(getDevice(topology, id('Core ZH'))?.rack).toBeTruthy();
+    // Load Balancer in Zürich: zwei Aufrufe landen bei zwei verschiedenen Webservern.
+    sim.browse(id('Monitoring ZH'), 'http://web.zuerich.rz.example/');
+    sim.runUntil(sim.now + 6000);
+    sim.browse(id('Monitoring ZH'), 'http://web.zuerich.rz.example/');
+    sim.runUntil(sim.now + 6000);
+    expect(sim.getDeviceState(id('LB ZH')).loadBalancer?.backends.map((b) => b.total)).toEqual([1, 1]);
   });
 
-  it('redundant: Port-Channels gebündelt, Spanning Tree blockiert die Reserve-Uplinks, kein Sturm', () => {
+  it('redundant: Port-Channels gebündelt, Rapid Spanning Tree sperrt die Reserve-Uplinks, kein Sturm', () => {
     const sim = new Simulation(topology);
     const id = (name: string) => topology.devices.find((d) => d.name === name)!.id;
     sim.runUntil(12_000);
@@ -47,7 +53,8 @@ describe('Schaufenster Rechenzentren-Verbund', () => {
     // Jeder Access-Switch in Zürich und Bern hat zwei Uplinks, einer ist blockiert.
     for (const access of ['Access A ZH', 'Access B ZH', 'Access A BE', 'Access B BE']) {
       const ports = sim.getDeviceState(id(access)).stp!.ports;
-      expect(ports.filter((p) => p.state === 'blocking').length, access).toBe(1);
+      expect(ports.filter((p) => p.state === 'discarding').length, access).toBe(1);
+      expect(sim.getDeviceState(id(access)).stp!.mode, access).toBe('rstp');
     }
   });
 });

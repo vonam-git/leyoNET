@@ -5,7 +5,7 @@ import type { Device, StaticNat, Topology } from '../model/types';
 import { routingModeOf } from '../model/devices';
 import { autoRoutes } from '../net/autoroute';
 import { LIMITED_BROADCAST, broadcastOf, formatIp, isCgnatRange, isPrivate, parseIp } from '../net/ipv4';
-import { buildRoutes, decodeIface, interfaceAddresses, lookupRoute, macOfIface, relayOf, subifId, vrfOfIface, type IfaceAddress, type Route } from '../net/routing';
+import { buildRoutes, decodeIface, flowHash, interfaceAddresses, lookupRoute, lookupRoutes, macOfIface, pickPath, relayOf, subifId, vrfOfIface, type IfaceAddress, type Route } from '../net/routing';
 import {
   BROADCAST_MAC,
   DHCP_CLIENT_PORT,
@@ -21,7 +21,10 @@ import {
   type OspfPacket,
   type TcpSegment,
   type UdpDatagram,
+  type VrrpPacket,
+  VRRP_MULTICAST,
 } from './frames';
+import { Vrrp } from './vrrp';
 import type { NodeContext, SimNode } from './simulation';
 import { cableAt, deviceSeq, getDevice, otherEnd } from '../model/topology';
 import { isModemWan } from '../model/links';
@@ -82,6 +85,12 @@ export interface SendOptions {
 }
 
 const isLoopback = (ip: number) => ip >>> 24 === 127;
+
+/** Kennung eines Datenflusses für die Lastverteilung (ECMP): Adressen, Protokoll, Ports bzw. ICMP-Kennung. */
+function flowKey(src: string, dst: string, payload: Ipv4Packet['payload']): string {
+  const ports = payload.kind === 'tcp' || payload.kind === 'udp' ? `${payload.srcPort}|${payload.dstPort}` : payload.kind === 'icmp' ? String(payload.id) : '';
+  return `${src}|${dst}|${payload.kind}|${ports}`;
+}
 export const isIcmpError = (icmp: IcmpMessage) => icmp.type === 'destUnreachable' || icmp.type === 'timeExceeded';
 
 /**
@@ -280,7 +289,7 @@ export class IpNode implements SimNode {
       if (mac && (frame.dst === mac || this.v6.acceptsMac(frame.dst, index))) this.v6.receive(index, frame.payload, frame.src);
       return;
     }
-    if (!mac || (frame.dst !== mac && frame.dst !== BROADCAST_MAC && !this.acceptsMulticast(frame.dst))) return;
+    if (!mac || (frame.dst !== mac && frame.dst !== BROADCAST_MAC && !this.acceptsMulticast(frame.dst) && !this.acceptsVirtualMac(index, frame.dst))) return;
     if (!this.ipv4On()) return;
     if (frame.payload.kind === 'arp') this.#onArp(index, frame.payload);
     else if (frame.payload.kind === 'ipv4') this.#onIp(index, frame.payload, frame.src);
@@ -288,6 +297,16 @@ export class IpNode implements SimNode {
 
   /** Proxy-ARP: zusätzliche Adressen, für die das Interface ARP-Anfragen beantwortet. */
   protected answersArpFor(_index: number, _ip: string): boolean {
+    return false;
+  }
+
+  /** VRRP: virtuelle MAC, mit der das Interface eine ARP-Anfrage nach `ip` beantwortet (nur als Master). */
+  protected virtualMacFor(_index: number, _ip: string): string | undefined {
+    return undefined;
+  }
+
+  /** VRRP: Rahmen an eine virtuelle MAC, für die das Gerät Master ist, gehören ihm. */
+  acceptsVirtualMac(_index: number, _mac: string): boolean {
     return false;
   }
 
@@ -362,7 +381,8 @@ export class IpNode implements SimNode {
   #onArp(index: number, arp: ArpPacket) {
     const iface = this.interfaces().find((i) => i.index === index);
     if (!iface) return;
-    const forMe = parseIp(arp.targetIp) === iface.ip || this.answersArpFor(index, arp.targetIp);
+    const virtualMac = this.virtualMacFor(index, arp.targetIp);
+    const forMe = parseIp(arp.targetIp) === iface.ip || this.answersArpFor(index, arp.targetIp) || !!virtualMac;
     // Wie RFC 826: Absender lernen, wenn die Anfrage uns gilt oder er schon bekannt ist.
     const key = this.#arpKey(arp.senderIp, index);
     if (forMe && arp.op === 'request') this.onUnaskedArp(arp.senderIp, arp.senderMac);
@@ -373,13 +393,15 @@ export class IpNode implements SimNode {
       else if (known && known.mac !== arp.senderMac) this.onArpChange(arp.senderIp, known.mac, arp.senderMac, true);
     } else if (forMe || this.#arp.has(key)) this.#learn(arp.senderIp, arp.senderMac, index);
     if (arp.op === 'request' && forMe) {
+      // VRRP-Master antworten für die virtuelle Adresse mit der virtuellen MAC (RFC 9568, 8.1.2).
+      const replyMac = virtualMac ?? iface.mac;
       this.sendFrame(index, {
-        src: iface.mac,
+        src: replyMac,
         dst: arp.senderMac,
         payload: {
           kind: 'arp',
           op: 'reply',
-            senderMac: iface.mac,
+          senderMac: replyMac,
           senderIp: arp.targetIp,
           targetMac: arp.senderMac,
           targetIp: arp.senderIp,
@@ -552,7 +574,8 @@ export class IpNode implements SimNode {
     if (this.vpnRoute({ ...packet, ttl: packet.ttl - 1 })) return;
     const dst = parseIp(packet.dst)!;
     // VRF: Das Paket bleibt in der Tabelle des Anschlusses, über den es kam.
-    const route = lookupRoute(this.routesIn(this.vrfOf(inIface.index)), dst);
+    // Mehrere gleich gute Wege (ECMP): je Datenfluss einer, nach dem Hash der Verbindung (RFC 2992).
+    const route = pickPath(lookupRoutes(this.routesIn(this.vrfOf(inIface.index)), dst), flowHash(flowKey(packet.src, packet.dst, packet.payload)));
     const out = route && this.interfaces().find((i) => i.index === route.iface);
     if (!route || !out) {
       this.#icmpError(inIface, packet, 'destUnreachable', 'net');
@@ -618,6 +641,8 @@ export class IpNode implements SimNode {
     const payload = packet.payload;
     if (payload.kind === 'ospf') {
       this.onOspf(packet, payload, index);
+    } else if (payload.kind === 'vrrp') {
+      this.onVrrp(packet, payload, index);
     } else if (payload.kind === 'udp') {
       this.onUdp(packet, payload, index, srcMac);
     } else if (payload.kind === 'tcp') {
@@ -633,6 +658,9 @@ export class IpNode implements SimNode {
 
   /** OSPF-Pakete (IP-Protokoll 89) für Router. */
   protected onOspf(_packet: Ipv4Packet, _ospf: OspfPacket, _index: number) {}
+
+  /** VRRP-Advertisements (IP-Protokoll 112) für Router und Layer-3-Switches. */
+  protected onVrrp(_packet: Ipv4Packet, _vrrp: VrrpPacket, _index: number) {}
 
   /** Anwendungen hängen sich hier ein (Ping, Traceroute). */
   protected onIcmp(_packet: Ipv4Packet) {}
@@ -698,7 +726,7 @@ export class IpNode implements SimNode {
       return;
     }
 
-    const route = lookupRoute(this.routesIn(options.vrf ?? this.#replyVrf), dst);
+    const route = pickPath(lookupRoutes(this.routesIn(options.vrf ?? this.#replyVrf), dst), flowHash(flowKey(options.src ?? '', dstText, payload)));
     const iface = route && this.interfaces().find((i) => i.index === route.iface);
     if (!route || !iface) {
       onError?.('noRoute');
@@ -882,6 +910,8 @@ export class ForwardingNode extends IpNode {
   readonly ospf6: Ospf6;
   readonly ripng: Ripng;
   readonly bgp: Bgp;
+  /** Redundantes Gateway (VRRP, RFC 9568). */
+  readonly vrrp: Vrrp;
   #version = 0;
   #cache: { device: Device | undefined; topology: Topology; version: number; routes: Route[] } | null = null;
 
@@ -918,6 +948,36 @@ export class ForwardingNode extends IpNode {
     this.ospf6 = new Ospf6(host6);
     this.ripng = new Ripng(host6);
     this.bgp = new Bgp(host);
+    this.vrrp = new Vrrp({
+      ctx,
+      device: () => ctx.device(),
+      interfaces: () => this.interfaces(),
+      ifaceUp: (index) => this.ifaceUp(index),
+      sendFrame: (index, frame) => this.sendFrame(index, frame),
+      syslog: (severity, msgid, text, params) => this.syslog(severity, msgid, text, params),
+    });
+  }
+
+  protected override virtualMacFor(index: number, ip: string): string | undefined {
+    return this.vrrp.arpMac(index, ip);
+  }
+
+  override acceptsVirtualMac(index: number, mac: string): boolean {
+    return this.vrrp.ownsMac(index, mac);
+  }
+
+  /** Besitzer der virtuellen Adresse oder Master mit Accept Mode: Pakete an die virtuelle Adresse gehören dem Gerät. */
+  override isOwn(ip: number): boolean {
+    return super.isOwn(ip) || this.vrrp.accepts(ip);
+  }
+
+  /** Pakete an eine virtuelle Adresse ohne Accept Mode verwerfen statt weiterleiten (RFC 9568). */
+  protected override intercept(_iface: IfaceAddress, packet: Ipv4Packet): boolean {
+    return this.vrrp.discards(packet.dst);
+  }
+
+  protected override onVrrp(packet: Ipv4Packet, vrrp: VrrpPacket, index: number) {
+    this.vrrp.receive(packet, vrrp, index);
   }
 
   /** Physische Verbindung eines logischen Interfaces; VLAN-Interfaces (SVI) gelten als verbunden. */
@@ -937,6 +997,7 @@ export class ForwardingNode extends IpNode {
     this.ripng.boot();
     this.bgp.boot();
     this.v6.boot();
+    this.vrrp.boot();
   }
 
   /**
@@ -981,7 +1042,7 @@ export class ForwardingNode extends IpNode {
 
   protected override joinedGroup(group: string): boolean {
     const device = this.routingDevice();
-    return (group === OSPF_ALL_ROUTERS && !!device?.ospf) || (group === RIP_MULTICAST && !!device?.rip);
+    return (group === OSPF_ALL_ROUTERS && !!device?.ospf) || (group === RIP_MULTICAST && !!device?.rip) || (group === VRRP_MULTICAST && this.vrrp.active());
   }
 
   protected override onOspf(packet: Ipv4Packet, ospf: OspfPacket, index: number) {
@@ -1029,6 +1090,7 @@ export class ForwardingNode extends IpNode {
     return {
       ...super.state(),
       routes: this.routes(),
+      ...(this.vrrp.active() ? { vrrp: this.vrrp.state() } : {}),
       ...(device?.ospf ? { ospf: this.ospf.state() } : {}),
       ...(device?.ospf6 ? { ospf6: this.ospf6.state() } : {}),
       ...(device?.bgp ? { bgp: this.bgp.peers() } : {}),

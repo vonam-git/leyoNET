@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_SPECS, canLog, configSaved, hasCli, runningConfig, setStartupConfig, canQos, canBePowered, canSupplyPoe, needsPoe, canAccessList, canAutoRoute, canFirewall, canVrf, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterLike, isRouterType, isSwitchType } from '../../core';
+  import { DEVICE_SPECS, canLog, canVrrp, configSaved, hasCli, runningConfig, setStartupConfig, canQos, canBePowered, canSupplyPoe, needsPoe, canAccessList, canAutoRoute, canFirewall, canVrf, routingModeOf, canHostServices, canUseWifi, getDevice, hasRoutingTable, isRouterLike, isRouterType, isSwitchType } from '../../core';
   import { t } from '../../i18n';
   import { typeLabel } from '../labels';
   import { dialogs, type DeviceWindowState } from '../state/dialogs.svelte';
@@ -41,6 +41,7 @@
   import SyslogConfig from './SyslogConfig.svelte';
   import WifiClientForm from './WifiClientForm.svelte';
   import VpnConfig from './VpnConfig.svelte';
+  import VrrpConfig from './VrrpConfig.svelte';
   import WlanConfig from './WlanConfig.svelte';
 
   /**
@@ -68,7 +69,7 @@
   );
   const position = $derived(device ? order.findIndex((d) => d.id === device.id) : -1);
 
-  type TabId = 'general' | 'addresses' | 'ports' | 'routing' | 'nat' | 'relay' | 'dhcp' | 'switching' | 'wlan' | 'mail' | 'services' | 'modem' | 'group' | 'state' | 'firewall' | 'acl' | 'vrf' | 'vpn' | 'poe' | 'qos' | 'voip' | 'security';
+  type TabId = 'general' | 'addresses' | 'ports' | 'routing' | 'nat' | 'relay' | 'dhcp' | 'switching' | 'wlan' | 'mail' | 'services' | 'modem' | 'group' | 'state' | 'firewall' | 'acl' | 'vrf' | 'vpn' | 'poe' | 'qos' | 'voip' | 'security' | 'redundancy';
 
   const tabs = $derived.by((): TabId[] => {
     if (!device) return [];
@@ -88,6 +89,7 @@
     if (canAccessList(d.type) && ui.has('net.acl')) list.push('acl');
     if (canVrf(d.type) && ui.has('net.vrf')) list.push('vrf');
     if (isRouterLike(d.type) && ui.has('net.vpn')) list.push('vpn');
+    if (canVrrp(d.type) && (ui.has('net.vrrp') || d.vrrp?.length)) list.push('redundancy');
     if (isSwitchType(d.type)) list.push('switching');
     // Port-Schutz am Switch und Syslog an Netzgeräten.
     const l2 = isSwitchType(d.type) && d.type !== 'accesspoint' && (ui.has('net.l2security') || d.dhcpSnooping || d.interfaces.some((i) => i.portSecurity));
@@ -108,7 +110,7 @@
     return wanted && tabs.includes(wanted) ? wanted : (tabs[0] ?? 'general');
   });
 
-  const HELP: Partial<Record<TabId, string>> = { routing: 'routing', nat: 'nat', relay: 'dhcp', dhcp: 'dhcp', wlan: 'wlan', mail: 'mail', switching: 'vlan', services: 'dhcp', firewall: 'firewall', acl: 'acl', vrf: 'vrf', vpn: 'vpn', poe: 'poe', qos: 'qos', voip: 'voip', security: 'l2security' };
+  const HELP: Partial<Record<TabId, string>> = { routing: 'routing', nat: 'nat', relay: 'dhcp', dhcp: 'dhcp', wlan: 'wlan', mail: 'mail', switching: 'vlan', services: 'dhcp', firewall: 'firewall', acl: 'acl', vrf: 'vrf', vpn: 'vpn', poe: 'poe', qos: 'qos', voip: 'voip', security: 'l2security', redundancy: 'vrrp' };
 
   // Gerät gelöscht oder Projekt gewechselt: schliessen.
   $effect(() => {
@@ -323,6 +325,8 @@
           <VrfConfig {device} />
         {:else if tab === 'vpn'}
           <VpnConfig {device} />
+        {:else if tab === 'redundancy'}
+          <VrrpConfig {device} />
         {:else if tab === 'relay'}
           <DhcpPoolConfig {device} />
         {:else if tab === 'switching'}
